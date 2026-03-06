@@ -48,7 +48,7 @@
 	return x_mkint(p_base, syscall(p[0], p[1], p[2], p[3], p[4], p[5]));
 }
 */
-#ifndef SPECS
+#ifndef TESTS
 
 /*
  * Main Driver

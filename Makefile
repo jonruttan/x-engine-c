@@ -132,20 +132,20 @@ valgrind:
 	$(CC) $(CFLAGS) -g -Wall $(SOURCES) && valgrind -v --leak-check=full ./a.out && rm a.out
 .PHONY: valgrind
 
-ifndef PATH_SPECS_C
-PATH_SPECS_C=tests/c
+ifndef PATH_TESTS_C
+PATH_TESTS_C=tests/c
 endif
 
 ifndef TESTS
-TESTS=$(PATH_SPECS_C)/src/*.spec.c
+TESTS=$(PATH_TESTS_C)/src/*.spec.c
 endif
 
 test:
-	CFLAGS="$(CFLAGS) -fno-common -g -Og -I. -DSPECS" sh $(PATH_SPECS_C)/test-runner/test-runner.sh $(TESTS)
+	CFLAGS="$(CFLAGS) -fno-common -g -Og -I. -DTESTS" sh $(PATH_TESTS_C)/test-runner/test-runner.sh $(TESTS)
 .PHONY: test
 
 test-quick:
-	CFLAGS="$(CFLAGS) -fno-common -g -Og -I. -DSPECS" RUNNER=command sh $(PATH_SPECS_C)/test-runner/test-runner.sh $(TESTS)
+	CFLAGS="$(CFLAGS) -fno-common -g -Og -I. -DTESTS" RUNNER=command sh $(PATH_TESTS_C)/test-runner/test-runner.sh $(TESTS)
 .PHONY: test
 
 tests: test

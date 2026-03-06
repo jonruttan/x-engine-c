@@ -22,7 +22,7 @@
 #include "x-sys.h"
 #include "x-lib.h"
 
-#ifndef SPECS
+#ifndef TESTS
 
 /*
  * # System Functions
@@ -90,7 +90,7 @@ void x_sys_exit(int status)
 	exit(status);
 }
 
-#endif /* SPECS */
+#endif /* TESTS */
 
 x_char_t x_sys_read_char(int fd)
 {
