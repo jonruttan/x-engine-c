@@ -141,11 +141,11 @@ TESTS=$(PATH_SPECS_C)/src/*.spec.c
 endif
 
 test:
-	CFLAGS="$(CFLAGS) -g -Og -I. -DSPECS" sh $(PATH_SPECS_C)/test-runner/test-runner.sh $(TESTS)
+	CFLAGS="$(CFLAGS) -fno-common -g -Og -I. -DSPECS" sh $(PATH_SPECS_C)/test-runner/test-runner.sh $(TESTS)
 .PHONY: test
 
 test-quick:
-	CFLAGS="$(CFLAGS) -g -Og -I. -DSPECS" RUNNER=command sh $(PATH_SPECS_C)/test-runner/test-runner.sh $(TESTS)
+	CFLAGS="$(CFLAGS) -fno-common -g -Og -I. -DSPECS" RUNNER=command sh $(PATH_SPECS_C)/test-runner/test-runner.sh $(TESTS)
 .PHONY: test
 
 tests: test
