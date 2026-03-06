@@ -1,5 +1,5 @@
 /*
- * # Unit Tests: *x-sexp*
+ * # Unit Tests: *x-token*
  */
 
 #define X_TOKEN_SIZE_MAX 3
@@ -7,28 +7,35 @@
 #define TEST_RUNNER_OVERHEAD
 #include "test-runner.h"
 
+#include "x-type/buffer.h"
+
+/* We need the GC structures for cleanup. */
+#ifndef X_GC
+#define X_GC
+#endif /* X_GC */
+
 #include "src/x-sys.c"
 #include "src/x-lib.c"
 #include "src/x.c"
 #include "src/x-obj.c"
 #include "src/x-alist.c"
 #include "src/x-base.c"
-#include "src/x-sexp.c"
-#include "src/x-token.c"
 #include "src/x-type.c"
-#include "src/x-type/atom.c"
-#include "src/x-sexp/atom.c"
-#include "src/x-type/pair.c"
-#include "src/x-sexp/pair.c"
-#include "src/x-type/char.c"
-#include "src/x-sexp/char.c"
-#include "src/x-type/str.c"
-#include "src/x-sexp/str.c"
-#include "src/x-type/buffer.c"
 #include "src/x-type/prim.c"
-#include "src/x-type/list.c"
-#include "src/x-sexp/list.c"
+#include "src/x-type/buffer.c"
+#include "src/x-type/atom.c"
+#include "src/x-type/pair.c"
 #include "src/x-type/iter.c"
+
+/* Stub sexp list symbols to avoid pulling in x-sexp dependencies. */
+#include "x-sexp/list.h"
+x_satom_t x_sexp_list_analyse_prim = x_obj_set(x_type_atom_obj, X_OBJ_FLAG_NONE, { .fn = NULL }),
+	x_sexp_list_delimit_prim = x_obj_set(x_type_atom_obj, X_OBJ_FLAG_NONE, { .fn = NULL }),
+	x_sexp_list_read_prim = x_obj_set(x_type_atom_obj, X_OBJ_FLAG_NONE, { .fn = NULL }),
+	x_sexp_list_write_prim = x_obj_set(x_type_atom_obj, X_OBJ_FLAG_NONE, { .fn = NULL });
+
+#include "src/x-type/list.c"
+#include "src/x-token.c"
 
 #include "helper-system-functions.c"
 
@@ -58,57 +65,30 @@ void test_cleanup(x_obj_t *p_base)
 
 
 /*
- * ## Test Runners
+ * ## Test Helpers
  */
-static char *test_token_get(void)
-{
-	x_obj_t *p_base, *p_args, *p_buffer, *p_obj;
-	x_char_t *s, buffer[32];
 
-	s = "  ;123\n  (ABC)";
-	helper_file_buffer_ptr[TEST_HELPER_FILE_STDIN] = s;
-	helper_file_reset();
+/* Whitespace type: matches runs of whitespace, discards them. */
+x_obj_t *test_token_read_analyse_whitespace(x_obj_t *p_base, x_obj_t *p_args);
+x_obj_t *test_token_read_read_whitespace(x_obj_t *p_base, x_obj_t *p_args);
 
-	p_base = x_base_make(NULL, NULL);
-
-	p_buffer = x_base_field_buffer(p_base) = x_mkbufferown(p_base, buffer);
-	/*x_sexp_write(p_base, x_base(p_base));*/
-	p_args = x_mkspair(p_base, p_buffer, p_base);
-	p_obj = x_token_get(p_base, p_base);
-	printf("\"%s\"\n", x_bufferval(p_obj));
-	p_obj = x_token_get(p_base, p_base);
-	printf("\"%s\"\n", x_bufferval(p_obj));
-/*	_it_should("return the Base", x_obj_isnil(p_base, p_obj));
-*/
-	x_sys_free(p_args);
-	x_sys_free(p_buffer);
-
-	return NULL;
-}
-
-static char *test_token_delimit(void)
-{
-	return NULL;
-}
-
+x_satom_t test_token_read_analyse_whitespace_prim = x_obj_set(x_type_atom_obj, X_OBJ_FLAG_NONE, { .fn = test_token_read_analyse_whitespace }),
+	test_token_read_read_whitespace_prim = x_obj_set(x_type_atom_obj, X_OBJ_FLAG_NONE, { .fn = test_token_read_read_whitespace });
 
 x_obj_t *test_token_read_analyse_whitespace(x_obj_t *p_base, x_obj_t *p_args)
 {
-	x_obj_t *p_buffer = x_token_read_arg_buffer(p_args);
-
-	printf("Analysing whitespace...");
+	x_obj_t *p_buffer = x_token_read_arg_buffer(p_args),
+		*p_score = x_token_read_arg_score(p_args);
 
 	if (x_lib_strchr(" \t\r\n", x_bufferlastchar(p_buffer))) {
-		printf("match.\n");
-		return p_args;
+		return test_token_read_analyse_whitespace_prim;
 	}
 
 	if (x_bufferlen(p_buffer) > 1) {
-		x_bufferread(p_buffer)--;
-		return p_buffer;
+		x_firstint(p_score) = x_bufferlen(p_buffer) - 1;
+		x_restobj(p_score) = test_token_read_read_whitespace_prim;
+		return p_score;
 	}
-
-	printf("unrecognized ('%c').\n", x_bufferlastchar(p_buffer));
 
 	return p_base;
 }
@@ -117,66 +97,66 @@ x_obj_t *test_token_read_delimit_whitespace(x_obj_t *p_base, x_obj_t *p_args)
 {
 	x_obj_t *p_buffer = x_token_read_arg_buffer(p_args);
 
-	printf("Delmiting whitespace...");
-
 	if (x_lib_strchr(" \t\r\n", x_bufferlastchar(p_buffer))) {
-		printf("match.\n");
 		x_bufferread(p_buffer)--;
 		return p_buffer;
 	}
-
-	printf("unrecognized ('%c').\n", x_bufferlastchar(p_buffer));
 
 	return p_base;
 }
 
 x_obj_t *test_token_read_read_whitespace(x_obj_t *p_base, x_obj_t *p_args)
 {
-	printf("Consuming whitespace.");
-
 	return p_args;
 }
 
 
-x_obj_t *test_token_read_analyse_any(x_obj_t *p_base, x_obj_t *p_args)
+/* Catchall type: matches any single char with negative score. */
+x_obj_t *test_token_read_read_catchall(x_obj_t *p_base, x_obj_t *p_args);
+
+x_satom_t test_token_read_read_catchall_prim = x_obj_set(x_type_atom_obj, X_OBJ_FLAG_NONE, { .fn = test_token_read_read_catchall });
+
+x_obj_t *test_token_read_analyse_catchall(x_obj_t *p_base, x_obj_t *p_args)
 {
-	x_obj_t *p_buffer = x_token_read_arg_buffer(p_args);
+	x_obj_t *p_buffer = x_token_read_arg_buffer(p_args),
+		*p_score = x_token_read_arg_score(p_args);
 
-	printf("Analysing any...match.\n");
-
-	return p_buffer;
+	x_firstint(p_score) = -x_bufferlen(p_buffer);
+	x_restobj(p_score) = test_token_read_read_catchall_prim;
+	return p_score;
 }
 
-x_obj_t *test_token_read_read_any(x_obj_t *p_base, x_obj_t *p_args)
+x_obj_t *test_token_read_read_catchall(x_obj_t *p_base, x_obj_t *p_args)
 {
 	x_obj_t *p_buffer = x_token_read_arg_buffer(p_args);
-
-	printf("Reading any.");
 
 	return x_mksatom(p_base, x_bufferval(p_buffer)[0]);
 }
 
 
+/* TYPE1: matches sequences of @/A chars, returns as owned atom. */
+x_obj_t *test_token_read_read1(x_obj_t *p_base, x_obj_t *p_args);
+
+x_satom_t test_token_read_read1_prim = x_obj_set(x_type_atom_obj, X_OBJ_FLAG_NONE, { .fn = test_token_read_read1 });
+
 x_obj_t *test_token_read_analyse1(x_obj_t *p_base, x_obj_t *p_args)
 {
-	x_obj_t *p_buffer = x_token_read_arg_buffer(p_args);
+	x_obj_t *p_buffer = x_token_read_arg_buffer(p_args),
+		*p_score = x_token_read_arg_score(p_args);
 
-	printf("Analysing1...");
-
-	if (x_lib_strchr("@A ", x_bufferlastchar(p_buffer))) {
-		printf("match.\n");
+	if (x_lib_strchr("@A", x_bufferlastchar(p_buffer))) {
 		return p_args;
 	}
 
-	if (x_bufferlen(p_buffer) > 1) {
-		printf("unrecognized ('%c'), returning recognized.\n", x_bufferlastchar(p_buffer));
-		x_bufferread(p_buffer)--;
-		return p_buffer;
+	x_bufferread(p_buffer)--;
+
+	if (x_bufferlen(p_buffer) < 1) {
+		return p_base;
 	}
 
-	printf("unrecognized ('%c').\n", x_bufferlastchar(p_buffer));
-
-	return p_base;
+	x_firstint(p_score) = x_bufferlen(p_buffer);
+	x_restobj(p_score) = test_token_read_read1_prim;
+	return p_score;
 }
 
 x_obj_t *test_token_read_read1(x_obj_t *p_base, x_obj_t *p_args)
@@ -184,57 +164,58 @@ x_obj_t *test_token_read_read1(x_obj_t *p_base, x_obj_t *p_args)
 	x_obj_t *p_buffer = x_token_read_arg_buffer(p_args);
 	x_char_t *s = x_lib_strndup(x_bufferval(p_buffer), x_bufferlen(p_buffer));
 
-	printf("Reading1.");
-
-	return x_mkstrown(p_base, s);
-	/*return x_mksatom(p_base, x_bufferval(p_buffer)[0]);*/
+	return x_obj_make(p_base, x_type_atom_obj, X_OBJ_FLAG_OWN, X_OBJ_LENGTH_ATOM, (x_obj_t *)s);
 }
 
 
+/* TYPE2: matches @A (two-stage analyser), returns as satom. */
 x_obj_t *test_token_read_analyse2_2(x_obj_t *p_base, x_obj_t *p_args);
-x_satom_t test_token_read_analyse2_1_prim = x_obj_set(x_type_atom_obj, X_OBJ_FLAG_NONE, { .fn = test_token_read_analyse2_2 });
+x_obj_t *test_token_read_read2(x_obj_t *p_base, x_obj_t *p_args);
+
+x_satom_t test_token_read_analyse2_2_prim = x_obj_set(x_type_atom_obj, X_OBJ_FLAG_NONE, { .fn = test_token_read_analyse2_2 }),
+	test_token_read_read2_prim = x_obj_set(x_type_atom_obj, X_OBJ_FLAG_NONE, { .fn = test_token_read_read2 });
 
 x_obj_t *test_token_read_analyse2_1(x_obj_t *p_base, x_obj_t *p_args)
 {
 	x_obj_t *p_buffer = x_token_read_arg_buffer(p_args);
 
-	printf("Analysing2_1...");
-
 	if ('@' == x_bufferlastchar(p_buffer)) {
-		printf("match.\n");
-		return test_token_read_analyse2_1_prim;
+		return test_token_read_analyse2_2_prim;
 	}
-
-	printf("unrecognized ('%c').\n", x_bufferlastchar(p_buffer));
 
 	return p_base;
 }
 
 x_obj_t *test_token_read_analyse2_2(x_obj_t *p_base, x_obj_t *p_args)
 {
-	x_obj_t *p_buffer = x_token_read_arg_buffer(p_args);
-
-	printf("Analysing2_2...");
+	x_obj_t *p_buffer = x_token_read_arg_buffer(p_args),
+		*p_score = x_token_read_arg_score(p_args);
 
 	if ('A' == x_bufferlastchar(p_buffer)) {
-		printf("match.\n");
-		return p_buffer;
+		x_firstint(p_score) = x_bufferlen(p_buffer);
+		x_restobj(p_score) = test_token_read_read2_prim;
+		return p_score;
 	}
-
-	printf("unrecognized ('%c').\n", x_bufferlastchar(p_buffer));
 
 	return p_base;
 }
 
 x_obj_t *test_token_read_read2(x_obj_t *p_base, x_obj_t *p_args)
 {
-	x_obj_t *p_buffer = x_token_read_arg_buffer(p_args),
-		*p_obj = x_mksatom(p_base, x_bufferlastchar(p_buffer));
+	x_obj_t *p_buffer = x_token_read_arg_buffer(p_args);
 
-	printf("Reading2.");
-
-	return p_obj;
+	return x_mksatom(p_base, x_bufferlastchar(p_buffer));
 }
+
+
+/*
+ * ## Test Runners
+ */
+static char *test_token_delimit(void)
+{
+	return NULL;
+}
+
 
 static char *test_token_read(void)
 {
@@ -243,17 +224,17 @@ static char *test_token_read(void)
 		*p_type, *p_args, *p_buffer, *p_obj;
 	x_char_t *s, buffer[32];
 	struct x_type_t type_whitespace = {
-		.p_name = x_mkstr(p_base, "WHITESPACE"),
+		.p_name = x_mkatom(p_base, (void *)"WHITESPACE"),
 		.p_analyse = x_mkatom(p_base, test_token_read_analyse_whitespace),
 		.p_delimit = x_mkatom(p_base, test_token_read_delimit_whitespace)
-	}, type_any = {
-		.p_name = x_mkstr(p_base, "ANY"),
-		.p_analyse = x_mkatom(p_base, test_token_read_analyse_any)
+	}, type_catchall = {
+		.p_name = x_mkatom(p_base, (void *)"CATCHALL"),
+		.p_analyse = x_mkatom(p_base, test_token_read_analyse_catchall)
 	}, type1 = {
-		.p_name = x_mkstr(p_base, "TYPE1"),
+		.p_name = x_mkatom(p_base, (void *)"TYPE1"),
 		.p_analyse = x_mkatom(p_base, test_token_read_analyse1)
 	}, type2 = {
-		.p_name = x_mkstr(p_base, "TYPE2"),
+		.p_name = x_mkatom(p_base, (void *)"TYPE2"),
 		.p_analyse = x_mkatom(p_base, test_token_read_analyse2_1)
 	};
 
@@ -264,7 +245,7 @@ static char *test_token_read(void)
 	p_type = x_type_struct_make(p_base, type_whitespace);
 	x_base_type_alist_extend(p_base2, p_type);
 
-	p_type = x_type_struct_make(p_base, type_any);
+	p_type = x_type_struct_make(p_base, type_catchall);
 	x_base_type_alist_extend(p_base2, p_type);
 
 	p_type = x_type_struct_make(p_base, type1);
@@ -274,29 +255,22 @@ static char *test_token_read(void)
 	x_base_type_alist_extend(p_base2, p_type);
 
 	p_buffer = x_mkbufferown(p_base, buffer);
-
-/*	x_type_buffer_read(p_base, x_mkspair(p_base, p_buffer, x_mkspair(p_base, x_mkchar(p_base, '\0'), p_base)));
-	printf("C:'%c'\n", x_bufferlastchar(p_buffer));*/
-	/*x_sexp_write(p_base, x_base(p_base));*/
 	p_args = x_mkpair(p_base, p_buffer, p_base);
 
 	p_obj = x_token_read(p_base2, p_args);
-	printf("'%s'\n", x_strval(p_obj));
-  	_it_should("return a token",
-		x_obj_type_isstr(p_base2, p_obj)
-		&& 0 == strcmp("@AA", x_strval(p_obj)));
-
-	p_obj = x_token_read(p_base2, p_args);
-	printf("'%c'\n", x_charval(p_obj));
-  	_it_should("return a token",
+  	_it_should("return a TYPE1 token",
 		x_obj_type_issatom(p_obj)
-		&& 'B' == x_charval(p_obj));
+		&& 0 == strcmp("@AA", x_atomstr(p_obj)));
 
 	p_obj = x_token_read(p_base2, p_args);
-	printf("'%s'\n", x_strval(p_obj));
-  	_it_should("return a token",
-		x_obj_type_isstr(p_base2, p_obj)
-		&& 0 == strcmp("@AA", x_strval(p_obj)));
+  	_it_should("return a CATCHALL token",
+		x_obj_type_issatom(p_obj)
+		&& 'B' == x_atomchar(p_obj));
+
+	p_obj = x_token_read(p_base2, p_args);
+  	_it_should("return a TYPE1 token",
+		x_obj_type_issatom(p_obj)
+		&& 0 == strcmp("@AA", x_atomstr(p_obj)));
 
 
 	test_cleanup(p_base);
@@ -307,9 +281,8 @@ static char *test_token_read(void)
 }
 
 static char *run_tests() {
-	_xrun_test(test_token_get);
 	_run_test(test_token_delimit);
-	_xrun_test(test_token_read);
+	_run_test(test_token_read);
 
 	return NULL;
 }

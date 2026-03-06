@@ -48,31 +48,6 @@ x_obj_t *x_sexp_list_delimit(x_obj_t *p_base, x_obj_t *p_args)
 	return p_base;
 }
 
-/*x_obj_t *x_token_readlist(x_obj_t *p_base, x_obj_t *p_args)
-{
-	x_obj_t *token = x_token_get(x_firstobj(p_args), p_base), *tmp;
-
-	if ( ! x_lib_strcmp(x_atomstr(token), ")")) {
-		return p_base;
-	}
-
-	if ( ! x_lib_strcmp(x_atomstr(token), ".")) {
-		tmp = x_token_read(p_base, x_firstobj(p_args));
-
-		if (x_lib_strcmp(x_atomstr(x_token_get(x_firstobj(p_args), p_base)), ")")) {
-			x_obj_debug(p_base, "(l.%d)", __LINE__);
-			x_sys_exit(X_SYS_EXIT_FAILURE);
-		}
-
-		return tmp;
-	}
-
-	x_base_field_token_cache(p_base) = token;
-	tmp = x_token_read(p_base, p_args); / * Must force evaluation order * /
-
-	return x_mkspair(p_base, tmp, x_token_readlist(p_base, p_args));
-}*/
-
 x_obj_t *x_sexp_list_read(x_obj_t *p_base, x_obj_t *p_args)
 {
 /*	x_obj_t *p_buffer = x_token_read_arg_buffer(p_args);
