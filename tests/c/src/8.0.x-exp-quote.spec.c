@@ -26,6 +26,7 @@
 #include "src/x-sexp/atom.c"
 #include "src/x-sexp/pair.c"
 #include "src/x-sexp/list.c"
+#include "src/x-token.c"
 #include "src/x-exp/quote.c"
 
 #include "helper-system-functions.c"

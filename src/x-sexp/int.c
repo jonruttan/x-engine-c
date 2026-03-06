@@ -93,6 +93,11 @@ x_obj_t *x_sexp_int_analyse_prefix(x_obj_t *p_base, x_obj_t *p_args)
 		return x_sexp_int_analyse_base_prim;
 	}
 
+	if ( ! isdigit(x_bufferlastchar(p_buffer))) {
+		x_bufferread(p_buffer)--;
+		return p_base;
+	}
+
 	return x_sexp_int_analyse_digits(p_base, p_args);
 }
 

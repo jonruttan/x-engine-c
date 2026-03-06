@@ -16,6 +16,7 @@
 /*
  * # Includes
  */
+#include "x-sexp/str.h"
 #include "x-base.h"
 #include "x-token.h"
 #include "x-type/str.h"

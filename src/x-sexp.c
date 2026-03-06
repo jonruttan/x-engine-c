@@ -18,38 +18,22 @@
  */
 #include "x-sexp.h"
 #include "x-base.h"
+#include "x-token.h"
 #include "x-type.h"
 #include "x-sexp/atom.h"
 #include "x-sexp/pair.h"
 
 /*
- * Reads a written representation of _args_ from input.
+ * Reads an s-expression from input.
  *
  * @function x_sexp_read
  * @param {x_obj_t *} p_base A pointer to the p_base of the object structure.
+ * @param {x_obj_t *} p_args A pair of (buffer . base) for the token reader.
  * @returns {x_obj_t *} A pointer to the object read.
  */
-x_obj_t *x_sexp_read(x_obj_t *p_base, x_obj_t *p_obj)
+x_obj_t *x_sexp_read(x_obj_t *p_base, x_obj_t *p_args)
 {
-	/*x_spair_t args[1] = {
-		x_obj_set(NULL, X_OBJ_FLAG_NONE, { { p_obj }, { NULL } })
-	};
-	x_obj_t *p_ret;*/
-
-/*	if (x_obj_type_isspair(p_obj)) {
-		return x_sexp_pair_write(p_base, p_obj);
-	} else {*/
-/*		if ( ! x_obj_isnil(p_base, x_obj_type(p_obj))) {
-			p_ret = x_type_write(p_base, (x_obj_t *)args);
-
-			if ( ! x_obj_isnil(p_base, p_ret)) {
-				return p_ret;
-			}
-		}
-*/
-		/*return x_sexp_atom_write(p_base, p_obj);*/
-/*	}*/
-	return p_base;
+	return x_token_read(p_base, p_args);
 }
 
 /*

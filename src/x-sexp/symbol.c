@@ -16,14 +16,16 @@
 /*
  * # Includes
  */
+#include "x-sexp/symbol.h"
 #include "x-base.h"
 #include "x-token.h"
 #include "x-type/buffer.h"
+#include "x-type/str.h"
 #include "x-type/symbol.h"
 
 x_satom_t x_sexp_symbol_analyse_prim = x_obj_set(x_type_atom_obj, X_OBJ_FLAG_NONE, { .fn = x_sexp_symbol_analyse }),
 	x_sexp_symbol_read_prim = x_obj_set(x_type_atom_obj, X_OBJ_FLAG_NONE, { .fn = x_sexp_symbol_read }),
-	x_sexp_symbol_write_prim = x_obj_set(x_type_atom_obj, X_OBJ_FLAG_NONE, { .fn = x_sexp_symbol_read });
+	x_sexp_symbol_write_prim = x_obj_set(x_type_atom_obj, X_OBJ_FLAG_NONE, { .fn = x_sexp_symbol_write });
 
 x_obj_t *x_sexp_symbol_analyse(x_obj_t *p_base, x_obj_t *p_args)
 {
@@ -32,6 +34,10 @@ x_obj_t *x_sexp_symbol_analyse(x_obj_t *p_base, x_obj_t *p_args)
 
 	if (x_obj_isnil(p_base, x_token_delimit(p_base, p_args))) {
 		return p_args;
+	}
+
+	if (x_bufferlen(p_buffer) == 0) {
+		return p_base;
 	}
 
 	x_firstint(p_score) = -x_bufferlen(p_buffer);

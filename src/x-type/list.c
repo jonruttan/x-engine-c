@@ -18,6 +18,8 @@
  */
 #include "x-type/list.h"
 #include "x-type/iter.h"
+#include "x-type/prim.h"
+#include "x-eval.h"
 #include "x-sexp/list.h"
 
 x_satom_t x_type_list_name = x_obj_set(x_type_pair_obj, X_OBJ_FLAG_NONE, { .s = (x_char_t *)X_TYPE_LIST_NAME }),
@@ -74,9 +76,23 @@ x_obj_t *x_type_list_make(x_obj_t *p_base, x_obj_t *p_args)
 
 x_obj_t *x_type_list_eval(x_obj_t *p_base, x_obj_t *p_args)
 {
-	x_obj_t *p_exp = x_firstobj(x_eval_arg_exp(p_args));
-	x_spair_t prim_args = x_obj_set(NULL, X_OBJ_FLAG_NONE,
-			{ x_type_field_call(x_obj_type(x_firstobj(p_exp))) }, { p_exp });
+	x_obj_t *p_exp = x_firstobj(x_eval_arg_exp(p_args)), *p_proc;
+	x_satom_t car_atom = x_obj_set(NULL, X_OBJ_FLAG_NONE, { x_firstobj(p_exp) });
+	x_spair_t eval_args[1] = {
+		x_obj_set(NULL, X_OBJ_FLAG_NONE, { car_atom }, { NULL })
+	},
+	proc_exp = x_obj_set(NULL, X_OBJ_FLAG_NONE, { NULL }, { x_restobj(p_exp) }),
+	prim_args = x_obj_set(NULL, X_OBJ_FLAG_NONE, { NULL }, { (x_obj_t *)proc_exp });
+
+	/* Eval car to resolve operator (e.g. symbol -> prim). */
+	p_proc = x_eval(p_base, (x_obj_t *)eval_args);
+
+	if (x_obj_isnil(p_base, p_proc)) {
+		return p_exp;
+	}
+
+	x_firstobj((x_obj_t *)proc_exp) = p_proc;
+	x_firstobj((x_obj_t *)prim_args) = x_type_field_call(x_obj_type(p_proc));
 
 	if (x_obj_isnil(p_base, x_firstobj((x_obj_t *)prim_args))) {
 		return p_exp;

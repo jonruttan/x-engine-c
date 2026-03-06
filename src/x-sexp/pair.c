@@ -17,6 +17,7 @@
  * # Includes
  */
 #include "x-type/pair.h"
+#include "x-sexp.h"
 
 /*
  * Writes a written representation of _args_ pair to output.
@@ -30,7 +31,8 @@ x_obj_t *x_sexp_pair_write(x_obj_t *p_base, x_obj_t *p_args)
 {
 	x_obj_t *p_obj = x_firstobj(p_args);
 	x_satom_t data_obj = x_obj_set(NULL, X_OBJ_FLAG_NONE, { .s = NULL }),
-		size_obj = x_obj_set(NULL, X_OBJ_FLAG_NONE, { .i = 1 });
+		size_obj = x_obj_set(NULL, X_OBJ_FLAG_NONE, { .i = 1 }),
+		write_wrap = x_obj_set(NULL, X_OBJ_FLAG_NONE, { NULL });
 	x_spair_t args[2] = {
 		x_obj_set(NULL, X_OBJ_FLAG_NONE, { data_obj }, { (x_obj_t *)(args + 1) }),
 		x_obj_set(NULL, X_OBJ_FLAG_NONE, { size_obj }, { NULL })
@@ -41,7 +43,8 @@ x_obj_t *x_sexp_pair_write(x_obj_t *p_base, x_obj_t *p_args)
 
 	for (;;) {
 		if ( ! x_obj_isnil(p_base, x_car(p_obj))) {
-			x_sexp_write(p_base, x_car(p_obj));
+			x_firstobj((x_obj_t *)write_wrap) = x_car(p_obj);
+			x_sexp_write(p_base, (x_obj_t *)write_wrap);
 		}
 
 		p_obj = x_cdr(p_obj);
@@ -58,7 +61,8 @@ x_obj_t *x_sexp_pair_write(x_obj_t *p_base, x_obj_t *p_args)
 			x_atomint(size_obj) = 3;
 			x_base_write(p_base, (x_obj_t *)args);
 
-			x_sexp_write(p_base, p_obj);
+			x_firstobj((x_obj_t *)write_wrap) = p_obj;
+			x_sexp_write(p_base, (x_obj_t *)write_wrap);
 
 			x_atomstr(data_obj) = ")";
 			x_atomint(size_obj) = 1;

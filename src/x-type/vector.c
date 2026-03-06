@@ -29,17 +29,17 @@
  */
 x_int_t x_obj_vector_units(x_obj_t *p_base, x_obj_t *p_obj)
 {
-	return x_intval(x_vectorlen(p_obj)) + 1;
+	return x_vectorlen(p_obj) + 1;
 }
 
 x_int_t x_obj_vector_length(x_obj_t *p_base, x_obj_t *p_obj)
 {
-	return x_intval(x_vectorlen(p_obj));
+	return x_vectorlen(p_obj);
 }
 
 x_obj_t *x_obj_vector_proc(x_obj_t *p_base, x_obj_t *p_proc, x_obj_t *p_args)
 {
-	return x_vectorval(p_proc, x_intval(x_car(p_args)));
+	return x_vectorval(p_proc, x_firstint(x_car(p_args)));
 }
 
 x_obj_t *x_obj_vector_read(x_obj_t *p_base, x_obj_t *p_args)

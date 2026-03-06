@@ -28,6 +28,7 @@
 #include "src/x-type/atom.c"
 #include "src/x-sexp/atom.c"
 #include "src/x-sexp/pair.c"
+#include "src/x-eval.c"
 #include "src/x-type/list.c"
 #include "src/x-sexp/list.c"
 #include "src/x-token.c"

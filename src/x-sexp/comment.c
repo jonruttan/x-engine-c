@@ -16,6 +16,7 @@
 /*
  * # Includes
  */
+#include "x-sexp/comment.h"
 #include "x-base.h"
 #include "x-token.h"
 #include "x-type/buffer.h"

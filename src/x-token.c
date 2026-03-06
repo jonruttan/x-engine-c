@@ -99,6 +99,7 @@ x_obj_t *x_token_analyse(x_obj_t *p_base, x_obj_t *p_args)
 			x_obj_set(NULL, X_OBJ_FLAG_NONE, { chr }, { NULL }),
 		};
 	x_obj_t *p_score = (x_obj_t *)score;
+	x_char_t *p_bw;
 
 	/* Cycle through of all of the types. */
 	p_read = p_base;
@@ -111,8 +112,12 @@ x_obj_t *x_token_analyse(x_obj_t *p_base, x_obj_t *p_args)
 
 			while (1) {
 
-				/* TODO: Handle error. */
-				x_type_buffer_read_text(p_base, (x_obj_t *)read_args);
+				p_bw = x_bufferwrite(p_buffer);
+				if (x_obj_isnil(p_base, x_type_buffer_read_text(p_base, (x_obj_t *)read_args))
+					&& x_bufferwrite(p_buffer) == p_bw) {
+					x_bufferread(p_buffer) = x_bufferval(p_buffer);
+					break;
+				}
 
 				prim_arg_prim = p_analyse;
 				p_obj = x_type_prim_call(p_base, (x_obj_t *)prim_args);

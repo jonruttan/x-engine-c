@@ -19,6 +19,7 @@
 #include "x-type/symbol.h"
 #include "x-type/str.h"
 #include "x-alist.h"
+#include "x-eval.h"
 #include "x-sexp/symbol.h"
 
 x_satom_t x_type_symbol_name = x_obj_set(x_type_atom_obj, X_OBJ_FLAG_NONE, { .s = (x_char_t *)X_TYPE_SYMBOL_NAME }),
@@ -118,14 +119,14 @@ x_obj_t *x_type_symbol_eval(x_obj_t *p_base, x_obj_t *p_args)
 /*x_obj_t *x_type_symbol_eval(x_obj_t *p_base, x_obj_t *p_exp, x_obj_t *p_env)*/
 {
 	x_spair_t args[2] = {
-		x_obj_set(NULL, X_OBJ_FLAG_NONE, { x_firstobj(p_args) }, { (x_obj_t *)(args + 1) }),
+		x_obj_set(NULL, X_OBJ_FLAG_NONE, { x_firstobj(x_eval_arg_exp(p_args)) }, { (x_obj_t *)(args + 1) }),
 		x_obj_set(NULL, X_OBJ_FLAG_NONE, { x_base_field_env_alist(p_base) }, { NULL })
 	};
 	x_obj_t *p_sym = x_alist_assoc(p_base, (x_obj_t *)args);
 
 	if (x_obj_isnil(p_base, p_sym)) {
 		/* TODO: Implement type name. */
-		x_obj_error(p_base, "Unbound "X_TYPE_SYMBOL_NAME, x_symbolval(x_firstobj(p_args)));
+		x_obj_error(p_base, "Unbound "X_TYPE_SYMBOL_NAME, x_symbolval(x_firstobj(x_eval_arg_exp(p_args))));
 
 		return p_base;
 	}

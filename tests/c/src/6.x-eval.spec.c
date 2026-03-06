@@ -24,6 +24,7 @@
 #include "src/x-sexp/pair.c"
 #include "src/x-type/prim.c"
 
+x_obj_t *x_token_read(x_obj_t *p_base, x_obj_t *p_args) { return p_base; }
 
 #include "helper-system-functions.c"
 

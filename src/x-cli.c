@@ -5,78 +5,94 @@
  *
  * @description Computational Expressions in C
  * @author [Jon Ruttan](jonruttan@gmail.com)
- * @copyright 2021 Jon Ruttan
+ * @copyright 2024 Jon Ruttan
  * @license MIT No Attribution (MIT-0)
  *
  *     ., .,
  *     {O,O}
  *     (   )
  *      " "
- * Compile with:
- *
- *     gcc -DX_MACHINE="\"$(gcc -dumpmachine)\"" -o x src/*.c
- *
  */
 /*
  * # Includes
  */
-#define _GNU_SOURCE			/* For *syscall* */
-#include <stdlib.h>
-#include <unistd.h>
-/*#include "x-eval.h"*/
+#include "x-base.h"
+#include "x-eval.h"
+#include "x-prim.h"
+#include "x-sexp.h"
+#include "x-type/buffer.h"
+#include "x-type/char.h"
+#include "x-type/comment.h"
+#include "x-type/int.h"
+#include "x-type/list.h"
+#include "x-type/prim.h"
+#include "x-type/str.h"
+#include "x-type/symbol.h"
+#include "x-type/whitespace.h"
 
-/*
- * # Primitives
- */
-/*x_obj_t *x_prim_syscall(x_obj_t *p_base, x_obj_t *args) {
-	long i=0, p[6] = { 0, 0, 0, 0, 0, 0 };
+#ifndef TESTS
 
-	for (; args != nil; args = x_cdr(args))
-		switch (x_obj_type(x_car(args))) {
-		case X_INTEGER:
-				p[i++] = x_intval(x_car(args));
-				break;
+#define X_CLI_BUFFER_SIZE 256
 
-		case X_STRING:
-				p[i++] = (long)x_strval(x_car(args));
-				break;
+int main(int argc, char *argv[])
+{
+	x_obj_t *p_base, *p_buffer, *p_read_args, *p_exp, *p_result;
+	x_char_t buffer[X_CLI_BUFFER_SIZE];
+	x_satom_t exp_wrap = x_obj_set(NULL, X_OBJ_FLAG_NONE, { NULL });
+	x_spair_t eval_args[1] = {
+		x_obj_set(NULL, X_OBJ_FLAG_NONE, { exp_wrap }, { NULL })
+	},
+	write_args[1] = {
+		x_obj_set(NULL, X_OBJ_FLAG_NONE, { NULL }, { NULL })
+	};
+	(void)argc;
+	(void)argv;
 
-		default:
+	/* Create base object. */
+	p_base = x_base_make(NULL, NULL);
+
+	/* Register types for parsing. */
+	x_type_prim_register(p_base, p_base);
+	x_type_symbol_register(p_base, p_base);
+	x_type_list_register(p_base, p_base);
+	x_type_int_register(p_base, p_base);
+	x_type_str_register(p_base, p_base);
+	x_type_char_register(p_base, p_base);
+	x_type_whitespace_register(p_base, p_base);
+	x_type_comment_register(p_base, p_base);
+
+	/* Set up read buffer. */
+	p_buffer = x_mkbuffer(p_base, buffer);
+	p_read_args = x_mkspair(p_base, p_buffer, p_base);
+
+	/* Register primitives. */
+	x_prim_register(p_base, p_base);
+
+	/* REPL loop. */
+	for (;;) {
+		x_sys_write(STDOUT_FILENO, "> ", 2);
+
+		/* Read. */
+		p_exp = x_sexp_read(p_base, p_read_args);
+
+		if (x_obj_isnil(p_base, p_exp)) {
+			x_sys_write(STDOUT_FILENO, "\n", 1);
 			break;
 		}
 
-	return x_mkint(p_base, syscall(p[0], p[1], p[2], p[3], p[4], p[5]));
-}
-*/
-#ifndef TESTS
+		/* Eval. */
+		x_firstobj((x_obj_t *)exp_wrap) = p_exp;
+		p_result = x_eval(p_base, (x_obj_t *)eval_args);
 
-/*
- * Main Driver
- */
-int main(int argc, char *argv[], char *envp[]) {
-/*	x_obj_t *p_base = x_init(STDIN_FILENO, STDOUT_FILENO), *args = x_mkvector(p_base, argc);
-	int i;
+		/* Print. */
+		if ( ! x_obj_isnil(p_base, p_result)) {
+			x_firstobj((x_obj_t *)write_args) = p_result;
+			x_sexp_write(p_base, (x_obj_t *)write_args);
+		}
 
-	x_extend_top(p_base, x_intern(p_base, "syscall"), x_primop(p_base, x_prim_syscall));
-	x_extend_top(p_base, x_intern(p_base, "args"), args);
-
-	for (i = 0; i < argc; i++) {
-		x_vectorval(args, i) = x_mkstr(p_base, argv[i]);
+		x_sys_write(STDOUT_FILENO, "\n", 1);
 	}
 
-	for (;;) {
-		x_obj_t *exp = x_eval(p_base, x_readobj(p_base), x_vectorval(p_base, X_I_EXPR));
-		x_eval(p_base, x_proccall(p_base, "write", exp), x_vectorval(p_base, X_I_EXPR));
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wunused-result"
-		x_write(STDOUT_FILENO, "\n", 1);
-#pragma GCC diagnostic pop
-		x_eval(p_base, x_proccall(p_base, "gc", nil), x_vectorval(p_base, X_I_EXPR));
-	}
-	x_fini(p_base);
-
-	return X_EXIT_SUCCESS;
-*/
 	return 0;
 }
 

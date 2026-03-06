@@ -19,6 +19,7 @@
 #include "src/x-token.c"
 #include "src/x-type.c"
 #include "src/x-type/iter.c"
+#include "src/x-eval.c"
 #include "src/x-type/list.c"
 #include "src/x-sexp/list.c"
 #include "src/x-type/prim.c"

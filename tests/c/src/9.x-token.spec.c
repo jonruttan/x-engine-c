@@ -34,6 +34,7 @@ x_satom_t x_sexp_list_analyse_prim = x_obj_set(x_type_atom_obj, X_OBJ_FLAG_NONE,
 	x_sexp_list_read_prim = x_obj_set(x_type_atom_obj, X_OBJ_FLAG_NONE, { .fn = NULL }),
 	x_sexp_list_write_prim = x_obj_set(x_type_atom_obj, X_OBJ_FLAG_NONE, { .fn = NULL });
 
+#include "src/x-eval.c"
 #include "src/x-type/list.c"
 #include "src/x-token.c"
 

@@ -18,6 +18,7 @@
  */
 #include "x-type/iter.h"
 #include "x-obj.h"
+#include "x-type/prim.h"
 
 x_satom_t x_type_iter_name = x_obj_set(x_type_pair_obj, X_OBJ_FLAG_NONE, { .s = (x_char_t *)X_TYPE_ITER_NAME }),
 	x_type_iter_make_prim = x_obj_set(x_type_atom_obj, X_OBJ_FLAG_NONE, { (x_obj_t *)&x_type_iter_make }),
