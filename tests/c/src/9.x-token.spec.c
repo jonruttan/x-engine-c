@@ -4,6 +4,7 @@
 
 #define X_TOKEN_SIZE_MAX 3
 
+#define TEST_RUNNER_OVERHEAD
 #include "test-runner.h"
 
 #include "src/x-sys.c"
@@ -35,12 +36,12 @@
 /*
  * ## Test Overhead
  */
-static void setup(void)
+static void _setup(void)
 {
 	helper_set_alloc(MEM_GUARANTEED);
 }
 
-static void teardown(void)
+static void _teardown(void)
 {
 }
 

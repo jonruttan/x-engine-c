@@ -2,6 +2,7 @@
  * # Unit Tests: *x-sexp/comment*
  */
 
+#define TEST_RUNNER_OVERHEAD
 #include "test-runner.h"
 #include "x-obj.h"
 
@@ -37,12 +38,12 @@
  * ## Test Overhead
  */
 
-static void setup(void)
+static void _setup(void)
 {
 	helper_set_alloc(MEM_GUARANTEED);
 }
 
-static void teardown(void)
+static void _teardown(void)
 {
 }
 
