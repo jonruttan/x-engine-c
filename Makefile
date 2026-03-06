@@ -133,7 +133,7 @@ valgrind:
 .PHONY: valgrind
 
 ifndef PATH_SPECS_C
-PATH_SPECS_C=specs/c
+PATH_SPECS_C=tests/c
 endif
 
 ifndef TESTS
@@ -153,7 +153,7 @@ tests: test
 
 watch:
 	while true; do \
-		fswatch -o --event Created --event Updated --event MovedTo $(HEADERS) $(SOURCES) specs/c | \
+		fswatch -o --event Created --event Updated --event MovedTo $(HEADERS) $(SOURCES) tests/c | \
 		make debug && make test && make docs; \
 	done
 .PHONY: watch
