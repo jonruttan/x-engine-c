@@ -17,6 +17,7 @@
  * # Includes
  */
 #include "x-base.h"
+#include "x-token.h"
 #include "x-type/buffer.h"
 #include "x-type/char.h"
 
@@ -43,6 +44,7 @@ x_obj_t *x_sexp_whitespace_analyse2(x_obj_t *p_base, x_obj_t *p_args)
 
 	if (x_obj_isnil(p_base, x_sexp_whitespace_analyse1(p_base, p_args))) {
 		x_intval(p_score) = x_bufferlen(p_buffer) - 1;
+		x_restobj(p_score) = x_sexp_whitespace_read_prim;
 
 		return p_score;
 	}

@@ -17,6 +17,7 @@
  * # Includes
  */
 #include "x-base.h"
+#include "x-token.h"
 #include "x-type/buffer.h"
 #include "x-type/char.h"
 #include "x-sexp/char.h"
@@ -37,11 +38,16 @@ x_obj_t *x_sexp_char_analyse1(x_obj_t *p_base, x_obj_t *p_args)
 
 x_obj_t *x_sexp_char_analyse2(x_obj_t *p_base, x_obj_t *p_args)
 {
-	if (X_SEXP_CHAR_PRE_STR[1] != x_bufferlastchar(x_token_read_arg_buffer(p_args))) {
-		return  p_base;
+	x_obj_t *p_buffer = x_token_read_arg_buffer(p_args),
+		*p_score = x_token_read_arg_score(p_args);
+
+	if (X_SEXP_CHAR_PRE_STR[1] != x_bufferlastchar(p_buffer)) {
+		return p_base;
 	}
 
-	return x_token_read_arg_buffer(p_args);
+	x_firstint(p_score) = x_bufferlen(p_buffer);
+	x_restobj(p_score) = x_sexp_char_read_prim;
+	return p_score;
 }
 
 x_obj_t *x_sexp_char_read(x_obj_t *p_base, x_obj_t *p_args)

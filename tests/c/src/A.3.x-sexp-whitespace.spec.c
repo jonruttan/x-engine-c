@@ -31,6 +31,9 @@
 #include "src/x-type/atom.c"
 #include "src/x-sexp/atom.c"
 #include "src/x-sexp/pair.c"
+#include "src/x-type/iter.c"
+#include "src/x-type/list.c"
+#include "src/x-sexp/list.c"
 #include "src/x-token.c"
 
 #include "helper-system-functions.c"
@@ -124,14 +127,22 @@ static char *test_sexp_whitespace_analyse2(void)
 			x_sexp_whitespace_analyse2_prim == p_obj
 		);
 	}
-return NULL;
-	p_obj = x_type_buffer_read(p_base, p_args);
-	p_obj = x_sexp_whitespace_analyse2(p_base, p_args);
-	_it_should("return the buffer object", p_buffer == p_obj);
-	_it_should("reposition the read pointer",
-		x_bufferread(p_buffer) == x_bufferval(p_buffer) + strlen(X_SEXP_WHITESPACE_CHARS_STR)
-		&& x_bufferwrite(p_buffer) == x_bufferread(p_buffer) + 1
-	);
+	{
+		x_spair_t score = x_obj_set(NULL, X_OBJ_FLAG_NONE, {});
+		x_spair_t buffer_args2[3] = {
+			x_obj_set(NULL, X_OBJ_FLAG_NONE, { p_buffer }, { (x_obj_t *)(buffer_args2 + 1) }),
+			x_obj_set(NULL, X_OBJ_FLAG_NONE, { score }, { (x_obj_t *)(buffer_args2 + 2) }),
+			x_obj_set(NULL, X_OBJ_FLAG_NONE, { NULL }, { NULL }),
+		};
+		x_obj_t *p_score = (x_obj_t *)score;
+
+		p_obj = x_type_buffer_read(p_base, (x_obj_t *)buffer_args2);
+		p_obj = x_sexp_whitespace_analyse2(p_base, (x_obj_t *)buffer_args2);
+		_it_should("return the score", p_score == p_obj);
+		_it_should("set the score",
+			x_intval(p_score) == (x_int_t)(strlen(X_SEXP_WHITESPACE_CHARS_STR))
+		);
+	}
 
 
 	test_cleanup(p_base);
@@ -199,12 +210,33 @@ static char *test_sexp_whitespace_read(void)
 	return NULL;
 }
 
-x_obj_t *test_token_read_analyse_all(x_obj_t *p_base, x_obj_t *p_args)
+x_obj_t *test_token_read_analyse_catchall(x_obj_t *p_base, x_obj_t *p_args);
+x_obj_t *test_token_read_read_catchall(x_obj_t *p_base, x_obj_t *p_args);
+
+x_satom_t test_token_read_analyse_catchall_prim = x_obj_set(x_type_atom_obj, X_OBJ_FLAG_NONE, { .fn = test_token_read_analyse_catchall }),
+	test_token_read_read_catchall_prim = x_obj_set(x_type_atom_obj, X_OBJ_FLAG_NONE, { .fn = test_token_read_read_catchall });
+
+x_obj_t *test_token_read_analyse_catchall(x_obj_t *p_base, x_obj_t *p_args)
 {
-	return p_args;
+	x_obj_t *p_buffer = x_token_read_arg_buffer(p_args),
+		*p_score = x_token_read_arg_score(p_args);
+
+	/* Stop at whitespace or null. */
+	if (!x_bufferlastchar(p_buffer)
+		|| x_lib_strchr(X_SEXP_WHITESPACE_CHARS_STR, x_bufferlastchar(p_buffer))) {
+		x_bufferread(p_buffer)--;
+		if (x_bufferlen(p_buffer) < 1) {
+			return p_base;
+		}
+		x_firstint(p_score) = -x_bufferlen(p_buffer);
+		x_restobj(p_score) = test_token_read_read_catchall_prim;
+		return p_score;
+	}
+
+	return test_token_read_analyse_catchall_prim;
 }
 
-x_obj_t *test_token_read_read_all(x_obj_t *p_base, x_obj_t *p_args)
+x_obj_t *test_token_read_read_catchall(x_obj_t *p_base, x_obj_t *p_args)
 {
 	x_obj_t *p_buffer = x_token_read_arg_buffer(p_args);
 
@@ -216,9 +248,9 @@ static char *test_sexp_whitespace_read_token(void)
 	x_obj_t *p_base = x_base_make(NULL, NULL),
 		*p_type, *p_args, *p_buffer, *p_obj;
 	x_char_t *s, buffer[32];
-	struct x_type_t type_all = {
-		.p_name = x_mkstr(p_base, "ALL"),
-		.p_analyse = x_mkatom(p_base, test_token_read_analyse_all)
+	struct x_type_t type_catchall = {
+		.p_name = x_mkstr(p_base, "CATCHALL"),
+		.p_analyse = test_token_read_analyse_catchall_prim,
 	};
 
 
@@ -227,7 +259,7 @@ static char *test_sexp_whitespace_read_token(void)
 	helper_file_reset();
 
 	p_base = x_base_make(NULL, NULL);
-	p_type = x_type_struct_make(p_base, type_all);
+	p_type = x_type_struct_make(p_base, type_catchall);
 	x_base_type_alist_extend(p_base, p_type);
 	x_type_whitespace_register(p_base, p_base);
 	p_buffer = x_mkbuffer(p_base, buffer);

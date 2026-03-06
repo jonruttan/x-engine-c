@@ -18,6 +18,7 @@
  */
 #include <ctype.h>
 #include "x-sexp/int.h"
+#include "x-token.h"
 #include "x-type/char.h"
 #include "x-type/buffer.h"
 #include "x-type/int.h"
@@ -33,7 +34,8 @@ x_satom_t x_sexp_int_analyse_sign_prim = x_obj_set(x_type_atom_obj, X_OBJ_FLAG_N
 
 x_obj_t *x_sexp_int_analyse_digits(x_obj_t *p_base, x_obj_t *p_args)
 {
-	x_obj_t *p_buffer = x_token_read_arg_buffer(p_args);
+	x_obj_t *p_buffer = x_token_read_arg_buffer(p_args),
+		*p_score = x_token_read_arg_score(p_args);
 
 	if (isdigit(x_bufferlastchar(p_buffer))) {
 		return x_sexp_int_analyse_digits_prim;
@@ -46,12 +48,15 @@ x_obj_t *x_sexp_int_analyse_digits(x_obj_t *p_base, x_obj_t *p_args)
 		return p_base;
 	}
 
-	return p_buffer;
+	x_firstint(p_score) = x_bufferlen(p_buffer);
+	x_restobj(p_score) = x_sexp_int_read_prim;
+	return p_score;
 }
 
 x_obj_t *x_sexp_int_analyse_xdigits(x_obj_t *p_base, x_obj_t *p_args)
 {
-	x_obj_t *p_buffer = x_token_read_arg_buffer(p_args);
+	x_obj_t *p_buffer = x_token_read_arg_buffer(p_args),
+		*p_score = x_token_read_arg_score(p_args);
 
 	if (isxdigit(x_bufferlastchar(p_buffer))) {
 		return x_sexp_int_analyse_xdigits_prim;
@@ -61,11 +66,12 @@ x_obj_t *x_sexp_int_analyse_xdigits(x_obj_t *p_base, x_obj_t *p_args)
 	x_bufferread(p_buffer)--;
 
 	if (x_bufferlen(p_buffer) < 1) {
-		/*printf("int too short, bowing out\n");*/
 		return p_base;
 	}
 
-	return p_buffer;
+	x_firstint(p_score) = x_bufferlen(p_buffer);
+	x_restobj(p_score) = x_sexp_int_read_prim;
+	return p_score;
 }
 
 x_obj_t *x_sexp_int_analyse_base(x_obj_t *p_base, x_obj_t *p_args)

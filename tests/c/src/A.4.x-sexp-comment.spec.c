@@ -30,6 +30,9 @@
 #include "src/x-type/atom.c"
 #include "src/x-sexp/atom.c"
 #include "src/x-sexp/pair.c"
+#include "src/x-type/iter.c"
+#include "src/x-type/list.c"
+#include "src/x-sexp/list.c"
 #include "src/x-token.c"
 
 #include "helper-system-functions.c"
@@ -115,10 +118,20 @@ static char *test_sexp_comment_analyse2(void)
 
 	p_base = x_base_make(NULL, NULL);
 	p_buffer = x_mkbuffer(p_base, buffer);
-	p_args = x_mkspair(p_base, p_buffer, p_base);
-	p_obj = x_type_buffer_read(p_base, p_args);
-	p_obj = x_sexp_comment_analyse2(p_base, p_args);
-	_it_should("return the buffer", p_buffer == p_obj);
+	{
+		x_spair_t score = x_obj_set(NULL, X_OBJ_FLAG_NONE, {});
+		x_spair_t buffer_args[3] = {
+			x_obj_set(NULL, X_OBJ_FLAG_NONE, { p_buffer }, { (x_obj_t *)(buffer_args + 1) }),
+			x_obj_set(NULL, X_OBJ_FLAG_NONE, { score }, { (x_obj_t *)(buffer_args + 2) }),
+			x_obj_set(NULL, X_OBJ_FLAG_NONE, { NULL }, { NULL }),
+		};
+		x_obj_t *p_score = (x_obj_t *)score;
+
+		p_args = (x_obj_t *)buffer_args;
+		p_obj = x_type_buffer_read(p_base, p_args);
+		p_obj = x_sexp_comment_analyse2(p_base, p_args);
+		_it_should("return the score", p_score == p_obj);
+	}
 
 
 	s = " ";
@@ -194,14 +207,63 @@ static char *test_sexp_comment_read(void)
 	return NULL;
 }
 
-x_obj_t *test_token_read_analyse_any(x_obj_t *p_base, x_obj_t *p_args)
+x_obj_t *test_token_read_analyse_whitespace(x_obj_t *p_base, x_obj_t *p_args);
+x_obj_t *test_token_read_read_whitespace(x_obj_t *p_base, x_obj_t *p_args);
+x_obj_t *test_token_read_analyse_catchall(x_obj_t *p_base, x_obj_t *p_args);
+x_obj_t *test_token_read_read_catchall(x_obj_t *p_base, x_obj_t *p_args);
+
+x_satom_t test_token_read_analyse_whitespace_prim = x_obj_set(x_type_atom_obj, X_OBJ_FLAG_NONE, { .fn = test_token_read_analyse_whitespace }),
+	test_token_read_read_whitespace_prim = x_obj_set(x_type_atom_obj, X_OBJ_FLAG_NONE, { .fn = test_token_read_read_whitespace }),
+	test_token_read_analyse_catchall_prim = x_obj_set(x_type_atom_obj, X_OBJ_FLAG_NONE, { .fn = test_token_read_analyse_catchall }),
+	test_token_read_read_catchall_prim = x_obj_set(x_type_atom_obj, X_OBJ_FLAG_NONE, { .fn = test_token_read_read_catchall });
+
+x_obj_t *test_token_read_analyse_whitespace(x_obj_t *p_base, x_obj_t *p_args)
+{
+	x_obj_t *p_buffer = x_token_read_arg_buffer(p_args),
+		*p_score = x_token_read_arg_score(p_args);
+
+	if (x_lib_strchr(" \t\r\n", x_bufferlastchar(p_buffer))) {
+		return test_token_read_analyse_whitespace_prim;
+	}
+
+	if (x_bufferlen(p_buffer) > 1) {
+		x_firstint(p_score) = x_bufferlen(p_buffer) - 1;
+		x_restobj(p_score) = test_token_read_read_whitespace_prim;
+		return p_score;
+	}
+
+	return p_base;
+}
+
+x_obj_t *test_token_read_delimit_whitespace(x_obj_t *p_base, x_obj_t *p_args)
 {
 	x_obj_t *p_buffer = x_token_read_arg_buffer(p_args);
 
-	return p_buffer;
+	if (x_lib_strchr(" \t\r\n", x_bufferlastchar(p_buffer))) {
+		x_bufferread(p_buffer)--;
+		return p_buffer;
+	}
+
+	return p_base;
 }
 
-x_obj_t *test_token_read_read_any(x_obj_t *p_base, x_obj_t *p_args)
+x_obj_t *test_token_read_read_whitespace(x_obj_t *p_base, x_obj_t *p_args)
+{
+	return p_args;
+}
+
+x_obj_t *test_token_read_analyse_catchall(x_obj_t *p_base, x_obj_t *p_args)
+{
+	x_obj_t *p_buffer = x_token_read_arg_buffer(p_args),
+		*p_score = x_token_read_arg_score(p_args);
+
+	/* Immediately return a negative score (fallback, lowest priority). */
+	x_firstint(p_score) = -x_bufferlen(p_buffer);
+	x_restobj(p_score) = test_token_read_read_catchall_prim;
+	return p_score;
+}
+
+x_obj_t *test_token_read_read_catchall(x_obj_t *p_base, x_obj_t *p_args)
 {
 	x_obj_t *p_buffer = x_token_read_arg_buffer(p_args);
 
@@ -213,9 +275,14 @@ static char *test_sexp_comment_read_token(void)
 	x_obj_t *p_base = x_base_make(NULL, NULL),
 		*p_type, *p_args, *p_buffer, *p_obj;
 	x_char_t *s, buffer[32];
-	struct x_type_t type_any = {
-		.p_name = x_mkstr(p_base, "ANY"),
-		.p_analyse = x_mkatom(p_base, test_token_read_analyse_any)
+	struct x_type_t type_whitespace = {
+		.p_name = x_mkstr(p_base, "WHITESPACE"),
+		.p_analyse = test_token_read_analyse_whitespace_prim,
+		.p_delimit = x_mkatom(p_base, test_token_read_delimit_whitespace)
+	};
+	struct x_type_t type_catchall = {
+		.p_name = x_mkstr(p_base, "CATCHALL"),
+		.p_analyse = test_token_read_analyse_catchall_prim,
 	};
 
 
@@ -225,7 +292,9 @@ static char *test_sexp_comment_read_token(void)
 
 	p_base = x_base_make(NULL, NULL);
 	x_type_comment_register(p_base, p_base);
-	p_type = x_type_struct_make(p_base, type_any);
+	p_type = x_type_struct_make(p_base, type_whitespace);
+	x_base_type_alist_extend(p_base, p_type);
+	p_type = x_type_struct_make(p_base, type_catchall);
 	x_base_type_alist_extend(p_base, p_type);
 	p_buffer = x_mkbuffer(p_base, buffer);
 	p_args = x_mkspair(p_base, p_buffer, p_base);

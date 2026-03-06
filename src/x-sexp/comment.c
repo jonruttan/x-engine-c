@@ -17,6 +17,7 @@
  * # Includes
  */
 #include "x-base.h"
+#include "x-token.h"
 #include "x-type/buffer.h"
 #include "x-type/char.h"
 
@@ -38,10 +39,13 @@ x_obj_t *x_sexp_comment_analyse1(x_obj_t *p_base, x_obj_t *p_args)
 
 x_obj_t *x_sexp_comment_analyse2(x_obj_t *p_base, x_obj_t *p_args)
 {
-	x_obj_t *p_buffer = x_token_read_arg_buffer(p_args);
+	x_obj_t *p_buffer = x_token_read_arg_buffer(p_args),
+		*p_score = x_token_read_arg_score(p_args);
 
 	if (0 == x_lib_strncmp(X_SEXP_COMMENT_POST_STR, x_bufferread(p_buffer) - X_SEXP_COMMENT_PRE_STR_LEN, X_SEXP_COMMENT_POST_STR_LEN)) {
-		return p_buffer;
+		x_firstint(p_score) = x_bufferlen(p_buffer);
+		x_restobj(p_score) = x_sexp_comment_read_prim;
+		return p_score;
 	}
 
 	return x_sexp_comment_analyse2_prim;
