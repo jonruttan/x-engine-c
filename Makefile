@@ -93,7 +93,7 @@ OBJECTS=$(SOURCES:.c=.o)
 EXECUTABLE=x
 
 # Options to be added to $(DEFS)
-DEFS?=$(OSDEF) -DX_MACHINE="$(X_MACHINE)"
+DEFS?=$(OSDEF) -DX_MACHINE="$(X_MACHINE)" -DX_SYSCALL
 
 # Where to install the stuff
 BINDIR?=$(PREFIX)/bin
@@ -125,9 +125,9 @@ $(EXECUTABLE)-debug: $(EXECUTABLE)
 defs:
 	ctags -f - src/**/*.c | awk 'BEGIN {FS = "\t"} /\/.*\$\/;"/ { printf("%s;\n", substr($$3,3,length($$3)-6)) }' | sort -u > defs
 
-docs: README.md $(SOURCES)
-	grock --glob='*.{h,c,md}' --index=README.md --style=thin --out=docs
-	LD_LIBRARY_PATH=/usr/lib/llvm-12/lib/ cldoc generate -I./include -- --report --language=c --output doc src/*.c
+apidocs: README.md $(SOURCES)
+	grock --glob='*.{h,c,md}' --index=README.md --style=thin --out=apidocs
+	LD_LIBRARY_PATH=/usr/lib/llvm-12/lib/ cldoc generate -I./include -- --report --language=c --output apidocs src/*.c
 
 lint:
 	$(CC) -fsyntax-only $(CFLAGS) -g -Wall -pedantic $(SOURCES)
@@ -171,7 +171,7 @@ tests: test test-x test-scm test-krn
 watch:
 	while true; do \
 		fswatch -o --event Created --event Updated --event MovedTo $(HEADERS) $(SOURCES) tests/c | \
-		make debug && make test && make docs; \
+		make debug && make test && make apidocs; \
 	done
 .PHONY: watch
 
@@ -179,11 +179,13 @@ watch:
 #C=-c
 install:	$(EXECUTABLE) lib/$(EXECUTABLE).x $(EXECUTABLE).sh
 	install -d -m 0755 $(BINDIR)
-	install -d -m 0755 $(LIBDIR)
+	install -d -m 0755 $(LIBDIR)/lib
+	install -d -m 0755 $(LIBDIR)/lang
 	install $C -m 0755 $(EXECUTABLE) $(BINDIR)
 	install $C -m 0755 $(EXECUTABLE).sh $(BINDIR)
 	strip $(BINDIR)/$(EXECUTABLE)
-	install $C -m 0644 lib/* $(LIBDIR)
+	install $C -m 0644 lib/* $(LIBDIR)/lib
+	cp -R lang/* $(LIBDIR)/lang
 .PHONY: install
 
 uninstall:
@@ -194,5 +196,5 @@ uninstall:
 
 clean:
 	rm -f $(EXECUTABLE) $(EXECUTABLE)-debug *.out $(SRCDIR)/*.o $(SRCDIR)/**/*.o $(X_EXPR_DIR)/src/*.o *.core core
-	rm -Rf docs/
+	rm -Rf apidocs/
 .PHONY: clean

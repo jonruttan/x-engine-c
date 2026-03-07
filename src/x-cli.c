@@ -32,7 +32,34 @@
 #include "x-type/symbol.h"
 #include "x-type/whitespace.h"
 
+#ifdef X_SYSCALL
+#include <unistd.h>
+#include <sys/syscall.h>
+#endif
+
 #ifndef TESTS
+
+#ifdef X_SYSCALL
+static x_obj_t *x_prim_syscall(x_obj_t *p_base, x_obj_t *p_args)
+{
+	long i = 0, p[7];
+	x_obj_t *arg;
+
+	p[0] = p[1] = p[2] = p[3] = p[4] = p[5] = p[6] = 0;
+
+	while (!x_obj_isnil(p_base, p_args) && i < 7) {
+		arg = x_prim_eval_arg(p_base, x_firstobj(p_args));
+		if (x_obj_type_isint(p_base, arg))
+			p[i++] = x_intval(arg);
+		else if (x_obj_type_isstr(p_base, arg))
+			p[i++] = (long)x_strval(arg);
+		p_args = x_restobj(p_args);
+	}
+
+	return x_mkint(p_base,
+		syscall(p[0], p[1], p[2], p[3], p[4], p[5], p[6]));
+}
+#endif
 
 #define X_CLI_BUFFER_SIZE 256
 
@@ -72,6 +99,17 @@ int main(int argc, char *argv[])
 
 	/* Register primitives. */
 	x_prim_register(p_base, p_base);
+
+#ifdef X_SYSCALL
+	/* Register syscall primitive. */
+	{
+		x_obj_t *p_sym = x_make_symbol(p_base, X_OBJ_FLAG_NONE,
+			(x_char_t *)"syscall");
+		x_obj_t *p_prim = x_mkprim(p_base, x_prim_syscall);
+		x_obj_t *p_pair = x_mkspair(p_base, p_sym, p_prim);
+		x_base_env_alist_extend(p_base, p_pair);
+	}
+#endif
 
 	/* REPL loop. */
 	for (;;) {
