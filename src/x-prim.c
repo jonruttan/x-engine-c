@@ -646,7 +646,7 @@ static x_obj_t *x_prim_qq_expand(x_obj_t *p_base, x_obj_t *p_tmpl)
 		x_prim_qq_expand(p_base, x_restobj(p_tmpl)));
 }
 
-/* quasiquote: (quasiquote tmpl) -> template with unquote/unquote-splicing */
+/* quasi: (quasi tmpl) -> template with unquote/unquote-splicing */
 static x_obj_t *x_prim_quasiquote(x_obj_t *p_base, x_obj_t *p_args)
 {
 	return x_prim_qq_expand(p_base, x_firstobj(p_args));
@@ -987,10 +987,10 @@ x_obj_t *x_prim_register(x_obj_t *p_base, x_obj_t *p_args)
 		x_base_env_alist_extend(p_base, p_pair);
 	}
 
-	x_prim_bind(p_base, "quote", x_prim_quote);
-	x_prim_bind(p_base, "cons", x_prim_cons);
-	x_prim_bind(p_base, "car", x_prim_car);
-	x_prim_bind(p_base, "cdr", x_prim_cdr);
+	x_prim_bind(p_base, "lit", x_prim_quote);
+	x_prim_bind(p_base, "pair", x_prim_cons);
+	x_prim_bind(p_base, "first", x_prim_car);
+	x_prim_bind(p_base, "rest", x_prim_cdr);
 	x_prim_bind(p_base, "eq?", x_prim_eq);
 	x_prim_bind(p_base, "=", x_prim_numeq);
 	x_prim_bind(p_base, "+", x_prim_sum);
@@ -1012,7 +1012,7 @@ x_obj_t *x_prim_register(x_obj_t *p_base, x_obj_t *p_args)
 	x_prim_bind(p_base, ">=", x_prim_gte);
 	x_prim_bind(p_base, "and", x_prim_and);
 	x_prim_bind(p_base, "or", x_prim_or);
-	x_prim_bind(p_base, "cond", x_prim_cond);
+	x_prim_bind(p_base, "match", x_prim_cond);
 	x_prim_bind(p_base, "let", x_prim_let);
 	x_prim_bind(p_base, "/", x_prim_div);
 	x_prim_bind(p_base, "%", x_prim_mod);
@@ -1031,7 +1031,7 @@ x_obj_t *x_prim_register(x_obj_t *p_base, x_obj_t *p_args)
 	x_prim_bind(p_base, "procedure?", x_prim_procedurep);
 	x_prim_bind(p_base, "wrap", x_prim_wrap);
 	x_prim_bind(p_base, "unwrap", x_prim_unwrap);
-	x_prim_bind(p_base, "quasiquote", x_prim_quasiquote);
+	x_prim_bind(p_base, "quasi", x_prim_quasiquote);
 	x_prim_bind(p_base, "guard", x_prim_guard);
 	x_prim_bind(p_base, "error", x_prim_error);
 	x_prim_bind(p_base, "make-base", x_prim_make_base);

@@ -19,12 +19,14 @@
 #include "x-type/list.h"
 #include "x-type/iter.h"
 #include "x-type/prim.h"
+#include "x-prim.h"
 #include "x-eval.h"
 #include "x-sexp/list.h"
 
 x_satom_t x_type_list_name = x_obj_set(x_type_pair_obj, X_OBJ_FLAG_NONE, { .s = (x_char_t *)X_TYPE_LIST_NAME }),
 	x_type_list_struct_prim = x_obj_set(x_type_pair_obj, X_OBJ_FLAG_NONE, { (x_obj_t *)&x_type_list_struct }),
 	x_type_list_make_prim = x_obj_set(x_type_atom_obj, X_OBJ_FLAG_NONE, { (x_obj_t *)&x_type_list_make }),
+	x_type_list_call_prim = x_obj_set(x_type_atom_obj, X_OBJ_FLAG_NONE, { (x_obj_t *)&x_type_list_call }),
 	x_type_list_eval_prim = x_obj_set(x_type_atom_obj, X_OBJ_FLAG_NONE, { (x_obj_t *)&x_type_list_eval }),
 	x_type_list_iter_prim = x_obj_set(x_type_atom_obj, X_OBJ_FLAG_NONE, { .fn = x_type_list_iter });
 
@@ -45,6 +47,7 @@ x_obj_t *x_type_list_struct(x_obj_t *p_base, x_obj_t *p_args)
 	struct x_type_t type = {
 		.p_name = x_type_list_name,
 		.p_make = x_type_list_make_prim,
+		.p_call = x_type_list_call_prim,
 		.p_eval = x_type_list_eval_prim,
 		.p_analyse = x_sexp_list_analyse_prim,
 		.p_delimit = x_sexp_list_delimit_prim,
@@ -72,6 +75,75 @@ x_obj_t *x_type_list_make(x_obj_t *p_base, x_obj_t *p_args)
 		? 0 : x_firstint(x_01(p_args));
 
 	return x_obj_make(p_base, p_type, flags, X_OBJ_LENGTH_PAIR, x_0(p_list), x_1(p_list));
+}
+
+x_obj_t *x_type_list_call(x_obj_t *p_base, x_obj_t *p_args)
+{
+	x_obj_t *proc = x_firstobj(p_args), *vals = x_restobj(p_args);
+	x_obj_t *arg1, *arg2;
+	x_int_t n, i;
+
+	/* Evaluate first arg. */
+	if (x_obj_isnil(p_base, vals)) {
+		return p_base;
+	}
+
+	arg1 = x_prim_eval_arg(p_base, x_firstobj(vals));
+	vals = x_restobj(vals);
+
+	if (! x_obj_isnil(p_base, vals)) {
+		/* Slice: (list start len) -> sublist */
+		x_int_t start = x_atomint(arg1);
+		x_int_t len;
+		x_obj_t *p_result = p_base, *p_tail = p_base;
+
+		arg2 = x_prim_eval_arg(p_base, x_firstobj(vals));
+		len = x_atomint(arg2);
+
+		/* Walk to start position. */
+		for (i = 0; i < start && ! x_obj_isnil(p_base, proc); i++) {
+			proc = x_restobj(proc);
+		}
+
+		/* Collect len elements. */
+		for (i = 0; i < len && ! x_obj_isnil(p_base, proc); i++) {
+			x_obj_t *p_new = x_mklist(p_base, x_firstobj(proc), p_base);
+
+			if (x_obj_isnil(p_base, p_result)) {
+				p_result = p_new;
+			} else {
+				x_restobj(p_tail) = p_new;
+			}
+
+			p_tail = p_new;
+			proc = x_restobj(proc);
+		}
+
+		return p_result;
+	}
+
+	/* Single index. */
+	n = x_atomint(arg1);
+
+	/* Negative index: count from end. */
+	if (n < 0) {
+		x_obj_t *p_walk = proc;
+		x_int_t len = 0;
+
+		while (! x_obj_isnil(p_base, p_walk)) {
+			len++;
+			p_walk = x_restobj(p_walk);
+		}
+
+		n += len;
+	}
+
+	/* Walk to index. */
+	for (i = 0; i < n && ! x_obj_isnil(p_base, proc); i++) {
+		proc = x_restobj(proc);
+	}
+
+	return x_obj_isnil(p_base, proc) ? p_base : x_firstobj(proc);
 }
 
 x_obj_t *x_type_list_eval(x_obj_t *p_base, x_obj_t *p_args)
