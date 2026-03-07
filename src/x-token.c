@@ -175,10 +175,7 @@ x_obj_t *x_token_read(x_obj_t *p_base, x_obj_t *p_args)
 		prim_arg_prim = p_read;
 		p_obj = x_type_prim_call(p_base, (x_obj_t *)prim_args);
 
-		/* TODO: Handle error response. */
 		if (x_obj_isnil(p_base, p_obj)) {
-			x_obj_debug(p_base, "EOF (l.%d)", __LINE__);
-			x_sys_exit(X_SYS_EXIT_FAILURE);
 			return p_base;
 		}
 

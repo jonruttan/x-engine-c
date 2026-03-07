@@ -38,13 +38,6 @@
  * # Defines
  */
 #define x_mktype(B,T,X)               x_obj_make((B), (T), 0, 1, (X))
-#define x_mkmacro(B,X,Y)              x_obj_make((B), X_MACRO, 0, 2, (X), (Y))
-#define x_macroargs(X)                x_firstobj((X))
-#define x_macrocode(X)                x_restobj((X))
-#define x_proc(B,X,Y,Z)               x_obj_make((B), X_PROCEDURE, 0, 3, (X), (Y), (Z))
-#define x_procargs(X)                 x_firstobj((X))
-#define x_proccode(X)                 x_secondobj((X))
-#define x_procenv(X)                  x_obj(x_obj_data_i((X),2))
 
 #define x_type_types(B)               (x_firstobj((B)))
 #define x_type_settypes(B,X)          (x_type_types((B)) = (X))
