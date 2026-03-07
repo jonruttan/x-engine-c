@@ -56,12 +56,51 @@ static x_obj_t *x_prim_syscall(x_obj_t *p_base, x_obj_t *p_args)
 		p_args = x_restobj(p_args);
 	}
 
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
 	return x_mkint(p_base,
 		syscall(p[0], p[1], p[2], p[3], p[4], p[5], p[6]));
+#pragma GCC diagnostic pop
 }
 #endif
 
 #define X_CLI_BUFFER_SIZE 256
+
+#ifdef X_INCLUDE
+static x_obj_t *x_prim_include(x_obj_t *p_base, x_obj_t *p_args)
+{
+	x_obj_t *p_path = x_prim_eval_arg(p_base, x_firstobj(p_args));
+	int fd = x_sys_open(x_strval(p_path), 0 /* O_RDONLY */);
+	x_obj_t *p_buffer, *p_result;
+	x_char_t *buf;
+
+	if (fd < 0) {
+		x_obj_error(p_base, "include: cannot open", x_strval(p_path));
+		return p_base;
+	}
+
+	/* Push new input state. */
+	x_base_field_filein_stack(p_base) = x_mkspair(p_base,
+		x_mksatom(p_base, fd), x_base_field_filein_stack(p_base));
+
+	buf = (x_char_t *)x_sys_malloc(X_CLI_BUFFER_SIZE);
+	p_buffer = x_mkbufferown(p_base, buf);
+	x_base_field_buffer_stack(p_base) = x_mkspair(p_base,
+		p_buffer, x_base_field_buffer_stack(p_base));
+
+	/* Load all expressions. */
+	p_result = x_base_load(p_base, p_base);
+
+	/* Pop and close. */
+	x_base_field_filein_stack(p_base) =
+		x_restobj(x_base_field_filein_stack(p_base));
+	x_base_field_buffer_stack(p_base) =
+		x_restobj(x_base_field_buffer_stack(p_base));
+	x_sys_close(fd);
+
+	return p_result;
+}
+#endif
 
 int main(int argc, char *argv[])
 {
@@ -109,6 +148,11 @@ int main(int argc, char *argv[])
 		x_obj_t *p_pair = x_mkspair(p_base, p_sym, p_prim);
 		x_base_env_alist_extend(p_base, p_pair);
 	}
+#endif
+
+#ifdef X_INCLUDE
+	/* Register include primitive. */
+	x_prim_bind(p_base, "include", x_prim_include);
 #endif
 
 	/* REPL loop. */

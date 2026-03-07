@@ -48,13 +48,15 @@ typedef struct x_error_handler {
 #define x_base(X)						x_firstobj(X)
 #define x_base_field_type_alist(X)		x_firstobj(x_firstobj(X))
 #define x_base_field_files(X)			x_firstobj(x_restobj(x_firstobj(X)))
-#define x_base_field_filein(X)			x_firstobj(x_base_field_files((X)))
+#define x_base_field_filein_stack(X)	x_firstobj(x_base_field_files((X)))
+#define x_base_field_filein(X)			x_firstobj(x_base_field_filein_stack((X)))
 #define x_base_field_fileout(X)			x_firstobj(x_restobj(x_base_field_files((X))))
 #define x_base_field_fileerr(X)			x_firstobj(x_restobj(x_restobj(x_base_field_files((X)))))
 #define x_base_field_env(X)				x_firstobj(x_restobj(x_restobj(x_firstobj(X))))
 #define x_base_field_env_alist(X)		x_firstobj(x_base_field_env((X)))
 #define x_base_field_eval_list(X)		x_firstobj(x_restobj(x_base_field_env((X))))
-#define x_base_field_buffer(X)			x_firstobj(x_restobj(x_restobj(x_base_field_env((X)))))
+#define x_base_field_buffer_stack(X)	x_firstobj(x_restobj(x_restobj(x_base_field_env((X)))))
+#define x_base_field_buffer(X)			x_firstobj(x_base_field_buffer_stack((X)))
 #define x_base_field_token_cache(X)		x_firstobj(x_restobj(x_restobj(x_restobj(x_base_field_env((X))))))
 #define x_base_field_error_handler(X)	x_firstobj(x_restobj(x_restobj(x_restobj(x_restobj(x_base_field_env((X)))))))
 #define x_base_field_tco_expr(X)		x_firstobj(x_restobj(x_restobj(x_restobj(x_restobj(x_restobj(x_base_field_env((X))))))))
@@ -66,6 +68,7 @@ x_obj_t *x_base_make(x_obj_t *p_base, x_obj_t *p_args);
 x_obj_t *x_base_type_alist_extend(x_obj_t *p_base, x_obj_t *p_args);
 x_obj_t *x_base_type_alist_assoc(x_obj_t *p_base, x_obj_t *p_args);
 x_obj_t *x_base_env_alist_extend(x_obj_t *p_base, x_obj_t *p_args);
+x_obj_t *x_base_load(x_obj_t *p_base, x_obj_t *p_args);
 x_obj_t *x_base_read(x_obj_t *p_base, x_obj_t *p_args);
 x_obj_t *x_base_write(x_obj_t *p_base, x_obj_t *p_args);
 

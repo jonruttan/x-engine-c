@@ -18,6 +18,7 @@
  */
 #include "x-base.h"
 #include "x-alist.h"
+#include "x-eval.h"
 
 #include "x-sexp.h"
 
@@ -31,14 +32,14 @@ x_obj_t *x_base_make(x_obj_t *p_base, x_obj_t *p_args)
 	x_atomobj(p_base) = pair(
 		nil,
 		pair(
-			pair(atom(STDIN_FILENO),
+			pair(pair(atom(STDIN_FILENO), nil),
 			pair(atom(STDOUT_FILENO),
 			pair(atom(STDERR_FILENO),
 			nil))),
 		pair(
 			pair(pair(nil, nil),
 			pair(pair(nil, nil),
-			pair(nil,
+			pair(pair(nil, nil),
 			pair(nil,
 			pair(nil,
 			pair(nil,
@@ -93,6 +94,29 @@ x_obj_t *x_base_env_alist_extend(x_obj_t *p_base, x_obj_t *p_args)
 	x_restobj((x_obj_t *)args) = x_base_field_env_alist(p_base);
 
 	return x_base_field_env_alist(p_base) = x_alist_extend(p_base, (x_obj_t *)args);
+}
+
+x_obj_t *x_base_load(x_obj_t *p_base, x_obj_t *p_args)
+{
+	x_obj_t *p_buffer = x_base_field_buffer(p_base);
+	x_obj_t *p_exp, *p_result = p_base;
+	x_satom_t exp_wrap = x_obj_set(NULL, X_OBJ_FLAG_NONE, { NULL });
+	x_spair_t eval_args[1] = {
+		x_obj_set(NULL, X_OBJ_FLAG_NONE, { exp_wrap }, { NULL })
+	};
+	x_spair_t read_args[1] = {
+		x_obj_set(NULL, X_OBJ_FLAG_NONE, { p_buffer }, { p_base })
+	};
+
+	for (;;) {
+		p_exp = x_sexp_read(p_base, (x_obj_t *)read_args);
+		if (x_obj_isnil(p_base, p_exp)) break;
+
+		x_firstobj((x_obj_t *)exp_wrap) = p_exp;
+		p_result = x_eval(p_base, (x_obj_t *)eval_args);
+	}
+
+	return p_result;
 }
 
 x_obj_t *x_base_read(x_obj_t *p_base, x_obj_t *p_args)
