@@ -22,6 +22,8 @@
 #include "x-type.h"
 
 #define X_TYPE_PRIM_NAME		"PRIMITIVE"
+#define X_TYPE_PRIM_WRITE_STR	"#<prim>"
+#define X_TYPE_PRIM_WRITE_LEN	7
 
 /*
  * # Macros
@@ -47,5 +49,6 @@ x_obj_t *x_type_prim_register(x_obj_t *p_base, x_obj_t *p_args);
 x_obj_t *x_type_prim_struct(x_obj_t *p_base, x_obj_t *p_args);
 x_obj_t *x_type_prim_make(x_obj_t *p_base, x_obj_t *p_args);
 x_obj_t *x_type_prim_call(x_obj_t *p_base, x_obj_t *p_args);
+x_obj_t *x_type_prim_write(x_obj_t *p_base, x_obj_t *p_args);
 
 #endif /* X_TYPE_PRIM_H */

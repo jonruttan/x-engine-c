@@ -21,6 +21,7 @@
 #include "x-sexp/str.h"
 #include "x-type/char.h"
 #include "x-type/int.h"
+#include "x-prim.h"
 #include "x-sexp/str.h"
 
 x_satom_t x_type_str_name = x_obj_set(x_type_atom_obj, X_OBJ_FLAG_NONE, { .s = (x_char_t *)X_TYPE_STR_NAME }),
@@ -80,26 +81,31 @@ x_obj_t *x_type_str_length(x_obj_t *p_base, x_obj_t *p_args)
 	return x_mksatom(p_base, x_strlen(x_firstobj(p_args)));
 }
 
-/*x_obj_t *x_type_str_call(x_obj_t *p_base, x_obj_t *proc, x_obj_t *vals)*/
 x_obj_t *x_type_str_call(x_obj_t *p_base, x_obj_t *p_args)
 {
 	x_obj_t *proc = x_firstobj(p_args), *vals = x_restobj(p_args);
-	/*
-	 * TODO: Test whether index exists
-	 * TODO: Slices
-	 * TODO: Lookup slice function pointer from table using type
-	 */
-	x_int_t n = x_obj_length(p_base, vals);
+	x_obj_t *arg1, *arg2;
+	x_int_t n;
 
-	if (n > 1) {
-		/* TODO: Convert to Str type when type is available. */
-		/*return x_mkstrown(p_base, x_strval(proc) + x_intval(x_firstobj(vals)), x_intval(x_firstobj(x_restobj(vals))));*/
-		return x_mksatom(p_base, x_mksatomown(p_base, x_lib_strndup(x_strval(proc) + x_atomint(x_firstobj(vals)), x_atomint(x_firstobj(x_restobj(vals))))));
+	/* Evaluate first arg. */
+	if (x_obj_isnil(p_base, vals)) {
+		return p_base;
 	}
 
-	if (n == 1) {
-		n = x_intval(x_firstobj(vals));
+	arg1 = x_prim_eval_arg(p_base, x_firstobj(vals));
+	vals = x_restobj(vals);
+
+	if (! x_obj_isnil(p_base, vals)) {
+		/* Slice: (str start len) -> substring */
+		x_int_t start = x_atomint(arg1);
+
+		arg2 = x_prim_eval_arg(p_base, x_firstobj(vals));
+
+		return x_mkstr(p_base, x_lib_strndup(x_strval(proc) + start, x_atomint(arg2)));
 	}
+
+	/* Single index. */
+	n = x_atomint(arg1);
 
 	if (n < 0) {
 		n += x_lib_strlen(x_strval(proc));

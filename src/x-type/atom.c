@@ -19,9 +19,11 @@
 #include "x-type/atom.h"
 #include "x-type/int.h"
 #include "x-obj.h"
+#include "x-base.h"
 
 x_satom_t x_type_atom_name = x_obj_set(x_type_atom_obj, X_OBJ_FLAG_NONE, { .s = (x_char_t *)X_TYPE_ATOM_NAME }),
 	x_type_atom_make_prim = x_obj_set(x_type_atom_obj, X_OBJ_FLAG_NONE, { (x_obj_t *)&x_type_atom_make }),
+	x_type_atom_write_prim = x_obj_set(x_type_atom_obj, X_OBJ_FLAG_NONE, { (x_obj_t *)&x_type_atom_write }),
 	x_type_atom_struct_prim = x_obj_set(x_type_atom_obj, X_OBJ_FLAG_NONE, { (x_obj_t *)&x_type_atom_struct });
 
 x_obj_t *x_make_atom(x_obj_t *p_base, x_obj_flag_t flags, void *p)
@@ -40,7 +42,8 @@ x_obj_t *x_type_atom_struct(x_obj_t *p_base, x_obj_t *p_args)
 {
 	struct x_type_t type = {
 		.p_name = x_type_atom_name,
-		.p_make = x_type_atom_make_prim
+		.p_make = x_type_atom_make_prim,
+		.p_write = x_type_atom_write_prim
 	};
 
 	return x_type_struct_make(p_base, type);
@@ -64,4 +67,18 @@ x_obj_t *x_type_atom_make(x_obj_t *p_base, x_obj_t *p_args)
 		? 0 : x_firstint(x_01(p_args));
 
 	return x_obj_make(p_base, p_type, flags, X_OBJ_LENGTH_ATOM, x_atomval(p_atom));
+}
+
+x_obj_t *x_type_atom_write(x_obj_t *p_base, x_obj_t *p_args)
+{
+	x_satom_t buffer = x_obj_set(x_type_atom_obj, X_OBJ_FLAG_NONE, { .s = (x_char_t *)X_TYPE_ATOM_WRITE_STR }),
+		size = x_obj_set(x_type_atom_obj, X_OBJ_FLAG_NONE, { .i = X_TYPE_ATOM_WRITE_LEN });
+	x_spair_t args[2] = {
+		x_obj_set(NULL, X_OBJ_FLAG_NONE, { buffer }, { (x_obj_t *)(args + 1) }),
+		x_obj_set(NULL, X_OBJ_FLAG_NONE, { size }, { NULL })
+	};
+
+	x_base_write(p_base, (x_obj_t *)args);
+
+	return x_firstobj(p_args);
 }

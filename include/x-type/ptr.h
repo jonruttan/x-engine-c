@@ -22,6 +22,8 @@
 #include "x-type.h"
 
 #define X_TYPE_PTR_NAME		"POINTER"
+#define X_TYPE_PTR_WRITE_STR	"#<ptr>"
+#define X_TYPE_PTR_WRITE_LEN	6
 
 /*
  * # Macros
@@ -43,5 +45,6 @@ x_obj_t *x_make_ptr(x_obj_t *p_base, x_obj_flag_t flags, void *p);
 x_obj_t *x_type_ptr_struct(x_obj_t *p_base, x_obj_t *p_args);
 x_obj_t *x_type_ptr_register(x_obj_t *p_base, x_obj_t *p_args);
 x_obj_t *x_type_ptr_make(x_obj_t *p_base, x_obj_t *p_args);
+x_obj_t *x_type_ptr_write(x_obj_t *p_base, x_obj_t *p_args);
 
 #endif /* X_TYPE_PTR_H */

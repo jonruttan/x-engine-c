@@ -41,5 +41,6 @@ x_obj_t *x_make_pair(x_obj_t *p_base, x_obj_flag_t flags, void *p1, void *p2);
 x_obj_t *x_type_pair_register(x_obj_t *p_base, x_obj_t *p_args);
 x_obj_t *x_type_pair_struct(x_obj_t *p_base, x_obj_t *p_args);
 x_obj_t *x_type_pair_make(x_obj_t *p_base, x_obj_t *p_args);
+x_obj_t *x_type_pair_length(x_obj_t *p_base, x_obj_t *p_args);
 
 #endif /* X_TYPE_PAIR_H */

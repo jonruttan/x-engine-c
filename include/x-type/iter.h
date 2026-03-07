@@ -25,6 +25,9 @@
 #define X_TYPE_ITER_NAME			"ITER"
 #endif /* X_TYPE_ITER_NAME */
 
+#define X_TYPE_ITER_WRITE_STR		"#<iter>"
+#define X_TYPE_ITER_WRITE_LEN		7
+
 /*
  * # Macros
  */
@@ -46,5 +49,6 @@ x_obj_t *x_type_iter_struct(x_obj_t *p_base, x_obj_t *p_args);
 x_obj_t *x_type_iter_make(x_obj_t *p_base, x_obj_t *p_args);
 x_obj_t *x_type_iter_isempty(x_obj_t *p_base, x_obj_t *p_args);
 x_obj_t *x_type_iter_next(x_obj_t *p_base, x_obj_t *p_args);
+x_obj_t *x_type_iter_write(x_obj_t *p_base, x_obj_t *p_args);
 
 #endif /* X_TYPE_ITER_H */

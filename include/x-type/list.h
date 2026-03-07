@@ -42,6 +42,7 @@ x_obj_t *x_make_list(x_obj_t *p_base, x_obj_flag_t flags, void *p1, void *p2);
 x_obj_t *x_type_list_register(x_obj_t *p_base, x_obj_t *p_args);
 x_obj_t *x_type_list_struct(x_obj_t *p_base, x_obj_t *p_args);
 x_obj_t *x_type_list_make(x_obj_t *p_base, x_obj_t *p_args);
+x_obj_t *x_type_list_length(x_obj_t *p_base, x_obj_t *p_args);
 x_obj_t *x_type_list_call(x_obj_t *p_base, x_obj_t *p_args);
 x_obj_t *x_type_list_eval(x_obj_t *p_base, x_obj_t *p_args);
 x_obj_t *x_type_list_iter(x_obj_t *p_base, x_obj_t *p_args);

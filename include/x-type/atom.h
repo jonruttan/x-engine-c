@@ -25,6 +25,9 @@
 #define X_TYPE_ATOM_NAME		"ATOM"
 #endif /* X_TYPE_ATOM_NAME */
 
+#define X_TYPE_ATOM_WRITE_STR	"#<atom>"
+#define X_TYPE_ATOM_WRITE_LEN	7
+
 /*
  * # Macros
  */
@@ -49,5 +52,6 @@ x_obj_t *x_type_atom_register(x_obj_t *p_base, x_obj_t *p_args);
 x_obj_t *x_type_atom_struct(x_obj_t *p_base, x_obj_t *p_args);
 x_obj_t *x_type_atom_make(x_obj_t *p_base, x_obj_t *p_args);
 x_obj_t *x_type_atom_call(x_obj_t *p_base, x_obj_t *p_args);
+x_obj_t *x_type_atom_write(x_obj_t *p_base, x_obj_t *p_args);
 
 #endif /* X_TYPE_ATOM_H */

@@ -77,3 +77,5 @@ x_obj_t *x_sexp_pair_write(x_obj_t *p_base, x_obj_t *p_args)
 
 	return p_obj;
 }
+
+x_satom_t x_sexp_pair_write_prim = x_obj_set(x_type_atom_obj, X_OBJ_FLAG_NONE, { .fn = x_sexp_pair_write });

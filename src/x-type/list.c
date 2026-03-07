@@ -26,6 +26,7 @@
 x_satom_t x_type_list_name = x_obj_set(x_type_pair_obj, X_OBJ_FLAG_NONE, { .s = (x_char_t *)X_TYPE_LIST_NAME }),
 	x_type_list_struct_prim = x_obj_set(x_type_pair_obj, X_OBJ_FLAG_NONE, { (x_obj_t *)&x_type_list_struct }),
 	x_type_list_make_prim = x_obj_set(x_type_atom_obj, X_OBJ_FLAG_NONE, { (x_obj_t *)&x_type_list_make }),
+	x_type_list_length_prim = x_obj_set(x_type_atom_obj, X_OBJ_FLAG_NONE, { (x_obj_t *)&x_type_list_length }),
 	x_type_list_call_prim = x_obj_set(x_type_atom_obj, X_OBJ_FLAG_NONE, { (x_obj_t *)&x_type_list_call }),
 	x_type_list_eval_prim = x_obj_set(x_type_atom_obj, X_OBJ_FLAG_NONE, { (x_obj_t *)&x_type_list_eval }),
 	x_type_list_iter_prim = x_obj_set(x_type_atom_obj, X_OBJ_FLAG_NONE, { .fn = x_type_list_iter });
@@ -47,6 +48,7 @@ x_obj_t *x_type_list_struct(x_obj_t *p_base, x_obj_t *p_args)
 	struct x_type_t type = {
 		.p_name = x_type_list_name,
 		.p_make = x_type_list_make_prim,
+		.p_length = x_type_list_length_prim,
 		.p_call = x_type_list_call_prim,
 		.p_eval = x_type_list_eval_prim,
 		.p_analyse = x_sexp_list_analyse_prim,
@@ -75,6 +77,19 @@ x_obj_t *x_type_list_make(x_obj_t *p_base, x_obj_t *p_args)
 		? 0 : x_firstint(x_01(p_args));
 
 	return x_obj_make(p_base, p_type, flags, X_OBJ_LENGTH_PAIR, x_0(p_list), x_1(p_list));
+}
+
+x_obj_t *x_type_list_length(x_obj_t *p_base, x_obj_t *p_args)
+{
+	x_obj_t *p_obj = x_firstobj(p_args);
+	x_int_t len = 0;
+
+	while (! x_obj_isnil(p_base, p_obj)) {
+		len++;
+		p_obj = x_restobj(p_obj);
+	}
+
+	return x_mksatom(p_base, len);
 }
 
 x_obj_t *x_type_list_call(x_obj_t *p_base, x_obj_t *p_args)
