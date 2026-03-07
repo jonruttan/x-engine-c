@@ -52,7 +52,7 @@ x_obj_t *x_prim_evlis(x_obj_t *p_base, x_obj_t *p_args)
 		return p_base;
 	}
 
-	return x_mkspair(p_base,
+	return x_mklist(p_base,
 		x_prim_eval_arg(p_base, x_firstobj(p_args)),
 		x_prim_evlis(p_base, x_restobj(p_args)));
 }
@@ -125,7 +125,7 @@ static x_obj_t *x_prim_eq(x_obj_t *p_base, x_obj_t *p_args)
 	x_obj_t *a = x_prim_eval_arg(p_base, x_firstobj(p_args)),
 		*b = x_prim_eval_arg(p_base, x_firstobj(x_restobj(p_args)));
 
-	return a == b ? a : p_base;
+	return a == b ? x_mksymbol(p_base, (x_char_t *)X_PRIM_TRUE) : p_base;
 }
 
 /* =: (= a b) -> integer value equality */
@@ -432,38 +432,47 @@ static x_obj_t *x_prim_let(x_obj_t *p_base, x_obj_t *p_args)
 	return p_result;
 }
 
-/* apply: (apply f args) -> call procedure with pre-evaluated arg list */
+/* apply: (apply f args) -> call callable with pre-evaluated arg list */
 static x_obj_t *x_prim_apply(x_obj_t *p_base, x_obj_t *p_args)
 {
 	x_obj_t *p_fn = x_prim_eval_arg(p_base, x_firstobj(p_args)),
 		*p_vals = x_prim_eval_arg(p_base, x_firstobj(x_restobj(p_args)));
-	x_obj_t *p_params = x_procparams(p_fn),
-		*p_body = x_procbody(p_fn),
-		*p_closure_env = x_procenv(p_fn),
-		*p_saved_env = x_base_field_env_alist(p_base),
-		*p_result = p_base;
 
-	x_base_field_env_alist(p_base) = x_prim_multiple_extend(
-		p_base, p_closure_env, p_params, p_vals);
-
-	while ( ! x_obj_isnil(p_base, p_body)) {
-		if (x_obj_isnil(p_base, x_restobj(p_body))) {
-			x_base_field_tco_expr(p_base) = x_firstobj(p_body);
-
-			if (x_obj_isnil(p_base, x_base_field_tco_env(p_base))) {
-				x_base_field_tco_env(p_base) = p_saved_env;
-			}
-
-			return p_base;
-		}
-
-		p_result = x_prim_eval_arg(p_base, x_firstobj(p_body));
-		p_body = x_restobj(p_body);
+	/* C primitive: call directly with evaluated args. */
+	if (x_obj_type_isprim(p_base, p_fn)) {
+		return (*x_primval(p_fn))(p_base, p_vals);
 	}
 
-	x_base_field_env_alist(p_base) = p_saved_env;
+	/* Procedure (closure): bind params, evaluate body. */
+	{
+		x_obj_t *p_params = x_procparams(p_fn),
+			*p_body = x_procbody(p_fn),
+			*p_closure_env = x_procenv(p_fn),
+			*p_saved_env = x_base_field_env_alist(p_base),
+			*p_result = p_base;
 
-	return p_result;
+		x_base_field_env_alist(p_base) = x_prim_multiple_extend(
+			p_base, p_closure_env, p_params, p_vals);
+
+		while ( ! x_obj_isnil(p_base, p_body)) {
+			if (x_obj_isnil(p_base, x_restobj(p_body))) {
+				x_base_field_tco_expr(p_base) = x_firstobj(p_body);
+
+				if (x_obj_isnil(p_base, x_base_field_tco_env(p_base))) {
+					x_base_field_tco_env(p_base) = p_saved_env;
+				}
+
+				return p_base;
+			}
+
+			p_result = x_prim_eval_arg(p_base, x_firstobj(p_body));
+			p_body = x_restobj(p_body);
+		}
+
+		x_base_field_env_alist(p_base) = p_saved_env;
+
+		return p_result;
+	}
 }
 
 /* eval: (eval expr [env]) -> evaluate expression, optionally in given env */
@@ -850,6 +859,102 @@ static x_obj_t *x_prim_string_to_number(x_obj_t *p_base, x_obj_t *p_args)
 	return x_mkint(p_base, x_lib_strtoint(x_strval(p_str), NULL, 0));
 }
 
+/* make-type: (make-type name handlers-alist) -> create runtime type */
+static x_obj_t *x_prim_make_type(x_obj_t *p_base, x_obj_t *p_args)
+{
+	x_obj_t *p_name_str = x_prim_eval_arg(p_base, x_firstobj(p_args)),
+		*p_handlers = x_prim_eval_arg(p_base, x_firstobj(x_restobj(p_args)));
+	x_char_t *name = x_lib_strndup(x_strval(p_name_str),
+		x_lib_strlen(x_strval(p_name_str)));
+	x_obj_t *p_name_atom = x_obj_make(p_base, x_type_atom_obj,
+		X_OBJ_FLAG_OWN, X_OBJ_LENGTH_ATOM, name);
+	struct x_type_t type = { 0 };
+	x_obj_t *p_sym, *p_entry, *p_type;
+	x_spair_t assoc_args[2] = {
+		x_obj_set(NULL, X_OBJ_FLAG_NONE, { NULL }, { (x_obj_t *)(assoc_args + 1) }),
+		x_obj_set(NULL, X_OBJ_FLAG_NONE, { p_handlers }, { NULL })
+	};
+
+	type.p_name = p_name_atom;
+
+	/* Look up handler closures from the alist. */
+	p_sym = x_mksymbol(p_base, (x_char_t *)"call");
+	x_firstobj((x_obj_t *)assoc_args) = p_sym;
+	p_entry = x_alist_assoc(p_base, (x_obj_t *)assoc_args);
+	if ( ! x_obj_isnil(p_base, p_entry)) {
+		type.p_call = x_restobj(p_entry);
+	}
+
+	p_sym = x_mksymbol(p_base, (x_char_t *)"write");
+	x_firstobj((x_obj_t *)assoc_args) = p_sym;
+	p_entry = x_alist_assoc(p_base, (x_obj_t *)assoc_args);
+	if ( ! x_obj_isnil(p_base, p_entry)) {
+		type.p_write = x_restobj(p_entry);
+	}
+
+	p_sym = x_mksymbol(p_base, (x_char_t *)"length");
+	x_firstobj((x_obj_t *)assoc_args) = p_sym;
+	p_entry = x_alist_assoc(p_base, (x_obj_t *)assoc_args);
+	if ( ! x_obj_isnil(p_base, p_entry)) {
+		type.p_length = x_restobj(p_entry);
+	}
+
+	p_type = x_type_struct_make(p_base, type);
+	x_base_type_alist_extend(p_base, p_type);
+
+	return p_name_atom;
+}
+
+/* make-instance: (make-instance type-handle data) -> create typed instance */
+static x_obj_t *x_prim_make_instance(x_obj_t *p_base, x_obj_t *p_args)
+{
+	x_obj_t *p_handle = x_prim_eval_arg(p_base, x_firstobj(p_args)),
+		*p_data = x_prim_eval_arg(p_base, x_firstobj(x_restobj(p_args)));
+	x_spair_t lookup_args[1] = {
+		x_obj_set(NULL, X_OBJ_FLAG_NONE, { p_handle }, { NULL })
+	};
+	x_obj_t *p_type = x_base_type_alist_assoc(p_base, (x_obj_t *)lookup_args);
+
+	if (x_obj_isnil(p_base, p_type)) {
+		return p_base;
+	}
+
+	return x_obj_make(p_base, p_type, 0, X_OBJ_LENGTH_PAIR, p_data, p_base);
+}
+
+/* type?: (type? obj type-handle) -> t if obj's type matches handle */
+static x_obj_t *x_prim_typep(x_obj_t *p_base, x_obj_t *p_args)
+{
+	x_obj_t *p_obj = x_prim_eval_arg(p_base, x_firstobj(p_args)),
+		*p_handle = x_prim_eval_arg(p_base, x_firstobj(x_restobj(p_args)));
+
+	if (x_obj_isnil(p_base, p_obj) || x_obj_isnil(p_base, x_obj_type(p_obj))) {
+		return p_base;
+	}
+
+	return x_type_field_name(x_obj_type(p_obj)) == p_handle
+		? x_mksymbol(p_base, (x_char_t *)X_PRIM_TRUE) : p_base;
+}
+
+/* type-name: (type-name obj) -> name string of obj's type */
+static x_obj_t *x_prim_type_name(x_obj_t *p_base, x_obj_t *p_args)
+{
+	x_obj_t *p_obj = x_prim_eval_arg(p_base, x_firstobj(p_args)),
+		*p_name;
+
+	if (x_obj_isnil(p_base, p_obj) || x_obj_isnil(p_base, x_obj_type(p_obj))) {
+		return p_base;
+	}
+
+	p_name = x_type_field_name(x_obj_type(p_obj));
+
+	if (x_obj_isnil(p_base, p_name)) {
+		return p_base;
+	}
+
+	return x_mkstr(p_base, x_atomstr(p_name));
+}
+
 /* make-base: (make-base) -> create fresh sandboxed interpreter */
 static x_obj_t *x_prim_make_base(x_obj_t *p_base, x_obj_t *p_args)
 {
@@ -1044,6 +1149,10 @@ x_obj_t *x_prim_register(x_obj_t *p_base, x_obj_t *p_args)
 	x_prim_bind(p_base, "string=?", x_prim_string_eq);
 	x_prim_bind(p_base, "number->string", x_prim_number_to_string);
 	x_prim_bind(p_base, "string->number", x_prim_string_to_number);
+	x_prim_bind(p_base, "make-type", x_prim_make_type);
+	x_prim_bind(p_base, "make-instance", x_prim_make_instance);
+	x_prim_bind(p_base, "type?", x_prim_typep);
+	x_prim_bind(p_base, "type-name", x_prim_type_name);
 
 	return p_base;
 }

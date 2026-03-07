@@ -18,6 +18,7 @@
  */
 #include "x-obj.h"
 #include "x-type.h"
+#include "x-type/procedure.h"
 
 
 /*
@@ -68,7 +69,17 @@ x_obj_t *x_obj_prim_call(x_obj_t *p_base, x_obj_t *p_args)
 
 	p_call = x_type_field_call(x_obj_type(p_obj));
 
-	if (x_obj_isnil(p_base, p_call) || x_obj_isnil(p_base, x_atomobj(p_call))) {
+	if (x_obj_isnil(p_base, p_call)) {
+		return p_base;
+	}
+
+	if (x_obj_type_isprocedure(p_base, p_call)) {
+		x_spair_t closure_args = x_obj_set(NULL, X_OBJ_FLAG_NONE,
+			{ p_call }, { p_args });
+		return x_type_procedure_call(p_base, (x_obj_t *)&closure_args);
+	}
+
+	if (x_obj_isnil(p_base, x_atomobj(p_call))) {
 		return p_base;
 	}
 
