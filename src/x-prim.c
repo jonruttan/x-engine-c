@@ -127,7 +127,47 @@ static x_obj_t *x_prim_numeq(x_obj_t *p_base, x_obj_t *p_args)
 		*b = x_prim_eval_arg(p_base, x_firstobj(x_restobj(p_args)));
 
 	return x_intval(a) == x_intval(b)
-		? x_mksymbol(p_base, (x_char_t *)"t") : p_base;
+		? x_mksymbol(p_base, (x_char_t *)X_PRIM_TRUE) : p_base;
+}
+
+/* <: (< a b) -> t if a < b */
+static x_obj_t *x_prim_lt(x_obj_t *p_base, x_obj_t *p_args)
+{
+	x_obj_t *a = x_prim_eval_arg(p_base, x_firstobj(p_args)),
+		*b = x_prim_eval_arg(p_base, x_firstobj(x_restobj(p_args)));
+
+	return x_intval(a) < x_intval(b)
+		? x_mksymbol(p_base, (x_char_t *)X_PRIM_TRUE) : p_base;
+}
+
+/* >: (> a b) -> t if a > b */
+static x_obj_t *x_prim_gt(x_obj_t *p_base, x_obj_t *p_args)
+{
+	x_obj_t *a = x_prim_eval_arg(p_base, x_firstobj(p_args)),
+		*b = x_prim_eval_arg(p_base, x_firstobj(x_restobj(p_args)));
+
+	return x_intval(a) > x_intval(b)
+		? x_mksymbol(p_base, (x_char_t *)X_PRIM_TRUE) : p_base;
+}
+
+/* <=: (<= a b) -> t if a <= b */
+static x_obj_t *x_prim_lte(x_obj_t *p_base, x_obj_t *p_args)
+{
+	x_obj_t *a = x_prim_eval_arg(p_base, x_firstobj(p_args)),
+		*b = x_prim_eval_arg(p_base, x_firstobj(x_restobj(p_args)));
+
+	return x_intval(a) <= x_intval(b)
+		? x_mksymbol(p_base, (x_char_t *)X_PRIM_TRUE) : p_base;
+}
+
+/* >=: (>= a b) -> t if a >= b */
+static x_obj_t *x_prim_gte(x_obj_t *p_base, x_obj_t *p_args)
+{
+	x_obj_t *a = x_prim_eval_arg(p_base, x_firstobj(p_args)),
+		*b = x_prim_eval_arg(p_base, x_firstobj(x_restobj(p_args)));
+
+	return x_intval(a) >= x_intval(b)
+		? x_mksymbol(p_base, (x_char_t *)X_PRIM_TRUE) : p_base;
 }
 
 /* +: (+ a b) -> integer addition */
@@ -189,7 +229,7 @@ static x_obj_t *x_prim_nullp(x_obj_t *p_base, x_obj_t *p_args)
 {
 	x_obj_t *x = x_prim_eval_arg(p_base, x_firstobj(p_args));
 
-	return x_obj_isnil(p_base, x) ? x_mksymbol(p_base, (x_char_t *)"t") : p_base;
+	return x_obj_isnil(p_base, x) ? x_mksymbol(p_base, (x_char_t *)X_PRIM_TRUE) : p_base;
 }
 
 /* pair?: (pair? x) -> t if list pair */
@@ -197,7 +237,7 @@ static x_obj_t *x_prim_pairp(x_obj_t *p_base, x_obj_t *p_args)
 {
 	x_obj_t *x = x_prim_eval_arg(p_base, x_firstobj(p_args));
 
-	return x_obj_type_islist(p_base, x) ? x_mksymbol(p_base, (x_char_t *)"t") : p_base;
+	return x_obj_type_islist(p_base, x) ? x_mksymbol(p_base, (x_char_t *)X_PRIM_TRUE) : p_base;
 }
 
 /* atom?: (atom? x) -> t if not a list pair */
@@ -205,7 +245,7 @@ static x_obj_t *x_prim_atomp(x_obj_t *p_base, x_obj_t *p_args)
 {
 	x_obj_t *x = x_prim_eval_arg(p_base, x_firstobj(p_args));
 
-	return x_obj_type_islist(p_base, x) ? p_base : x_mksymbol(p_base, (x_char_t *)"t");
+	return x_obj_type_islist(p_base, x) ? p_base : x_mksymbol(p_base, (x_char_t *)X_PRIM_TRUE);
 }
 
 /* not: (not x) -> t if nil */
@@ -213,7 +253,7 @@ static x_obj_t *x_prim_not(x_obj_t *p_base, x_obj_t *p_args)
 {
 	x_obj_t *x = x_prim_eval_arg(p_base, x_firstobj(p_args));
 
-	return x_obj_isnil(p_base, x) ? x_mksymbol(p_base, (x_char_t *)"t") : p_base;
+	return x_obj_isnil(p_base, x) ? x_mksymbol(p_base, (x_char_t *)X_PRIM_TRUE) : p_base;
 }
 
 /* list: (list a b c) -> (a b c) */
@@ -226,6 +266,89 @@ static x_obj_t *x_prim_list(x_obj_t *p_base, x_obj_t *p_args)
 	return x_mklist(p_base,
 		x_prim_eval_arg(p_base, x_firstobj(p_args)),
 		x_prim_list(p_base, x_restobj(p_args)));
+}
+
+/* and: (and expr...) -> short-circuit, returns last truthy or nil */
+static x_obj_t *x_prim_and(x_obj_t *p_base, x_obj_t *p_args)
+{
+	x_obj_t *p_result = x_mksymbol(p_base, (x_char_t *)X_PRIM_TRUE);
+
+	while ( ! x_obj_isnil(p_base, p_args)) {
+		p_result = x_prim_eval_arg(p_base, x_firstobj(p_args));
+		if (x_obj_isnil(p_base, p_result)) {
+			return p_base;
+		}
+		p_args = x_restobj(p_args);
+	}
+
+	return p_result;
+}
+
+/* or: (or expr...) -> short-circuit, returns first truthy or nil */
+static x_obj_t *x_prim_or(x_obj_t *p_base, x_obj_t *p_args)
+{
+	x_obj_t *p_result = p_base;
+
+	while ( ! x_obj_isnil(p_base, p_args)) {
+		p_result = x_prim_eval_arg(p_base, x_firstobj(p_args));
+		if ( ! x_obj_isnil(p_base, p_result)) {
+			return p_result;
+		}
+		p_args = x_restobj(p_args);
+	}
+
+	return p_base;
+}
+
+/* cond: (cond (test expr)...) -> multi-branch conditional */
+static x_obj_t *x_prim_cond(x_obj_t *p_base, x_obj_t *p_args)
+{
+	while ( ! x_obj_isnil(p_base, p_args)) {
+		x_obj_t *p_clause = x_firstobj(p_args),
+			*p_test = x_prim_eval_arg(p_base, x_firstobj(p_clause));
+
+		if ( ! x_obj_isnil(p_base, p_test)) {
+			return x_prim_eval_arg(p_base, x_firstobj(x_restobj(p_clause)));
+		}
+
+		p_args = x_restobj(p_args);
+	}
+
+	return p_base;
+}
+
+/* let: (let ((name val)...) body...) -> local bindings */
+static x_obj_t *x_prim_let(x_obj_t *p_base, x_obj_t *p_args)
+{
+	x_obj_t *p_bindings = x_firstobj(p_args),
+		*p_body = x_restobj(p_args),
+		*p_params = p_base,
+		*p_vals = p_base,
+		*p_b;
+	x_obj_t *p_saved_env = x_base_field_env_alist(p_base),
+		*p_result = p_base;
+
+	/* Walk bindings to extract params and eval'd values. */
+	for (p_b = p_bindings; ! x_obj_isnil(p_base, p_b); p_b = x_restobj(p_b)) {
+		x_obj_t *p_binding = x_firstobj(p_b);
+		p_params = x_mkspair(p_base, x_firstobj(p_binding), p_params);
+		p_vals = x_mkspair(p_base,
+			x_prim_eval_arg(p_base, x_firstobj(x_restobj(p_binding))),
+			p_vals);
+	}
+
+	/* Extend current env with bindings, eval body, restore. */
+	x_base_field_env_alist(p_base) = x_prim_multiple_extend(
+		p_base, p_saved_env, p_params, p_vals);
+
+	while ( ! x_obj_isnil(p_base, p_body)) {
+		p_result = x_prim_eval_arg(p_base, x_firstobj(p_body));
+		p_body = x_restobj(p_body);
+	}
+
+	x_base_field_env_alist(p_base) = p_saved_env;
+
+	return p_result;
 }
 
 /* fn: (fn (params) body...) -> create closure */
@@ -290,6 +413,13 @@ static void x_prim_bind(x_obj_t *p_base, x_char_t *name, x_prim_fn fn)
 
 x_obj_t *x_prim_register(x_obj_t *p_base, x_obj_t *p_args)
 {
+	/* Bind t as a self-evaluating truth symbol. */
+	{
+		x_obj_t *p_t = x_mksymbol(p_base, (x_char_t *)X_PRIM_TRUE),
+			*p_pair = x_mkspair(p_base, p_t, p_t);
+		x_base_env_alist_extend(p_base, p_pair);
+	}
+
 	x_prim_bind(p_base, "quote", x_prim_quote);
 	x_prim_bind(p_base, "cons", x_prim_cons);
 	x_prim_bind(p_base, "car", x_prim_car);
@@ -309,6 +439,14 @@ x_obj_t *x_prim_register(x_obj_t *p_base, x_obj_t *p_args)
 	x_prim_bind(p_base, "atom?", x_prim_atomp);
 	x_prim_bind(p_base, "not", x_prim_not);
 	x_prim_bind(p_base, "list", x_prim_list);
+	x_prim_bind(p_base, "<", x_prim_lt);
+	x_prim_bind(p_base, ">", x_prim_gt);
+	x_prim_bind(p_base, "<=", x_prim_lte);
+	x_prim_bind(p_base, ">=", x_prim_gte);
+	x_prim_bind(p_base, "and", x_prim_and);
+	x_prim_bind(p_base, "or", x_prim_or);
+	x_prim_bind(p_base, "cond", x_prim_cond);
+	x_prim_bind(p_base, "let", x_prim_let);
 
 	return p_base;
 }

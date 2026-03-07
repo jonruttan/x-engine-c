@@ -21,7 +21,9 @@
  */
 #include "x-type.h"
 
-#define X_TYPE_PROCEDURE_NAME	"PROCEDURE"
+#define X_TYPE_PROCEDURE_NAME		"PROCEDURE"
+#define X_TYPE_PROCEDURE_WRITE_STR	"#<fn>"
+#define X_TYPE_PROCEDURE_WRITE_LEN	5
 
 /*
  * # Macros

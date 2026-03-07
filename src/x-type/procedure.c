@@ -114,8 +114,8 @@ x_obj_t *x_type_procedure_call(x_obj_t *p_base, x_obj_t *p_args)
 
 x_obj_t *x_type_procedure_write(x_obj_t *p_base, x_obj_t *p_args)
 {
-	x_satom_t buffer = x_obj_set(x_type_atom_obj, X_OBJ_FLAG_NONE, { .s = (x_char_t *)"#<fn>" }),
-		size = x_obj_set(x_type_atom_obj, X_OBJ_FLAG_NONE, { .i = 5 });
+	x_satom_t buffer = x_obj_set(x_type_atom_obj, X_OBJ_FLAG_NONE, { .s = (x_char_t *)X_TYPE_PROCEDURE_WRITE_STR }),
+		size = x_obj_set(x_type_atom_obj, X_OBJ_FLAG_NONE, { .i = X_TYPE_PROCEDURE_WRITE_LEN });
 	x_spair_t args[2] = {
 		x_obj_set(NULL, X_OBJ_FLAG_NONE, { buffer }, { (x_obj_t *)(args + 1) }),
 		x_obj_set(NULL, X_OBJ_FLAG_NONE, { size }, { NULL })
