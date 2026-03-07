@@ -21,11 +21,14 @@
 #include "x-base.h"
 #include "x-eval.h"
 #include "x-exp/quote.h"
+#include "x-sexp.h"
+#include "x-type/buffer.h"
 #include "x-type/int.h"
 #include "x-type/list.h"
 #include "x-type/prim.h"
 #include "x-type/operative.h"
 #include "x-type/procedure.h"
+#include "x-type/str.h"
 #include "x-type/symbol.h"
 
 /*
@@ -279,6 +282,39 @@ static x_obj_t *x_prim_not(x_obj_t *p_base, x_obj_t *p_args)
 	return x_obj_isnil(p_base, x) ? x_mksymbol(p_base, (x_char_t *)X_PRIM_TRUE) : p_base;
 }
 
+/* number?: (number? x) -> t if integer */
+static x_obj_t *x_prim_numberp(x_obj_t *p_base, x_obj_t *p_args)
+{
+	x_obj_t *x = x_prim_eval_arg(p_base, x_firstobj(p_args));
+
+	return x_obj_type_isint(p_base, x) ? x_mksymbol(p_base, (x_char_t *)X_PRIM_TRUE) : p_base;
+}
+
+/* string?: (string? x) -> t if string */
+static x_obj_t *x_prim_stringp(x_obj_t *p_base, x_obj_t *p_args)
+{
+	x_obj_t *x = x_prim_eval_arg(p_base, x_firstobj(p_args));
+
+	return x_obj_type_isstr(p_base, x) ? x_mksymbol(p_base, (x_char_t *)X_PRIM_TRUE) : p_base;
+}
+
+/* symbol?: (symbol? x) -> t if symbol */
+static x_obj_t *x_prim_symbolp(x_obj_t *p_base, x_obj_t *p_args)
+{
+	x_obj_t *x = x_prim_eval_arg(p_base, x_firstobj(p_args));
+
+	return x_obj_type_issymbol(p_base, x) ? x_mksymbol(p_base, (x_char_t *)X_PRIM_TRUE) : p_base;
+}
+
+/* procedure?: (procedure? x) -> t if callable (fn or prim) */
+static x_obj_t *x_prim_procedurep(x_obj_t *p_base, x_obj_t *p_args)
+{
+	x_obj_t *x = x_prim_eval_arg(p_base, x_firstobj(p_args));
+
+	return (x_obj_type_isprocedure(p_base, x) || x_obj_type_isprim(p_base, x))
+		? x_mksymbol(p_base, (x_char_t *)X_PRIM_TRUE) : p_base;
+}
+
 /* list: (list a b c) -> (a b c) */
 static x_obj_t *x_prim_list(x_obj_t *p_base, x_obj_t *p_args)
 {
@@ -440,6 +476,79 @@ static x_obj_t *x_prim_operative(x_obj_t *p_base, x_obj_t *p_args)
 	return x_mkop(p_base, p_params, p_envparam, p_body, p_env);
 }
 
+/* write: (write obj) -> output s-expression to stdout */
+static x_obj_t *x_prim_write(x_obj_t *p_base, x_obj_t *p_args)
+{
+	x_obj_t *p_val = x_prim_eval_arg(p_base, x_firstobj(p_args));
+	x_spair_t write_args[1] = {
+		x_obj_set(NULL, X_OBJ_FLAG_NONE, { p_val }, { NULL })
+	};
+
+	x_sexp_write(p_base, (x_obj_t *)write_args);
+
+	return p_base;
+}
+
+/* display: (display obj) -> output human-readable (strings unquoted) */
+static x_obj_t *x_prim_display(x_obj_t *p_base, x_obj_t *p_args)
+{
+	x_obj_t *p_val = x_prim_eval_arg(p_base, x_firstobj(p_args));
+
+	if (x_obj_type_isstr(p_base, p_val)) {
+		int fd = x_base_isset(p_base)
+			? x_atomint(x_base_field_fileout(p_base)) : STDOUT_FILENO;
+		x_char_t *s = x_strval(p_val);
+
+		x_sys_write(fd, s, x_lib_strlen(s));
+	} else {
+		x_spair_t write_args[1] = {
+			x_obj_set(NULL, X_OBJ_FLAG_NONE, { p_val }, { NULL })
+		};
+
+		x_sexp_write(p_base, (x_obj_t *)write_args);
+	}
+
+	return p_base;
+}
+
+/* newline: (newline) -> output newline character */
+static x_obj_t *x_prim_newline(x_obj_t *p_base, x_obj_t *p_args)
+{
+	int fd = x_base_isset(p_base)
+		? x_atomint(x_base_field_fileout(p_base)) : STDOUT_FILENO;
+
+	x_sys_write(fd, "\n", 1);
+
+	return p_base;
+}
+
+/* read: (read) -> read one s-expression from stdin */
+static x_obj_t *x_prim_read_expr(x_obj_t *p_base, x_obj_t *p_args)
+{
+	x_obj_t *p_buffer = x_base_field_buffer(p_base);
+	x_spair_t read_args[1] = {
+		x_obj_set(NULL, X_OBJ_FLAG_NONE, { p_buffer }, { p_base })
+	};
+
+	return x_sexp_read(p_base, (x_obj_t *)read_args);
+}
+
+/* string->symbol: (string->symbol str) -> convert string to symbol */
+static x_obj_t *x_prim_string_to_symbol(x_obj_t *p_base, x_obj_t *p_args)
+{
+	x_obj_t *p_str = x_prim_eval_arg(p_base, x_firstobj(p_args));
+
+	return x_mksymbol(p_base, x_strval(p_str));
+}
+
+/* symbol->string: (symbol->string sym) -> convert symbol to string */
+static x_obj_t *x_prim_symbol_to_string(x_obj_t *p_base, x_obj_t *p_args)
+{
+	x_obj_t *p_sym = x_prim_eval_arg(p_base, x_firstobj(p_args));
+
+	return x_mkstr(p_base, x_symbolval(p_sym));
+}
+
 /* do: (do form...) -> evaluate each form, return last */
 static x_obj_t *x_prim_do(x_obj_t *p_base, x_obj_t *p_args)
 {
@@ -531,6 +640,16 @@ x_obj_t *x_prim_register(x_obj_t *p_base, x_obj_t *p_args)
 	x_prim_bind(p_base, "apply", x_prim_apply);
 	x_prim_bind(p_base, "eval", x_prim_eval);
 	x_prim_bind(p_base, "op", x_prim_operative);
+	x_prim_bind(p_base, "write", x_prim_write);
+	x_prim_bind(p_base, "display", x_prim_display);
+	x_prim_bind(p_base, "newline", x_prim_newline);
+	x_prim_bind(p_base, "read", x_prim_read_expr);
+	x_prim_bind(p_base, "string->symbol", x_prim_string_to_symbol);
+	x_prim_bind(p_base, "symbol->string", x_prim_symbol_to_string);
+	x_prim_bind(p_base, "number?", x_prim_numberp);
+	x_prim_bind(p_base, "string?", x_prim_stringp);
+	x_prim_bind(p_base, "symbol?", x_prim_symbolp);
+	x_prim_bind(p_base, "procedure?", x_prim_procedurep);
 
 	return p_base;
 }

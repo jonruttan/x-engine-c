@@ -67,6 +67,7 @@ int main(int argc, char *argv[])
 
 	/* Set up read buffer. */
 	p_buffer = x_mkbuffer(p_base, buffer);
+	x_base_field_buffer(p_base) = p_buffer;
 	p_read_args = x_mkspair(p_base, p_buffer, p_base);
 
 	/* Register primitives. */

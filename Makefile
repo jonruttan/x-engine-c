@@ -157,7 +157,11 @@ test-x: $(EXECUTABLE)
 	sh tests/x/spec-runner.sh
 .PHONY: test-x
 
-tests: test test-x
+test-scm: $(EXECUTABLE)
+	sh tests/scm/spec-runner.sh
+.PHONY: test-scm
+
+tests: test test-x test-scm
 .PHONY: tests
 
 watch:
