@@ -44,19 +44,11 @@ x_obj_t *x_obj_vector_proc(x_obj_t *p_base, x_obj_t *p_proc, x_obj_t *p_args)
 
 x_obj_t *x_obj_vector_read(x_obj_t *p_base, x_obj_t *p_args)
 {
-	/* TODO: Fix this. */
-/*	if (x_strval(p_args)[0] == '#' && x_lib_strlen(x_strval(p_args)) == 1) {
-		return x_mkspair(p_base, x_firstobj(x_findsym(p_base, _X_VECTOR)), x_readobj(p_base));
-	}
-*/
 	return p_base;
 }
 
 x_obj_t *x_mkvector(x_obj_t *p_base, x_int_t count)
 {
-	/* TODO: Fix this. */
-	x_obj_t *ret = NULL; /*x_obj_alloc(p_base, X_VECTOR, 0, count + 1);
-	x_firstint(ret) = x_mkint(p_base, count);*/
-
-	return ret;
+	(void)count;
+	return NULL;
 }

@@ -85,29 +85,29 @@ x_obj_t *x_type_symbol_make(x_obj_t *p_base, x_obj_t *p_args)
 	return p_obj;
 }
 
-/*#define SYMBOL_FIND_REORDER*/
-/* TODO: Alter so symbol list can be optionally supplied by argument. */
 x_obj_t *x_type_symbol_find(x_obj_t *p_base, x_obj_t *p_args)
 {
-	/* TODO: Restruture to use iterator. */
 	x_obj_t *p_type = x_type_symbol_register(p_base, p_base),
 		*p_list = x_symbol_data_list(p_type);
 	x_char_t *name = x_firststr(x_firstobj(p_args));
 #ifdef SYMBOL_FIND_REORDER
-	x_obj_t *top = *pp_top, **prev = pp_top;
+	x_obj_t *p_prev = p_base;
 #endif
 
 	while ( ! x_obj_isnil(p_base, p_list)) {
 		if ( 0 == x_lib_strcmp(name, x_symbolval(x_firstobj(p_list)))) {
 #ifdef SYMBOL_FIND_REORDER
-			*prev = x_restobj(p_list);
-			x_restobj(p_list) = top;
-			top = p_symlist;
+			/* Move to front: splice out and prepend. */
+			if ( ! x_obj_isnil(p_base, p_prev)) {
+				x_restobj(p_prev) = x_restobj(p_list);
+				x_restobj(p_list) = x_symbol_data_list(p_type);
+				x_symbol_data_list(p_type) = p_list;
+			}
 #endif
 			return p_list;
 		}
 #ifdef SYMBOL_FIND_REORDER
-		*prev = p_list;
+		p_prev = p_list;
 #endif
 		p_list = x_restobj(p_list);
 	}

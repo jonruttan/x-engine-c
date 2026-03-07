@@ -93,7 +93,7 @@ OBJECTS=$(SOURCES:.c=.o)
 EXECUTABLE=x
 
 # Options to be added to $(DEFS)
-DEFS?=$(OSDEF) -DX_MACHINE="$(X_MACHINE)" -DX_SYSCALL
+DEFS?=$(OSDEF) -DX_MACHINE="$(X_MACHINE)" -DX_SYSCALL -DSYMBOL_FIND_REORDER
 
 # Where to install the stuff
 BINDIR?=$(PREFIX)/bin
@@ -157,15 +157,19 @@ test-x: $(EXECUTABLE)
 	sh tests/x/spec-runner.sh
 .PHONY: test-x
 
-test-scm: $(EXECUTABLE)
-	sh tests/scm/spec-runner.sh
-.PHONY: test-scm
+test-r5rs: $(EXECUTABLE)
+	sh tests/r5rs/spec-runner.sh
+.PHONY: test-r5rs
 
 test-krn: $(EXECUTABLE)
 	sh tests/krn/spec-runner.sh
 .PHONY: test-krn
 
-tests: test test-x test-scm test-krn
+test-sl: $(EXECUTABLE)
+	sh tests/sl/spec-runner.sh
+.PHONY: test-sl
+
+tests: test test-x test-r5rs test-krn test-sl
 .PHONY: tests
 
 watch:

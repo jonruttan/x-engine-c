@@ -308,10 +308,6 @@ void _x_obj_dump(char *file, long unsigned line, x_obj_t *p_base, x_obj_t *p_obj
 		s = data_buffer;
 		s += sprintf(s, ":[");
 
-		/*if (x_obj_type_issatom(p_obj) || x_obj_type_issatom(x_obj_type(p_obj))) {
-			s += sprintf(s, "0x%"X_INT_STR_PRINTF_CONV"x", x_atomint(p_obj));
-		}*/
-
 		if (x_obj_type_isspair(p_obj)) {
 			if (x_obj_isnil(p_base, x_firstobj(p_obj))) {
 				s += sprintf(s, X_TYPE_NIL_NAME);
@@ -349,9 +345,4 @@ void _x_obj_dump(char *file, long unsigned line, x_obj_t *p_base, x_obj_t *p_obj
 }
 
 #else /* DEBUG */
-
-/*void x_obj_debug_va(x_obj_t *p_base, char *fmt, va_list ap) {}
-void x_obj_debug(x_obj_t *p_base, char *fmt, ...) {}
-void x_obj_dump(x_obj_t *p_base, x_obj_t *p_obj, char *msg) {}
-*/
 #endif /* DEBUG */

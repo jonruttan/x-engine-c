@@ -145,7 +145,6 @@ x_obj_t *x_sexp_int_write(x_obj_t *p_base, x_obj_t *p_args)
 	p_ret = x_base_write(p_base, (x_obj_t *)args);
 
 	if ( ! x_obj_isnil(p_base, p_ret)) {
-		/*return p_ret;*/
 		return x_firstobj(p_args);
 	}
 

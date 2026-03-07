@@ -24,9 +24,6 @@
 /*
  * # Macros
  */
-/*#define x_mkvector(E, N)			x__obj_make(E, X_VECTOR, 0, (N)+1)*/
-/*#define x_mkvector(E, N)			x_obj_make(E, X_VECTOR, 0, (N)+1, x_mkint(E, (N)))*/
-
 #define x_vectorlen(X)			x_firstint((X))
 #define x_vectorval(X, N)		x_obj(x_obj_data_i((X),(N)+1))
 
