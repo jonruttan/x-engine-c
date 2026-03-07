@@ -113,14 +113,16 @@ x_obj_t *x_type_operative_call(x_obj_t *p_base, x_obj_t *p_args)
 	/* Eval body forms sequentially (implicit do). */
 	p_result = p_base;
 	while ( ! x_obj_isnil(p_base, p_body)) {
+		if (x_obj_isnil(p_base, x_restobj(p_body))) {
+			/* Last body form: tail position. */
+			x_base_field_tco_expr(p_base) = x_firstobj(p_body);
+
+			return p_base;
+		}
+
 		p_result = x_prim_eval_arg(p_base, x_firstobj(p_body));
 		p_body = x_restobj(p_body);
 	}
-
-	/* Do not restore env — operative body may have extended it
-	 * via def. Param bindings leak but are harmless (shadowed
-	 * by future bindings). This matches traditional fexpr semantics
-	 * where the body runs in the caller's dynamic environment. */
 
 	return p_result;
 }

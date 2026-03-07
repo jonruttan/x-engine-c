@@ -17,6 +17,7 @@
  * # Includes
  */
 #include "x-eval.h"
+#include "x-base.h"
 #include "x-obj.h"
 #include "x-type.h"
 #include "x-type/prim.h"
@@ -24,7 +25,9 @@
 x_obj_t *x_eval(x_obj_t *p_base, x_obj_t *p_args)
 {
 	x_obj_t *p_exp;
+	x_obj_t *p_tco_env_save = NULL;
 	x_spair_t prim_args = x_obj_set(NULL, X_OBJ_FLAG_NONE, { NULL }, { NULL });
+	int trampolining = 0;
 
 eval_start:
 	p_exp = x_firstobj(x_eval_arg_exp(p_args));
@@ -46,6 +49,32 @@ eval_start:
 
 		if (p_exp == p_args) {
 			goto eval_start;
+		}
+	}
+
+	/* TCO trampoline: re-evaluate tail expression if set. */
+	if (x_base_isset(p_base)
+		&& ! x_obj_isnil(p_base, x_base_field_tco_expr(p_base))) {
+		if ( ! trampolining) {
+			/* First entry: snapshot tco_env and clear global
+			 * so nested x_eval calls don't see it. */
+			p_tco_env_save = x_base_field_tco_env(p_base);
+			trampolining = 1;
+		}
+
+		x_base_field_tco_env(p_base) = p_base;
+		x_firstobj(x_eval_arg_exp(p_args)) = x_base_field_tco_expr(p_base);
+		x_base_field_tco_expr(p_base) = p_base;
+		goto eval_start;
+	}
+
+	/* TCO env restore: only the x_eval that trampolined restores env. */
+	if (trampolining && x_base_isset(p_base)) {
+		x_base_field_tco_env(p_base) = p_base;
+
+		if (p_tco_env_save != NULL
+			&& ! x_obj_isnil(p_base, p_tco_env_save)) {
+			x_base_field_env_alist(p_base) = p_tco_env_save;
 		}
 	}
 

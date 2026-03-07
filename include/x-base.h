@@ -23,7 +23,7 @@
  * '(
  *   (type-alist)
  *   (file:in file:out file:err)
- *   (env-alist symbol-list expr-list buffer token-cache)
+ *   (env-alist symbol-list expr-list buffer token-cache error-handler tco-expr tco-env)
  * )
  * ```
  */
@@ -31,6 +31,17 @@
  * # Includes
  */
 #include "x-obj.h"
+#include <setjmp.h>
+
+/*
+ * # Error Handler
+ */
+typedef struct x_error_handler {
+	jmp_buf jmp;
+	x_obj_t *p_error;
+	x_obj_t *p_saved_env;
+	struct x_error_handler *prev;
+} x_error_handler_t;
 
 /* TODO: Add name and version fields. */
 #define x_base(X)						x_firstobj(X)
@@ -44,6 +55,9 @@
 #define x_base_field_eval_list(X)		x_firstobj(x_restobj(x_base_field_env((X))))
 #define x_base_field_buffer(X)			x_firstobj(x_restobj(x_restobj(x_base_field_env((X)))))
 #define x_base_field_token_cache(X)		x_firstobj(x_restobj(x_restobj(x_restobj(x_base_field_env((X))))))
+#define x_base_field_error_handler(X)	x_firstobj(x_restobj(x_restobj(x_restobj(x_restobj(x_base_field_env((X)))))))
+#define x_base_field_tco_expr(X)		x_firstobj(x_restobj(x_restobj(x_restobj(x_restobj(x_restobj(x_base_field_env((X))))))))
+#define x_base_field_tco_env(X)			x_firstobj(x_restobj(x_restobj(x_restobj(x_restobj(x_restobj(x_restobj(x_base_field_env((X)))))))))
 
 #define x_base_isset(B)					((B) != NULL && x_base((B)) != NULL)
 

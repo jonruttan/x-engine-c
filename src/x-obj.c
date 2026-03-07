@@ -19,6 +19,8 @@
 #include "x-obj.h"
 #include "x-base.h"
 #include "x-type.h"
+#include "x-type/ptr.h"
+#include "x-type/str.h"
 
 
 x_satom_t x_type_atom_obj = x_obj_set(NULL, X_OBJ_FLAG_NONE, {.s = (x_char_t *)X_TYPE_ATOM_NAME}),
@@ -236,7 +238,20 @@ x_int_t x_obj_length(x_obj_t *p_base, x_obj_t *p_obj)
  */
 void x_obj_error(x_obj_t *p_base, x_char_t *message, x_char_t *symbol)
 {
-	int fd = x_base_isset(p_base) ? x_atomint(x_base_field_fileerr(p_base)) : STDERR_FILENO;
+	int fd;
+
+	/* If an error handler is installed, longjmp to it. */
+	if (x_base_isset(p_base)
+		&& ! x_obj_isnil(p_base, x_base_field_error_handler(p_base))) {
+		x_error_handler_t *handler =
+			(x_error_handler_t *)x_ptrval(x_base_field_error_handler(p_base));
+
+		handler->p_error = x_mkstr(p_base, message);
+		x_base_field_env_alist(p_base) = handler->p_saved_env;
+		longjmp(handler->jmp, 1);
+	}
+
+	fd = x_base_isset(p_base) ? x_atomint(x_base_field_fileerr(p_base)) : STDERR_FILENO;
 
 	x_error(fd, message, symbol);
 }

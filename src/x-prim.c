@@ -28,8 +28,12 @@
 #include "x-type/prim.h"
 #include "x-type/operative.h"
 #include "x-type/procedure.h"
+#include "x-type/ptr.h"
 #include "x-type/str.h"
 #include "x-type/symbol.h"
+#include "x-type/char.h"
+#include "x-type/whitespace.h"
+#include "x-type/comment.h"
 
 /*
  * # Helpers
@@ -242,12 +246,18 @@ static x_obj_t *x_prim_if(x_obj_t *p_base, x_obj_t *p_args)
 	if (x_obj_isnil(p_base, p_cond)) {
 		x_obj_t *p_else = x_restobj(p_rest);
 
-		return x_obj_isnil(p_base, p_else)
-			? p_base
-			: x_prim_eval_arg(p_base, x_firstobj(p_else));
+		if (x_obj_isnil(p_base, p_else)) {
+			return p_base;
+		}
+
+		x_base_field_tco_expr(p_base) = x_firstobj(p_else);
+
+		return p_base;
 	}
 
-	return x_prim_eval_arg(p_base, x_firstobj(p_rest));
+	x_base_field_tco_expr(p_base) = x_firstobj(p_rest);
+
+	return p_base;
 }
 
 /* null?: (null? x) -> t if nil */
@@ -367,7 +377,9 @@ static x_obj_t *x_prim_cond(x_obj_t *p_base, x_obj_t *p_args)
 			*p_test = x_prim_eval_arg(p_base, x_firstobj(p_clause));
 
 		if ( ! x_obj_isnil(p_base, p_test)) {
-			return x_prim_eval_arg(p_base, x_firstobj(x_restobj(p_clause)));
+			x_base_field_tco_expr(p_base) = x_firstobj(x_restobj(p_clause));
+
+			return p_base;
 		}
 
 		p_args = x_restobj(p_args);
@@ -401,6 +413,16 @@ static x_obj_t *x_prim_let(x_obj_t *p_base, x_obj_t *p_args)
 		p_base, p_saved_env, p_params, p_vals);
 
 	while ( ! x_obj_isnil(p_base, p_body)) {
+		if (x_obj_isnil(p_base, x_restobj(p_body))) {
+			x_base_field_tco_expr(p_base) = x_firstobj(p_body);
+
+			if (x_obj_isnil(p_base, x_base_field_tco_env(p_base))) {
+				x_base_field_tco_env(p_base) = p_saved_env;
+			}
+
+			return p_base;
+		}
+
 		p_result = x_prim_eval_arg(p_base, x_firstobj(p_body));
 		p_body = x_restobj(p_body);
 	}
@@ -425,6 +447,16 @@ static x_obj_t *x_prim_apply(x_obj_t *p_base, x_obj_t *p_args)
 		p_base, p_closure_env, p_params, p_vals);
 
 	while ( ! x_obj_isnil(p_base, p_body)) {
+		if (x_obj_isnil(p_base, x_restobj(p_body))) {
+			x_base_field_tco_expr(p_base) = x_firstobj(p_body);
+
+			if (x_obj_isnil(p_base, x_base_field_tco_env(p_base))) {
+				x_base_field_tco_env(p_base) = p_saved_env;
+			}
+
+			return p_base;
+		}
+
 		p_result = x_prim_eval_arg(p_base, x_firstobj(p_body));
 		p_body = x_restobj(p_body);
 	}
@@ -565,12 +597,73 @@ static x_obj_t *x_prim_symbol_to_string(x_obj_t *p_base, x_obj_t *p_args)
 	return x_mkstr(p_base, x_symbolval(p_sym));
 }
 
+/* qq_append: append list a to list b (for unquote-splicing) */
+static x_obj_t *x_prim_qq_append(x_obj_t *p_base, x_obj_t *p_a, x_obj_t *p_b)
+{
+	if (x_obj_isnil(p_base, p_a)) {
+		return p_b;
+	}
+
+	return x_mklist(p_base,
+		x_firstobj(p_a),
+		x_prim_qq_append(p_base, x_restobj(p_a), p_b));
+}
+
+/* qq_expand: recursively process quasiquote template */
+static x_obj_t *x_prim_qq_expand(x_obj_t *p_base, x_obj_t *p_tmpl)
+{
+	x_obj_t *p_car;
+
+	/* Atom or nil -> return as-is. */
+	if (x_obj_isnil(p_base, p_tmpl)
+		|| ! x_obj_type_islist(p_base, p_tmpl)) {
+		return p_tmpl;
+	}
+
+	p_car = x_firstobj(p_tmpl);
+
+	/* (unquote x) -> eval x */
+	if (x_obj_type_issymbol(p_base, p_car)
+		&& 0 == x_lib_strcmp(x_symbolval(p_car), "unquote")) {
+		return x_prim_eval_arg(p_base, x_firstobj(x_restobj(p_tmpl)));
+	}
+
+	/* ((unquote-splicing x) . rest) -> append (eval x) to expanded rest */
+	if (x_obj_type_islist(p_base, p_car)
+		&& x_obj_type_issymbol(p_base, x_firstobj(p_car))
+		&& 0 == x_lib_strcmp(x_symbolval(x_firstobj(p_car)),
+			"unquote-splicing")) {
+		x_obj_t *p_spliced = x_prim_eval_arg(p_base,
+			x_firstobj(x_restobj(p_car)));
+		x_obj_t *p_rest = x_prim_qq_expand(p_base, x_restobj(p_tmpl));
+
+		return x_prim_qq_append(p_base, p_spliced, p_rest);
+	}
+
+	/* Recursive: expand car and cdr */
+	return x_mklist(p_base,
+		x_prim_qq_expand(p_base, p_car),
+		x_prim_qq_expand(p_base, x_restobj(p_tmpl)));
+}
+
+/* quasiquote: (quasiquote tmpl) -> template with unquote/unquote-splicing */
+static x_obj_t *x_prim_quasiquote(x_obj_t *p_base, x_obj_t *p_args)
+{
+	return x_prim_qq_expand(p_base, x_firstobj(p_args));
+}
+
 /* do: (do form...) -> evaluate each form, return last */
 static x_obj_t *x_prim_do(x_obj_t *p_base, x_obj_t *p_args)
 {
 	x_obj_t *p_result = p_base;
 
 	while ( ! x_obj_isnil(p_base, p_args)) {
+		if (x_obj_isnil(p_base, x_restobj(p_args))) {
+			x_base_field_tco_expr(p_base) = x_firstobj(p_args);
+
+			return p_base;
+		}
+
 		p_result = x_prim_eval_arg(p_base, x_firstobj(p_args));
 		p_args = x_restobj(p_args);
 	}
@@ -599,6 +692,271 @@ static x_obj_t *x_prim_set(x_obj_t *p_base, x_obj_t *p_args)
 	}
 
 	x_restobj(p_pair) = p_val;
+
+	return p_val;
+}
+
+/* guard: (guard (var handler-body...) body...) -> error recovery */
+static x_obj_t *x_prim_guard(x_obj_t *p_base, x_obj_t *p_args)
+{
+	x_error_handler_t handler;
+	x_obj_t *p_clause = x_firstobj(p_args),
+		*p_var = x_firstobj(p_clause),
+		*p_handler_body = x_restobj(p_clause),
+		*p_body = x_restobj(p_args),
+		*p_prev_handler = x_base_field_error_handler(p_base),
+		*p_result = p_base;
+
+	/* Save env and push handler. */
+	handler.p_error = p_base;
+	handler.p_saved_env = x_base_field_env_alist(p_base);
+	handler.prev = x_obj_isnil(p_base, p_prev_handler)
+		? NULL : (x_error_handler_t *)x_ptrval(p_prev_handler);
+	x_base_field_error_handler(p_base) = x_mkptr(p_base, &handler);
+
+	if (setjmp(handler.jmp) == 0) {
+		/* Normal execution: evaluate body. */
+		while ( ! x_obj_isnil(p_base, p_body)) {
+			p_result = x_prim_eval_arg(p_base, x_firstobj(p_body));
+			p_body = x_restobj(p_body);
+		}
+	} else {
+		/* Error caught: bind error to var, run handler body. */
+		x_obj_t *p_pair = x_mkspair(p_base, p_var, handler.p_error);
+
+		x_base_env_alist_extend(p_base, p_pair);
+
+		while ( ! x_obj_isnil(p_base, p_handler_body)) {
+			p_result = x_prim_eval_arg(p_base,
+				x_firstobj(p_handler_body));
+			p_handler_body = x_restobj(p_handler_body);
+		}
+
+		x_base_field_env_alist(p_base) = handler.p_saved_env;
+	}
+
+	/* Pop handler. */
+	x_base_field_error_handler(p_base) = handler.prev
+		? x_mkptr(p_base, handler.prev) : p_base;
+
+	return p_result;
+}
+
+/* error: (error message) -> signal an error */
+static x_obj_t *x_prim_error(x_obj_t *p_base, x_obj_t *p_args)
+{
+	x_obj_t *p_msg = x_prim_eval_arg(p_base, x_firstobj(p_args));
+
+	/* If handler installed, use it. */
+	if ( ! x_obj_isnil(p_base, x_base_field_error_handler(p_base))) {
+		x_error_handler_t *handler =
+			(x_error_handler_t *)x_ptrval(x_base_field_error_handler(p_base));
+
+		handler->p_error = p_msg;
+		x_base_field_env_alist(p_base) = handler->p_saved_env;
+		longjmp(handler->jmp, 1);
+	}
+
+	/* No handler: fall through to fatal error. */
+	if (x_obj_type_isstr(p_base, p_msg)) {
+		x_obj_error(p_base, x_strval(p_msg), NULL);
+	} else {
+		x_obj_error(p_base, "error", NULL);
+	}
+
+	return p_base;
+}
+
+/* string-length: (string-length str) -> integer length */
+static x_obj_t *x_prim_string_length(x_obj_t *p_base, x_obj_t *p_args)
+{
+	x_obj_t *p_str = x_prim_eval_arg(p_base, x_firstobj(p_args));
+
+	return x_mkint(p_base, x_lib_strlen(x_strval(p_str)));
+}
+
+/* string-ref: (string-ref str index) -> single-char string */
+static x_obj_t *x_prim_string_ref(x_obj_t *p_base, x_obj_t *p_args)
+{
+	x_obj_t *p_str = x_prim_eval_arg(p_base, x_firstobj(p_args)),
+		*p_idx = x_prim_eval_arg(p_base, x_firstobj(x_restobj(p_args)));
+	x_char_t *s = x_lib_strndup(x_strval(p_str) + x_intval(p_idx), 1);
+
+	return x_mkstrown(p_base, s);
+}
+
+/* string-append: (string-append str...) -> concatenated string */
+static x_obj_t *x_prim_string_append(x_obj_t *p_base, x_obj_t *p_args)
+{
+	x_obj_t *p_a, *p_b;
+	x_char_t *sa, *sb, *s;
+	size_t la, lb;
+
+	p_a = x_prim_eval_arg(p_base, x_firstobj(p_args));
+	p_b = x_prim_eval_arg(p_base, x_firstobj(x_restobj(p_args)));
+	sa = x_strval(p_a);
+	sb = x_strval(p_b);
+	la = x_lib_strlen(sa);
+	lb = x_lib_strlen(sb);
+	s = (x_char_t *)x_sys_malloc(la + lb + 1);
+	x_lib_memcpy(s, sa, la);
+	x_lib_memcpy(s + la, sb, lb + 1);
+
+	return x_mkstrown(p_base, s);
+}
+
+/* substring: (substring str start end) -> sub-string */
+static x_obj_t *x_prim_substring(x_obj_t *p_base, x_obj_t *p_args)
+{
+	x_obj_t *p_str = x_prim_eval_arg(p_base, x_firstobj(p_args)),
+		*p_start = x_prim_eval_arg(p_base, x_firstobj(x_restobj(p_args))),
+		*p_end = x_prim_eval_arg(p_base,
+			x_firstobj(x_restobj(x_restobj(p_args))));
+	x_int_t start = x_intval(p_start), end = x_intval(p_end);
+
+	return x_mkstrown(p_base, x_lib_strndup(x_strval(p_str) + start,
+		end - start));
+}
+
+/* string=?: (string=? str1 str2) -> t if equal */
+static x_obj_t *x_prim_string_eq(x_obj_t *p_base, x_obj_t *p_args)
+{
+	x_obj_t *p_a = x_prim_eval_arg(p_base, x_firstobj(p_args)),
+		*p_b = x_prim_eval_arg(p_base, x_firstobj(x_restobj(p_args)));
+
+	return x_lib_strcmp(x_strval(p_a), x_strval(p_b)) == 0
+		? x_mksymbol(p_base, (x_char_t *)X_PRIM_TRUE) : p_base;
+}
+
+/* number->string: (number->string n) -> string representation */
+static x_obj_t *x_prim_number_to_string(x_obj_t *p_base, x_obj_t *p_args)
+{
+	x_obj_t *p_n = x_prim_eval_arg(p_base, x_firstobj(p_args));
+	x_char_t buf[22];
+
+	x_lib_inttostr(x_intval(p_n), buf, 10);
+
+	return x_mkstrown(p_base, x_lib_strndup(buf, x_lib_strlen(buf)));
+}
+
+/* string->number: (string->number str) -> integer */
+static x_obj_t *x_prim_string_to_number(x_obj_t *p_base, x_obj_t *p_args)
+{
+	x_obj_t *p_str = x_prim_eval_arg(p_base, x_firstobj(p_args));
+
+	return x_mkint(p_base, x_lib_strtoint(x_strval(p_str), NULL, 0));
+}
+
+/* make-base: (make-base) -> create fresh sandboxed interpreter */
+static x_obj_t *x_prim_make_base(x_obj_t *p_base, x_obj_t *p_args)
+{
+	x_obj_t *p_new_base, *p_buffer;
+	x_char_t *buffer = (x_char_t *)x_sys_malloc(256);
+
+	p_new_base = x_base_make(NULL, NULL);
+
+	/* Register types. */
+	x_type_prim_register(p_new_base, p_new_base);
+	x_type_operative_register(p_new_base, p_new_base);
+	x_type_procedure_register(p_new_base, p_new_base);
+	x_type_symbol_register(p_new_base, p_new_base);
+	x_type_list_register(p_new_base, p_new_base);
+	x_type_int_register(p_new_base, p_new_base);
+	x_type_str_register(p_new_base, p_new_base);
+	x_type_char_register(p_new_base, p_new_base);
+	x_type_whitespace_register(p_new_base, p_new_base);
+	x_type_comment_register(p_new_base, p_new_base);
+
+	/* Set up read buffer. */
+	p_buffer = x_mkbuffer(p_new_base, buffer);
+	x_base_field_buffer(p_new_base) = p_buffer;
+
+	/* Register primitives. */
+	x_prim_register(p_new_base, p_new_base);
+
+	return p_new_base;
+}
+
+/* Rebuild expression tree replacing source nil with target nil. */
+static x_obj_t *x_prim_renil(x_obj_t *p_src, x_obj_t *p_dst,
+	x_obj_t *p_exp)
+{
+	if (x_obj_isnil(p_src, p_exp)) {
+		return p_dst;
+	}
+
+	if (x_obj_type_islist(p_src, p_exp)) {
+		return x_mklist(p_dst,
+			x_prim_renil(p_src, p_dst, x_firstobj(p_exp)),
+			x_prim_renil(p_src, p_dst, x_restobj(p_exp)));
+	}
+
+	return p_exp;
+}
+
+/* base-eval: (base-eval base expr) -> eval expr in target base */
+static x_obj_t *x_prim_base_eval(x_obj_t *p_base, x_obj_t *p_args)
+{
+	x_error_handler_t handler;
+	x_obj_t *p_target = x_prim_eval_arg(p_base, x_firstobj(p_args)),
+		*p_expr = x_prim_eval_arg(p_base, x_firstobj(x_restobj(p_args))),
+		*p_prev_handler = x_base_field_error_handler(p_target),
+		*p_result;
+
+	/* Re-nil: replace parent nil terminators with target nil. */
+	p_expr = x_prim_renil(p_base, p_target, p_expr);
+
+	/* Install bridge handler in target to propagate errors to parent. */
+	handler.p_error = p_target;
+	handler.p_saved_env = x_base_field_env_alist(p_target);
+	handler.prev = x_obj_isnil(p_target, p_prev_handler)
+		? NULL : (x_error_handler_t *)x_ptrval(p_prev_handler);
+	x_base_field_error_handler(p_target) = x_mkptr(p_target, &handler);
+
+	if (setjmp(handler.jmp) == 0) {
+		p_result = x_prim_eval_arg(p_target, p_expr);
+	} else {
+		/* Error caught from target: restore and re-signal in parent. */
+		x_base_field_error_handler(p_target) = handler.prev
+			? x_mkptr(p_target, handler.prev) : p_target;
+		x_base_field_env_alist(p_target) = handler.p_saved_env;
+
+		if ( ! x_obj_isnil(p_base, x_base_field_error_handler(p_base))) {
+			x_error_handler_t *p_parent =
+				(x_error_handler_t *)x_ptrval(
+					x_base_field_error_handler(p_base));
+
+			p_parent->p_error = handler.p_error;
+			x_base_field_env_alist(p_base) = p_parent->p_saved_env;
+			longjmp(p_parent->jmp, 1);
+		}
+
+		x_obj_error(p_base, "error", NULL);
+
+		return p_base;
+	}
+
+	/* Pop handler. */
+	x_base_field_error_handler(p_target) = handler.prev
+		? x_mkptr(p_target, handler.prev) : p_target;
+
+	return p_result;
+}
+
+/* base-bind: (base-bind base name value) -> bind in target base */
+static x_obj_t *x_prim_base_bind(x_obj_t *p_base, x_obj_t *p_args)
+{
+	x_obj_t *p_target = x_prim_eval_arg(p_base, x_firstobj(p_args)),
+		*p_name = x_prim_eval_arg(p_base, x_firstobj(x_restobj(p_args))),
+		*p_val = x_prim_eval_arg(p_base,
+			x_firstobj(x_restobj(x_restobj(p_args)))),
+		*p_pair;
+
+	/* Re-nil list values for cross-base compatibility. */
+	p_val = x_prim_renil(p_base, p_target, p_val);
+	p_pair = x_mkspair(p_target, p_name, p_val);
+
+	x_base_env_alist_extend(p_target, p_pair);
 
 	return p_val;
 }
@@ -668,6 +1026,19 @@ x_obj_t *x_prim_register(x_obj_t *p_base, x_obj_t *p_args)
 	x_prim_bind(p_base, "procedure?", x_prim_procedurep);
 	x_prim_bind(p_base, "wrap", x_prim_wrap);
 	x_prim_bind(p_base, "unwrap", x_prim_unwrap);
+	x_prim_bind(p_base, "quasiquote", x_prim_quasiquote);
+	x_prim_bind(p_base, "guard", x_prim_guard);
+	x_prim_bind(p_base, "error", x_prim_error);
+	x_prim_bind(p_base, "make-base", x_prim_make_base);
+	x_prim_bind(p_base, "base-eval", x_prim_base_eval);
+	x_prim_bind(p_base, "base-bind", x_prim_base_bind);
+	x_prim_bind(p_base, "string-length", x_prim_string_length);
+	x_prim_bind(p_base, "string-ref", x_prim_string_ref);
+	x_prim_bind(p_base, "string-append", x_prim_string_append);
+	x_prim_bind(p_base, "substring", x_prim_substring);
+	x_prim_bind(p_base, "string=?", x_prim_string_eq);
+	x_prim_bind(p_base, "number->string", x_prim_number_to_string);
+	x_prim_bind(p_base, "string->number", x_prim_string_to_number);
 
 	return p_base;
 }
