@@ -20,7 +20,6 @@
 #include "x-base.h"
 #include "x-type.h"
 #include "x-type/ptr.h"
-#include "x-type/str.h"
 
 
 x_satom_t x_type_atom_obj = x_obj_set(NULL, X_OBJ_FLAG_NONE, {.s = (x_char_t *)X_TYPE_ATOM_NAME}),
@@ -246,7 +245,7 @@ void x_obj_error(x_obj_t *p_base, x_char_t *message, x_char_t *symbol)
 		x_error_handler_t *handler =
 			(x_error_handler_t *)x_ptrval(x_base_field_error_handler(p_base));
 
-		handler->p_error = x_mkstr(p_base, message);
+		handler->error_msg = message;
 		x_base_field_env_alist(p_base) = handler->p_saved_env;
 		longjmp(handler->jmp, 1);
 	}

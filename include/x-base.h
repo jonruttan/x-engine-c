@@ -39,6 +39,7 @@
 typedef struct x_error_handler {
 	jmp_buf jmp;
 	x_obj_t *p_error;
+	x_char_t *error_msg;
 	x_obj_t *p_saved_env;
 	struct x_error_handler *prev;
 } x_error_handler_t;

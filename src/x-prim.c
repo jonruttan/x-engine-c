@@ -709,6 +709,7 @@ static x_obj_t *x_prim_guard(x_obj_t *p_base, x_obj_t *p_args)
 
 	/* Save env and push handler. */
 	handler.p_error = p_base;
+	handler.error_msg = NULL;
 	handler.p_saved_env = x_base_field_env_alist(p_base);
 	handler.prev = x_obj_isnil(p_base, p_prev_handler)
 		? NULL : (x_error_handler_t *)x_ptrval(p_prev_handler);
@@ -722,7 +723,9 @@ static x_obj_t *x_prim_guard(x_obj_t *p_base, x_obj_t *p_args)
 		}
 	} else {
 		/* Error caught: bind error to var, run handler body. */
-		x_obj_t *p_pair = x_mkspair(p_base, p_var, handler.p_error);
+		x_obj_t *p_err = x_obj_isnil(p_base, handler.p_error)
+			? x_mkstr(p_base, handler.error_msg) : handler.p_error;
+		x_obj_t *p_pair = x_mkspair(p_base, p_var, p_err);
 
 		x_base_env_alist_extend(p_base, p_pair);
 
@@ -908,6 +911,7 @@ static x_obj_t *x_prim_base_eval(x_obj_t *p_base, x_obj_t *p_args)
 
 	/* Install bridge handler in target to propagate errors to parent. */
 	handler.p_error = p_target;
+	handler.error_msg = NULL;
 	handler.p_saved_env = x_base_field_env_alist(p_target);
 	handler.prev = x_obj_isnil(p_target, p_prev_handler)
 		? NULL : (x_error_handler_t *)x_ptrval(p_prev_handler);
@@ -927,6 +931,7 @@ static x_obj_t *x_prim_base_eval(x_obj_t *p_base, x_obj_t *p_args)
 					x_base_field_error_handler(p_base));
 
 			p_parent->p_error = handler.p_error;
+			p_parent->error_msg = handler.error_msg;
 			x_base_field_env_alist(p_base) = p_parent->p_saved_env;
 			longjmp(p_parent->jmp, 1);
 		}
