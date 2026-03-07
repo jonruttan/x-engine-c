@@ -22,7 +22,6 @@
 #include "x-obj.h"
 #include "x-token.h"
 
-x_obj_t *x_sexp_atom_read(x_obj_t *p_base, x_obj_t *args);
 x_obj_t *x_sexp_atom_write(x_obj_t *p_base, x_obj_t *args);
 x_obj_t *x_sexp_read(x_obj_t *p_base, x_obj_t *args);
 x_obj_t *x_sexp_write(x_obj_t *p_base, x_obj_t *args);
