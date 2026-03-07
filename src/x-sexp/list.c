@@ -124,12 +124,12 @@ x_obj_t *x_sexp_list_write(x_obj_t *p_base, x_obj_t *p_args)
 	x_base_write(p_base, (x_obj_t *)args);
 
 	for (;;) {
-		if ( ! x_obj_isnil(p_base, x_car(p_obj))) {
-			x_firstobj((x_obj_t *)write_wrap) = x_car(p_obj);
+		if ( ! x_obj_isnil(p_base, x_firstobj(p_obj))) {
+			x_firstobj((x_obj_t *)write_wrap) = x_firstobj(p_obj);
 			x_sexp_write(p_base, (x_obj_t *)write_wrap);
 		}
 
-		p_obj = x_cdr(p_obj);
+		p_obj = x_restobj(p_obj);
 
 		if (x_obj_isnil(p_base, p_obj)) {
 			x_atomstr(data_obj) = X_SEXP_LIST_POST_STR;

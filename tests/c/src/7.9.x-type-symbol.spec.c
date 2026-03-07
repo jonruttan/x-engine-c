@@ -663,8 +663,8 @@ static char *test_type_symbol_eval(void)
 
 
 	p_obj = x_mksatom(p_base, p_base);
-	x_base_field_env_alist(p_base) = x_cons(p_base,
-		x_cons(p_base, p_symbol, p_obj),
+	x_base_field_env_alist(p_base) = x_mkspair(p_base,
+		x_mkspair(p_base, p_symbol, p_obj),
 		x_base_field_env_alist(p_base)
 	);
 

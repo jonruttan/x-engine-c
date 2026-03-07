@@ -109,7 +109,7 @@ static char *test_type_units(void)
 			nil))),
 		nil));
 */
-	/*x_sexp_write(p_base, x_car(p_base));*/
+	/*x_sexp_write(p_base, x_firstobj(p_base));*/
 
 	/* TODO: GC version. */
 	p_obj = x_mksatom(p_base, NULL);

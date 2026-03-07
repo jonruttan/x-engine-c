@@ -93,12 +93,12 @@ x_obj_t *x_type_str_call(x_obj_t *p_base, x_obj_t *p_args)
 
 	if (n > 1) {
 		/* TODO: Convert to Str type when type is available. */
-		/*return x_mkstrown(p_base, x_strval(proc) + x_intval(x_car(vals)), x_intval(x_cadr(vals)));*/
-		return x_mksatom(p_base, x_mksatomown(p_base, x_lib_strndup(x_strval(proc) + x_atomint(x_car(vals)), x_atomint(x_cadr(vals)))));
+		/*return x_mkstrown(p_base, x_strval(proc) + x_intval(x_firstobj(vals)), x_intval(x_firstobj(x_restobj(vals))));*/
+		return x_mksatom(p_base, x_mksatomown(p_base, x_lib_strndup(x_strval(proc) + x_atomint(x_firstobj(vals)), x_atomint(x_firstobj(x_restobj(vals))))));
 	}
 
 	if (n == 1) {
-		n = x_intval(x_car(vals));
+		n = x_intval(x_firstobj(vals));
 	}
 
 	if (n < 0) {

@@ -49,28 +49,28 @@
 #define x_type_types(B)               (x_firstobj((B)))
 #define x_type_settypes(B,X)          (x_type_types((B)) = (X))
 
-#define x_type_field_name             x_car
+#define x_type_field_name(X)          x_firstobj(X)
 
-#define x_type_field_data             x_cadr
+#define x_type_field_data(X)          x_firstobj(x_restobj(X))
 
-#define x_type_field_heap             x_caddr
-#define x_type_field_make(X)          x_car(x_type_field_heap((X)))
-#define x_type_field_free(X)          x_cadr(x_type_field_heap((X)))
-#define x_type_field_clone(X)         x_caddr(x_type_field_heap((X)))
-#define x_type_field_units(X)         x_cadddr(x_type_field_heap((X)))
-#define x_type_field_length(X)        x_car(x_cddddr(x_type_field_heap((X))))
+#define x_type_field_heap(X)          x_firstobj(x_restobj(x_restobj(X)))
+#define x_type_field_make(X)          x_firstobj(x_type_field_heap((X)))
+#define x_type_field_free(X)          x_firstobj(x_restobj(x_type_field_heap((X))))
+#define x_type_field_clone(X)         x_firstobj(x_restobj(x_restobj(x_type_field_heap((X)))))
+#define x_type_field_units(X)         x_firstobj(x_restobj(x_restobj(x_restobj(x_type_field_heap((X))))))
+#define x_type_field_length(X)        x_firstobj(x_restobj(x_restobj(x_restobj(x_restobj(x_type_field_heap((X)))))))
 
-#define x_type_field_proc(X)          x_cadddr((X))
-#define x_type_field_call(X)          x_car(x_type_field_proc((X)))
-#define x_type_field_eval(X)          x_cadr(x_type_field_proc((X)))
-#define x_type_field_convert(X)       x_caddr(x_type_field_proc((X)))
+#define x_type_field_proc(X)          x_firstobj(x_restobj(x_restobj(x_restobj(X))))
+#define x_type_field_call(X)          x_firstobj(x_type_field_proc((X)))
+#define x_type_field_eval(X)          x_firstobj(x_restobj(x_type_field_proc((X))))
+#define x_type_field_convert(X)       x_firstobj(x_restobj(x_restobj(x_type_field_proc((X)))))
 
-#define x_type_field_io(X)            x_car(x_cddddr((X)))
-#define x_type_field_analyse(X)       x_car(x_type_field_io((X)))
-#define x_type_field_delimit(X)       x_cadr(x_type_field_io((X)))
-#define x_type_field_write(X)         x_caddr(x_type_field_io((X)))
+#define x_type_field_io(X)            x_firstobj(x_restobj(x_restobj(x_restobj(x_restobj(X)))))
+#define x_type_field_analyse(X)       x_firstobj(x_type_field_io((X)))
+#define x_type_field_delimit(X)       x_firstobj(x_restobj(x_type_field_io((X))))
+#define x_type_field_write(X)         x_firstobj(x_restobj(x_restobj(x_type_field_io((X)))))
 
-#define x_type_arg_type(X)            x_car((X))
+#define x_type_arg_type(X)            x_firstobj((X))
 
 /*
  * # Data Structures

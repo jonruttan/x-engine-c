@@ -66,7 +66,7 @@ static char *test_base_make(void)
 	_it_should("return the Base object type alist",
 		! x_obj_isnil(p_base, p_obj)
 		&& x_obj_type_isspair(p_obj)
-		&& x_obj_isnil(p_base, x_car(p_obj))
+		&& x_obj_isnil(p_base, x_firstobj(p_obj))
 	);
 */
 
@@ -108,7 +108,7 @@ static char *test_base_make(void)
 	_it_should("return the Base object expression list",
 		! x_obj_isnil(p_base, p_obj)
 		&& x_obj_type_isspair(p_obj)
-		&& x_obj_isnil(p_base, x_car(p_obj))
+		&& x_obj_isnil(p_base, x_firstobj(p_obj))
 	);
 
 	p_obj = x_base_field_buffer(p_base);
@@ -160,9 +160,9 @@ static char *test_base_type_alist_extend(void)
 	p_alist = x_base_type_alist_extend(p_base, p_args);
 	_it_should("extend alist with (#<0x1:0x0> . #<0x1:0x1>)",
 		x_obj_type_isspair(p_alist)
-		&& x_obj_type_isspair(x_car(p_alist))
-		&& x_caar(p_alist) == p_atoms[0]
-		&& x_cdar(p_alist) == p_atoms[1]
+		&& x_obj_type_isspair(x_firstobj(p_alist))
+		&& x_firstobj(x_firstobj(p_alist)) == p_atoms[0]
+		&& x_restobj(x_firstobj(p_alist)) == p_atoms[1]
 	);
 
 
@@ -170,12 +170,12 @@ static char *test_base_type_alist_extend(void)
 	p_alist = x_base_type_alist_extend(p_base, p_args);
 	_it_should("extend alist with (#<0x1:0x2> . #<0x1:0x3>)",
 		x_obj_type_isspair(p_alist)
-		&& x_obj_type_isspair(x_car(p_alist))
-		&& x_caar(p_alist) == p_atoms[1]
-		&& x_cdar(p_alist) == p_atoms[2]
-		&& x_obj_type_isspair(x_cadr(p_alist))
-		&& x_caadr(p_alist) == p_atoms[0]
-		&& x_cdadr(p_alist) == p_atoms[1]
+		&& x_obj_type_isspair(x_firstobj(p_alist))
+		&& x_firstobj(x_firstobj(p_alist)) == p_atoms[1]
+		&& x_restobj(x_firstobj(p_alist)) == p_atoms[2]
+		&& x_obj_type_isspair(x_firstobj(x_restobj(p_alist)))
+		&& x_firstobj(x_firstobj(x_restobj(p_alist))) == p_atoms[0]
+		&& x_restobj(x_firstobj(x_restobj(p_alist))) == p_atoms[1]
 	);
 
 	x_sys_free(p_base);
@@ -287,9 +287,9 @@ static char *test_base_env_alist_extend(void)
 	p_alist = x_base_env_alist_extend(p_base, p_args);
 	_it_should("extend alist with (#<0x1:0x0> . #<0x1:0x1>)",
 		x_obj_type_isspair(p_alist)
-		&& x_obj_type_isspair(x_car(p_alist))
-		&& x_caar(p_alist) == p_atoms[0]
-		&& x_cdar(p_alist) == p_atoms[1]
+		&& x_obj_type_isspair(x_firstobj(p_alist))
+		&& x_firstobj(x_firstobj(p_alist)) == p_atoms[0]
+		&& x_restobj(x_firstobj(p_alist)) == p_atoms[1]
 	);
 
 
@@ -297,12 +297,12 @@ static char *test_base_env_alist_extend(void)
 	p_alist = x_base_env_alist_extend(p_base, p_args);
 	_it_should("extend alist with (#<0x1:0x2> . #<0x1:0x3>)",
 		x_obj_type_isspair(p_alist)
-		&& x_obj_type_isspair(x_car(p_alist))
-		&& x_caar(p_alist) == p_atoms[1]
-		&& x_cdar(p_alist) == p_atoms[2]
-		&& x_obj_type_isspair(x_cadr(p_alist))
-		&& x_caadr(p_alist) == p_atoms[0]
-		&& x_cdadr(p_alist) == p_atoms[1]
+		&& x_obj_type_isspair(x_firstobj(p_alist))
+		&& x_firstobj(x_firstobj(p_alist)) == p_atoms[1]
+		&& x_restobj(x_firstobj(p_alist)) == p_atoms[2]
+		&& x_obj_type_isspair(x_firstobj(x_restobj(p_alist)))
+		&& x_firstobj(x_firstobj(x_restobj(p_alist))) == p_atoms[0]
+		&& x_restobj(x_firstobj(x_restobj(p_alist))) == p_atoms[1]
 	);
 
 	x_sys_free(p_base);

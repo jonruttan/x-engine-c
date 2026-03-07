@@ -29,11 +29,11 @@ x_obj_t *x_findsym1(x_obj_t *p_base, x_obj_t **pp_top, x_char_t *name)
 	x_obj_t **prev = pp_top;
 #endif /* X_FINDSYM_REORDER */
 
-	for (p_symlist = p_top; p_symlist != p_base; p_symlist = x_cdr(p_symlist)) {
-		if ( ! x_lib_strcmp(name, x_symname(x_car(p_symlist)))) {
+	for (p_symlist = p_top; p_symlist != p_base; p_symlist = x_restobj(p_symlist)) {
+		if ( ! x_lib_strcmp(name, x_symname(x_firstobj(p_symlist)))) {
 #ifdef X_FINDSYM_REORDER
-			*prev = x_cdr(p_symlist);
-			x_cdr(p_symlist) = p_top;
+			*prev = x_restobj(p_symlist);
+			x_restobj(p_symlist) = p_top;
 			p_top = symlist;
 #endif /* X_FINDSYM_REORDER */
 			return p_symlist;
@@ -56,11 +56,11 @@ x_obj_t *x_intern(x_obj_t *p_base, x_obj_t *p_top, x_char_t *name)
 	x_obj_t *op = x_findsym(p_top, name);
 
 	if (op != x_nil) {
-		return x_car(op);
+		return x_firstobj(op);
 	}
 
 	op = x_mkownsym(p_top, name);
-	x_vectorval(p_top, X_I_SYMBOLS) = x_cons(p_top, op, x_vectorval(p_top, X_I_SYMBOLS));
+	x_vectorval(p_top, X_I_SYMBOLS) = x_mkspair(p_top, op, x_vectorval(p_top, X_I_SYMBOLS));
 
 	return op;
 }

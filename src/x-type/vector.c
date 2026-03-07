@@ -39,14 +39,14 @@ x_int_t x_obj_vector_length(x_obj_t *p_base, x_obj_t *p_obj)
 
 x_obj_t *x_obj_vector_proc(x_obj_t *p_base, x_obj_t *p_proc, x_obj_t *p_args)
 {
-	return x_vectorval(p_proc, x_firstint(x_car(p_args)));
+	return x_vectorval(p_proc, x_firstint(x_firstobj(p_args)));
 }
 
 x_obj_t *x_obj_vector_read(x_obj_t *p_base, x_obj_t *p_args)
 {
 	/* TODO: Fix this. */
 /*	if (x_strval(p_args)[0] == '#' && x_lib_strlen(x_strval(p_args)) == 1) {
-		return x_cons(p_base, x_car(x_findsym(p_base, _X_VECTOR)), x_readobj(p_base));
+		return x_mkspair(p_base, x_firstobj(x_findsym(p_base, _X_VECTOR)), x_readobj(p_base));
 	}
 */
 	return p_base;

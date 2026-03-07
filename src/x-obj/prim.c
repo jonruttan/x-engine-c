@@ -37,11 +37,11 @@ x_obj_t *x_obj_prim_make(x_obj_t *p_base, x_obj_t *p_args)
 	}
 
 	if (x_obj_type_issatom(p_obj) || x_obj_type_issatom(x_obj_type(p_obj))) {
-		return x_obj_make(p_base, x_obj_type(p_obj), x_atomint(x_cadr(p_args)), X_OBJ_LENGTH_ATOM, x_atomint(x_caddr(p_args)));
+		return x_obj_make(p_base, x_obj_type(p_obj), x_atomint(x_firstobj(x_restobj(p_args))), X_OBJ_LENGTH_ATOM, x_atomint(x_firstobj(x_restobj(x_restobj(p_args)))));
 	}
 
 	if (x_obj_type_isspair(p_obj)) {
-		return x_obj_make(p_base, x_obj_type(p_obj), x_atomint(x_cadr(p_args)), X_OBJ_LENGTH_PAIR, x_atomint(x_caddr(p_args)), x_atomint(x_cadddr(p_args)));
+		return x_obj_make(p_base, x_obj_type(p_obj), x_atomint(x_firstobj(x_restobj(p_args))), X_OBJ_LENGTH_PAIR, x_atomint(x_firstobj(x_restobj(x_restobj(p_args)))), x_atomint(x_firstobj(x_restobj(x_restobj(x_restobj(p_args))))));
 	}
 
 	p_make = x_type_field_name(x_obj_type(p_obj));

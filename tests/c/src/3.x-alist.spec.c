@@ -65,9 +65,9 @@ static char *test_alist_extend(void)
 	p_alist = x_alist_extend(p_base, p_args);
 	_it_should("extend alist with (#<0x1:0x1> . #<0x1:0x2>)",
 		x_obj_type_isspair(p_alist)
-		&& x_obj_type_isspair(x_car(p_alist))
-		&& x_caar(p_alist) == p_atoms[0]
-		&& x_cdar(p_alist) == p_atoms[1]
+		&& x_obj_type_isspair(x_firstobj(p_alist))
+		&& x_firstobj(x_firstobj(p_alist)) == p_atoms[0]
+		&& x_restobj(x_firstobj(p_alist)) == p_atoms[1]
 	);
 
 
@@ -78,12 +78,12 @@ static char *test_alist_extend(void)
 	p_alist = x_alist_extend(p_base, p_args);
 	_it_should("extend alist with (#<0x1:0x2> . #<0x1:0x3>)",
 		x_obj_type_isspair(p_alist)
-		&& x_obj_type_isspair(x_car(p_alist))
-		&& x_caar(p_alist) == p_atoms[1]
-		&& x_cdar(p_alist) == p_atoms[2]
-		&& x_obj_type_isspair(x_cadr(p_alist))
-		&& x_caadr(p_alist) == p_atoms[0]
-		&& x_cdadr(p_alist) == p_atoms[1]
+		&& x_obj_type_isspair(x_firstobj(p_alist))
+		&& x_firstobj(x_firstobj(p_alist)) == p_atoms[1]
+		&& x_restobj(x_firstobj(p_alist)) == p_atoms[2]
+		&& x_obj_type_isspair(x_firstobj(x_restobj(p_alist)))
+		&& x_firstobj(x_firstobj(x_restobj(p_alist))) == p_atoms[0]
+		&& x_restobj(x_firstobj(x_restobj(p_alist))) == p_atoms[1]
 	);
 
 
@@ -101,21 +101,21 @@ static char *test_alist_assoc(void)
 	p_atoms[1] = x_mksatom(p_base, 2);
 	p_atoms[2] = x_mksatom(p_base, 3);
 
-	p_alist = x_cons(p_base,
-		x_cons(p_base, p_atoms[0], p_atoms[0]), x_cons(p_base,
-		x_cons(p_base, p_atoms[1], p_atoms[1]), p_base));
+	p_alist = x_mkspair(p_base,
+		x_mkspair(p_base, p_atoms[0], p_atoms[0]), x_mkspair(p_base,
+		x_mkspair(p_base, p_atoms[1], p_atoms[1]), p_base));
 
-	p_args = x_cons(p_base, p_atoms[0], x_cons(p_base, p_alist, p_base));
+	p_args = x_mkspair(p_base, p_atoms[0], x_mkspair(p_base, p_alist, p_base));
 	p_obj = x_alist_assoc(p_base, p_args);
 	_it_should("assoc 1 with (#<0x1:0x1> . #<0x1:0x1>)",
 		x_obj_type_isspair(p_obj)
 		/*&& x_firstobj(p_obj) == p_atoms[0]
 		&& x_restobj(p_obj) == p_atoms[0]*/
-		&& x_caar(p_obj) == x_car(p_atoms[0])
-		&& x_cadr(p_obj) == x_car(p_atoms[0])
+		&& x_firstobj(x_firstobj(p_obj)) == x_firstobj(p_atoms[0])
+		&& x_firstobj(x_restobj(p_obj)) == x_firstobj(p_atoms[0])
 	);
 
-	p_args = x_cons(p_base, p_atoms[1], x_cons(p_base, p_alist, p_base));
+	p_args = x_mkspair(p_base, p_atoms[1], x_mkspair(p_base, p_alist, p_base));
 	p_obj = x_alist_assoc(p_base, p_args);
 	_it_should("assoc 2 with (#<0x1:0x2> . #<0x1:0x2>)",
 		x_obj_type_isspair(p_obj)
@@ -124,12 +124,12 @@ static char *test_alist_assoc(void)
 	);
 
 
-	p_args = x_cons(p_base, p_atoms[2], x_cons(p_base, p_alist, p_base));
+	p_args = x_mkspair(p_base, p_atoms[2], x_mkspair(p_base, p_alist, p_base));
 	p_obj = x_alist_assoc(p_base, p_args);
 	_it_should("assoc 3 with nil", x_obj_isnil(p_base, p_obj));
 
 
-	p_args = x_cons(p_base, p_base, x_cons(p_base, p_alist, p_base));
+	p_args = x_mkspair(p_base, p_base, x_mkspair(p_base, p_alist, p_base));
 	p_obj = x_alist_assoc(p_base, p_args);
 	_it_should("assoc nil with nil", x_obj_isnil(p_base, p_obj));
 

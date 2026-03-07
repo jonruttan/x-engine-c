@@ -34,11 +34,11 @@ x_obj_t *x_alist_assoc(x_obj_t *p_base, x_obj_t *p_args)
 		*p_alist = x_firstobj(x_restobj(p_args));
 
 	while ( ! x_obj_isnil(p_base, p_alist)) {
-		if (x_caaar(p_alist) == x_car(p_obj)) {
-			return x_car(p_alist);
+		if (x_firstobj(x_firstobj(x_firstobj(p_alist))) == x_firstobj(p_obj)) {
+			return x_firstobj(p_alist);
 		}
 
-		p_alist = x_cdr(p_alist);
+		p_alist = x_restobj(p_alist);
 	}
 
 	return p_base;

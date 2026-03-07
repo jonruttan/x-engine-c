@@ -24,7 +24,7 @@
 /*
  * # Environment Managment Functions
  */
-/*#define x_alist_extend(BASE, ALIST, SYM, VAL) (x_cons((BASE), x_cons((BASE), (SYM), (VAL)), (ALIST)))*/
+/*#define x_alist_extend(BASE, ALIST, SYM, VAL) (x_mkspair((BASE), x_mkspair((BASE), (SYM), (VAL)), (ALIST)))*/
 
 x_obj_t *x_alist_extend(x_obj_t *p_base, x_obj_t *p_args);
 x_obj_t *x_alist_assoc(x_obj_t *p_base, x_obj_t *p_args);

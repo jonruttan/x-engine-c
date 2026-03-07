@@ -31,20 +31,19 @@
  * # Includes
  */
 #include "x-obj.h"
-#include "x-lisp.h"
 
 /* TODO: Add name and version fields. */
-#define x_base							x_car
-#define x_base_field_type_alist			x_caar
-#define x_base_field_files				x_cadar
-#define x_base_field_filein(X)			x_car(x_base_field_files((X)))
-#define x_base_field_fileout(X)			x_cadr(x_base_field_files((X)))
-#define x_base_field_fileerr(X)			x_caddr(x_base_field_files((X)))
-#define x_base_field_env				x_caddar
-#define x_base_field_env_alist(X)		x_car(x_base_field_env((X)))
-#define x_base_field_eval_list(X)		x_cadr(x_base_field_env((X)))
-#define x_base_field_buffer(X)			x_caddr(x_base_field_env((X)))
-#define x_base_field_token_cache(X)		x_cadddr(x_base_field_env((X)))
+#define x_base(X)						x_firstobj(X)
+#define x_base_field_type_alist(X)		x_firstobj(x_firstobj(X))
+#define x_base_field_files(X)			x_firstobj(x_restobj(x_firstobj(X)))
+#define x_base_field_filein(X)			x_firstobj(x_base_field_files((X)))
+#define x_base_field_fileout(X)			x_firstobj(x_restobj(x_base_field_files((X))))
+#define x_base_field_fileerr(X)			x_firstobj(x_restobj(x_restobj(x_base_field_files((X)))))
+#define x_base_field_env(X)				x_firstobj(x_restobj(x_restobj(x_firstobj(X))))
+#define x_base_field_env_alist(X)		x_firstobj(x_base_field_env((X)))
+#define x_base_field_eval_list(X)		x_firstobj(x_restobj(x_base_field_env((X))))
+#define x_base_field_buffer(X)			x_firstobj(x_restobj(x_restobj(x_base_field_env((X)))))
+#define x_base_field_token_cache(X)		x_firstobj(x_restobj(x_restobj(x_restobj(x_base_field_env((X))))))
 
 #define x_base_isset(B)					((B) != NULL && x_base((B)) != NULL)
 
