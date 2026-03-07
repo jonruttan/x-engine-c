@@ -161,7 +161,11 @@ test-scm: $(EXECUTABLE)
 	sh tests/scm/spec-runner.sh
 .PHONY: test-scm
 
-tests: test test-x test-scm
+test-krn: $(EXECUTABLE)
+	sh tests/krn/spec-runner.sh
+.PHONY: test-krn
+
+tests: test test-x test-scm test-krn
 .PHONY: tests
 
 watch:

@@ -18,6 +18,7 @@
  */
 #include "x-type/procedure.h"
 #include "x-base.h"
+#include "x-obj/prim.h"
 #include "x-prim.h"
 
 x_satom_t x_type_procedure_name = x_obj_set(x_type_atom_obj, X_OBJ_FLAG_NONE, { .s = (x_char_t *)X_TYPE_PROCEDURE_NAME }),
@@ -82,34 +83,45 @@ x_obj_t *x_type_procedure_call(x_obj_t *p_base, x_obj_t *p_args)
 {
 	x_obj_t *p_proc = x_firstobj(p_args),
 		*p_unevaluated_args = x_restobj(p_args),
-		*p_params = x_procparams(p_proc),
-		*p_body = x_procbody(p_proc),
-		*p_closure_env = x_procenv(p_proc),
-		*p_saved_env,
-		*p_evaled_args,
-		*p_result;
+		*p_evaled_args;
 
 	/* Eval each argument in the current env. */
 	p_evaled_args = x_prim_evlis(p_base, p_unevaluated_args);
 
-	/* Save current env. */
-	p_saved_env = x_base_field_env_alist(p_base);
+	/* Wrapped combiner: dispatch to underlying combiner with eval'd args. */
+	if (x_obj_flags(p_proc) & X_OBJ_FLAG_WRAP) {
+		x_obj_t *p_combiner = x_procenv(p_proc),
+			*p_call_args = x_mkspair(p_base, p_combiner, p_evaled_args);
 
-	/* Extend closure's captured env with param bindings. */
-	x_base_field_env_alist(p_base) = x_prim_multiple_extend(
-		p_base, p_closure_env, p_params, p_evaled_args);
-
-	/* Eval body forms sequentially (implicit do). */
-	p_result = p_base;
-	while ( ! x_obj_isnil(p_base, p_body)) {
-		p_result = x_prim_eval_arg(p_base, x_firstobj(p_body));
-		p_body = x_restobj(p_body);
+		return x_obj_prim_call(p_base, p_call_args);
 	}
 
-	/* Restore saved env. */
-	x_base_field_env_alist(p_base) = p_saved_env;
+	{
+		x_obj_t *p_params = x_procparams(p_proc),
+			*p_body = x_procbody(p_proc),
+			*p_closure_env = x_procenv(p_proc),
+			*p_saved_env,
+			*p_result;
 
-	return p_result;
+		/* Save current env. */
+		p_saved_env = x_base_field_env_alist(p_base);
+
+		/* Extend closure's captured env with param bindings. */
+		x_base_field_env_alist(p_base) = x_prim_multiple_extend(
+			p_base, p_closure_env, p_params, p_evaled_args);
+
+		/* Eval body forms sequentially (implicit do). */
+		p_result = p_base;
+		while ( ! x_obj_isnil(p_base, p_body)) {
+			p_result = x_prim_eval_arg(p_base, x_firstobj(p_body));
+			p_body = x_restobj(p_body);
+		}
+
+		/* Restore saved env. */
+		x_base_field_env_alist(p_base) = p_saved_env;
+
+		return p_result;
+	}
 }
 
 x_obj_t *x_type_procedure_write(x_obj_t *p_base, x_obj_t *p_args)

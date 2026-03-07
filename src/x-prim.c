@@ -476,6 +476,22 @@ static x_obj_t *x_prim_operative(x_obj_t *p_base, x_obj_t *p_args)
 	return x_mkop(p_base, p_params, p_envparam, p_body, p_env);
 }
 
+/* wrap: (wrap combiner) -> create applicative from combiner */
+static x_obj_t *x_prim_wrap(x_obj_t *p_base, x_obj_t *p_args)
+{
+	x_obj_t *p_combiner = x_prim_eval_arg(p_base, x_firstobj(p_args));
+
+	return x_mkwrap(p_base, p_combiner);
+}
+
+/* unwrap: (unwrap applicative) -> extract underlying combiner */
+static x_obj_t *x_prim_unwrap(x_obj_t *p_base, x_obj_t *p_args)
+{
+	x_obj_t *p_applicative = x_prim_eval_arg(p_base, x_firstobj(p_args));
+
+	return x_procenv(p_applicative);
+}
+
 /* write: (write obj) -> output s-expression to stdout */
 static x_obj_t *x_prim_write(x_obj_t *p_base, x_obj_t *p_args)
 {
@@ -650,6 +666,8 @@ x_obj_t *x_prim_register(x_obj_t *p_base, x_obj_t *p_args)
 	x_prim_bind(p_base, "string?", x_prim_stringp);
 	x_prim_bind(p_base, "symbol?", x_prim_symbolp);
 	x_prim_bind(p_base, "procedure?", x_prim_procedurep);
+	x_prim_bind(p_base, "wrap", x_prim_wrap);
+	x_prim_bind(p_base, "unwrap", x_prim_unwrap);
 
 	return p_base;
 }

@@ -34,8 +34,11 @@
 #define x_procbody(X)				x_secondobj((X))
 #define x_procenv(X)				x_obj(x_obj_data_i((X),2))
 
+#define X_OBJ_FLAG_WRAP				X_OBJ_FLAG_1
+
 #define x_mkproc(B,P,BD,E)			x_make_procedure((B), X_OBJ_FLAG_NONE, (P), (BD), (E))
 #define x_mkfproc(B,F,P,BD,E)		x_make_procedure((B), (F), (P), (BD), (E))
+#define x_mkwrap(B,C)				x_make_procedure((B), X_OBJ_FLAG_WRAP, (B), (B), (C))
 
 /*
  * # Data Structures
