@@ -153,7 +153,11 @@ test-quick:
 	CFLAGS="$(CFLAGS) -fno-common -g -Og -I. -DTESTS" RUNNER=command sh $(PATH_TESTS_C)/test-runner/test-runner.sh $(TESTS)
 .PHONY: test
 
-tests: test
+test-x: $(EXECUTABLE)
+	sh tests/x/spec-runner.sh
+.PHONY: test-x
+
+tests: test test-x
 .PHONY: tests
 
 watch:

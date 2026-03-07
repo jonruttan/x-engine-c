@@ -120,6 +120,16 @@ static x_obj_t *x_prim_eq(x_obj_t *p_base, x_obj_t *p_args)
 	return a == b ? a : p_base;
 }
 
+/* =: (= a b) -> integer value equality */
+static x_obj_t *x_prim_numeq(x_obj_t *p_base, x_obj_t *p_args)
+{
+	x_obj_t *a = x_prim_eval_arg(p_base, x_firstobj(p_args)),
+		*b = x_prim_eval_arg(p_base, x_firstobj(x_restobj(p_args)));
+
+	return x_intval(a) == x_intval(b)
+		? x_mksymbol(p_base, (x_char_t *)"t") : p_base;
+}
+
 /* +: (+ a b) -> integer addition */
 static x_obj_t *x_prim_sum(x_obj_t *p_base, x_obj_t *p_args)
 {
@@ -147,14 +157,16 @@ static x_obj_t *x_prim_prod(x_obj_t *p_base, x_obj_t *p_args)
 	return x_mkint(p_base, x_intval(a) * x_intval(b));
 }
 
-/* define: (define name value) -> bind name to eval'd value */
+/* def: (def name value) -> bind name to eval'd value (supports recursion) */
 static x_obj_t *x_prim_define(x_obj_t *p_base, x_obj_t *p_args)
 {
 	x_obj_t *p_name = x_firstobj(p_args),
-		*p_val = x_prim_eval_arg(p_base, x_firstobj(x_restobj(p_args))),
-		*p_pair = x_mkspair(p_base, p_name, p_val);
+		*p_pair = x_mkspair(p_base, p_name, p_base),
+		*p_val;
 
 	x_base_env_alist_extend(p_base, p_pair);
+	p_val = x_prim_eval_arg(p_base, x_firstobj(x_restobj(p_args)));
+	x_restobj(p_pair) = p_val;
 
 	return p_val;
 }
@@ -170,6 +182,50 @@ static x_obj_t *x_prim_if(x_obj_t *p_base, x_obj_t *p_args)
 	}
 
 	return x_prim_eval_arg(p_base, x_firstobj(p_rest));
+}
+
+/* null?: (null? x) -> t if nil */
+static x_obj_t *x_prim_nullp(x_obj_t *p_base, x_obj_t *p_args)
+{
+	x_obj_t *x = x_prim_eval_arg(p_base, x_firstobj(p_args));
+
+	return x_obj_isnil(p_base, x) ? x_mksymbol(p_base, (x_char_t *)"t") : p_base;
+}
+
+/* pair?: (pair? x) -> t if list pair */
+static x_obj_t *x_prim_pairp(x_obj_t *p_base, x_obj_t *p_args)
+{
+	x_obj_t *x = x_prim_eval_arg(p_base, x_firstobj(p_args));
+
+	return x_obj_type_islist(p_base, x) ? x_mksymbol(p_base, (x_char_t *)"t") : p_base;
+}
+
+/* atom?: (atom? x) -> t if not a list pair */
+static x_obj_t *x_prim_atomp(x_obj_t *p_base, x_obj_t *p_args)
+{
+	x_obj_t *x = x_prim_eval_arg(p_base, x_firstobj(p_args));
+
+	return x_obj_type_islist(p_base, x) ? p_base : x_mksymbol(p_base, (x_char_t *)"t");
+}
+
+/* not: (not x) -> t if nil */
+static x_obj_t *x_prim_not(x_obj_t *p_base, x_obj_t *p_args)
+{
+	x_obj_t *x = x_prim_eval_arg(p_base, x_firstobj(p_args));
+
+	return x_obj_isnil(p_base, x) ? x_mksymbol(p_base, (x_char_t *)"t") : p_base;
+}
+
+/* list: (list a b c) -> (a b c) */
+static x_obj_t *x_prim_list(x_obj_t *p_base, x_obj_t *p_args)
+{
+	if (x_obj_isnil(p_base, p_args)) {
+		return p_base;
+	}
+
+	return x_mklist(p_base,
+		x_prim_eval_arg(p_base, x_firstobj(p_args)),
+		x_prim_list(p_base, x_restobj(p_args)));
 }
 
 /* fn: (fn (params) body...) -> create closure */
@@ -239,6 +295,7 @@ x_obj_t *x_prim_register(x_obj_t *p_base, x_obj_t *p_args)
 	x_prim_bind(p_base, "car", x_prim_car);
 	x_prim_bind(p_base, "cdr", x_prim_cdr);
 	x_prim_bind(p_base, "eq?", x_prim_eq);
+	x_prim_bind(p_base, "=", x_prim_numeq);
 	x_prim_bind(p_base, "+", x_prim_sum);
 	x_prim_bind(p_base, "-", x_prim_sub);
 	x_prim_bind(p_base, "*", x_prim_prod);
@@ -247,6 +304,11 @@ x_obj_t *x_prim_register(x_obj_t *p_base, x_obj_t *p_args)
 	x_prim_bind(p_base, "fn", x_prim_closure);
 	x_prim_bind(p_base, "do", x_prim_do);
 	x_prim_bind(p_base, "set", x_prim_set);
+	x_prim_bind(p_base, "null?", x_prim_nullp);
+	x_prim_bind(p_base, "pair?", x_prim_pairp);
+	x_prim_bind(p_base, "atom?", x_prim_atomp);
+	x_prim_bind(p_base, "not", x_prim_not);
+	x_prim_bind(p_base, "list", x_prim_list);
 
 	return p_base;
 }
