@@ -21,6 +21,7 @@
 #include "x-base.h"
 #include "x-eval.h"
 #include "x-exp/quote.h"
+#include "x-gc.h"
 #include "x-sexp.h"
 #include "x-type/buffer.h"
 #include "x-type/int.h"
@@ -178,49 +179,133 @@ static x_obj_t *x_prim_gte(x_obj_t *p_base, x_obj_t *p_args)
 		? x_mksymbol(p_base, (x_char_t *)X_PRIM_TRUE) : p_base;
 }
 
-/* +: (+ a b) -> integer addition */
+/* +: (+ a ...) -> variadic addition, identity 0 */
 static x_obj_t *x_prim_sum(x_obj_t *p_base, x_obj_t *p_args)
 {
-	x_obj_t *a = x_prim_eval_arg(p_base, x_firstobj(p_args)),
-		*b = x_prim_eval_arg(p_base, x_firstobj(x_restobj(p_args)));
+	x_int_t result = 0;
 
-	return x_mkint(p_base, x_intval(a) + x_intval(b));
+	for (; ! x_obj_isnil(p_base, p_args); p_args = x_restobj(p_args))
+		result += x_intval(x_prim_eval_arg(p_base, x_firstobj(p_args)));
+
+	return x_mkint(p_base, result);
 }
 
-/* -: (- a b) -> integer subtraction */
+/* -: (- a ...) -> variadic subtraction; (- a) negates */
 static x_obj_t *x_prim_sub(x_obj_t *p_base, x_obj_t *p_args)
 {
-	x_obj_t *a = x_prim_eval_arg(p_base, x_firstobj(p_args)),
-		*b = x_prim_eval_arg(p_base, x_firstobj(x_restobj(p_args)));
+	x_int_t result;
 
-	return x_mkint(p_base, x_intval(a) - x_intval(b));
+	if (x_obj_isnil(p_base, p_args))
+		return x_mkint(p_base, 0);
+
+	result = x_intval(x_prim_eval_arg(p_base, x_firstobj(p_args)));
+	p_args = x_restobj(p_args);
+
+	if (x_obj_isnil(p_base, p_args))
+		return x_mkint(p_base, -result);
+
+	for (; ! x_obj_isnil(p_base, p_args); p_args = x_restobj(p_args))
+		result -= x_intval(x_prim_eval_arg(p_base, x_firstobj(p_args)));
+
+	return x_mkint(p_base, result);
 }
 
-/* *: (* a b) -> integer multiplication */
+/* *: (* a ...) -> variadic multiplication, identity 1 */
 static x_obj_t *x_prim_prod(x_obj_t *p_base, x_obj_t *p_args)
 {
-	x_obj_t *a = x_prim_eval_arg(p_base, x_firstobj(p_args)),
-		*b = x_prim_eval_arg(p_base, x_firstobj(x_restobj(p_args)));
+	x_int_t result = 1;
 
-	return x_mkint(p_base, x_intval(a) * x_intval(b));
+	for (; ! x_obj_isnil(p_base, p_args); p_args = x_restobj(p_args))
+		result *= x_intval(x_prim_eval_arg(p_base, x_firstobj(p_args)));
+
+	return x_mkint(p_base, result);
 }
 
-/* /: (/ a b) -> integer division */
+/* /: (/ a ...) -> variadic integer division */
 static x_obj_t *x_prim_div(x_obj_t *p_base, x_obj_t *p_args)
 {
-	x_obj_t *a = x_prim_eval_arg(p_base, x_firstobj(p_args)),
-		*b = x_prim_eval_arg(p_base, x_firstobj(x_restobj(p_args)));
+	x_int_t result;
 
-	return x_mkint(p_base, x_intval(a) / x_intval(b));
+	if (x_obj_isnil(p_base, p_args))
+		return x_mkint(p_base, 1);
+
+	result = x_intval(x_prim_eval_arg(p_base, x_firstobj(p_args)));
+	p_args = x_restobj(p_args);
+
+	for (; ! x_obj_isnil(p_base, p_args); p_args = x_restobj(p_args))
+		result /= x_intval(x_prim_eval_arg(p_base, x_firstobj(p_args)));
+
+	return x_mkint(p_base, result);
 }
 
-/* %: (% a b) -> integer modulo */
+/* %: (% a ...) -> variadic integer modulo */
 static x_obj_t *x_prim_mod(x_obj_t *p_base, x_obj_t *p_args)
+{
+	x_int_t result;
+
+	if (x_obj_isnil(p_base, p_args))
+		return x_mkint(p_base, 0);
+
+	result = x_intval(x_prim_eval_arg(p_base, x_firstobj(p_args)));
+	p_args = x_restobj(p_args);
+
+	for (; ! x_obj_isnil(p_base, p_args); p_args = x_restobj(p_args))
+		result %= x_intval(x_prim_eval_arg(p_base, x_firstobj(p_args)));
+
+	return x_mkint(p_base, result);
+}
+
+/* ~: (~ n) -> bitwise NOT */
+static x_obj_t *x_prim_bitnot(x_obj_t *p_base, x_obj_t *p_args)
+{
+	x_obj_t *a = x_prim_eval_arg(p_base, x_firstobj(p_args));
+
+	return x_mkint(p_base, ~x_intval(a));
+}
+
+/* &: (& a b) -> bitwise AND */
+static x_obj_t *x_prim_bitand(x_obj_t *p_base, x_obj_t *p_args)
 {
 	x_obj_t *a = x_prim_eval_arg(p_base, x_firstobj(p_args)),
 		*b = x_prim_eval_arg(p_base, x_firstobj(x_restobj(p_args)));
 
-	return x_mkint(p_base, x_intval(a) % x_intval(b));
+	return x_mkint(p_base, x_intval(a) & x_intval(b));
+}
+
+/* |: (| a b) -> bitwise OR */
+static x_obj_t *x_prim_bitor(x_obj_t *p_base, x_obj_t *p_args)
+{
+	x_obj_t *a = x_prim_eval_arg(p_base, x_firstobj(p_args)),
+		*b = x_prim_eval_arg(p_base, x_firstobj(x_restobj(p_args)));
+
+	return x_mkint(p_base, x_intval(a) | x_intval(b));
+}
+
+/* ^: (^ a b) -> bitwise XOR */
+static x_obj_t *x_prim_bitxor(x_obj_t *p_base, x_obj_t *p_args)
+{
+	x_obj_t *a = x_prim_eval_arg(p_base, x_firstobj(p_args)),
+		*b = x_prim_eval_arg(p_base, x_firstobj(x_restobj(p_args)));
+
+	return x_mkint(p_base, x_intval(a) ^ x_intval(b));
+}
+
+/* <<: (<< a b) -> shift left */
+static x_obj_t *x_prim_shl(x_obj_t *p_base, x_obj_t *p_args)
+{
+	x_obj_t *a = x_prim_eval_arg(p_base, x_firstobj(p_args)),
+		*b = x_prim_eval_arg(p_base, x_firstobj(x_restobj(p_args)));
+
+	return x_mkint(p_base, x_intval(a) << x_intval(b));
+}
+
+/* >>: (>> a b) -> shift right */
+static x_obj_t *x_prim_shr(x_obj_t *p_base, x_obj_t *p_args)
+{
+	x_obj_t *a = x_prim_eval_arg(p_base, x_firstobj(p_args)),
+		*b = x_prim_eval_arg(p_base, x_firstobj(x_restobj(p_args)));
+
+	return x_mkint(p_base, x_intval(a) >> x_intval(b));
 }
 
 /* def: (def name value) -> bind name to eval'd value (supports recursion) */
@@ -322,6 +407,15 @@ static x_obj_t *x_prim_procedurep(x_obj_t *p_base, x_obj_t *p_args)
 	x_obj_t *x = x_prim_eval_arg(p_base, x_firstobj(p_args));
 
 	return (x_obj_type_isprocedure(p_base, x) || x_obj_type_isprim(p_base, x))
+		? x_mksymbol(p_base, (x_char_t *)X_PRIM_TRUE) : p_base;
+}
+
+/* char?: (char? x) -> t if character */
+static x_obj_t *x_prim_charp(x_obj_t *p_base, x_obj_t *p_args)
+{
+	x_obj_t *x = x_prim_eval_arg(p_base, x_firstobj(p_args));
+
+	return x_obj_type_ischar(p_base, x)
 		? x_mksymbol(p_base, (x_char_t *)X_PRIM_TRUE) : p_base;
 }
 
@@ -588,6 +682,31 @@ static x_obj_t *x_prim_read_expr(x_obj_t *p_base, x_obj_t *p_args)
 	};
 
 	return x_sexp_read(p_base, (x_obj_t *)read_args);
+}
+
+/* read-char: (read-char) -> read one character from stdin */
+static x_obj_t *x_prim_read_char(x_obj_t *p_base, x_obj_t *p_args)
+{
+	x_obj_t *p_buffer = x_base_field_buffer(p_base);
+	x_spair_t buf_args[1] = {
+		x_obj_set(NULL, X_OBJ_FLAG_NONE, { p_buffer }, { p_base })
+	};
+
+	p_buffer = x_type_buffer_read(p_base, (x_obj_t *)buf_args);
+
+	if (x_obj_isnil(p_base, p_buffer)) {
+		return p_base;
+	}
+
+	return x_mkchar(p_base, x_bufferlastchar(p_buffer));
+}
+
+/* gc: (gc) -> trigger garbage collection (mark reachable objects) */
+static x_obj_t *x_prim_gc(x_obj_t *p_base, x_obj_t *p_args)
+{
+	x_gc_mark(p_base, p_base, X_OBJ_FLAG_GC);
+
+	return p_base;
 }
 
 /* string->symbol: (string->symbol str) -> convert string to symbol */
@@ -1153,6 +1272,15 @@ x_obj_t *x_prim_register(x_obj_t *p_base, x_obj_t *p_args)
 	x_prim_bind(p_base, "make-instance", x_prim_make_instance);
 	x_prim_bind(p_base, "type?", x_prim_typep);
 	x_prim_bind(p_base, "type-name", x_prim_type_name);
+	x_prim_bind(p_base, "~", x_prim_bitnot);
+	x_prim_bind(p_base, "&", x_prim_bitand);
+	x_prim_bind(p_base, "|", x_prim_bitor);
+	x_prim_bind(p_base, "^", x_prim_bitxor);
+	x_prim_bind(p_base, "<<", x_prim_shl);
+	x_prim_bind(p_base, ">>", x_prim_shr);
+	x_prim_bind(p_base, "char?", x_prim_charp);
+	x_prim_bind(p_base, "read-char", x_prim_read_char);
+	x_prim_bind(p_base, "gc", x_prim_gc);
 
 	return p_base;
 }
