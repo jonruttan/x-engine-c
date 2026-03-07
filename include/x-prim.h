@@ -31,6 +31,15 @@ x_obj_t *x_prim_evlis(x_obj_t *p_base, x_obj_t *p_args);
 x_obj_t *x_prim_multiple_extend(x_obj_t *p_base, x_obj_t *p_env,
 	x_obj_t *p_params, x_obj_t *p_vals);
 
+void x_prim_bind(x_obj_t *p_base, x_char_t *name, x_prim_fn fn);
+
+x_obj_t *x_prim_core_register(x_obj_t *p_base, x_obj_t *p_args);
+x_obj_t *x_prim_arith_register(x_obj_t *p_base, x_obj_t *p_args);
+x_obj_t *x_prim_pred_register(x_obj_t *p_base, x_obj_t *p_args);
+x_obj_t *x_prim_string_register(x_obj_t *p_base, x_obj_t *p_args);
+x_obj_t *x_prim_io_register(x_obj_t *p_base, x_obj_t *p_args);
+x_obj_t *x_prim_type_register(x_obj_t *p_base, x_obj_t *p_args);
+
 x_obj_t *x_prim_register(x_obj_t *p_base, x_obj_t *p_args);
 
 #endif /* X_PRIM_H */
