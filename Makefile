@@ -26,7 +26,7 @@ PREFIX?=/usr/local
 # Override default compiler and flags
 CC?=gcc
 CFLAGS+=-Wall -Wextra -Wno-unused-parameter
-CFLAGS+=-DX_GC
+CFLAGS+=-DX_GC -DX_TYPE
 
 # Smaller, faster, flakier?
 # CFLAGS+=-Wl,--gc-sections -fdata-sections -fno-stack-protector -Wa,--noexecstack -fno-builtin -fno-unwind-tables -fno-asynchronous-unwind-tables -Os
@@ -80,9 +80,14 @@ BASEDIR=.
 INCDIR=$(BASEDIR)/include
 SRCDIR=$(BASEDIR)/src
 
-CFLAGS+=-I$(INCDIR)
+# x-expr foundation library
+X_EXPR_DIR=ext/x-expr
+X_EXPR_SOURCES=$(filter-out $(X_EXPR_DIR)/src/x-obj.c, $(wildcard $(X_EXPR_DIR)/src/*.c))
+X_EXPR_OBJECTS=$(X_EXPR_SOURCES:.c=.o)
 
-HEADERS=$(wildcard $(INCDIR)/*.h $(INCDIR)/**/*.h)
+CFLAGS+=-I$(X_EXPR_DIR)/include -I$(INCDIR)
+
+HEADERS=$(wildcard $(INCDIR)/*.h $(INCDIR)/**/*.h $(X_EXPR_DIR)/include/*.h)
 SOURCES=$(wildcard $(SRCDIR)/*.c $(SRCDIR)/**/*.c)
 OBJECTS=$(SOURCES:.c=.o)
 EXECUTABLE=x
@@ -107,8 +112,8 @@ debug: $(EXECUTABLE)-debug
 strip: $(EXECUTABLE)
 	strip $(EXECUTABLE)
 
-$(EXECUTABLE): $(OBJECTS) $(EXTRA_OBJS)
-	$(CC) $(LDFLAGS) $(OBJECTS) $(EXTRA_OBJS) $(EXTRA_LIBS) -o $@
+$(EXECUTABLE): $(OBJECTS) $(X_EXPR_OBJECTS) $(EXTRA_OBJS)
+	$(CC) $(LDFLAGS) $(OBJECTS) $(X_EXPR_OBJECTS) $(EXTRA_OBJS) $(EXTRA_LIBS) -o $@
 
 $(EXECUTABLE)-debug: CFLAGS += -g -Og -DDEBUG
 $(EXECUTABLE)-debug: LDFLAGS += -g
@@ -176,6 +181,6 @@ uninstall:
 .PHONY: uninstall
 
 clean:
-	rm -f $(EXECUTABLE) $(EXECUTABLE)-debug *.out $(SRCDIR)/*.o $(SRCDIR)/**/*.o *.core core
+	rm -f $(EXECUTABLE) $(EXECUTABLE)-debug *.out $(SRCDIR)/*.o $(SRCDIR)/**/*.o $(X_EXPR_DIR)/src/*.o *.core core
 	rm -Rf docs/
 .PHONY: clean

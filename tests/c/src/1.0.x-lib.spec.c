@@ -13,9 +13,9 @@
 #undef X_USE_STDLIB
 #endif /* X_TEST_LIB */
 
-#include "src/x-sys.c"
-#include "src/x-lib.c"
-#include "src/x.c"
+#include "ext/x-expr/src/x-sys.c"
+#include "ext/x-expr/src/x-lib.c"
+#include "ext/x-expr/src/x.c"
 
 #include "helper-system-functions.c"
 

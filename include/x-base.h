@@ -31,6 +31,7 @@
  * # Includes
  */
 #include "x-obj.h"
+#include "x-lisp.h"
 
 /* TODO: Add name and version fields. */
 #define x_base							x_car

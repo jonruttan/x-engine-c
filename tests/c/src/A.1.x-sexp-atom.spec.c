@@ -5,10 +5,10 @@
 #define TEST_RUNNER_OVERHEAD
 #include "test-runner.h"
 
-#include "src/x-sys.c"
-#include "src/x-lib.c"
+#include "ext/x-expr/src/x-sys.c"
+#include "ext/x-expr/src/x-lib.c"
 #include "src/x-obj.c"
-#include "src/x.c"
+#include "ext/x-expr/src/x.c"
 #include "src/x-alist.c"
 #include "src/x-base.c"
 #include "src/x-sexp/atom.c"

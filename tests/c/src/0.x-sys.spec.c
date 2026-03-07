@@ -5,7 +5,7 @@
 #define TEST_RUNNER_OVERHEAD
 #include "test-runner.h"
 
-#include "src/x-sys.c"
+#include "ext/x-expr/src/x-sys.c"
 
 #include "helper-system-functions.c"
 
