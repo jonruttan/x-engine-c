@@ -171,7 +171,7 @@ x_obj_t *x_type_list_eval(x_obj_t *p_base, x_obj_t *p_args)
 	proc_exp = x_obj_set(NULL, X_OBJ_FLAG_NONE, { NULL }, { x_restobj(p_exp) }),
 	prim_args = x_obj_set(NULL, X_OBJ_FLAG_NONE, { NULL }, { (x_obj_t *)proc_exp });
 
-	/* Eval car to resolve operator (e.g. symbol -> prim). */
+	/* Eval first to resolve operator (e.g. symbol -> prim). */
 	p_proc = x_eval(p_base, (x_obj_t *)eval_args);
 
 	if (x_obj_isnil(p_base, p_proc)) {

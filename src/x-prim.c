@@ -740,7 +740,7 @@ static x_obj_t *x_prim_qq_append(x_obj_t *p_base, x_obj_t *p_a, x_obj_t *p_b)
 /* qq_expand: recursively process quasiquote template */
 static x_obj_t *x_prim_qq_expand(x_obj_t *p_base, x_obj_t *p_tmpl)
 {
-	x_obj_t *p_car;
+	x_obj_t *p_head;
 
 	/* Atom or nil -> return as-is. */
 	if (x_obj_isnil(p_base, p_tmpl)
@@ -748,29 +748,29 @@ static x_obj_t *x_prim_qq_expand(x_obj_t *p_base, x_obj_t *p_tmpl)
 		return p_tmpl;
 	}
 
-	p_car = x_firstobj(p_tmpl);
+	p_head = x_firstobj(p_tmpl);
 
 	/* (unquote x) -> eval x */
-	if (x_obj_type_issymbol(p_base, p_car)
-		&& 0 == x_lib_strcmp(x_symbolval(p_car), "unquote")) {
+	if (x_obj_type_issymbol(p_base, p_head)
+		&& 0 == x_lib_strcmp(x_symbolval(p_head), "unquote")) {
 		return x_prim_eval_arg(p_base, x_firstobj(x_restobj(p_tmpl)));
 	}
 
 	/* ((unquote-splicing x) . rest) -> append (eval x) to expanded rest */
-	if (x_obj_type_islist(p_base, p_car)
-		&& x_obj_type_issymbol(p_base, x_firstobj(p_car))
-		&& 0 == x_lib_strcmp(x_symbolval(x_firstobj(p_car)),
+	if (x_obj_type_islist(p_base, p_head)
+		&& x_obj_type_issymbol(p_base, x_firstobj(p_head))
+		&& 0 == x_lib_strcmp(x_symbolval(x_firstobj(p_head)),
 			"unquote-splicing")) {
 		x_obj_t *p_spliced = x_prim_eval_arg(p_base,
-			x_firstobj(x_restobj(p_car)));
+			x_firstobj(x_restobj(p_head)));
 		x_obj_t *p_rest = x_prim_qq_expand(p_base, x_restobj(p_tmpl));
 
 		return x_prim_qq_append(p_base, p_spliced, p_rest);
 	}
 
-	/* Recursive: expand car and cdr */
+	/* Recursive: expand first and rest */
 	return x_mklist(p_base,
-		x_prim_qq_expand(p_base, p_car),
+		x_prim_qq_expand(p_base, p_head),
 		x_prim_qq_expand(p_base, x_restobj(p_tmpl)));
 }
 
