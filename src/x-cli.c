@@ -19,7 +19,7 @@
 #include "x-base.h"
 #include "x-eval.h"
 #include "x-prim.h"
-#include "x-sexp.h"
+#include "x-token.h"
 #include "x-type/buffer.h"
 #include "x-type/char.h"
 #include "x-type/comment.h"
@@ -160,7 +160,7 @@ int main(int argc, char *argv[])
 		x_sys_write(STDOUT_FILENO, "> ", 2);
 
 		/* Read. */
-		p_exp = x_sexp_read(p_base, p_read_args);
+		p_exp = x_token_read(p_base, p_read_args);
 
 		if (x_obj_isnil(p_base, p_exp)) {
 			x_sys_write(STDOUT_FILENO, "\n", 1);
@@ -174,7 +174,7 @@ int main(int argc, char *argv[])
 		/* Print. */
 		if ( ! x_obj_isnil(p_base, p_result)) {
 			x_firstobj((x_obj_t *)write_args) = p_result;
-			x_sexp_write(p_base, (x_obj_t *)write_args);
+			x_token_write(p_base, (x_obj_t *)write_args);
 		}
 
 		x_sys_write(STDOUT_FILENO, "\n", 1);

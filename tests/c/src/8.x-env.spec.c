@@ -31,7 +31,6 @@
 #include "src/x-type/symbol.c"
 #include "src/x-sexp/symbol.c"
 #include "src/x-env.c"
-#include "src/x-sexp.c"
 #include "src/x-sexp/atom.c"
 #include "src/x-sexp/pair.c"
 

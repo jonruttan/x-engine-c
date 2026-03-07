@@ -20,7 +20,7 @@
 #include "x-alist.h"
 #include "x-eval.h"
 
-#include "x-sexp.h"
+#include "x-token.h"
 
 #define nil			p_base
 #define pair(X,Y)	(x_mkspair(p_base, (X), (Y)))
@@ -109,7 +109,7 @@ x_obj_t *x_base_load(x_obj_t *p_base, x_obj_t *p_args)
 	};
 
 	for (;;) {
-		p_exp = x_sexp_read(p_base, (x_obj_t *)read_args);
+		p_exp = x_token_read(p_base, (x_obj_t *)read_args);
 		if (x_obj_isnil(p_base, p_exp)) break;
 
 		x_firstobj((x_obj_t *)exp_wrap) = p_exp;

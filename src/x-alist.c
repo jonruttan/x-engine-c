@@ -18,7 +18,6 @@
  */
 #include "x-alist.h"
 
-#include "x-sexp.h"
 
 
 x_obj_t *x_alist_extend(x_obj_t *p_base, x_obj_t *p_args)

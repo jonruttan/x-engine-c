@@ -16,7 +16,6 @@
 #include "src/x-obj.c"
 #include "src/x-alist.c"
 #include "src/x-base.c"
-#include "src/x-sexp.c"
 #include "src/x-sexp/atom.c"
 #include "src/x-sexp/pair.c"
 #include "src/x-token.c"

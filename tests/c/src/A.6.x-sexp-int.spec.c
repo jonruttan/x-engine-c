@@ -27,7 +27,6 @@
 #include "src/x-sexp/int.c"
 #include "src/x-type/str.c"
 #include "src/x-sexp/str.c"
-#include "src/x-sexp.c"
 #include "src/x-type/atom.c"
 #include "src/x-sexp/atom.c"
 #include "src/x-sexp/pair.c"

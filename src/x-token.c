@@ -27,6 +27,8 @@
 #include "x-type/prim.h"
 #include "x-type/str.h"
 #include "x-type/list.h"
+#include "x-sexp/atom.h"
+#include "x-sexp/pair.h"
 
 /*
  * # Tokenization Functions
@@ -186,4 +188,23 @@ x_obj_t *x_token_read(x_obj_t *p_base, x_obj_t *p_args)
 			return p_obj;
 		}
 	}
+}
+
+x_obj_t *x_token_write(x_obj_t *p_base, x_obj_t *p_args)
+{
+	x_obj_t *p_obj = x_firstobj(p_args);
+
+	if (x_obj_type_issatom(p_obj)) {
+		return x_sexp_atom_write(p_base, p_args);
+	}
+
+	if (x_obj_type_isspair(p_obj)) {
+		return x_sexp_pair_write(p_base, p_args);
+	}
+
+	if ( ! x_obj_isnil(p_base, x_obj_type(p_obj))) {
+		return x_type_write(p_base, p_args);
+	}
+
+	return p_base;
 }

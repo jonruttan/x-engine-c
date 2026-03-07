@@ -11,11 +11,9 @@
 #include "ext/x-expr/src/x.c"
 #include "src/x-alist.c"
 #include "src/x-base.c"
-#include "src/x-sexp.c"
+#include "helper-system-functions.c"
 
 x_obj_t *x_token_read(x_obj_t *p_base, x_obj_t *p_args) { return p_base; }
-
-#include "helper-system-functions.c"
 
 
 /*
@@ -54,6 +52,25 @@ x_obj_t *x_type_write(x_obj_t *p_base, x_obj_t *p_args)
 	return p_args;
 }
 
+x_obj_t *x_token_write(x_obj_t *p_base, x_obj_t *p_args)
+{
+	x_obj_t *p_obj = x_firstobj(p_args);
+
+	if (x_obj_type_issatom(p_obj)) {
+		return x_sexp_atom_write(p_base, p_args);
+	}
+
+	if (x_obj_type_isspair(p_obj)) {
+		return x_sexp_pair_write(p_base, p_args);
+	}
+
+	if ( ! x_obj_isnil(p_base, x_obj_type(p_obj))) {
+		return x_type_write(p_base, p_args);
+	}
+
+	return p_base;
+}
+
 
 /*
  * ## Test Runners
@@ -66,7 +83,7 @@ static char *test_sexp_write(void)
 	p_atom = x_mksatom(NULL, NULL);
 	p_args = x_mkspair(NULL, p_atom, NULL);
 
-	p_ret = x_sexp_write(NULL, p_args);
+	p_ret = x_token_write(NULL, p_args);
 
 	_it_should("write atom s-exp to stdout",
 		p_args == p_ret
@@ -82,7 +99,7 @@ static char *test_sexp_write(void)
 	p_pair = x_mkspair(NULL, NULL, NULL);
 	p_args = x_mkspair(NULL, p_pair, NULL);
 
-	p_ret = x_sexp_write(NULL, p_args);
+	p_ret = x_token_write(NULL, p_args);
 
 	_it_should("write atom s-exp to stdout",
 		p_args == p_ret
@@ -100,7 +117,7 @@ static char *test_sexp_write(void)
 	x_obj_type(p_obj) = p_type;
 	p_args = x_mkspair(NULL, p_obj, NULL);
 
-	p_ret = x_sexp_write(NULL, p_args);
+	p_ret = x_token_write(NULL, p_args);
 
 	_it_should("write atom s-exp to stdout",
 		p_args == p_ret
@@ -118,7 +135,7 @@ static char *test_sexp_write(void)
 	x_obj_type(p_obj) = NULL;
 	p_args = x_mkspair(NULL, p_obj, NULL);
 
-	p_ret = x_sexp_write(NULL, p_args);
+	p_ret = x_token_write(NULL, p_args);
 
 	_it_should("write atom s-exp to stdout",
 		NULL == p_ret

@@ -13,6 +13,9 @@
 #include "src/x-base.c"
 #include "src/x-sexp/pair.c"
 
+x_obj_t *x_token_read(x_obj_t *p_base, x_obj_t *p_args) { return p_base; }
+x_obj_t *x_eval(x_obj_t *p_base, x_obj_t *p_args) { return p_base; }
+
 #include "helper-system-functions.c"
 
 
@@ -28,13 +31,13 @@ static void _teardown(void)
 {
 }
 
-static int x_sexp_write_call_count = 0;
-x_obj_t *x_sexp_write(x_obj_t *p_base, x_obj_t *p_obj)
+static int x_token_write_call_count = 0;
+x_obj_t *x_token_write(x_obj_t *p_base, x_obj_t *p_obj)
 {
 	char s[16];
 	int fd = x_base_isset(p_base) ? x_atomint(x_base_field_fileout(p_base)) : STDOUT_FILENO;
 
-	sprintf(s, "<%d>", ++x_sexp_write_call_count);
+	sprintf(s, "<%d>", ++x_token_write_call_count);
 	x_sys_write(fd, s, strlen(s));
 
 	return p_base;
@@ -67,7 +70,7 @@ static char *test_sexp_pair_write(void)
 	s = helper_file_str(TEST_HELPER_FILE_STDOUT);
 	_it_should("write empty pair s-exp to stdout",
 		0 == strncmp(expected, s, strlen(expected))
-		&& 0 == x_sexp_write_call_count
+		&& 0 == x_token_write_call_count
 	);
 
 
@@ -78,7 +81,7 @@ static char *test_sexp_pair_write(void)
 	s = helper_file_str(TEST_HELPER_FILE_STDOUT);
 	_it_should("write pair s-exp to stdout",
 		0 == strncmp(expected, s, strlen(expected))
-		&& 1 == x_sexp_write_call_count
+		&& 1 == x_token_write_call_count
 	);
 
 
@@ -89,7 +92,7 @@ static char *test_sexp_pair_write(void)
 	s = helper_file_str(TEST_HELPER_FILE_STDOUT);
 	_it_should("write broken pair s-exp to stdout",
 		0 == strncmp(expected, s, strlen(expected))
-		&& 3 == x_sexp_write_call_count
+		&& 3 == x_token_write_call_count
 	);
 
 
@@ -100,7 +103,7 @@ static char *test_sexp_pair_write(void)
 	s = helper_file_str(TEST_HELPER_FILE_STDOUT);
 	_it_should("write list s-exp to stdout",
 		0 == strncmp(expected, s, strlen(expected))
-		&& 5 == x_sexp_write_call_count
+		&& 5 == x_token_write_call_count
 	);
 
 

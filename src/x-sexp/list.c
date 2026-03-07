@@ -19,7 +19,7 @@
 #include "x-type/list.h"
 #include "x-type/buffer.h"
 #include "x-token.h"
-#include "x-sexp.h"
+#include "x-token.h"
 #include "x-sexp/list.h"
 #include "x-sexp/whitespace.h"
 
@@ -76,15 +76,15 @@ x_obj_t *x_sexp_list_read(x_obj_t *p_base, x_obj_t *p_args)
 		x_type_buffer_retain(p_base, (x_obj_t *)read_args);
 
 		for (;;) {
-			elem = x_sexp_read(p_base, (x_obj_t *)read_args);
+			elem = x_token_read(p_base, (x_obj_t *)read_args);
 
 			if (elem == (x_obj_t *)x_sexp_list_read_prim) {
 				break;
 			}
 
 			if (elem == (x_obj_t *)x_sexp_list_delimit_prim) {
-				x_restobj(tail) = x_sexp_read(p_base, (x_obj_t *)read_args);
-				x_sexp_read(p_base, (x_obj_t *)read_args);
+				x_restobj(tail) = x_token_read(p_base, (x_obj_t *)read_args);
+				x_token_read(p_base, (x_obj_t *)read_args);
 				break;
 			}
 
@@ -126,7 +126,7 @@ x_obj_t *x_sexp_list_write(x_obj_t *p_base, x_obj_t *p_args)
 	for (;;) {
 		if ( ! x_obj_isnil(p_base, x_firstobj(p_obj))) {
 			x_firstobj((x_obj_t *)write_wrap) = x_firstobj(p_obj);
-			x_sexp_write(p_base, (x_obj_t *)write_wrap);
+			x_token_write(p_base, (x_obj_t *)write_wrap);
 		}
 
 		p_obj = x_restobj(p_obj);
@@ -144,7 +144,7 @@ x_obj_t *x_sexp_list_write(x_obj_t *p_base, x_obj_t *p_args)
 			x_base_write(p_base, (x_obj_t *)args);
 
 			x_firstobj((x_obj_t *)write_wrap) = p_obj;
-			x_sexp_write(p_base, (x_obj_t *)write_wrap);
+			x_token_write(p_base, (x_obj_t *)write_wrap);
 
 			x_atomstr(data_obj) = X_SEXP_LIST_POST_STR;
 			x_atomint(size_obj) = 1;

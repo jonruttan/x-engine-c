@@ -19,7 +19,7 @@
 #include "x-prim.h"
 #include "x-base.h"
 #include "x-gc.h"
-#include "x-sexp.h"
+#include "x-token.h"
 #include "x-type/buffer.h"
 #include "x-type/char.h"
 #include "x-type/str.h"
@@ -32,7 +32,7 @@ static x_obj_t *x_prim_write(x_obj_t *p_base, x_obj_t *p_args)
 		x_obj_set(NULL, X_OBJ_FLAG_NONE, { p_val }, { NULL })
 	};
 
-	x_sexp_write(p_base, (x_obj_t *)write_args);
+	x_token_write(p_base, (x_obj_t *)write_args);
 
 	return p_base;
 }
@@ -53,7 +53,7 @@ static x_obj_t *x_prim_display(x_obj_t *p_base, x_obj_t *p_args)
 			x_obj_set(NULL, X_OBJ_FLAG_NONE, { p_val }, { NULL })
 		};
 
-		x_sexp_write(p_base, (x_obj_t *)write_args);
+		x_token_write(p_base, (x_obj_t *)write_args);
 	}
 
 	return p_base;
@@ -78,7 +78,7 @@ static x_obj_t *x_prim_read_expr(x_obj_t *p_base, x_obj_t *p_args)
 		x_obj_set(NULL, X_OBJ_FLAG_NONE, { p_buffer }, { p_base })
 	};
 
-	return x_sexp_read(p_base, (x_obj_t *)read_args);
+	return x_token_read(p_base, (x_obj_t *)read_args);
 }
 
 /* read-char: (read-char) -> read one character from stdin */

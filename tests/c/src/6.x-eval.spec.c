@@ -16,7 +16,6 @@
 #include "src/x-alist.c"
 #include "src/x-base.c"
 #include "src/x-eval.c"
-#include "src/x-sexp.c"
 #include "src/x-type.c"
 #include "src/x-type/atom.c"
 #include "src/x-sexp/atom.c"
@@ -25,6 +24,7 @@
 #include "src/x-type/prim.c"
 
 x_obj_t *x_token_read(x_obj_t *p_base, x_obj_t *p_args) { return p_base; }
+x_obj_t *x_token_write(x_obj_t *p_base, x_obj_t *p_args) { return p_args; }
 
 #include "helper-system-functions.c"
 

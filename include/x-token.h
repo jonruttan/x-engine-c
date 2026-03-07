@@ -34,5 +34,6 @@
 x_obj_t *x_token_delimit(x_obj_t *p_base, x_obj_t *p_obj);
 x_obj_t *x_token_analyse(x_obj_t *p_base, x_obj_t *p_obj);
 x_obj_t *x_token_read(x_obj_t *p_base, x_obj_t *p_obj);
+x_obj_t *x_token_write(x_obj_t *p_base, x_obj_t *p_obj);
 
 #endif /* X_TOKEN_H */
