@@ -169,7 +169,7 @@ watch:
 
 # old version of install(1) may need -c
 #C=-c
-install:	$(EXECUTABLE) lib/$(EXECUTABLE)-lib.l $(EXECUTABLE).sh
+install:	$(EXECUTABLE) lib/$(EXECUTABLE).x $(EXECUTABLE).sh
 	install -d -m 0755 $(BINDIR)
 	install -d -m 0755 $(LIBDIR)
 	install $C -m 0755 $(EXECUTABLE) $(BINDIR)

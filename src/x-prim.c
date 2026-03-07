@@ -24,6 +24,7 @@
 #include "x-type/int.h"
 #include "x-type/list.h"
 #include "x-type/prim.h"
+#include "x-type/operative.h"
 #include "x-type/procedure.h"
 #include "x-type/symbol.h"
 
@@ -229,14 +230,18 @@ static x_obj_t *x_prim_define(x_obj_t *p_base, x_obj_t *p_args)
 	return p_val;
 }
 
-/* if: (if cond then else) -> conditional evaluation */
+/* if: (if cond then [else]) -> conditional evaluation */
 static x_obj_t *x_prim_if(x_obj_t *p_base, x_obj_t *p_args)
 {
 	x_obj_t *p_cond = x_prim_eval_arg(p_base, x_firstobj(p_args)),
 		*p_rest = x_restobj(p_args);
 
 	if (x_obj_isnil(p_base, p_cond)) {
-		return x_prim_eval_arg(p_base, x_firstobj(x_restobj(p_rest)));
+		x_obj_t *p_else = x_restobj(p_rest);
+
+		return x_obj_isnil(p_base, p_else)
+			? p_base
+			: x_prim_eval_arg(p_base, x_firstobj(p_else));
 	}
 
 	return x_prim_eval_arg(p_base, x_firstobj(p_rest));
@@ -393,10 +398,23 @@ static x_obj_t *x_prim_apply(x_obj_t *p_base, x_obj_t *p_args)
 	return p_result;
 }
 
-/* eval: (eval expr) -> evaluate expression in current environment */
+/* eval: (eval expr [env]) -> evaluate expression, optionally in given env */
 static x_obj_t *x_prim_eval(x_obj_t *p_base, x_obj_t *p_args)
 {
-	x_obj_t *p_expr = x_prim_eval_arg(p_base, x_firstobj(p_args));
+	x_obj_t *p_expr = x_prim_eval_arg(p_base, x_firstobj(p_args)),
+		*p_env_arg = x_restobj(p_args);
+
+	if ( ! x_obj_isnil(p_base, p_env_arg)) {
+		x_obj_t *p_env = x_prim_eval_arg(p_base, x_firstobj(p_env_arg)),
+			*p_saved_env = x_base_field_env_alist(p_base),
+			*p_result;
+
+		x_base_field_env_alist(p_base) = p_env;
+		p_result = x_prim_eval_arg(p_base, p_expr);
+		x_base_field_env_alist(p_base) = p_saved_env;
+
+		return p_result;
+	}
 
 	return x_prim_eval_arg(p_base, p_expr);
 }
@@ -409,6 +427,17 @@ static x_obj_t *x_prim_closure(x_obj_t *p_base, x_obj_t *p_args)
 		*p_env = x_base_field_env_alist(p_base);
 
 	return x_mkproc(p_base, p_params, p_body, p_env);
+}
+
+/* op: (op formals env-param body...) -> create operative (user-level fexpr) */
+static x_obj_t *x_prim_operative(x_obj_t *p_base, x_obj_t *p_args)
+{
+	x_obj_t *p_params = x_firstobj(p_args),
+		*p_envparam = x_firstobj(x_restobj(p_args)),
+		*p_body = x_restobj(x_restobj(p_args)),
+		*p_env = x_base_field_env_alist(p_base);
+
+	return x_mkop(p_base, p_params, p_envparam, p_body, p_env);
 }
 
 /* do: (do form...) -> evaluate each form, return last */
@@ -501,6 +530,7 @@ x_obj_t *x_prim_register(x_obj_t *p_base, x_obj_t *p_args)
 	x_prim_bind(p_base, "%", x_prim_mod);
 	x_prim_bind(p_base, "apply", x_prim_apply);
 	x_prim_bind(p_base, "eval", x_prim_eval);
+	x_prim_bind(p_base, "op", x_prim_operative);
 
 	return p_base;
 }

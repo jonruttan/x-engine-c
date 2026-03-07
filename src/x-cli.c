@@ -25,6 +25,7 @@
 #include "x-type/comment.h"
 #include "x-type/int.h"
 #include "x-type/list.h"
+#include "x-type/operative.h"
 #include "x-type/prim.h"
 #include "x-type/procedure.h"
 #include "x-type/str.h"
@@ -54,6 +55,7 @@ int main(int argc, char *argv[])
 
 	/* Register types for parsing. */
 	x_type_prim_register(p_base, p_base);
+	x_type_operative_register(p_base, p_base);
 	x_type_procedure_register(p_base, p_base);
 	x_type_symbol_register(p_base, p_base);
 	x_type_list_register(p_base, p_base);
