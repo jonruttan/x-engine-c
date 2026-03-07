@@ -197,6 +197,24 @@ static x_obj_t *x_prim_prod(x_obj_t *p_base, x_obj_t *p_args)
 	return x_mkint(p_base, x_intval(a) * x_intval(b));
 }
 
+/* /: (/ a b) -> integer division */
+static x_obj_t *x_prim_div(x_obj_t *p_base, x_obj_t *p_args)
+{
+	x_obj_t *a = x_prim_eval_arg(p_base, x_firstobj(p_args)),
+		*b = x_prim_eval_arg(p_base, x_firstobj(x_restobj(p_args)));
+
+	return x_mkint(p_base, x_intval(a) / x_intval(b));
+}
+
+/* %: (% a b) -> integer modulo */
+static x_obj_t *x_prim_mod(x_obj_t *p_base, x_obj_t *p_args)
+{
+	x_obj_t *a = x_prim_eval_arg(p_base, x_firstobj(p_args)),
+		*b = x_prim_eval_arg(p_base, x_firstobj(x_restobj(p_args)));
+
+	return x_mkint(p_base, x_intval(a) % x_intval(b));
+}
+
 /* def: (def name value) -> bind name to eval'd value (supports recursion) */
 static x_obj_t *x_prim_define(x_obj_t *p_base, x_obj_t *p_args)
 {
@@ -351,6 +369,38 @@ static x_obj_t *x_prim_let(x_obj_t *p_base, x_obj_t *p_args)
 	return p_result;
 }
 
+/* apply: (apply f args) -> call procedure with pre-evaluated arg list */
+static x_obj_t *x_prim_apply(x_obj_t *p_base, x_obj_t *p_args)
+{
+	x_obj_t *p_fn = x_prim_eval_arg(p_base, x_firstobj(p_args)),
+		*p_vals = x_prim_eval_arg(p_base, x_firstobj(x_restobj(p_args)));
+	x_obj_t *p_params = x_procparams(p_fn),
+		*p_body = x_procbody(p_fn),
+		*p_closure_env = x_procenv(p_fn),
+		*p_saved_env = x_base_field_env_alist(p_base),
+		*p_result = p_base;
+
+	x_base_field_env_alist(p_base) = x_prim_multiple_extend(
+		p_base, p_closure_env, p_params, p_vals);
+
+	while ( ! x_obj_isnil(p_base, p_body)) {
+		p_result = x_prim_eval_arg(p_base, x_firstobj(p_body));
+		p_body = x_restobj(p_body);
+	}
+
+	x_base_field_env_alist(p_base) = p_saved_env;
+
+	return p_result;
+}
+
+/* eval: (eval expr) -> evaluate expression in current environment */
+static x_obj_t *x_prim_eval(x_obj_t *p_base, x_obj_t *p_args)
+{
+	x_obj_t *p_expr = x_prim_eval_arg(p_base, x_firstobj(p_args));
+
+	return x_prim_eval_arg(p_base, p_expr);
+}
+
 /* fn: (fn (params) body...) -> create closure */
 static x_obj_t *x_prim_closure(x_obj_t *p_base, x_obj_t *p_args)
 {
@@ -447,6 +497,10 @@ x_obj_t *x_prim_register(x_obj_t *p_base, x_obj_t *p_args)
 	x_prim_bind(p_base, "or", x_prim_or);
 	x_prim_bind(p_base, "cond", x_prim_cond);
 	x_prim_bind(p_base, "let", x_prim_let);
+	x_prim_bind(p_base, "/", x_prim_div);
+	x_prim_bind(p_base, "%", x_prim_mod);
+	x_prim_bind(p_base, "apply", x_prim_apply);
+	x_prim_bind(p_base, "eval", x_prim_eval);
 
 	return p_base;
 }
