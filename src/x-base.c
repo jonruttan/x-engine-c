@@ -95,22 +95,6 @@ x_obj_t *x_base_env_alist_extend(x_obj_t *p_base, x_obj_t *p_args)
 	return x_base_field_env_alist(p_base) = x_alist_extend(p_base, (x_obj_t *)args);
 }
 
-x_obj_t *x_base_env_alist_assoc(x_obj_t *p_base, x_obj_t *p_args)
-{
-	x_spair_t args[2] = {
-		x_obj_set(NULL, X_OBJ_FLAG_NONE, { x_firstobj(p_args) }, { (x_obj_t *)(args + 1) }),
-		x_obj_set(NULL, X_OBJ_FLAG_NONE, { NULL }, { NULL })
-	};
-
-	if ( ! x_base_isset(p_base)) {
-		return p_base;
-	}
-
-	x_firstobj((x_obj_t *)args[1]) = x_base_field_env_alist(p_base);
-
-	return x_alist_assoc(p_base, (x_obj_t *)args);
-}
-
 x_obj_t *x_base_read(x_obj_t *p_base, x_obj_t *p_args)
 {
 	int fd = x_base_isset(p_base) ? x_atomint(x_base_field_filein(p_base)) : STDIN_FILENO;

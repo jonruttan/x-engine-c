@@ -66,7 +66,6 @@ x_obj_t *x_base_make(x_obj_t *p_base, x_obj_t *p_args);
 x_obj_t *x_base_type_alist_extend(x_obj_t *p_base, x_obj_t *p_args);
 x_obj_t *x_base_type_alist_assoc(x_obj_t *p_base, x_obj_t *p_args);
 x_obj_t *x_base_env_alist_extend(x_obj_t *p_base, x_obj_t *p_args);
-x_obj_t *x_base_env_alist_assoc(x_obj_t *p_base, x_obj_t *p_args);
 x_obj_t *x_base_read(x_obj_t *p_base, x_obj_t *p_args);
 x_obj_t *x_base_write(x_obj_t *p_base, x_obj_t *p_args);
 
