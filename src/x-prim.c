@@ -95,8 +95,8 @@ static x_obj_t *x_prim_quote(x_obj_t *p_base, x_obj_t *p_args)
 	return x_firstobj(p_args);
 }
 
-/* cons: (cons a b) -> (a . b) */
-static x_obj_t *x_prim_cons(x_obj_t *p_base, x_obj_t *p_args)
+/* pair: (pair a b) -> (a . b) */
+static x_obj_t *x_prim_pair(x_obj_t *p_base, x_obj_t *p_args)
 {
 	x_obj_t *a = x_prim_eval_arg(p_base, x_firstobj(p_args)),
 		*b = x_prim_eval_arg(p_base, x_firstobj(x_restobj(p_args)));
@@ -104,16 +104,16 @@ static x_obj_t *x_prim_cons(x_obj_t *p_base, x_obj_t *p_args)
 	return x_mklist(p_base, a, b);
 }
 
-/* car: (car x) -> first element */
-static x_obj_t *x_prim_car(x_obj_t *p_base, x_obj_t *p_args)
+/* first: (first x) -> first element */
+static x_obj_t *x_prim_first(x_obj_t *p_base, x_obj_t *p_args)
 {
 	x_obj_t *x = x_prim_eval_arg(p_base, x_firstobj(p_args));
 
 	return x_firstobj(x);
 }
 
-/* cdr: (cdr x) -> rest */
-static x_obj_t *x_prim_cdr(x_obj_t *p_base, x_obj_t *p_args)
+/* rest: (rest x) -> rest */
+static x_obj_t *x_prim_rest(x_obj_t *p_base, x_obj_t *p_args)
 {
 	x_obj_t *x = x_prim_eval_arg(p_base, x_firstobj(p_args));
 
@@ -1212,9 +1212,9 @@ x_obj_t *x_prim_register(x_obj_t *p_base, x_obj_t *p_args)
 	}
 
 	x_prim_bind(p_base, "lit", x_prim_quote);
-	x_prim_bind(p_base, "pair", x_prim_cons);
-	x_prim_bind(p_base, "first", x_prim_car);
-	x_prim_bind(p_base, "rest", x_prim_cdr);
+	x_prim_bind(p_base, "pair", x_prim_pair);
+	x_prim_bind(p_base, "first", x_prim_first);
+	x_prim_bind(p_base, "rest", x_prim_rest);
 	x_prim_bind(p_base, "eq?", x_prim_eq);
 	x_prim_bind(p_base, "=", x_prim_numeq);
 	x_prim_bind(p_base, "+", x_prim_sum);
