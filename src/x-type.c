@@ -88,7 +88,10 @@ x_obj_t *x_type_write(x_obj_t *p_base, x_obj_t *p_args)
 	};
 
 	if ( ! x_obj_isnil(p_base, p_fn)) {
-		return x_type_prim_call(p_base, (x_obj_t *)args);
+		/* Use prim_apply (no TCO) so all body forms execute
+		 * before returning to C. prim_call sets the last form
+		 * as a TCO expr that nobody would process here. */
+		return x_type_prim_apply(p_base, (x_obj_t *)args);
 	}
 
 	return p_base;
