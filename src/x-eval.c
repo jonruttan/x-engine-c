@@ -62,6 +62,13 @@ eval_start:
 			 * so nested x_eval calls don't see it. */
 			p_tco_env_save = x_base_field_tco_env(p_base);
 			trampolining = 1;
+		} else if ((p_tco_env_save == NULL
+			|| x_obj_isnil(p_base, p_tco_env_save))
+			&& ! x_obj_isnil(p_base, x_base_field_tco_env(p_base))) {
+			/* Later iteration: initial tco_env was nil (from
+			 * if/do/match/and/or) but an inner form (fn/let)
+			 * now provides tco_env for env restoration. */
+			p_tco_env_save = x_base_field_tco_env(p_base);
 		}
 
 		x_base_field_tco_env(p_base) = p_base;
