@@ -158,6 +158,22 @@ static x_obj_t *x_prim_charp(x_obj_t *p_base, x_obj_t *p_args)
 		? x_mksymbol(p_base, (x_char_t *)X_PRIM_TRUE) : p_base;
 }
 
+/* char->integer: (char->integer c) -> integer char code */
+static x_obj_t *x_prim_char_to_integer(x_obj_t *p_base, x_obj_t *p_args)
+{
+	x_obj_t *p_c = x_prim_eval_arg(p_base, x_firstobj(p_args));
+
+	return x_mkint(p_base, (x_int_t)x_charval(p_c));
+}
+
+/* integer->char: (integer->char n) -> character */
+static x_obj_t *x_prim_integer_to_char(x_obj_t *p_base, x_obj_t *p_args)
+{
+	x_obj_t *p_n = x_prim_eval_arg(p_base, x_firstobj(p_args));
+
+	return x_mkchar(p_base, (x_char_t)x_intval(p_n));
+}
+
 x_obj_t *x_prim_pred_register(x_obj_t *p_base, x_obj_t *p_args)
 {
 	x_prim_bind(p_base, "eq?", x_prim_eq);
@@ -175,6 +191,8 @@ x_obj_t *x_prim_pred_register(x_obj_t *p_base, x_obj_t *p_args)
 	x_prim_bind(p_base, "symbol?", x_prim_symbolp);
 	x_prim_bind(p_base, "procedure?", x_prim_procedurep);
 	x_prim_bind(p_base, "char?", x_prim_charp);
+	x_prim_bind(p_base, "char->integer", x_prim_char_to_integer);
+	x_prim_bind(p_base, "integer->char", x_prim_integer_to_char);
 
 	return p_base;
 }

@@ -30,12 +30,13 @@
  */
 extern x_satom_t x_sexp_char_analyse1_prim,
  	x_sexp_char_analyse2_prim,
+ 	x_sexp_char_analyse3_prim,
  	x_sexp_char_read_prim,
  	x_sexp_char_write_prim;
 
-/*x_obj_t *x_sexp_char_read(x_obj_t *p_base, x_obj_t *p_args);*/
 x_obj_t *x_sexp_char_analyse1(x_obj_t *p_base, x_obj_t *p_args);
 x_obj_t *x_sexp_char_analyse2(x_obj_t *p_base, x_obj_t *p_args);
+x_obj_t *x_sexp_char_analyse3(x_obj_t *p_base, x_obj_t *p_args);
 x_obj_t *x_sexp_char_read(x_obj_t *p_base, x_obj_t *p_args);
 x_obj_t *x_sexp_char_write(x_obj_t *p_base, x_obj_t *p_args);
 

@@ -24,6 +24,7 @@
 
 x_satom_t x_sexp_char_analyse1_prim = x_obj_set(x_type_atom_obj, X_OBJ_FLAG_NONE, { .fn = x_sexp_char_analyse1 }),
  	x_sexp_char_analyse2_prim = x_obj_set(x_type_atom_obj, X_OBJ_FLAG_NONE, { .fn = x_sexp_char_analyse2 }),
+ 	x_sexp_char_analyse3_prim = x_obj_set(x_type_atom_obj, X_OBJ_FLAG_NONE, { .fn = x_sexp_char_analyse3 }),
  	x_sexp_char_read_prim = x_obj_set(x_type_atom_obj, X_OBJ_FLAG_NONE, { .fn = x_sexp_char_read }),
  	x_sexp_char_write_prim = x_obj_set(x_type_atom_obj, X_OBJ_FLAG_NONE, { .fn = x_sexp_char_write });
 
@@ -38,12 +39,19 @@ x_obj_t *x_sexp_char_analyse1(x_obj_t *p_base, x_obj_t *p_args)
 
 x_obj_t *x_sexp_char_analyse2(x_obj_t *p_base, x_obj_t *p_args)
 {
-	x_obj_t *p_buffer = x_token_read_arg_buffer(p_args),
-		*p_score = x_token_read_arg_score(p_args);
+	x_obj_t *p_buffer = x_token_read_arg_buffer(p_args);
 
 	if (X_SEXP_CHAR_PRE_STR[1] != x_bufferlastchar(p_buffer)) {
 		return p_base;
 	}
+
+	return x_sexp_char_analyse3_prim;
+}
+
+x_obj_t *x_sexp_char_analyse3(x_obj_t *p_base, x_obj_t *p_args)
+{
+	x_obj_t *p_buffer = x_token_read_arg_buffer(p_args),
+		*p_score = x_token_read_arg_score(p_args);
 
 	x_firstint(p_score) = x_bufferlen(p_buffer);
 	x_restobj(p_score) = x_sexp_char_read_prim;
@@ -52,15 +60,9 @@ x_obj_t *x_sexp_char_analyse2(x_obj_t *p_base, x_obj_t *p_args)
 
 x_obj_t *x_sexp_char_read(x_obj_t *p_base, x_obj_t *p_args)
 {
-	x_satom_t int_obj = x_obj_set(NULL, X_OBJ_FLAG_NONE, { .i = 1 });
-	x_spair_t args[2] = {
-		x_obj_set(NULL, X_OBJ_FLAG_NONE, { x_mkchar(p_base, '\0') }, { (x_obj_t *)(args + 1) }),
-		x_obj_set(NULL, X_OBJ_FLAG_NONE, { int_obj }, { NULL })
-	};
-
-	x_type_buffer_reset(p_base, p_args);
-
-	return x_base_read(p_base, (x_obj_t *)args);
+	x_obj_t *p_buffer = x_token_read_arg_buffer(p_args);
+	x_int_t len = x_bufferlen(p_buffer);
+	return x_mkchar(p_base, *(x_bufferval(p_buffer) + len - 1));
 }
 
 x_obj_t *x_sexp_char_write(x_obj_t *p_base, x_obj_t *p_args)

@@ -17,6 +17,7 @@
  * # Includes
  */
 #include "x-prim.h"
+#include "x-type/char.h"
 #include "x-type/int.h"
 #include "x-type/str.h"
 #include "x-type/symbol.h"
@@ -29,14 +30,13 @@ static x_obj_t *x_prim_string_length(x_obj_t *p_base, x_obj_t *p_args)
 	return x_mkint(p_base, x_lib_strlen(x_strval(p_str)));
 }
 
-/* string-ref: (string-ref str index) -> single-char string */
+/* string-ref: (string-ref str index) -> character */
 static x_obj_t *x_prim_string_ref(x_obj_t *p_base, x_obj_t *p_args)
 {
 	x_obj_t *p_str = x_prim_eval_arg(p_base, x_firstobj(p_args)),
 		*p_idx = x_prim_eval_arg(p_base, x_firstobj(x_restobj(p_args)));
-	x_char_t *s = x_lib_strndup(x_strval(p_str) + x_intval(p_idx), 1);
 
-	return x_mkstrown(p_base, s);
+	return x_mkchar(p_base, *(x_strval(p_str) + x_intval(p_idx)));
 }
 
 /* string-append: (string-append str...) -> concatenated string */
