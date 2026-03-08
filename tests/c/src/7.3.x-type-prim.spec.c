@@ -20,10 +20,10 @@
 #include "src/x-type/atom.c"
 /*#include "src/x-type/pair.c"*/
 #include "src/x-type/char.c"
-#include "src/x-sexp/char.c"
+#include "src/x-token/sexp/char.c"
 #include "src/x-type/prim.c"
 #include "src/x-type/str.c"
-#include "src/x-sexp/str.c"
+#include "src/x-token/sexp/str.c"
 #include "src/x-type/buffer.c"
 
 #include "helper-system-functions.c"

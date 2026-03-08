@@ -18,7 +18,7 @@
  */
 #include <ctype.h>
 #include "x-type/int.h"
-#include "x-sexp/int.h"
+#include "x-token/sexp/int.h"
 
 x_satom_t x_type_int_name = x_obj_set(x_type_atom_obj, X_OBJ_FLAG_NONE, { .s = (x_char_t *)X_TYPE_INT_NAME }),
 	x_type_int_make_prim = x_obj_set(x_type_atom_obj, X_OBJ_FLAG_NONE, { (x_obj_t *)&x_type_int_make }),

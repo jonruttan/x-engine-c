@@ -4,7 +4,7 @@
 
 #define TEST_RUNNER_OVERHEAD
 #include "test-runner.h"
-#include "x-sexp/whitespace.h"
+#include "x-token/sexp/whitespace.h"
 #include "x-type/buffer.h"
 
 /* We need the GC structures for cleanup. */
@@ -22,18 +22,18 @@
 #include "src/x-type/prim.c"
 #include "src/x-type/buffer.c"
 #include "src/x-type/char.c"
-#include "src/x-sexp/char.c"
+#include "src/x-token/sexp/char.c"
 #include "src/x-type/str.c"
-#include "src/x-sexp/str.c"
+#include "src/x-token/sexp/str.c"
 #include "src/x-type/whitespace.c"
-#include "src/x-sexp/whitespace.c"
+#include "src/x-token/sexp/whitespace.c"
 #include "src/x-type/atom.c"
-#include "src/x-sexp/atom.c"
-#include "src/x-sexp/pair.c"
+#include "src/x-token/sexp/atom.c"
+#include "src/x-token/sexp/pair.c"
 #include "src/x-type/iter.c"
 #include "src/x-eval.c"
 #include "src/x-type/list.c"
-#include "src/x-sexp/list.c"
+#include "src/x-token/sexp/list.c"
 #include "src/x-token.c"
 
 #include "helper-system-functions.c"

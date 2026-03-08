@@ -19,7 +19,7 @@
 #include "x-base.h"
 #include "x-type/buffer.h"
 #include "x-type/char.h"
-#include "x-sexp/char.h"
+#include "x-token/sexp/char.h"
 
 x_satom_t x_type_char_name = x_obj_set(x_type_atom_obj, X_OBJ_FLAG_NONE, { .s = (x_char_t *)X_TYPE_CHAR_NAME }),
 	x_type_char_make_prim = x_obj_set(x_type_atom_obj, X_OBJ_FLAG_NONE, { (x_obj_t *)&x_type_char_make }),

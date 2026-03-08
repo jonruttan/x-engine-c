@@ -18,7 +18,7 @@
  */
 #include "x-base.h"
 #include "x-type/whitespace.h"
-#include "x-sexp/whitespace.h"
+#include "x-token/sexp/whitespace.h"
 
 x_satom_t x_type_whitespace_name = x_obj_set(x_type_atom_obj, X_OBJ_FLAG_NONE, { .s = (x_char_t *)X_TYPE_WHITESPACE_NAME }),
 	x_type_whitespace_struct_prim = x_obj_set(x_type_atom_obj, X_OBJ_FLAG_NONE, { (x_obj_t *)&x_type_whitespace_struct });

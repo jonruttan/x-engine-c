@@ -22,9 +22,9 @@
 #include "src/x-type/iter.c"
 #include "src/x-type/list.c"
 #include "src/x-type/prim.c"
-#include "src/x-sexp/atom.c"
-#include "src/x-sexp/pair.c"
-#include "src/x-sexp/list.c"
+#include "src/x-token/sexp/atom.c"
+#include "src/x-token/sexp/pair.c"
+#include "src/x-token/sexp/list.c"
 #include "src/x-token.c"
 
 #include "helper-system-functions.c"

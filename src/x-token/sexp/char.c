@@ -20,7 +20,7 @@
 #include "x-token.h"
 #include "x-type/buffer.h"
 #include "x-type/char.h"
-#include "x-sexp/char.h"
+#include "x-token/sexp/char.h"
 
 x_satom_t x_sexp_char_analyse1_prim = x_obj_set(x_type_atom_obj, X_OBJ_FLAG_NONE, { .fn = x_sexp_char_analyse1 }),
  	x_sexp_char_analyse2_prim = x_obj_set(x_type_atom_obj, X_OBJ_FLAG_NONE, { .fn = x_sexp_char_analyse2 }),

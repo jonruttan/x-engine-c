@@ -28,7 +28,7 @@
 #include "src/x-type/iter.c"
 
 /* Stub sexp list symbols to avoid pulling in x-sexp dependencies. */
-#include "x-sexp/list.h"
+#include "x-token/sexp/list.h"
 x_satom_t x_sexp_list_analyse_prim = x_obj_set(x_type_atom_obj, X_OBJ_FLAG_NONE, { .fn = NULL }),
 	x_sexp_list_delimit_prim = x_obj_set(x_type_atom_obj, X_OBJ_FLAG_NONE, { .fn = NULL }),
 	x_sexp_list_read_prim = x_obj_set(x_type_atom_obj, X_OBJ_FLAG_NONE, { .fn = NULL }),

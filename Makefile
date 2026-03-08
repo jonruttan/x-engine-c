@@ -87,8 +87,8 @@ X_EXPR_OBJECTS=$(X_EXPR_SOURCES:.c=.o)
 
 CFLAGS+=-I$(X_EXPR_DIR)/include -I$(INCDIR)
 
-HEADERS=$(wildcard $(INCDIR)/*.h $(INCDIR)/**/*.h $(X_EXPR_DIR)/include/*.h)
-SOURCES=$(wildcard $(SRCDIR)/*.c $(SRCDIR)/**/*.c)
+HEADERS=$(wildcard $(INCDIR)/*.h $(INCDIR)/**/*.h $(INCDIR)/**/**/*.h $(X_EXPR_DIR)/include/*.h)
+SOURCES=$(wildcard $(SRCDIR)/*.c $(SRCDIR)/**/*.c $(SRCDIR)/**/**/*.c)
 OBJECTS=$(SOURCES:.c=.o)
 EXECUTABLE=x
 
@@ -199,6 +199,6 @@ uninstall:
 .PHONY: uninstall
 
 clean:
-	rm -f $(EXECUTABLE) $(EXECUTABLE)-debug *.out $(SRCDIR)/*.o $(SRCDIR)/**/*.o $(X_EXPR_DIR)/src/*.o *.core core
+	rm -f $(EXECUTABLE) $(EXECUTABLE)-debug *.out $(SRCDIR)/*.o $(SRCDIR)/**/*.o $(SRCDIR)/**/**/*.o $(X_EXPR_DIR)/src/*.o *.core core
 	rm -Rf apidocs/
 .PHONY: clean

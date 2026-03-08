@@ -17,12 +17,12 @@
  * # Includes
  */
 #include <ctype.h>
-#include "x-sexp/int.h"
+#include "x-token/sexp/int.h"
 #include "x-token.h"
 #include "x-type/char.h"
 #include "x-type/buffer.h"
 #include "x-type/int.h"
-#include "x-sexp/int.h"
+#include "x-token/sexp/int.h"
 
 x_satom_t x_sexp_int_analyse_sign_prim = x_obj_set(x_type_atom_obj, X_OBJ_FLAG_NONE, { .fn = x_sexp_int_analyse_sign }),
 	x_sexp_int_analyse_prefix_prim = x_obj_set(x_type_atom_obj, X_OBJ_FLAG_NONE, { .fn = x_sexp_int_analyse_prefix }),

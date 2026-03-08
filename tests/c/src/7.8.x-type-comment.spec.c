@@ -20,11 +20,11 @@
 #include "src/x-type/prim.c"
 #include "src/x-type/buffer.c"
 #include "src/x-type/char.c"
-#include "src/x-sexp/char.c"
+#include "src/x-token/sexp/char.c"
 #include "src/x-type/str.c"
-#include "src/x-sexp/str.c"
+#include "src/x-token/sexp/str.c"
 #include "src/x-type/comment.c"
-#include "src/x-sexp/comment.c"
+#include "src/x-token/sexp/comment.c"
 
 #include "helper-system-functions.c"
 

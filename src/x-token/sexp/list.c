@@ -20,8 +20,8 @@
 #include "x-type/buffer.h"
 #include "x-token.h"
 #include "x-token.h"
-#include "x-sexp/list.h"
-#include "x-sexp/whitespace.h"
+#include "x-token/sexp/list.h"
+#include "x-token/sexp/whitespace.h"
 
 x_satom_t x_sexp_list_analyse_prim = x_obj_set(x_type_atom_obj, X_OBJ_FLAG_NONE, { .fn = x_sexp_list_analyse }),
 	x_sexp_list_delimit_prim = x_obj_set(x_type_atom_obj, X_OBJ_FLAG_NONE, { .fn = x_sexp_list_delimit }),

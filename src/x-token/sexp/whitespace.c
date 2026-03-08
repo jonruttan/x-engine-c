@@ -16,7 +16,7 @@
 /*
  * # Includes
  */
-#include "x-sexp/whitespace.h"
+#include "x-token/sexp/whitespace.h"
 #include "x-base.h"
 #include "x-token.h"
 #include "x-type/buffer.h"

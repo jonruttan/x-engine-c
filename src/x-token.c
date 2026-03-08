@@ -27,8 +27,8 @@
 #include "x-type/prim.h"
 #include "x-type/str.h"
 #include "x-type/list.h"
-#include "x-sexp/atom.h"
-#include "x-sexp/pair.h"
+#include "x-token/sexp/atom.h"
+#include "x-token/sexp/pair.h"
 
 /*
  * # Tokenization Functions

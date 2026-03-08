@@ -11,7 +11,7 @@
 #include "ext/x-expr/src/x.c"
 #include "src/x-alist.c"
 #include "src/x-base.c"
-#include "src/x-sexp/pair.c"
+#include "src/x-token/sexp/pair.c"
 
 x_obj_t *x_token_read(x_obj_t *p_base, x_obj_t *p_args) { return p_base; }
 x_obj_t *x_eval(x_obj_t *p_base, x_obj_t *p_args) { return p_base; }

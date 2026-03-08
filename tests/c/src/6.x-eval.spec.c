@@ -18,9 +18,9 @@
 #include "src/x-eval.c"
 #include "src/x-type.c"
 #include "src/x-type/atom.c"
-#include "src/x-sexp/atom.c"
+#include "src/x-token/sexp/atom.c"
 #include "src/x-type/pair.c"
-#include "src/x-sexp/pair.c"
+#include "src/x-token/sexp/pair.c"
 #include "src/x-type/prim.c"
 
 x_obj_t *x_token_read(x_obj_t *p_base, x_obj_t *p_args) { return p_base; }
