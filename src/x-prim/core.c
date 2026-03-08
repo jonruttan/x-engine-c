@@ -221,6 +221,19 @@ static x_obj_t *x_prim_and(x_obj_t *p_base, x_obj_t *p_args)
 	x_obj_t *p_result = x_mksymbol(p_base, (x_char_t *)X_PRIM_TRUE);
 
 	while ( ! x_obj_isnil(p_base, p_args)) {
+		if (x_obj_isnil(p_base, x_restobj(p_args))) {
+			/* Last expression: tail-evaluate.  Set tco_env
+			 * so the trampoline restores env after eval
+			 * (and doesn't change env, so save current). */
+			x_base_field_tco_expr(p_base) = x_firstobj(p_args);
+
+			if (x_obj_isnil(p_base, x_base_field_tco_env(p_base))) {
+				x_base_field_tco_env(p_base)
+					= x_base_field_env_alist(p_base);
+			}
+
+			return p_base;
+		}
 		p_result = x_prim_eval_arg(p_base, x_firstobj(p_args));
 		if (x_obj_isnil(p_base, p_result)) {
 			return p_base;
@@ -237,6 +250,19 @@ static x_obj_t *x_prim_or(x_obj_t *p_base, x_obj_t *p_args)
 	x_obj_t *p_result = p_base;
 
 	while ( ! x_obj_isnil(p_base, p_args)) {
+		if (x_obj_isnil(p_base, x_restobj(p_args))) {
+			/* Last expression: tail-evaluate.  Set tco_env
+			 * so the trampoline restores env after eval
+			 * (or doesn't change env, so save current). */
+			x_base_field_tco_expr(p_base) = x_firstobj(p_args);
+
+			if (x_obj_isnil(p_base, x_base_field_tco_env(p_base))) {
+				x_base_field_tco_env(p_base)
+					= x_base_field_env_alist(p_base);
+			}
+
+			return p_base;
+		}
 		p_result = x_prim_eval_arg(p_base, x_firstobj(p_args));
 		if ( ! x_obj_isnil(p_base, p_result)) {
 			return p_result;
