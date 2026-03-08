@@ -54,36 +54,6 @@ static x_obj_t *x_prim_lt(x_obj_t *p_base, x_obj_t *p_args)
 		? x_mksymbol(p_base, (x_char_t *)X_PRIM_TRUE) : p_base;
 }
 
-/* >: (> a b) -> t if a > b */
-static x_obj_t *x_prim_gt(x_obj_t *p_base, x_obj_t *p_args)
-{
-	x_obj_t *a = x_prim_eval_arg(p_base, x_firstobj(p_args)),
-		*b = x_prim_eval_arg(p_base, x_firstobj(x_restobj(p_args)));
-
-	return x_intval(a) > x_intval(b)
-		? x_mksymbol(p_base, (x_char_t *)X_PRIM_TRUE) : p_base;
-}
-
-/* <=: (<= a b) -> t if a <= b */
-static x_obj_t *x_prim_lte(x_obj_t *p_base, x_obj_t *p_args)
-{
-	x_obj_t *a = x_prim_eval_arg(p_base, x_firstobj(p_args)),
-		*b = x_prim_eval_arg(p_base, x_firstobj(x_restobj(p_args)));
-
-	return x_intval(a) <= x_intval(b)
-		? x_mksymbol(p_base, (x_char_t *)X_PRIM_TRUE) : p_base;
-}
-
-/* >=: (>= a b) -> t if a >= b */
-static x_obj_t *x_prim_gte(x_obj_t *p_base, x_obj_t *p_args)
-{
-	x_obj_t *a = x_prim_eval_arg(p_base, x_firstobj(p_args)),
-		*b = x_prim_eval_arg(p_base, x_firstobj(x_restobj(p_args)));
-
-	return x_intval(a) >= x_intval(b)
-		? x_mksymbol(p_base, (x_char_t *)X_PRIM_TRUE) : p_base;
-}
-
 /* null?: (null? x) -> t if nil */
 static x_obj_t *x_prim_nullp(x_obj_t *p_base, x_obj_t *p_args)
 {
@@ -98,22 +68,6 @@ static x_obj_t *x_prim_pairp(x_obj_t *p_base, x_obj_t *p_args)
 	x_obj_t *x = x_prim_eval_arg(p_base, x_firstobj(p_args));
 
 	return x_obj_type_islist(p_base, x) ? x_mksymbol(p_base, (x_char_t *)X_PRIM_TRUE) : p_base;
-}
-
-/* atom?: (atom? x) -> t if not a list pair */
-static x_obj_t *x_prim_atomp(x_obj_t *p_base, x_obj_t *p_args)
-{
-	x_obj_t *x = x_prim_eval_arg(p_base, x_firstobj(p_args));
-
-	return x_obj_type_islist(p_base, x) ? p_base : x_mksymbol(p_base, (x_char_t *)X_PRIM_TRUE);
-}
-
-/* not: (not x) -> t if nil */
-static x_obj_t *x_prim_not(x_obj_t *p_base, x_obj_t *p_args)
-{
-	x_obj_t *x = x_prim_eval_arg(p_base, x_firstobj(p_args));
-
-	return x_obj_isnil(p_base, x) ? x_mksymbol(p_base, (x_char_t *)X_PRIM_TRUE) : p_base;
 }
 
 /* number?: (number? x) -> t if integer */
@@ -179,13 +133,8 @@ x_obj_t *x_prim_pred_register(x_obj_t *p_base, x_obj_t *p_args)
 	x_prim_bind(p_base, "eq?", x_prim_eq);
 	x_prim_bind(p_base, "=", x_prim_numeq);
 	x_prim_bind(p_base, "<", x_prim_lt);
-	x_prim_bind(p_base, ">", x_prim_gt);
-	x_prim_bind(p_base, "<=", x_prim_lte);
-	x_prim_bind(p_base, ">=", x_prim_gte);
 	x_prim_bind(p_base, "null?", x_prim_nullp);
 	x_prim_bind(p_base, "pair?", x_prim_pairp);
-	x_prim_bind(p_base, "atom?", x_prim_atomp);
-	x_prim_bind(p_base, "not", x_prim_not);
 	x_prim_bind(p_base, "number?", x_prim_numberp);
 	x_prim_bind(p_base, "string?", x_prim_stringp);
 	x_prim_bind(p_base, "symbol?", x_prim_symbolp);

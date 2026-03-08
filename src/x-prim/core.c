@@ -59,18 +59,6 @@ static x_obj_t *x_prim_rest(x_obj_t *p_base, x_obj_t *p_args)
 	return x_restobj(x);
 }
 
-/* list: (list a b c) -> (a b c) */
-static x_obj_t *x_prim_list(x_obj_t *p_base, x_obj_t *p_args)
-{
-	if (x_obj_isnil(p_base, p_args)) {
-		return p_base;
-	}
-
-	return x_mklist(p_base,
-		x_prim_eval_arg(p_base, x_firstobj(p_args)),
-		x_prim_list(p_base, x_restobj(p_args)));
-}
-
 /* def: (def name value) -> bind name to eval'd value (supports recursion) */
 static x_obj_t *x_prim_define(x_obj_t *p_base, x_obj_t *p_args)
 {
@@ -152,25 +140,6 @@ static x_obj_t *x_prim_set(x_obj_t *p_base, x_obj_t *p_args)
 	return p_val;
 }
 
-/* cond: (cond (test expr)...) -> multi-branch conditional */
-static x_obj_t *x_prim_cond(x_obj_t *p_base, x_obj_t *p_args)
-{
-	while ( ! x_obj_isnil(p_base, p_args)) {
-		x_obj_t *p_clause = x_firstobj(p_args),
-			*p_test = x_prim_eval_arg(p_base, x_firstobj(p_clause));
-
-		if ( ! x_obj_isnil(p_base, p_test)) {
-			x_base_field_tco_expr(p_base) = x_firstobj(x_restobj(p_clause));
-
-			return p_base;
-		}
-
-		p_args = x_restobj(p_args);
-	}
-
-	return p_base;
-}
-
 /* let: (let ((name val)...) body...) -> local bindings */
 static x_obj_t *x_prim_let(x_obj_t *p_base, x_obj_t *p_args)
 {
@@ -213,50 +182,6 @@ static x_obj_t *x_prim_let(x_obj_t *p_base, x_obj_t *p_args)
 	x_base_field_env_alist(p_base) = p_saved_env;
 
 	return p_result;
-}
-
-/* and: (and expr...) -> short-circuit, returns last truthy or nil */
-static x_obj_t *x_prim_and(x_obj_t *p_base, x_obj_t *p_args)
-{
-	x_obj_t *p_result = x_mksymbol(p_base, (x_char_t *)X_PRIM_TRUE);
-
-	while ( ! x_obj_isnil(p_base, p_args)) {
-		if (x_obj_isnil(p_base, x_restobj(p_args))) {
-			/* Last expression: tail-evaluate. */
-			x_base_field_tco_expr(p_base) = x_firstobj(p_args);
-
-			return p_base;
-		}
-		p_result = x_prim_eval_arg(p_base, x_firstobj(p_args));
-		if (x_obj_isnil(p_base, p_result)) {
-			return p_base;
-		}
-		p_args = x_restobj(p_args);
-	}
-
-	return p_result;
-}
-
-/* or: (or expr...) -> short-circuit, returns first truthy or nil */
-static x_obj_t *x_prim_or(x_obj_t *p_base, x_obj_t *p_args)
-{
-	x_obj_t *p_result = p_base;
-
-	while ( ! x_obj_isnil(p_base, p_args)) {
-		if (x_obj_isnil(p_base, x_restobj(p_args))) {
-			/* Last expression: tail-evaluate. */
-			x_base_field_tco_expr(p_base) = x_firstobj(p_args);
-
-			return p_base;
-		}
-		p_result = x_prim_eval_arg(p_base, x_firstobj(p_args));
-		if ( ! x_obj_isnil(p_base, p_result)) {
-			return p_result;
-		}
-		p_args = x_restobj(p_args);
-	}
-
-	return p_base;
 }
 
 /* apply: (apply f args) -> call callable with pre-evaluated arg list */
@@ -309,18 +234,21 @@ static x_obj_t *x_prim_eval(x_obj_t *p_base, x_obj_t *p_args)
 		*p_env_arg = x_restobj(p_args);
 
 	if ( ! x_obj_isnil(p_base, p_env_arg)) {
-		x_obj_t *p_env = x_prim_eval_arg(p_base, x_firstobj(p_env_arg)),
-			*p_saved_env = x_base_field_env_alist(p_base),
-			*p_result;
+		/* eval with env: save/restore for correct non-tail semantics */
+		x_obj_t *p_env = x_prim_eval_arg(p_base, x_firstobj(p_env_arg));
+		x_obj_t *p_saved = x_base_field_env_alist(p_base);
+		x_obj_t *p_result;
 
 		x_base_field_env_alist(p_base) = p_env;
 		p_result = x_prim_eval_arg(p_base, p_expr);
-		x_base_field_env_alist(p_base) = p_saved_env;
-
+		x_base_field_env_alist(p_base) = p_saved;
 		return p_result;
 	}
 
-	return x_prim_eval_arg(p_base, p_expr);
+	/* eval without env: use TCO trampoline */
+	x_base_field_tco_expr(p_base) = p_expr;
+
+	return p_base;
 }
 
 /* fn: (fn (params) body...) -> create closure */
@@ -434,59 +362,19 @@ static x_obj_t *x_prim_error(x_obj_t *p_base, x_obj_t *p_args)
 	return p_base;
 }
 
-/* qq_append: append list a to list b (for unquote-splicing) */
-static x_obj_t *x_prim_qq_append(x_obj_t *p_base, x_obj_t *p_a, x_obj_t *p_b)
+/* %rewrite: (%rewrite pair new-first new-rest) -> mutate pair in-place */
+static x_obj_t *x_prim_rewrite(x_obj_t *p_base, x_obj_t *p_args)
 {
-	if (x_obj_isnil(p_base, p_a)) {
-		return p_b;
-	}
+	x_obj_t *p_pair = x_prim_eval_arg(p_base, x_firstobj(p_args)),
+		*p_first = x_prim_eval_arg(p_base,
+			x_firstobj(x_restobj(p_args))),
+		*p_rest = x_prim_eval_arg(p_base,
+			x_firstobj(x_restobj(x_restobj(p_args))));
 
-	return x_mklist(p_base,
-		x_firstobj(p_a),
-		x_prim_qq_append(p_base, x_restobj(p_a), p_b));
-}
+	x_firstobj(p_pair) = p_first;
+	x_restobj(p_pair) = p_rest;
 
-/* qq_expand: recursively process quasiquote template */
-static x_obj_t *x_prim_qq_expand(x_obj_t *p_base, x_obj_t *p_tmpl)
-{
-	x_obj_t *p_head;
-
-	/* Atom or nil -> return as-is. */
-	if (x_obj_isnil(p_base, p_tmpl)
-		|| ! x_obj_type_islist(p_base, p_tmpl)) {
-		return p_tmpl;
-	}
-
-	p_head = x_firstobj(p_tmpl);
-
-	/* (unquote x) -> eval x */
-	if (x_obj_type_issymbol(p_base, p_head)
-		&& 0 == x_lib_strcmp(x_symbolval(p_head), "unquote")) {
-		return x_prim_eval_arg(p_base, x_firstobj(x_restobj(p_tmpl)));
-	}
-
-	/* ((unquote-splicing x) . rest) -> append (eval x) to expanded rest */
-	if (x_obj_type_islist(p_base, p_head)
-		&& x_obj_type_issymbol(p_base, x_firstobj(p_head))
-		&& 0 == x_lib_strcmp(x_symbolval(x_firstobj(p_head)),
-			"unquote-splicing")) {
-		x_obj_t *p_spliced = x_prim_eval_arg(p_base,
-			x_firstobj(x_restobj(p_head)));
-		x_obj_t *p_rest = x_prim_qq_expand(p_base, x_restobj(p_tmpl));
-
-		return x_prim_qq_append(p_base, p_spliced, p_rest);
-	}
-
-	/* Recursive: expand first and rest */
-	return x_mklist(p_base,
-		x_prim_qq_expand(p_base, p_head),
-		x_prim_qq_expand(p_base, x_restobj(p_tmpl)));
-}
-
-/* quasi: (quasi tmpl) -> template with unquote/unquote-splicing */
-static x_obj_t *x_prim_quasiquote(x_obj_t *p_base, x_obj_t *p_args)
-{
-	return x_prim_qq_expand(p_base, x_firstobj(p_args));
+	return p_pair;
 }
 
 x_obj_t *x_prim_core_register(x_obj_t *p_base, x_obj_t *p_args)
@@ -495,15 +383,11 @@ x_obj_t *x_prim_core_register(x_obj_t *p_base, x_obj_t *p_args)
 	x_prim_bind(p_base, "pair", x_prim_pair);
 	x_prim_bind(p_base, "first", x_prim_first);
 	x_prim_bind(p_base, "rest", x_prim_rest);
-	x_prim_bind(p_base, "list", x_prim_list);
 	x_prim_bind(p_base, "def", x_prim_define);
 	x_prim_bind(p_base, "if", x_prim_if);
 	x_prim_bind(p_base, "do", x_prim_do);
 	x_prim_bind(p_base, "set", x_prim_set);
-	x_prim_bind(p_base, "match", x_prim_cond);
 	x_prim_bind(p_base, "let", x_prim_let);
-	x_prim_bind(p_base, "and", x_prim_and);
-	x_prim_bind(p_base, "or", x_prim_or);
 	x_prim_bind(p_base, "apply", x_prim_apply);
 	x_prim_bind(p_base, "eval", x_prim_eval);
 	x_prim_bind(p_base, "fn", x_prim_closure);
@@ -512,7 +396,7 @@ x_obj_t *x_prim_core_register(x_obj_t *p_base, x_obj_t *p_args)
 	x_prim_bind(p_base, "unwrap", x_prim_unwrap);
 	x_prim_bind(p_base, "guard", x_prim_guard);
 	x_prim_bind(p_base, "error", x_prim_error);
-	x_prim_bind(p_base, "quasi", x_prim_quasiquote);
+	x_prim_bind(p_base, "%rewrite", x_prim_rewrite);
 
 	return p_base;
 }

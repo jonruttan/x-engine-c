@@ -19,80 +19,53 @@
 #include "x-prim.h"
 #include "x-type/int.h"
 
-/* +: (+ a ...) -> variadic addition, identity 0 */
+/* +: (+ a b) -> binary addition */
 static x_obj_t *x_prim_sum(x_obj_t *p_base, x_obj_t *p_args)
 {
-	x_int_t result = 0;
+	x_obj_t *a = x_prim_eval_arg(p_base, x_firstobj(p_args)),
+		*b = x_prim_eval_arg(p_base, x_firstobj(x_restobj(p_args)));
 
-	for (; ! x_obj_isnil(p_base, p_args); p_args = x_restobj(p_args))
-		result += x_intval(x_prim_eval_arg(p_base, x_firstobj(p_args)));
-
-	return x_mkint(p_base, result);
+	return x_mkint(p_base, x_intval(a) + x_intval(b));
 }
 
-/* -: (- a ...) -> variadic subtraction; (- a) negates */
+/* -: (- a) -> negate; (- a b) -> subtract */
 static x_obj_t *x_prim_sub(x_obj_t *p_base, x_obj_t *p_args)
 {
-	x_int_t result;
+	x_obj_t *a = x_prim_eval_arg(p_base, x_firstobj(p_args));
 
-	if (x_obj_isnil(p_base, p_args))
-		return x_mkint(p_base, 0);
+	if (x_obj_isnil(p_base, x_restobj(p_args)))
+		return x_mkint(p_base, -x_intval(a));
 
-	result = x_intval(x_prim_eval_arg(p_base, x_firstobj(p_args)));
-	p_args = x_restobj(p_args);
-
-	if (x_obj_isnil(p_base, p_args))
-		return x_mkint(p_base, -result);
-
-	for (; ! x_obj_isnil(p_base, p_args); p_args = x_restobj(p_args))
-		result -= x_intval(x_prim_eval_arg(p_base, x_firstobj(p_args)));
-
-	return x_mkint(p_base, result);
+	return x_mkint(p_base,
+		x_intval(a) - x_intval(x_prim_eval_arg(p_base,
+			x_firstobj(x_restobj(p_args)))));
 }
 
-/* *: (* a ...) -> variadic multiplication, identity 1 */
+/* *: (* a b) -> binary multiplication */
 static x_obj_t *x_prim_prod(x_obj_t *p_base, x_obj_t *p_args)
 {
-	x_int_t result = 1;
+	x_obj_t *a = x_prim_eval_arg(p_base, x_firstobj(p_args)),
+		*b = x_prim_eval_arg(p_base, x_firstobj(x_restobj(p_args)));
 
-	for (; ! x_obj_isnil(p_base, p_args); p_args = x_restobj(p_args))
-		result *= x_intval(x_prim_eval_arg(p_base, x_firstobj(p_args)));
-
-	return x_mkint(p_base, result);
+	return x_mkint(p_base, x_intval(a) * x_intval(b));
 }
 
-/* /: (/ a ...) -> variadic integer division */
+/* /: (/ a b) -> binary integer division */
 static x_obj_t *x_prim_div(x_obj_t *p_base, x_obj_t *p_args)
 {
-	x_int_t result;
+	x_obj_t *a = x_prim_eval_arg(p_base, x_firstobj(p_args)),
+		*b = x_prim_eval_arg(p_base, x_firstobj(x_restobj(p_args)));
 
-	if (x_obj_isnil(p_base, p_args))
-		return x_mkint(p_base, 1);
-
-	result = x_intval(x_prim_eval_arg(p_base, x_firstobj(p_args)));
-	p_args = x_restobj(p_args);
-
-	for (; ! x_obj_isnil(p_base, p_args); p_args = x_restobj(p_args))
-		result /= x_intval(x_prim_eval_arg(p_base, x_firstobj(p_args)));
-
-	return x_mkint(p_base, result);
+	return x_mkint(p_base, x_intval(a) / x_intval(b));
 }
 
-/* %: (% a ...) -> variadic integer modulo */
+/* %: (% a b) -> binary integer modulo */
 static x_obj_t *x_prim_mod(x_obj_t *p_base, x_obj_t *p_args)
 {
-	x_int_t result;
+	x_obj_t *a = x_prim_eval_arg(p_base, x_firstobj(p_args)),
+		*b = x_prim_eval_arg(p_base, x_firstobj(x_restobj(p_args)));
 
-	if (x_obj_isnil(p_base, p_args))
-		return x_mkint(p_base, 0);
-
-	result = x_intval(x_prim_eval_arg(p_base, x_firstobj(p_args)));
-	p_args = x_restobj(p_args);
-
-	for (; ! x_obj_isnil(p_base, p_args); p_args = x_restobj(p_args))
-		result %= x_intval(x_prim_eval_arg(p_base, x_firstobj(p_args)));
-
-	return x_mkint(p_base, result);
+	return x_mkint(p_base, x_intval(a) % x_intval(b));
 }
 
 /* ~: (~ n) -> bitwise NOT */
