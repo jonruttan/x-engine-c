@@ -39,6 +39,7 @@ x_obj_t *x_prim_pred_register(x_obj_t *p_base, x_obj_t *p_args);
 x_obj_t *x_prim_string_register(x_obj_t *p_base, x_obj_t *p_args);
 x_obj_t *x_prim_io_register(x_obj_t *p_base, x_obj_t *p_args);
 x_obj_t *x_prim_type_register(x_obj_t *p_base, x_obj_t *p_args);
+x_obj_t *x_prim_ffi_register(x_obj_t *p_base, x_obj_t *p_args);
 
 x_obj_t *x_prim_register(x_obj_t *p_base, x_obj_t *p_args);
 

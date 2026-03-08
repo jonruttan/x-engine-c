@@ -94,6 +94,7 @@ EXECUTABLE=x
 
 # Options to be added to $(DEFS)
 DEFS?=$(OSDEF) -DX_MACHINE="$(X_MACHINE)" -DX_SYSCALL -DX_INCLUDE -DSYMBOL_FIND_REORDER
+EXTRA_LIBS+=-ldl -lm
 
 # Where to install the stuff
 BINDIR?=$(PREFIX)/bin

@@ -96,6 +96,7 @@ x_obj_t *x_prim_register(x_obj_t *p_base, x_obj_t *p_args)
 	x_prim_string_register(p_base, p_args);
 	x_prim_io_register(p_base, p_args);
 	x_prim_type_register(p_base, p_args);
+	x_prim_ffi_register(p_base, p_args);
 
 	return p_base;
 }
