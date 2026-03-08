@@ -36,8 +36,10 @@ eval_start:
 		return p_base;
 	}
 
-	/* Differentiate simple from complex types. */
-	if (x_obj_isnil(p_base, x_obj_type(x_obj_type(p_exp)))) {
+	/* Differentiate simple from complex types.
+	 * Guard: NULL-typed (raw stack) objects self-evaluate. */
+	if (x_obj_type(p_exp) == NULL
+		|| x_obj_isnil(p_base, x_obj_type(x_obj_type(p_exp)))) {
 		return p_exp;
 	}
 

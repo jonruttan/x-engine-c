@@ -27,6 +27,7 @@
 #define x_token_read_arg_prim(X)		x_0((X))
 #define x_token_read_arg_buffer(X)		x_0((X))
 #define x_token_read_arg_score(X)		x_01((X))
+#define x_token_read_arg_char(X)		x_0(x_11((X)))
 
 /*
  * # Data Structures

@@ -72,6 +72,20 @@ static x_obj_t *x_prim_make_type(x_obj_t *p_base, x_obj_t *p_args)
 		type.p_length = x_restobj(p_entry);
 	}
 
+	p_sym = x_mksymbol(p_base, (x_char_t *)"analyse");
+	x_firstobj((x_obj_t *)assoc_args) = p_sym;
+	p_entry = x_alist_assoc(p_base, (x_obj_t *)assoc_args);
+	if ( ! x_obj_isnil(p_base, p_entry)) {
+		type.p_analyse = x_restobj(p_entry);
+	}
+
+	p_sym = x_mksymbol(p_base, (x_char_t *)"delimit");
+	x_firstobj((x_obj_t *)assoc_args) = p_sym;
+	p_entry = x_alist_assoc(p_base, (x_obj_t *)assoc_args);
+	if ( ! x_obj_isnil(p_base, p_entry)) {
+		type.p_delimit = x_restobj(p_entry);
+	}
+
 	p_type = x_type_struct_make(p_base, type);
 	x_base_type_alist_extend(p_base, p_type);
 
@@ -244,12 +258,27 @@ static x_obj_t *x_prim_base_bind(x_obj_t *p_base, x_obj_t *p_args)
 	return p_val;
 }
 
+/* score-match: (score-match score length reader) -> set score fields, return score */
+static x_obj_t *x_prim_score_match(x_obj_t *p_base, x_obj_t *p_args)
+{
+	x_obj_t *p_score = x_prim_eval_arg(p_base, x_firstobj(p_args)),
+		*p_len = x_prim_eval_arg(p_base, x_firstobj(x_restobj(p_args))),
+		*p_reader = x_prim_eval_arg(p_base,
+			x_firstobj(x_restobj(x_restobj(p_args))));
+
+	x_firstint(p_score) = x_atomint(p_len);
+	x_restobj(p_score) = p_reader;
+
+	return p_score;
+}
+
 x_obj_t *x_prim_type_register(x_obj_t *p_base, x_obj_t *p_args)
 {
 	x_prim_bind(p_base, "make-type", x_prim_make_type);
 	x_prim_bind(p_base, "make-instance", x_prim_make_instance);
 	x_prim_bind(p_base, "type?", x_prim_typep);
 	x_prim_bind(p_base, "type-name", x_prim_type_name);
+	x_prim_bind(p_base, "score-match", x_prim_score_match);
 	x_prim_bind(p_base, "make-base", x_prim_make_base);
 	x_prim_bind(p_base, "base-eval", x_prim_base_eval);
 	x_prim_bind(p_base, "base-bind", x_prim_base_bind);

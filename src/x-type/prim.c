@@ -19,6 +19,7 @@
 #include "x-type/prim.h"
 #include "x-type/procedure.h"
 #include "x-base.h"
+#include "x-prim.h"
 
 x_satom_t x_type_prim_name = x_obj_set(x_type_atom_obj, X_OBJ_FLAG_NONE, { .s = (x_char_t *)X_TYPE_PRIM_NAME }),
 	x_type_prim_make_prim = x_obj_set(x_type_atom_obj, X_OBJ_FLAG_NONE, { (x_obj_t *)&x_type_prim_make }),
@@ -76,6 +77,37 @@ x_obj_t *x_type_prim_call(x_obj_t *p_base, x_obj_t *p_args)
 
 	if (x_obj_type_isprocedure(p_base, p_fn)) {
 		return x_type_procedure_call(p_base, p_args);
+	}
+
+	return (*x_primval(p_fn))(p_base, x_restobj(p_args));
+}
+
+x_obj_t *x_type_prim_apply(x_obj_t *p_base, x_obj_t *p_args)
+{
+	x_obj_t *p_fn = x_firstobj(p_args);
+
+	if (x_obj_type_isprocedure(p_base, p_fn)) {
+		x_obj_t *p_params = x_procparams(p_fn),
+			*p_body = x_procbody(p_fn),
+			*p_closure_env = x_procenv(p_fn),
+			*p_saved_env,
+			*p_result;
+
+		p_saved_env = x_base_field_env_alist(p_base);
+
+		x_base_field_env_alist(p_base) = x_prim_multiple_extend(
+			p_base, p_closure_env, p_params, x_restobj(p_args));
+
+		/* Eval body forms. No TCO: called from C, not x_eval. */
+		p_result = p_base;
+		while ( ! x_obj_isnil(p_base, p_body)) {
+			p_result = x_prim_eval_arg(p_base, x_firstobj(p_body));
+			p_body = x_restobj(p_body);
+		}
+
+		x_base_field_env_alist(p_base) = p_saved_env;
+
+		return p_result;
 	}
 
 	return (*x_primval(p_fn))(p_base, x_restobj(p_args));

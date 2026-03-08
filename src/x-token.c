@@ -51,7 +51,7 @@ x_obj_t *x_token_delimit(x_obj_t *p_base, x_obj_t *p_args)
 
 		if (p_type != x_firstobj(p_types)
 			&& ! x_obj_isnil(p_base, prim_arg_prim)
-			&& x_type_prim_call(p_base, (x_obj_t *)prim_args) == p_buffer
+			&& x_type_prim_apply(p_base, (x_obj_t *)prim_args) == p_buffer
 		) {
 			return p_buffer;
 		}
@@ -80,7 +80,8 @@ x_obj_t *x_token_analyse(x_obj_t *p_base, x_obj_t *p_args)
 {
 	x_int_t i_best;
 	x_obj_t *p_buffer = x_firstobj(p_args), *p_read, *p_analyse, *p_obj;
-	x_satom_t chr = x_obj_set(NULL, X_OBJ_FLAG_NONE, { .c = '\0' } );
+	x_satom_t chr = x_obj_set(NULL, X_OBJ_FLAG_NONE, { .c = '\0' } ),
+		arg_chr = x_obj_set(NULL, X_OBJ_FLAG_NONE, { .i = 0 });
 	x_spair_t
 		score = x_obj_set(NULL, X_OBJ_FLAG_NONE, {}),
 		type_iter = x_obj_set(NULL, X_OBJ_FLAG_NONE, { x_type_alist_iter_prim }, { x_base_field_type_alist(p_base) }),
@@ -91,7 +92,7 @@ x_obj_t *x_token_analyse(x_obj_t *p_base, x_obj_t *p_args)
 		buffer_args[3] = {
 			x_obj_set(NULL, X_OBJ_FLAG_NONE, { p_buffer }, { (x_obj_t *)(buffer_args + 1) }),
 			x_obj_set(NULL, X_OBJ_FLAG_NONE, { score }, { (x_obj_t *)(buffer_args + 2) }),
-			x_obj_set(NULL, X_OBJ_FLAG_NONE, { NULL }, { NULL }),
+			x_obj_set(NULL, X_OBJ_FLAG_NONE, { arg_chr }, { NULL }),
 		},
 		prim_args[1] = {
 			x_obj_set(NULL, X_OBJ_FLAG_NONE, { NULL }, { (x_obj_t *)(buffer_args) }),
@@ -102,6 +103,9 @@ x_obj_t *x_token_analyse(x_obj_t *p_base, x_obj_t *p_args)
 		};
 	x_obj_t *p_score = (x_obj_t *)score;
 	x_char_t *p_bw;
+
+	/* Retain: ensure bufferval == bufferread for correct x_bufferlen. */
+	x_type_buffer_retain(p_base, (x_obj_t *)buffer_args);
 
 	/* Cycle through of all of the types. */
 	p_read = p_base;
@@ -121,8 +125,9 @@ x_obj_t *x_token_analyse(x_obj_t *p_base, x_obj_t *p_args)
 					break;
 				}
 
+				x_atomint(arg_chr) = (x_int_t)x_bufferlastchar(p_buffer);
 				prim_arg_prim = p_analyse;
-				p_obj = x_type_prim_call(p_base, (x_obj_t *)prim_args);
+				p_obj = x_type_prim_apply(p_base, (x_obj_t *)prim_args);
 
 				/* Not recognized. */
 				if (x_obj_isnil(p_base, p_obj)) {
@@ -175,7 +180,7 @@ x_obj_t *x_token_read(x_obj_t *p_base, x_obj_t *p_args)
 		}
 
 		prim_arg_prim = p_read;
-		p_obj = x_type_prim_call(p_base, (x_obj_t *)prim_args);
+		p_obj = x_type_prim_apply(p_base, (x_obj_t *)prim_args);
 
 		if (x_obj_isnil(p_base, p_obj)) {
 			return p_base;
