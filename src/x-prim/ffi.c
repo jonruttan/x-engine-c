@@ -23,6 +23,7 @@
 #include "x-type/symbol.h"
 
 #include <string.h>  /* memcpy */
+#include <stdio.h>   /* sprintf */
 #include <dlfcn.h>   /* dlopen, dlsym */
 
 /* dlopen: (dlopen path flags) -> ptr
@@ -68,6 +69,10 @@ static x_obj_t *x_prim_dlsym(x_obj_t *p_base, x_obj_t *p_args)
  *   "d+d"   : double + double (arithmetic)
  *   "d-d", "d*d", "d/d" : arithmetic
  *   "d<d", "d>d", "d=d", "d<=d", "d>=d" : comparison
+ *   "i->d"  : cast int to double, return IEEE 754 bits
+ *   "d->i"  : interpret IEEE 754 bits as double, truncate to int
+ *   "s0->d" : double(*)(const char*,void*) with NULL second arg
+ *   "d->s"  : format double bits as string ("%.15g")
  */
 static x_obj_t *x_prim_ffi_call(x_obj_t *p_base, x_obj_t *p_args)
 {
@@ -204,6 +209,39 @@ static x_obj_t *x_prim_ffi_call(x_obj_t *p_base, x_obj_t *p_args)
 		return a >= b
 			? x_mksymbol(p_base, (x_char_t *)X_PRIM_TRUE)
 			: p_base;
+	}
+
+	/* Cast conventions (no function pointer needed) */
+	if (x_lib_strcmp(conv, "i->d") == 0) {
+		p_a = x_prim_eval_arg(p_base, x_firstobj(p_rest));
+		a = (double)x_intval(p_a);
+		memcpy(&bits, &a, sizeof(double));
+		return x_mkint(p_base, bits);
+	}
+
+	if (x_lib_strcmp(conv, "d->i") == 0) {
+		p_a = x_prim_eval_arg(p_base, x_firstobj(p_rest));
+		memcpy(&a, &x_intval(p_a), sizeof(double));
+		return x_mkint(p_base, (x_int_t)a);
+	}
+
+	/* String/double conversions */
+	if (x_lib_strcmp(conv, "s0->d") == 0) {
+		fptr = x_ptrval(p_fptr);
+		p_a = x_prim_eval_arg(p_base, x_firstobj(p_rest));
+		r = ((double (*)(const char *, void *))fptr)(
+			x_firststr(p_a), NULL);
+		memcpy(&bits, &r, sizeof(double));
+		return x_mkint(p_base, bits);
+	}
+
+	if (x_lib_strcmp(conv, "d->s") == 0) {
+		x_char_t buf[32];
+		int len;
+		p_a = x_prim_eval_arg(p_base, x_firstobj(p_rest));
+		memcpy(&a, &x_intval(p_a), sizeof(double));
+		len = sprintf((char *)buf, "%.15g", a);
+		return x_mkstrown(p_base, x_lib_strndup(buf, len));
 	}
 
 	return p_base;
