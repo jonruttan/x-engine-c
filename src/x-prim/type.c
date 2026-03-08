@@ -86,6 +86,13 @@ static x_obj_t *x_prim_make_type(x_obj_t *p_base, x_obj_t *p_args)
 		type.p_delimit = x_restobj(p_entry);
 	}
 
+	p_sym = x_mksymbol(p_base, (x_char_t *)"convert");
+	x_firstobj((x_obj_t *)assoc_args) = p_sym;
+	p_entry = x_alist_assoc(p_base, (x_obj_t *)assoc_args);
+	if ( ! x_obj_isnil(p_base, p_entry)) {
+		type.p_convert = x_restobj(p_entry);
+	}
+
 	p_type = x_type_struct_make(p_base, type);
 	x_base_type_alist_extend(p_base, p_type);
 
@@ -258,6 +265,48 @@ static x_obj_t *x_prim_base_bind(x_obj_t *p_base, x_obj_t *p_args)
 	return p_val;
 }
 
+/* convert: (convert value target-type-handle) -> converted value or () */
+static x_obj_t *x_prim_convert(x_obj_t *p_base, x_obj_t *p_args)
+{
+	x_obj_t *p_val, *p_handle, *p_type, *p_convert_fn;
+	x_spair_t lookup_args[1] = {
+		x_obj_set(NULL, X_OBJ_FLAG_NONE, { NULL }, { NULL })
+	};
+	x_spair_t call_args[2] = {
+		x_obj_set(NULL, X_OBJ_FLAG_NONE, { NULL }, { (x_obj_t *)(call_args + 1) }),
+		x_obj_set(NULL, X_OBJ_FLAG_NONE, { NULL }, { NULL })
+	};
+
+	p_val = x_prim_eval_arg(p_base, x_firstobj(p_args));
+	p_handle = x_prim_eval_arg(p_base, x_firstobj(x_restobj(p_args)));
+
+	/* Short-circuit: already the target type. */
+	if ( ! x_obj_isnil(p_base, p_val)
+		&& ! x_obj_isnil(p_base, x_obj_type(p_val))
+		&& x_type_field_name(x_obj_type(p_val)) == p_handle) {
+		return p_val;
+	}
+
+	x_firstobj((x_obj_t *)lookup_args) = p_handle;
+	p_type = x_base_type_alist_assoc(p_base, (x_obj_t *)lookup_args);
+
+	if (x_obj_isnil(p_base, p_type)) {
+		return p_base;
+	}
+
+	p_convert_fn = x_type_field_convert(p_type);
+
+	if (x_obj_isnil(p_base, p_convert_fn)) {
+		return p_base;
+	}
+
+	/* Call: (convert-fn value) */
+	x_firstobj((x_obj_t *)call_args) = p_convert_fn;
+	x_firstobj((x_obj_t *)(call_args + 1)) = p_val;
+
+	return x_type_prim_apply(p_base, (x_obj_t *)call_args);
+}
+
 /* score-match: (score-match score length reader) -> set score fields, return score */
 static x_obj_t *x_prim_score_match(x_obj_t *p_base, x_obj_t *p_args)
 {
@@ -278,6 +327,7 @@ x_obj_t *x_prim_type_register(x_obj_t *p_base, x_obj_t *p_args)
 	x_prim_bind(p_base, "make-instance", x_prim_make_instance);
 	x_prim_bind(p_base, "type?", x_prim_typep);
 	x_prim_bind(p_base, "type-name", x_prim_type_name);
+	x_prim_bind(p_base, "convert", x_prim_convert);
 	x_prim_bind(p_base, "score-match", x_prim_score_match);
 	x_prim_bind(p_base, "make-base", x_prim_make_base);
 	x_prim_bind(p_base, "base-eval", x_prim_base_eval);
