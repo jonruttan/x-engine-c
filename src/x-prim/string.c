@@ -117,6 +117,44 @@ static x_obj_t *x_prim_string_to_number(x_obj_t *p_base, x_obj_t *p_args)
 	return x_mkint(p_base, x_lib_strtoint(x_strval(p_str), NULL, 0));
 }
 
+/* list->string: (list->string list-of-chars) -> string */
+static x_obj_t *x_prim_list_to_string(x_obj_t *p_base, x_obj_t *p_args)
+{
+	x_obj_t *p_list = x_prim_eval_arg(p_base, x_firstobj(p_args)),
+		*p_cur;
+	x_char_t *s;
+	size_t len = 0;
+
+	for (p_cur = p_list; !x_obj_isnil(p_base, p_cur); p_cur = x_restobj(p_cur))
+		len++;
+	s = (x_char_t *)x_sys_malloc(len + 1);
+	len = 0;
+	for (p_cur = p_list; !x_obj_isnil(p_base, p_cur); p_cur = x_restobj(p_cur))
+		s[len++] = x_charval(x_firstobj(p_cur));
+	s[len] = '\0';
+
+	return x_mkstrown(p_base, s);
+}
+
+/* make-string: (make-string k [char]) -> string of k copies of char */
+static x_obj_t *x_prim_make_string(x_obj_t *p_base, x_obj_t *p_args)
+{
+	x_obj_t *p_k = x_prim_eval_arg(p_base, x_firstobj(p_args)),
+		*p_rest = x_restobj(p_args);
+	x_int_t k = x_intval(p_k);
+	x_char_t fill = ' ', *s;
+	x_int_t i;
+
+	if (!x_obj_isnil(p_base, p_rest))
+		fill = x_charval(x_prim_eval_arg(p_base, x_firstobj(p_rest)));
+	s = (x_char_t *)x_sys_malloc(k + 1);
+	for (i = 0; i < k; i++)
+		s[i] = fill;
+	s[k] = '\0';
+
+	return x_mkstrown(p_base, s);
+}
+
 x_obj_t *x_prim_string_register(x_obj_t *p_base, x_obj_t *p_args)
 {
 	x_prim_bind(p_base, "string-length", x_prim_string_length);
@@ -128,6 +166,8 @@ x_obj_t *x_prim_string_register(x_obj_t *p_base, x_obj_t *p_args)
 	x_prim_bind(p_base, "symbol->string", x_prim_symbol_to_string);
 	x_prim_bind(p_base, "number->string", x_prim_number_to_string);
 	x_prim_bind(p_base, "string->number", x_prim_string_to_number);
+	x_prim_bind(p_base, "list->string", x_prim_list_to_string);
+	x_prim_bind(p_base, "make-string", x_prim_make_string);
 
 	return p_base;
 }
