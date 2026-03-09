@@ -159,18 +159,26 @@ test-x: $(EXECUTABLE)
 .PHONY: test-x
 
 test-r5rs: $(EXECUTABLE)
-	sh tests/r5rs/spec-runner.sh
+	sh lang/r5rs/tests/spec-runner.sh
 .PHONY: test-r5rs
 
+test-r7rs: $(EXECUTABLE)
+	sh lang/r7rs/tests/spec-runner.sh
+.PHONY: test-r7rs
+
 test-krn: $(EXECUTABLE)
-	sh tests/krn/spec-runner.sh
+	sh lang/krn/tests/spec-runner.sh
 .PHONY: test-krn
 
+test-ash: $(EXECUTABLE)
+	sh lang/ash/tests/spec-runner.sh
+.PHONY: test-ash
+
 test-sl: $(EXECUTABLE)
-	sh tests/sl/spec-runner.sh
+	sh lang/sl/tests/spec-runner.sh
 .PHONY: test-sl
 
-tests: test test-x test-r5rs test-krn test-sl
+tests: test test-x test-r5rs test-r7rs test-krn test-ash test-sl
 .PHONY: tests
 
 watch:
