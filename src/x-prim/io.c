@@ -116,43 +116,66 @@ static x_obj_t *x_prim_gc(x_obj_t *p_base, x_obj_t *p_args)
 	return NULL;
 }
 
-/* repl: (repl) -> read-eval-print loop until EOF */
+/* repl: (repl) -> read-eval-print loop until EOF
+ *
+ * Parses two x-lang forms from a source string:
+ *   1. Setup: saves %do (before libraries can redefine do),
+ *      defines temp variables %repl-exp and %repl-result
+ *   2. Step: one REPL iteration (prompt, read, eval, print)
+ * The C code loops evaluating the step form directly (no closure),
+ * so def bindings from (eval exp) persist across iterations. */
 x_obj_t *x_prim_repl(x_obj_t *p_base, x_obj_t *p_args)
 {
-	x_obj_t *p_buffer = x_base_field_buffer(p_base);
-	x_obj_t *p_exp, *p_result = NULL;
-	int fd = x_base_isset(p_base)
-		? x_atomint(x_base_field_fileout(p_base)) : STDOUT_FILENO;
-	x_satom_t exp_wrap = x_obj_set(NULL, X_OBJ_FLAG_NONE, { NULL });
-	x_spair_t eval_args[1] = {
-		x_obj_set(NULL, X_OBJ_FLAG_NONE, { exp_wrap }, { NULL })
-	};
-	x_spair_t read_args[1] = {
-		x_obj_set(NULL, X_OBJ_FLAG_NONE, { p_buffer }, { p_base })
-	};
-	x_spair_t write_args[1] = {
-		x_obj_set(NULL, X_OBJ_FLAG_NONE, { NULL }, { NULL })
-	};
+	static const x_char_t repl_src[] =
+		"(do (def %do do) (def %repl-exp ()) (def %repl-result ()))"
+		" (%do (display \"" X_REPL_PROMPT "\")"
+		" (set %repl-exp (read))"
+		" (if (null? %repl-exp) ()"
+		"  (%do (set %repl-result (eval %repl-exp))"
+		"   (if (null? %repl-result) () (write %repl-result))"
+		"   (newline) t)))";
+	x_int_t len = sizeof(repl_src) - 1;
+	x_char_t *buf = (x_char_t *)x_lib_strndup(repl_src, len);
+	x_obj_t *p_buffer, *p_setup, *p_step, *p_result;
+
+	p_buffer = x_mkfbufferown(p_base, X_OBJ_FLAG_RO, buf);
+	x_bufferwrite(p_buffer) = x_bufferval(p_buffer) + len;
+
+	{
+		x_spair_t read_args[1] = {
+			x_obj_set(NULL, X_OBJ_FLAG_NONE, { p_buffer }, { p_base })
+		};
+
+		/* Parse and eval setup (def temp vars). */
+		p_setup = x_token_read(p_base, (x_obj_t *)read_args);
+
+		{
+			x_satom_t wrap = x_obj_set(NULL, X_OBJ_FLAG_NONE, { p_setup });
+			x_spair_t eval_args[1] = {
+				x_obj_set(NULL, X_OBJ_FLAG_NONE, { wrap }, { NULL })
+			};
+
+			x_eval(p_base, (x_obj_t *)eval_args);
+		}
+
+		/* Parse step form (reused each iteration). */
+		p_step = x_token_read(p_base, (x_obj_t *)read_args);
+	}
+
+	/* REPL loop: eval step form until it returns nil (EOF). */
+	p_result = NULL;
 
 	for (;;) {
-		x_sys_write(fd, "> ", 2);
+		x_satom_t wrap = x_obj_set(NULL, X_OBJ_FLAG_NONE, { p_step });
+		x_spair_t eval_args[1] = {
+			x_obj_set(NULL, X_OBJ_FLAG_NONE, { wrap }, { NULL })
+		};
 
-		p_exp = x_token_read(p_base, (x_obj_t *)read_args);
-
-		if (x_obj_isnil(p_base, p_exp)) {
-			x_sys_write(fd, "\n", 1);
-			break;
-		}
-
-		x_firstobj((x_obj_t *)exp_wrap) = p_exp;
 		p_result = x_eval(p_base, (x_obj_t *)eval_args);
 
-		if ( ! x_obj_isnil(p_base, p_result)) {
-			x_firstobj((x_obj_t *)write_args) = p_result;
-			x_token_write(p_base, (x_obj_t *)write_args);
+		if (x_obj_isnil(p_base, p_result)) {
+			break;
 		}
-
-		x_sys_write(fd, "\n", 1);
 	}
 
 	return p_result;
