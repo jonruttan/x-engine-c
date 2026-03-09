@@ -33,6 +33,10 @@
 #include "x-obj.h"
 #include <setjmp.h>
 
+#define X_BASE_TRUE_STR		"t"
+#define X_BASE_REPL_STR		"> "
+
+
 /*
  * # Error Handler
  */

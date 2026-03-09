@@ -31,7 +31,7 @@ static x_obj_t *x_prim_eq(x_obj_t *p_base, x_obj_t *p_args)
 	x_obj_t *a = x_prim_eval_arg(p_base, x_firstobj(p_args)),
 		*b = x_prim_eval_arg(p_base, x_firstobj(x_restobj(p_args)));
 
-	return a == b ? x_mksymbol(p_base, (x_char_t *)X_PRIM_TRUE) : NULL;
+	return a == b ? x_mksymbol(p_base, (x_char_t *)X_BASE_TRUE_STR) : NULL;
 }
 
 /* =: (= a b) -> integer value equality */
@@ -41,7 +41,7 @@ static x_obj_t *x_prim_numeq(x_obj_t *p_base, x_obj_t *p_args)
 		*b = x_prim_eval_arg(p_base, x_firstobj(x_restobj(p_args)));
 
 	return x_intval(a) == x_intval(b)
-		? x_mksymbol(p_base, (x_char_t *)X_PRIM_TRUE) : NULL;
+		? x_mksymbol(p_base, (x_char_t *)X_BASE_TRUE_STR) : NULL;
 }
 
 /* <: (< a b) -> t if a < b */
@@ -51,7 +51,7 @@ static x_obj_t *x_prim_lt(x_obj_t *p_base, x_obj_t *p_args)
 		*b = x_prim_eval_arg(p_base, x_firstobj(x_restobj(p_args)));
 
 	return x_intval(a) < x_intval(b)
-		? x_mksymbol(p_base, (x_char_t *)X_PRIM_TRUE) : NULL;
+		? x_mksymbol(p_base, (x_char_t *)X_BASE_TRUE_STR) : NULL;
 }
 
 /* null?: (null? x) -> t if nil */
@@ -59,7 +59,7 @@ static x_obj_t *x_prim_nullp(x_obj_t *p_base, x_obj_t *p_args)
 {
 	x_obj_t *x = x_prim_eval_arg(p_base, x_firstobj(p_args));
 
-	return x_obj_isnil(p_base, x) ? x_mksymbol(p_base, (x_char_t *)X_PRIM_TRUE) : NULL;
+	return x_obj_isnil(p_base, x) ? x_mksymbol(p_base, (x_char_t *)X_BASE_TRUE_STR) : NULL;
 }
 
 /* pair?: (pair? x) -> t if list pair */
@@ -67,7 +67,7 @@ static x_obj_t *x_prim_pairp(x_obj_t *p_base, x_obj_t *p_args)
 {
 	x_obj_t *x = x_prim_eval_arg(p_base, x_firstobj(p_args));
 
-	return x_obj_type_islist(p_base, x) ? x_mksymbol(p_base, (x_char_t *)X_PRIM_TRUE) : NULL;
+	return x_obj_type_islist(p_base, x) ? x_mksymbol(p_base, (x_char_t *)X_BASE_TRUE_STR) : NULL;
 }
 
 /* number?: (number? x) -> t if integer */
@@ -75,7 +75,7 @@ static x_obj_t *x_prim_numberp(x_obj_t *p_base, x_obj_t *p_args)
 {
 	x_obj_t *x = x_prim_eval_arg(p_base, x_firstobj(p_args));
 
-	return x_obj_type_isint(p_base, x) ? x_mksymbol(p_base, (x_char_t *)X_PRIM_TRUE) : NULL;
+	return x_obj_type_isint(p_base, x) ? x_mksymbol(p_base, (x_char_t *)X_BASE_TRUE_STR) : NULL;
 }
 
 /* string?: (string? x) -> t if string */
@@ -83,7 +83,7 @@ static x_obj_t *x_prim_stringp(x_obj_t *p_base, x_obj_t *p_args)
 {
 	x_obj_t *x = x_prim_eval_arg(p_base, x_firstobj(p_args));
 
-	return x_obj_type_isstr(p_base, x) ? x_mksymbol(p_base, (x_char_t *)X_PRIM_TRUE) : NULL;
+	return x_obj_type_isstr(p_base, x) ? x_mksymbol(p_base, (x_char_t *)X_BASE_TRUE_STR) : NULL;
 }
 
 /* symbol?: (symbol? x) -> t if symbol */
@@ -91,7 +91,7 @@ static x_obj_t *x_prim_symbolp(x_obj_t *p_base, x_obj_t *p_args)
 {
 	x_obj_t *x = x_prim_eval_arg(p_base, x_firstobj(p_args));
 
-	return x_obj_type_issymbol(p_base, x) ? x_mksymbol(p_base, (x_char_t *)X_PRIM_TRUE) : NULL;
+	return x_obj_type_issymbol(p_base, x) ? x_mksymbol(p_base, (x_char_t *)X_BASE_TRUE_STR) : NULL;
 }
 
 /* procedure?: (procedure? x) -> t if callable (fn or prim) */
@@ -100,7 +100,7 @@ static x_obj_t *x_prim_procedurep(x_obj_t *p_base, x_obj_t *p_args)
 	x_obj_t *x = x_prim_eval_arg(p_base, x_firstobj(p_args));
 
 	return (x_obj_type_isprocedure(p_base, x) || x_obj_type_isprim(p_base, x))
-		? x_mksymbol(p_base, (x_char_t *)X_PRIM_TRUE) : NULL;
+		? x_mksymbol(p_base, (x_char_t *)X_BASE_TRUE_STR) : NULL;
 }
 
 /* char?: (char? x) -> t if character */
@@ -109,7 +109,7 @@ static x_obj_t *x_prim_charp(x_obj_t *p_base, x_obj_t *p_args)
 	x_obj_t *x = x_prim_eval_arg(p_base, x_firstobj(p_args));
 
 	return x_obj_type_ischar(p_base, x)
-		? x_mksymbol(p_base, (x_char_t *)X_PRIM_TRUE) : NULL;
+		? x_mksymbol(p_base, (x_char_t *)X_BASE_TRUE_STR) : NULL;
 }
 
 /* char->integer: (char->integer c) -> integer char code */

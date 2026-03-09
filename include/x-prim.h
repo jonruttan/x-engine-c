@@ -21,9 +21,6 @@
  */
 #include "x-obj.h"
 
-#define X_PRIM_TRUE	"t"
-#define X_REPL_PROMPT	"> "
-
 /*
  * # Data Structures
  */

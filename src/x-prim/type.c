@@ -161,7 +161,7 @@ static x_obj_t *x_prim_typep(x_obj_t *p_base, x_obj_t *p_args)
 	}
 
 	return x_type_field_name(x_obj_type(p_obj)) == p_handle
-		? x_mksymbol(p_base, (x_char_t *)X_PRIM_TRUE) : NULL;
+		? x_mksymbol(p_base, (x_char_t *)X_BASE_TRUE_STR) : NULL;
 }
 
 /* type-name: (type-name obj) -> name string of obj's type */

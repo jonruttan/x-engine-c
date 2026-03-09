@@ -128,7 +128,7 @@ x_obj_t *x_prim_repl(x_obj_t *p_base, x_obj_t *p_args)
 {
 	static const x_char_t repl_src[] =
 		"(do (def %do do) (def %repl-exp ()) (def %repl-result ()))"
-		" (%do (display \"" X_REPL_PROMPT "\")"
+		" (%do (display \"" X_BASE_REPL_STR "\")"
 		" (set %repl-exp (read))"
 		" (if (null? %repl-exp) ()"
 		"  (%do (set %repl-result (eval %repl-exp))"
