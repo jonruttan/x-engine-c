@@ -30,11 +30,11 @@ x_obj_t *x_obj_prim_make(x_obj_t *p_base, x_obj_t *p_args)
 
 	/* TODO: Move argument checks to Lisp layer. */
 	if (x_obj_isnil(p_base, p_args) || x_obj_isnil(p_base, (p_obj = x_firstobj(p_args)))) {
-		return p_base;
+		return NULL;
 	}
 
 	if (x_obj_isnil(p_base, x_obj_type(p_obj))) {
-		return p_base;
+		return NULL;
 	}
 
 	if (x_obj_type_issatom(p_obj) || x_obj_type_issatom(x_obj_type(p_obj))) {
@@ -48,10 +48,10 @@ x_obj_t *x_obj_prim_make(x_obj_t *p_base, x_obj_t *p_args)
 	p_make = x_type_field_name(x_obj_type(p_obj));
 
 	if (x_obj_isnil(p_base, p_make) || x_obj_isnil(p_base, x_atomobj(p_make))) {
-		return p_base;
+		return NULL;
 	}
 
-	return (*x_atomfn(p_make))(p_base, x_mkspair(p_base, p_obj, p_base));
+	return (*x_atomfn(p_make))(p_base, x_mkspair(p_base, p_obj, NULL));
 }
 
 x_obj_t *x_obj_prim_call(x_obj_t *p_base, x_obj_t *p_args)
@@ -60,17 +60,17 @@ x_obj_t *x_obj_prim_call(x_obj_t *p_base, x_obj_t *p_args)
 
 	/* TODO: Move argument checks to Lisp layer. */
 	if (x_obj_isnil(p_base, p_args) || x_obj_isnil(p_base, (p_obj = x_firstobj(p_args)))) {
-		return p_base;
+		return NULL;
 	}
 
 	if (x_obj_isnil(p_base, x_obj_type(p_obj))) {
-		return p_base;
+		return NULL;
 	}
 
 	p_call = x_type_field_call(x_obj_type(p_obj));
 
 	if (x_obj_isnil(p_base, p_call)) {
-		return p_base;
+		return NULL;
 	}
 
 	if (x_obj_type_isprocedure(p_base, p_call)) {
@@ -80,7 +80,7 @@ x_obj_t *x_obj_prim_call(x_obj_t *p_base, x_obj_t *p_args)
 	}
 
 	if (x_obj_isnil(p_base, x_atomobj(p_call))) {
-		return p_base;
+		return NULL;
 	}
 
 	return (*x_atomfn(p_call))(p_base, p_args);

@@ -45,7 +45,7 @@ x_obj_t *x_sexp_int_analyse_digits(x_obj_t *p_base, x_obj_t *p_args)
 	x_bufferread(p_buffer)--;
 
 	if (x_bufferlen(p_buffer) < 1) {
-		return p_base;
+		return NULL;
 	}
 
 	x_firstint(p_score) = x_bufferlen(p_buffer);
@@ -66,7 +66,7 @@ x_obj_t *x_sexp_int_analyse_xdigits(x_obj_t *p_base, x_obj_t *p_args)
 	x_bufferread(p_buffer)--;
 
 	if (x_bufferlen(p_buffer) < 1) {
-		return p_base;
+		return NULL;
 	}
 
 	x_firstint(p_score) = x_bufferlen(p_buffer);
@@ -95,7 +95,7 @@ x_obj_t *x_sexp_int_analyse_prefix(x_obj_t *p_base, x_obj_t *p_args)
 
 	if ( ! isdigit(x_bufferlastchar(p_buffer))) {
 		x_bufferread(p_buffer)--;
-		return p_base;
+		return NULL;
 	}
 
 	return x_sexp_int_analyse_digits(p_base, p_args);
@@ -117,7 +117,7 @@ x_obj_t *x_sexp_int_read(x_obj_t *p_base, x_obj_t *p_args)
 	x_obj_t *p_buffer = x_firstobj(p_args), *p_int;
 
 	if (x_bufferlen(p_buffer) < 1) {
-		return p_base;
+		return NULL;
 	}
 
 	/* Not required, final non-numeric char will act as delimiter. */
@@ -148,5 +148,5 @@ x_obj_t *x_sexp_int_write(x_obj_t *p_base, x_obj_t *p_args)
 		return x_firstobj(p_args);
 	}
 
-	return p_base;
+	return NULL;
 }

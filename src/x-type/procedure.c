@@ -111,7 +111,7 @@ x_obj_t *x_type_procedure_call(x_obj_t *p_base, x_obj_t *p_args)
 			p_base, p_closure_env, p_params, p_evaled_args);
 
 		/* Eval body forms sequentially (implicit do). */
-		p_result = p_base;
+		p_result = NULL;
 		while ( ! x_obj_isnil(p_base, p_body)) {
 			if (x_obj_isnil(p_base, x_restobj(p_body))) {
 				/* Last body form: tail position. */
@@ -121,7 +121,7 @@ x_obj_t *x_type_procedure_call(x_obj_t *p_base, x_obj_t *p_args)
 					x_base_field_tco_env(p_base) = p_saved_env;
 				}
 
-				return p_base;
+				return NULL;
 			}
 
 			p_result = x_prim_eval_arg(p_base, x_firstobj(p_body));

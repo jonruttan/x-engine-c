@@ -111,13 +111,13 @@ x_obj_t *x_type_operative_call(x_obj_t *p_base, x_obj_t *p_args)
 	x_base_field_env_alist(p_base) = p_env;
 
 	/* Eval body forms sequentially (implicit do). */
-	p_result = p_base;
+	p_result = NULL;
 	while ( ! x_obj_isnil(p_base, p_body)) {
 		if (x_obj_isnil(p_base, x_restobj(p_body))) {
 			/* Last body form: tail position. */
 			x_base_field_tco_expr(p_base) = x_firstobj(p_body);
 
-			return p_base;
+			return NULL;
 		}
 
 		p_result = x_prim_eval_arg(p_base, x_firstobj(p_body));

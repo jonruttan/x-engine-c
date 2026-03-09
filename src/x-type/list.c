@@ -100,7 +100,7 @@ x_obj_t *x_type_list_call(x_obj_t *p_base, x_obj_t *p_args)
 
 	/* Evaluate first arg. */
 	if (x_obj_isnil(p_base, vals)) {
-		return p_base;
+		return NULL;
 	}
 
 	arg1 = x_prim_eval_arg(p_base, x_firstobj(vals));
@@ -110,7 +110,7 @@ x_obj_t *x_type_list_call(x_obj_t *p_base, x_obj_t *p_args)
 		/* Slice: (list start len) -> sublist */
 		x_int_t start = x_atomint(arg1);
 		x_int_t len;
-		x_obj_t *p_result = p_base, *p_tail = p_base;
+		x_obj_t *p_result = NULL, *p_tail = NULL;
 
 		arg2 = x_prim_eval_arg(p_base, x_firstobj(vals));
 		len = x_atomint(arg2);
@@ -122,7 +122,7 @@ x_obj_t *x_type_list_call(x_obj_t *p_base, x_obj_t *p_args)
 
 		/* Collect len elements. */
 		for (i = 0; i < len && ! x_obj_isnil(p_base, proc); i++) {
-			x_obj_t *p_new = x_mklist(p_base, x_firstobj(proc), p_base);
+			x_obj_t *p_new = x_mklist(p_base, x_firstobj(proc), NULL);
 
 			if (x_obj_isnil(p_base, p_result)) {
 				p_result = p_new;
@@ -158,7 +158,7 @@ x_obj_t *x_type_list_call(x_obj_t *p_base, x_obj_t *p_args)
 		proc = x_restobj(proc);
 	}
 
-	return x_obj_isnil(p_base, proc) ? p_base : x_firstobj(proc);
+	return x_obj_isnil(p_base, proc) ? NULL : x_firstobj(proc);
 }
 
 x_obj_t *x_type_list_eval(x_obj_t *p_base, x_obj_t *p_args)

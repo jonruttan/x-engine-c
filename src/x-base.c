@@ -22,13 +22,14 @@
 
 #include "x-token.h"
 
-#define nil			p_base
+#define nil			NULL
 #define pair(X,Y)	(x_mkspair(p_base, (X), (Y)))
 #define atom(X)		(x_mksatom(p_base, (X)))
 
 x_obj_t *x_base_make(x_obj_t *p_base, x_obj_t *p_args)
 {
-	p_base = atom(nil);
+	p_base = x_obj_make(p_base, x_type_base_obj, X_OBJ_FLAG_BASE,
+		X_OBJ_LENGTH_ATOM, p_base);
 	x_atomobj(p_base) = pair(
 		nil,
 		pair(
@@ -37,8 +38,8 @@ x_obj_t *x_base_make(x_obj_t *p_base, x_obj_t *p_args)
 			pair(atom(STDERR_FILENO),
 			nil))),
 		pair(
-			pair(pair(nil, nil),
-			pair(pair(nil, nil),
+			pair(nil,
+			pair(nil,
 			pair(pair(nil, nil),
 			pair(nil,
 			pair(nil,
@@ -59,7 +60,7 @@ x_obj_t *x_base_type_alist_extend(x_obj_t *p_base, x_obj_t *p_args)
 	x_spair_t args = x_obj_set(NULL, X_OBJ_FLAG_NONE, { p_args }, { NULL });
 
 	if ( ! x_base_isset(p_base)) {
-		return p_base;
+		return NULL;
 	}
 
 	x_restobj((x_obj_t *)args) = x_base_field_type_alist(p_base);
@@ -75,7 +76,7 @@ x_obj_t *x_base_type_alist_assoc(x_obj_t *p_base, x_obj_t *p_args)
 	};
 
 	if ( ! x_base_isset(p_base)) {
-		return p_base;
+		return NULL;
 	}
 
 	x_firstobj((x_obj_t *)args[1]) = x_base_field_type_alist(p_base);
@@ -88,7 +89,7 @@ x_obj_t *x_base_env_alist_extend(x_obj_t *p_base, x_obj_t *p_args)
 	x_spair_t args = x_obj_set(NULL, X_OBJ_FLAG_NONE, { p_args }, { NULL });
 
 	if ( ! x_base_isset(p_base)) {
-		return p_base;
+		return NULL;
 	}
 
 	x_restobj((x_obj_t *)args) = x_base_field_env_alist(p_base);
@@ -99,7 +100,7 @@ x_obj_t *x_base_env_alist_extend(x_obj_t *p_base, x_obj_t *p_args)
 x_obj_t *x_base_load(x_obj_t *p_base, x_obj_t *p_args)
 {
 	x_obj_t *p_buffer = x_base_field_buffer(p_base);
-	x_obj_t *p_exp, *p_result = p_base;
+	x_obj_t *p_exp, *p_result = NULL;
 	x_satom_t exp_wrap = x_obj_set(NULL, X_OBJ_FLAG_NONE, { NULL });
 	x_spair_t eval_args[1] = {
 		x_obj_set(NULL, X_OBJ_FLAG_NONE, { exp_wrap }, { NULL })
@@ -129,7 +130,7 @@ x_obj_t *x_base_read(x_obj_t *p_base, x_obj_t *p_args)
 		return p_atom;
 	}
 
-	return p_base;
+	return NULL;
 }
 
 x_obj_t *x_base_write(x_obj_t *p_base, x_obj_t *p_args)
@@ -142,5 +143,5 @@ x_obj_t *x_base_write(x_obj_t *p_base, x_obj_t *p_args)
 		return p_atom;
 	}
 
-	return p_base;
+	return NULL;
 }

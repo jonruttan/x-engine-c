@@ -99,7 +99,7 @@ x_obj_t *x_type_prim_apply(x_obj_t *p_base, x_obj_t *p_args)
 			p_base, p_closure_env, p_params, x_restobj(p_args));
 
 		/* Eval body forms. No TCO: called from C, not x_eval. */
-		p_result = p_base;
+		p_result = NULL;
 		while ( ! x_obj_isnil(p_base, p_body)) {
 			p_result = x_prim_eval_arg(p_base, x_firstobj(p_body));
 			p_body = x_restobj(p_body);

@@ -37,7 +37,7 @@ x_obj_t *x_sexp_symbol_analyse(x_obj_t *p_base, x_obj_t *p_args)
 	}
 
 	if (x_bufferlen(p_buffer) == 0) {
-		return p_base;
+		return NULL;
 	}
 
 	x_firstint(p_score) = -x_bufferlen(p_buffer);

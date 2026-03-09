@@ -34,7 +34,7 @@ static x_obj_t *x_prim_write(x_obj_t *p_base, x_obj_t *p_args)
 
 	x_token_write(p_base, (x_obj_t *)write_args);
 
-	return p_base;
+	return NULL;
 }
 
 /* display: (display obj) -> output human-readable (strings unquoted) */
@@ -56,7 +56,7 @@ static x_obj_t *x_prim_display(x_obj_t *p_base, x_obj_t *p_args)
 		x_token_write(p_base, (x_obj_t *)write_args);
 	}
 
-	return p_base;
+	return NULL;
 }
 
 /* newline: (newline) -> output newline character */
@@ -67,7 +67,7 @@ static x_obj_t *x_prim_newline(x_obj_t *p_base, x_obj_t *p_args)
 
 	x_sys_write(fd, "\n", 1);
 
-	return p_base;
+	return NULL;
 }
 
 /* read: (read) -> read one s-expression from stdin */
@@ -92,7 +92,7 @@ static x_obj_t *x_prim_read_char(x_obj_t *p_base, x_obj_t *p_args)
 	p_buffer = x_type_buffer_read(p_base, (x_obj_t *)buf_args);
 
 	if (x_obj_isnil(p_base, p_buffer)) {
-		return p_base;
+		return NULL;
 	}
 
 	return x_mkchar(p_base, x_bufferlastchar(p_buffer));
@@ -103,7 +103,7 @@ static x_obj_t *x_prim_gc(x_obj_t *p_base, x_obj_t *p_args)
 {
 	x_gc_mark(p_base, p_base, X_OBJ_FLAG_GC);
 
-	return p_base;
+	return NULL;
 }
 
 x_obj_t *x_prim_io_register(x_obj_t *p_base, x_obj_t *p_args)

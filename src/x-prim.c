@@ -37,7 +37,7 @@ x_obj_t *x_prim_eval_arg(x_obj_t *p_base, x_obj_t *p_arg)
 x_obj_t *x_prim_evlis(x_obj_t *p_base, x_obj_t *p_args)
 {
 	if (x_obj_isnil(p_base, p_args)) {
-		return p_base;
+		return NULL;
 	}
 
 	return x_mklist(p_base,

@@ -39,7 +39,7 @@ x_obj_t *x_sexp_list_analyse(x_obj_t *p_base, x_obj_t *p_args)
 		return p_score;
 	}
 
-	return p_base;
+	return NULL;
 }
 
 x_obj_t *x_sexp_list_delimit(x_obj_t *p_base, x_obj_t *p_args)
@@ -51,7 +51,7 @@ x_obj_t *x_sexp_list_delimit(x_obj_t *p_base, x_obj_t *p_args)
 		return p_buffer;
 	}
 
-	return p_base;
+	return NULL;
 }
 
 x_obj_t *x_sexp_list_read(x_obj_t *p_base, x_obj_t *p_args)
@@ -69,7 +69,7 @@ x_obj_t *x_sexp_list_read(x_obj_t *p_base, x_obj_t *p_args)
 
 	/* '(' — read list contents. */
 	{
-		x_obj_t *head = p_base, *tail = p_base, *elem, *pair;
+		x_obj_t *head = NULL, *tail = NULL, *elem, *pair;
 		x_spair_t read_args = x_obj_set(NULL, X_OBJ_FLAG_NONE,
 			{ p_buffer }, { p_base });
 
@@ -88,7 +88,7 @@ x_obj_t *x_sexp_list_read(x_obj_t *p_base, x_obj_t *p_args)
 				break;
 			}
 
-			pair = x_mklist(p_base, elem, p_base);
+			pair = x_mklist(p_base, elem, NULL);
 
 			if (x_obj_isnil(p_base, head)) {
 				head = pair;

@@ -33,7 +33,7 @@ eval_start:
 	p_exp = x_firstobj(x_eval_arg_exp(p_args));
 
 	if (x_obj_isnil(p_base, p_exp)) {
-		return p_base;
+		return NULL;
 	}
 
 	/* Differentiate simple from complex types.
@@ -71,15 +71,15 @@ eval_start:
 			p_tco_env_save = x_base_field_tco_env(p_base);
 		}
 
-		x_base_field_tco_env(p_base) = p_base;
+		x_base_field_tco_env(p_base) = NULL;
 		x_firstobj(x_eval_arg_exp(p_args)) = x_base_field_tco_expr(p_base);
-		x_base_field_tco_expr(p_base) = p_base;
+		x_base_field_tco_expr(p_base) = NULL;
 		goto eval_start;
 	}
 
 	/* TCO env restore: only the x_eval that trampolined restores env. */
 	if (trampolining && x_base_isset(p_base)) {
-		x_base_field_tco_env(p_base) = p_base;
+		x_base_field_tco_env(p_base) = NULL;
 
 		if (p_tco_env_save != NULL
 			&& ! x_obj_isnil(p_base, p_tco_env_save)) {

@@ -35,7 +35,7 @@ x_obj_t *x_sexp_comment_analyse1(x_obj_t *p_base, x_obj_t *p_args)
 		return x_sexp_comment_analyse2_prim;
 	}
 
-	return p_base;
+	return NULL;
 }
 
 x_obj_t *x_sexp_comment_analyse2(x_obj_t *p_base, x_obj_t *p_args)
@@ -61,7 +61,7 @@ x_obj_t *x_sexp_comment_delimit(x_obj_t *p_base, x_obj_t *p_args)
 		return p_buffer;
 	}
 
-	return p_base;
+	return NULL;
 }
 
 x_obj_t *x_sexp_comment_read(x_obj_t *p_base, x_obj_t *p_args)

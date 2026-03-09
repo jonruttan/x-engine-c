@@ -63,7 +63,7 @@ static x_obj_t *x_prim_rest(x_obj_t *p_base, x_obj_t *p_args)
 static x_obj_t *x_prim_define(x_obj_t *p_base, x_obj_t *p_args)
 {
 	x_obj_t *p_name = x_firstobj(p_args),
-		*p_pair = x_mkspair(p_base, p_name, p_base),
+		*p_pair = x_mkspair(p_base, p_name, NULL),
 		*p_val;
 
 	x_base_env_alist_extend(p_base, p_pair);
@@ -83,29 +83,29 @@ static x_obj_t *x_prim_if(x_obj_t *p_base, x_obj_t *p_args)
 		x_obj_t *p_else = x_restobj(p_rest);
 
 		if (x_obj_isnil(p_base, p_else)) {
-			return p_base;
+			return NULL;
 		}
 
 		x_base_field_tco_expr(p_base) = x_firstobj(p_else);
 
-		return p_base;
+		return NULL;
 	}
 
 	x_base_field_tco_expr(p_base) = x_firstobj(p_rest);
 
-	return p_base;
+	return NULL;
 }
 
 /* do: (do form...) -> evaluate each form, return last */
 static x_obj_t *x_prim_do(x_obj_t *p_base, x_obj_t *p_args)
 {
-	x_obj_t *p_result = p_base;
+	x_obj_t *p_result = NULL;
 
 	while ( ! x_obj_isnil(p_base, p_args)) {
 		if (x_obj_isnil(p_base, x_restobj(p_args))) {
 			x_base_field_tco_expr(p_base) = x_firstobj(p_args);
 
-			return p_base;
+			return NULL;
 		}
 
 		p_result = x_prim_eval_arg(p_base, x_firstobj(p_args));
@@ -132,7 +132,7 @@ static x_obj_t *x_prim_set(x_obj_t *p_base, x_obj_t *p_args)
 	if (x_obj_isnil(p_base, p_pair)) {
 		x_obj_error(p_base, "Unbound "X_TYPE_SYMBOL_NAME, x_symbolval(p_name));
 
-		return p_base;
+		return NULL;
 	}
 
 	x_restobj(p_pair) = p_val;
@@ -145,11 +145,11 @@ static x_obj_t *x_prim_let(x_obj_t *p_base, x_obj_t *p_args)
 {
 	x_obj_t *p_bindings = x_firstobj(p_args),
 		*p_body = x_restobj(p_args),
-		*p_params = p_base,
-		*p_vals = p_base,
+		*p_params = NULL,
+		*p_vals = NULL,
 		*p_b;
 	x_obj_t *p_saved_env = x_base_field_env_alist(p_base),
-		*p_result = p_base;
+		*p_result = NULL;
 
 	/* Walk bindings to extract params and eval'd values. */
 	for (p_b = p_bindings; ! x_obj_isnil(p_base, p_b); p_b = x_restobj(p_b)) {
@@ -172,7 +172,7 @@ static x_obj_t *x_prim_let(x_obj_t *p_base, x_obj_t *p_args)
 				x_base_field_tco_env(p_base) = p_saved_env;
 			}
 
-			return p_base;
+			return NULL;
 		}
 
 		p_result = x_prim_eval_arg(p_base, x_firstobj(p_body));
@@ -201,7 +201,7 @@ static x_obj_t *x_prim_apply(x_obj_t *p_base, x_obj_t *p_args)
 			*p_body = x_procbody(p_fn),
 			*p_closure_env = x_procenv(p_fn),
 			*p_saved_env = x_base_field_env_alist(p_base),
-			*p_result = p_base;
+			*p_result = NULL;
 
 		x_base_field_env_alist(p_base) = x_prim_multiple_extend(
 			p_base, p_closure_env, p_params, p_vals);
@@ -214,7 +214,7 @@ static x_obj_t *x_prim_apply(x_obj_t *p_base, x_obj_t *p_args)
 					x_base_field_tco_env(p_base) = p_saved_env;
 				}
 
-				return p_base;
+				return NULL;
 			}
 
 			p_result = x_prim_eval_arg(p_base, x_firstobj(p_body));
@@ -248,7 +248,7 @@ static x_obj_t *x_prim_eval(x_obj_t *p_base, x_obj_t *p_args)
 	/* eval without env: use TCO trampoline */
 	x_base_field_tco_expr(p_base) = p_expr;
 
-	return p_base;
+	return NULL;
 }
 
 /* fn: (fn (params) body...) -> create closure */
@@ -297,10 +297,10 @@ static x_obj_t *x_prim_guard(x_obj_t *p_base, x_obj_t *p_args)
 		*p_handler_body = x_restobj(p_clause),
 		*p_body = x_restobj(p_args),
 		*p_prev_handler = x_base_field_error_handler(p_base),
-		*p_result = p_base;
+		*p_result = NULL;
 
 	/* Save env and push handler. */
-	handler.p_error = p_base;
+	handler.p_error = NULL;
 	handler.error_msg = NULL;
 	handler.p_saved_env = x_base_field_env_alist(p_base);
 	handler.prev = x_obj_isnil(p_base, p_prev_handler)
@@ -332,7 +332,7 @@ static x_obj_t *x_prim_guard(x_obj_t *p_base, x_obj_t *p_args)
 
 	/* Pop handler. */
 	x_base_field_error_handler(p_base) = handler.prev
-		? x_mkptr(p_base, handler.prev) : p_base;
+		? x_mkptr(p_base, handler.prev) : NULL;
 
 	return p_result;
 }
@@ -359,7 +359,7 @@ static x_obj_t *x_prim_error(x_obj_t *p_base, x_obj_t *p_args)
 		x_obj_error(p_base, "error", NULL);
 	}
 
-	return p_base;
+	return NULL;
 }
 
 /* %rewrite: (%rewrite pair new-first new-rest) -> mutate pair in-place */

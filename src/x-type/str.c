@@ -89,7 +89,7 @@ x_obj_t *x_type_str_call(x_obj_t *p_base, x_obj_t *p_args)
 
 	/* Evaluate first arg. */
 	if (x_obj_isnil(p_base, vals)) {
-		return p_base;
+		return NULL;
 	}
 
 	arg1 = x_prim_eval_arg(p_base, x_firstobj(vals));

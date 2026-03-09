@@ -40,7 +40,7 @@ static x_obj_t *x_prim_dlopen(x_obj_t *p_base, x_obj_t *p_args)
 		(int)x_intval(p_flags));
 
 	if (!h)
-		return p_base;
+		return NULL;
 
 	return x_mkptr(p_base, h);
 }
@@ -57,7 +57,7 @@ static x_obj_t *x_prim_dlsym(x_obj_t *p_base, x_obj_t *p_args)
 	sym = dlsym(x_ptrval(p_handle), x_strval(p_name));
 
 	if (!sym)
-		return p_base;
+		return NULL;
 
 	return x_mkptr(p_base, sym);
 }
@@ -164,7 +164,7 @@ static x_obj_t *x_prim_ffi_call(x_obj_t *p_base, x_obj_t *p_args)
 		memcpy(&b, &x_intval(p_b), sizeof(double));
 		return a < b
 			? x_mksymbol(p_base, (x_char_t *)X_PRIM_TRUE)
-			: p_base;
+			: NULL;
 	}
 
 	if (x_lib_strcmp(conv, "d>d") == 0) {
@@ -175,7 +175,7 @@ static x_obj_t *x_prim_ffi_call(x_obj_t *p_base, x_obj_t *p_args)
 		memcpy(&b, &x_intval(p_b), sizeof(double));
 		return a > b
 			? x_mksymbol(p_base, (x_char_t *)X_PRIM_TRUE)
-			: p_base;
+			: NULL;
 	}
 
 	if (x_lib_strcmp(conv, "d=d") == 0) {
@@ -186,7 +186,7 @@ static x_obj_t *x_prim_ffi_call(x_obj_t *p_base, x_obj_t *p_args)
 		memcpy(&b, &x_intval(p_b), sizeof(double));
 		return a == b
 			? x_mksymbol(p_base, (x_char_t *)X_PRIM_TRUE)
-			: p_base;
+			: NULL;
 	}
 
 	if (x_lib_strcmp(conv, "d<=d") == 0) {
@@ -197,7 +197,7 @@ static x_obj_t *x_prim_ffi_call(x_obj_t *p_base, x_obj_t *p_args)
 		memcpy(&b, &x_intval(p_b), sizeof(double));
 		return a <= b
 			? x_mksymbol(p_base, (x_char_t *)X_PRIM_TRUE)
-			: p_base;
+			: NULL;
 	}
 
 	if (x_lib_strcmp(conv, "d>=d") == 0) {
@@ -208,7 +208,7 @@ static x_obj_t *x_prim_ffi_call(x_obj_t *p_base, x_obj_t *p_args)
 		memcpy(&b, &x_intval(p_b), sizeof(double));
 		return a >= b
 			? x_mksymbol(p_base, (x_char_t *)X_PRIM_TRUE)
-			: p_base;
+			: NULL;
 	}
 
 	/* Cast conventions (no function pointer needed) */
@@ -244,7 +244,7 @@ static x_obj_t *x_prim_ffi_call(x_obj_t *p_base, x_obj_t *p_args)
 		return x_mkstrown(p_base, x_lib_strndup(buf, len));
 	}
 
-	return p_base;
+	return NULL;
 }
 
 /* ptr-call: (ptr-call fptr args...) -> int

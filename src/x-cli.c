@@ -76,7 +76,7 @@ static x_obj_t *x_prim_include(x_obj_t *p_base, x_obj_t *p_args)
 
 	if (fd < 0) {
 		x_obj_error(p_base, "include: cannot open", x_strval(p_path));
-		return p_base;
+		return NULL;
 	}
 
 	/* Push new input state. */

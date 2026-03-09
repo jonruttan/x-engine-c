@@ -134,7 +134,7 @@ x_obj_t *x_type_buffer_read(x_obj_t *p_base, x_obj_t *p_args)
 		p_char = x_base_read(p_base, (x_obj_t *)read_args);
 
 		if (x_obj_isnil(p_base, p_char)) {
-			return p_base;
+			return NULL;
 		}
 
 		x_type_buffer_append(p_base, (x_obj_t *)append_args);
@@ -152,7 +152,7 @@ x_obj_t *x_type_buffer_read_text(x_obj_t *p_base, x_obj_t *p_args)
 	p_buffer = x_type_buffer_read(p_base, p_args);
 
 	if (x_obj_isnil(p_base, p_buffer) || '\0' == x_bufferlastchar(p_buffer)) {
-		return p_base;
+		return NULL;
 	}
 
 	return p_buffer;

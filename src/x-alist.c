@@ -40,5 +40,5 @@ x_obj_t *x_alist_assoc(x_obj_t *p_base, x_obj_t *p_args)
 		p_alist = x_restobj(p_alist);
 	}
 
-	return p_base;
+	return NULL;
 }

@@ -35,7 +35,7 @@ x_obj_t *x_sexp_whitespace_analyse1(x_obj_t *p_base, x_obj_t *p_args)
 		return x_sexp_whitespace_analyse2_prim;
 	}
 
-	return p_base;
+	return NULL;
 }
 
 x_obj_t *x_sexp_whitespace_analyse2(x_obj_t *p_base, x_obj_t *p_args)
@@ -58,7 +58,7 @@ x_obj_t *x_sexp_whitespace_delimit(x_obj_t *p_base, x_obj_t *p_args)
 	x_obj_t *p_buffer = x_token_read_arg_buffer(p_args);
 
 	if (x_obj_isnil(p_base, x_sexp_whitespace_analyse1(p_base, p_args))) {
-		return p_base;
+		return NULL;
 	}
 
 	x_bufferread(p_buffer)--;

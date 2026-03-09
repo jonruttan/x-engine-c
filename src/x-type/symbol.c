@@ -61,7 +61,7 @@ x_obj_t *x_type_symbol_register(x_obj_t *p_base, x_obj_t *p_args)
 	x_obj_t *p_type = x_type_struct_get(p_base, (x_obj_t *)args);
 
 	if (x_obj_isnil(p_base, x_symbol_data(p_type))) {
-		x_symbol_data(p_type) = x_mkspair(p_base, p_base, p_base);
+		x_symbol_data(p_type) = x_mkspair(p_base, NULL, NULL);
 	}
 
 	return p_type;
@@ -91,7 +91,7 @@ x_obj_t *x_type_symbol_find(x_obj_t *p_base, x_obj_t *p_args)
 		*p_list = x_symbol_data_list(p_type);
 	x_char_t *name = x_firststr(x_firstobj(p_args));
 #ifdef SYMBOL_FIND_REORDER
-	x_obj_t *p_prev = p_base;
+	x_obj_t *p_prev = NULL;
 #endif
 
 	while ( ! x_obj_isnil(p_base, p_list)) {
@@ -112,7 +112,7 @@ x_obj_t *x_type_symbol_find(x_obj_t *p_base, x_obj_t *p_args)
 		p_list = x_restobj(p_list);
 	}
 
-	return p_base;
+	return NULL;
 }
 
 x_obj_t *x_type_symbol_eval(x_obj_t *p_base, x_obj_t *p_args)
@@ -128,7 +128,7 @@ x_obj_t *x_type_symbol_eval(x_obj_t *p_base, x_obj_t *p_args)
 		/* TODO: Implement type name. */
 		x_obj_error(p_base, "Unbound "X_TYPE_SYMBOL_NAME, x_symbolval(x_firstobj(x_eval_arg_exp(p_args))));
 
-		return p_base;
+		return NULL;
 	}
 
 	return x_restobj(p_sym);

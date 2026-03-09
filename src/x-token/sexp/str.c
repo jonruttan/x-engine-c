@@ -49,7 +49,7 @@ x_obj_t *x_sexp_str_analyse1(x_obj_t *p_base, x_obj_t *p_args)
 		return x_sexp_str_analyse2_prim;
 	}
 
-	return p_base;
+	return NULL;
 }
 
 x_obj_t *x_sexp_str_analyse2(x_obj_t *p_base, x_obj_t *p_args)

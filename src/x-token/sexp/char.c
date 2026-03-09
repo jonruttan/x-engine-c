@@ -43,7 +43,7 @@ static int is_lower(x_char_t c)
 x_obj_t *x_sexp_char_analyse1(x_obj_t *p_base, x_obj_t *p_args)
 {
 	if (X_SEXP_CHAR_PRE_STR[0] != x_bufferlastchar(x_token_read_arg_buffer(p_args))) {
-		return p_base;
+		return NULL;
 	}
 
 	return x_sexp_char_analyse2_prim;
@@ -54,7 +54,7 @@ x_obj_t *x_sexp_char_analyse2(x_obj_t *p_base, x_obj_t *p_args)
 	x_obj_t *p_buffer = x_token_read_arg_buffer(p_args);
 
 	if (X_SEXP_CHAR_PRE_STR[1] != x_bufferlastchar(p_buffer)) {
-		return p_base;
+		return NULL;
 	}
 
 	return x_sexp_char_analyse3_prim;
@@ -120,7 +120,7 @@ x_obj_t *x_sexp_char_read(x_obj_t *p_base, x_obj_t *p_args)
 
 	x_obj_error(p_base, "read: unknown character name", NULL);
 
-	return p_base;
+	return NULL;
 }
 
 x_obj_t *x_sexp_char_write(x_obj_t *p_base, x_obj_t *p_args)
@@ -159,5 +159,5 @@ x_obj_t *x_sexp_char_write(x_obj_t *p_base, x_obj_t *p_args)
 		return x_firstobj(p_args);
 	}
 
-	return p_base;
+	return NULL;
 }

@@ -59,7 +59,7 @@ x_obj_t *x_token_delimit(x_obj_t *p_base, x_obj_t *p_args)
 		p_types = x_restobj(p_types);
 	}
 
-	return p_base;
+	return NULL;
 }
 
 x_obj_t *x_type_alist_iter(x_obj_t *p_base, x_obj_t *p_args);
@@ -108,7 +108,7 @@ x_obj_t *x_token_analyse(x_obj_t *p_base, x_obj_t *p_args)
 	x_type_buffer_retain(p_base, (x_obj_t *)buffer_args);
 
 	/* Cycle through of all of the types. */
-	p_read = p_base;
+	p_read = NULL;
 	i_best = 0;
 
 	while ( ! x_iterempty(p_base, (x_obj_t *)type_iter)) {
@@ -176,14 +176,14 @@ x_obj_t *x_token_read(x_obj_t *p_base, x_obj_t *p_args)
 		p_read = x_token_analyse(p_base, p_args);
 
 		if (x_obj_isnil(p_base, p_read)) {
-			return p_base;
+			return NULL;
 		}
 
 		prim_arg_prim = p_read;
 		p_obj = x_type_prim_apply(p_base, (x_obj_t *)prim_args);
 
 		if (x_obj_isnil(p_base, p_obj)) {
-			return p_base;
+			return NULL;
 		}
 
 		x_type_buffer_retain(p_base, (x_obj_t *)buffer_args);
@@ -211,5 +211,5 @@ x_obj_t *x_token_write(x_obj_t *p_base, x_obj_t *p_args)
 		return x_type_write(p_base, p_args);
 	}
 
-	return p_base;
+	return NULL;
 }

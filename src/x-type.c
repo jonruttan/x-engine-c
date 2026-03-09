@@ -21,7 +21,7 @@
 #include "x-obj.h"
 #include "x-type/prim.h"
 
-#define nil			p_base
+#define nil			NULL
 #define pair(X,Y)	(x_mkspair(p_base, (X), (Y)))
 #define atom(X)		(x_mksatom(p_base, (X)))
 
@@ -94,6 +94,6 @@ x_obj_t *x_type_write(x_obj_t *p_base, x_obj_t *p_args)
 		return x_type_prim_apply(p_base, (x_obj_t *)args);
 	}
 
-	return p_base;
+	return NULL;
 }
 
