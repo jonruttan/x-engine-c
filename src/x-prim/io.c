@@ -22,6 +22,7 @@
 #include "x-token.h"
 #include "x-type/buffer.h"
 #include "x-type/char.h"
+#include "x-type/int.h"
 #include "x-type/str.h"
 
 /* write: (write obj) -> output s-expression to stdout */
@@ -98,6 +99,14 @@ static x_obj_t *x_prim_read_char(x_obj_t *p_base, x_obj_t *p_args)
 	return x_mkchar(p_base, x_bufferlastchar(p_buffer));
 }
 
+#ifdef X_CLOCK
+/* clock: (clock) -> CPU microseconds since process start */
+static x_obj_t *x_prim_clock(x_obj_t *p_base, x_obj_t *p_args)
+{
+	return x_mkint(p_base, x_sys_clock());
+}
+#endif /* X_CLOCK */
+
 /* gc: (gc) -> trigger garbage collection (mark reachable objects) */
 static x_obj_t *x_prim_gc(x_obj_t *p_base, x_obj_t *p_args)
 {
@@ -113,6 +122,9 @@ x_obj_t *x_prim_io_register(x_obj_t *p_base, x_obj_t *p_args)
 	x_prim_bind(p_base, "newline", x_prim_newline);
 	x_prim_bind(p_base, "read", x_prim_read_expr);
 	x_prim_bind(p_base, "read-char", x_prim_read_char);
+#ifdef X_CLOCK
+	x_prim_bind(p_base, "clock", x_prim_clock);
+#endif /* X_CLOCK */
 	x_prim_bind(p_base, "gc", x_prim_gc);
 
 	return p_base;
