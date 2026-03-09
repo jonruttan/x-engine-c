@@ -78,7 +78,7 @@ x_obj_t *x_type_alist_iter(x_obj_t *p_base, x_obj_t *p_args)
 
 x_obj_t *x_token_analyse(x_obj_t *p_base, x_obj_t *p_args)
 {
-	x_int_t i_best;
+	x_int_t i_best, i_consumed;
 	x_obj_t *p_buffer = x_firstobj(p_args), *p_read, *p_analyse, *p_obj;
 	x_satom_t chr = x_obj_set(NULL, X_OBJ_FLAG_NONE, { .c = '\0' } ),
 		arg_chr = x_obj_set(NULL, X_OBJ_FLAG_NONE, { .i = 0 });
@@ -116,7 +116,18 @@ x_obj_t *x_token_analyse(x_obj_t *p_base, x_obj_t *p_args)
 
 		if ( ! x_obj_isnil(p_base, p_analyse)) {
 
+			/* Clear score for this type. */
+			x_firstint(p_score) = 0;
+			x_restobj(p_score) = NULL;
+
 			while (1) {
+
+				/* EOF for readonly buffers — don't reset,
+				 * let auto-score compute from bufferlen. */
+				if ((x_obj_flags(p_buffer) & X_OBJ_FLAG_RO)
+					&& x_buffereof(p_buffer)) {
+					break;
+				}
 
 				p_bw = x_bufferwrite(p_buffer);
 				if (x_obj_isnil(p_base, x_type_buffer_read_text(p_base, (x_obj_t *)read_args))
@@ -153,6 +164,25 @@ x_obj_t *x_token_analyse(x_obj_t *p_base, x_obj_t *p_args)
 				/* Replace Analyser. */
 				p_analyse = p_obj;
 			}
+
+			/* EOF auto-score: if chars were consumed and a reader
+			 * was registered (via set-first-int/set-rest side
+			 * effect on first match), use the sign from the partial
+			 * score to compute final score from total consumed. */
+			i_consumed = x_bufferlen(p_buffer);
+			if (i_consumed > 0
+				&& ! x_obj_isnil(p_base, x_restobj(p_score))) {
+				x_int_t i_score = (x_firstint(p_score) < 0 ? -1 : 1)
+					* i_consumed;
+
+				if (i_score >= i_best
+					|| (i_best < 1
+						&& i_score <= i_best)) {
+					i_best = i_score;
+					p_read = x_restobj(p_score);
+				}
+			}
+			x_bufferread(p_buffer) = x_bufferval(p_buffer);
 		}
 	}
 

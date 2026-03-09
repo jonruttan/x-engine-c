@@ -325,18 +325,14 @@ static x_obj_t *x_prim_convert(x_obj_t *p_base, x_obj_t *p_args)
 	return x_type_prim_apply(p_base, (x_obj_t *)call_args);
 }
 
-/* score-match: (score-match score length reader) -> set score fields, return score */
-static x_obj_t *x_prim_score_match(x_obj_t *p_base, x_obj_t *p_args)
+/* buffer-token: (buffer-token buffer) -> extract consumed portion as string */
+static x_obj_t *x_prim_buffer_token(x_obj_t *p_base, x_obj_t *p_args)
 {
-	x_obj_t *p_score = x_prim_eval_arg(p_base, x_firstobj(p_args)),
-		*p_len = x_prim_eval_arg(p_base, x_firstobj(x_restobj(p_args))),
-		*p_reader = x_prim_eval_arg(p_base,
-			x_firstobj(x_restobj(x_restobj(p_args))));
+	x_obj_t *p_buffer = x_prim_eval_arg(p_base, x_firstobj(p_args));
+	x_int_t len = x_bufferlen(p_buffer);
+	x_char_t *str = x_lib_strndup(x_bufferval(p_buffer), len);
 
-	x_firstint(p_score) = x_atomint(p_len);
-	x_restobj(p_score) = p_reader;
-
-	return p_score;
+	return x_mkstrown(p_base, str);
 }
 
 /* %token-discard: read hook that signals discard (returns p_args) */
@@ -358,20 +354,17 @@ static x_obj_t *x_prim_token_read_string(x_obj_t *p_base, x_obj_t *p_args)
 		*p_str = x_prim_eval_arg(p_base, x_firstobj(x_restobj(p_args)));
 	x_char_t *str = x_strval(p_str);
 	x_int_t len = x_lib_strlen(str);
-	x_char_t *buf = (x_char_t *)x_sys_malloc(len + 2);
+	x_char_t *buf = (x_char_t *)x_sys_malloc(len + 1);
 	x_obj_t *p_buffer, *p_token, *p_result, *p_tail, *p_node;
 
-	/* Pre-fill buffer: string + space sentinel + NUL EOF.
-	 * The trailing space forces word/operator analyse hooks to see a
-	 * word-break character and score their match; the whitespace type
-	 * discards it; then the NUL causes the buffer read to return nil,
-	 * ending the tokenize loop cleanly. */
+	/* Readonly buffer: string content only, no sentinel.
+	 * EOF auto-scoring in x_token_analyse handles the final
+	 * token when the buffer is exhausted. */
 	x_lib_memcpy(buf, str, len);
-	buf[len] = ' ';
-	buf[len + 1] = '\0';
+	buf[len] = '\0';
 
-	p_buffer = x_mkbufferown(p_token_base, buf);
-	x_bufferwrite(p_buffer) = x_bufferval(p_buffer) + len + 2;
+	p_buffer = x_mkfbufferown(p_token_base, X_OBJ_FLAG_RO, buf);
+	x_bufferwrite(p_buffer) = x_bufferval(p_buffer) + len;
 
 	p_result = NULL;
 	p_tail = NULL;
@@ -412,7 +405,7 @@ x_obj_t *x_prim_type_register(x_obj_t *p_base, x_obj_t *p_args)
 	x_prim_bind(p_base, "type?", x_prim_typep);
 	x_prim_bind(p_base, "type-name", x_prim_type_name);
 	x_prim_bind(p_base, "convert", x_prim_convert);
-	x_prim_bind(p_base, "score-match", x_prim_score_match);
+	x_prim_bind(p_base, "buffer-token", x_prim_buffer_token);
 	x_prim_bind(p_base, "make-token-base", x_prim_make_token_base);
 	x_prim_bind(p_base, "make-base", x_prim_make_base);
 	x_prim_bind(p_base, "base-eval", x_prim_base_eval);

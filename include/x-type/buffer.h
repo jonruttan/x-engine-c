@@ -39,8 +39,10 @@
 #define x_bufferlen(X)				(x_bufferread(X) - x_bufferval(X))
 #define x_bufferunread(X)			(x_bufferwrite(X) - x_bufferread(X))
 #define x_bufferlastchar(X)			(x_bufferread(X)[-1])
+#define x_buffereof(X)				(x_bufferread(X) >= x_bufferwrite(X))
 
 #define x_mkbuffer(B, P)			x_make_buffer((B), X_OBJ_FLAG_NONE, (P))
+#define x_mkbufferro(B, P)			x_make_buffer((B), X_OBJ_FLAG_RO, (P))
 #define x_mkfbuffer(B, F, P)		x_make_buffer((B), (F), (P))
 #define x_mkbufferown(B, P)			x_make_buffer((B), X_OBJ_FLAG_OWN, (P))
 #define x_mkfbufferown(B, F, P)		x_make_buffer((B), X_OBJ_FLAG_OWN | (F), (P))

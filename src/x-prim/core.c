@@ -20,6 +20,7 @@
 #include "x-alist.h"
 #include "x-base.h"
 #include "x-eval.h"
+#include "x-type/int.h"
 #include "x-type/list.h"
 #include "x-type/operative.h"
 #include "x-type/prim.h"
@@ -377,6 +378,70 @@ static x_obj_t *x_prim_rewrite(x_obj_t *p_base, x_obj_t *p_args)
 	return p_pair;
 }
 
+/* first-int: (first-int x) -> car slot as integer atom */
+static x_obj_t *x_prim_first_int(x_obj_t *p_base, x_obj_t *p_args)
+{
+	x_obj_t *x = x_prim_eval_arg(p_base, x_firstobj(p_args));
+
+	return x_mkint(p_base, x_firstint(x));
+}
+
+/* rest-int: (rest-int x) -> cdr slot as integer atom */
+static x_obj_t *x_prim_rest_int(x_obj_t *p_base, x_obj_t *p_args)
+{
+	x_obj_t *x = x_prim_eval_arg(p_base, x_firstobj(p_args));
+
+	return x_mkint(p_base, x_restint(x));
+}
+
+/* set-first: (set-first pair val) -> write object pointer to car */
+static x_obj_t *x_prim_set_first(x_obj_t *p_base, x_obj_t *p_args)
+{
+	x_obj_t *p_pair = x_prim_eval_arg(p_base, x_firstobj(p_args)),
+		*p_val = x_prim_eval_arg(p_base,
+			x_firstobj(x_restobj(p_args)));
+
+	x_firstobj(p_pair) = p_val;
+
+	return p_pair;
+}
+
+/* set-rest: (set-rest pair val) -> write object pointer to cdr */
+static x_obj_t *x_prim_set_rest(x_obj_t *p_base, x_obj_t *p_args)
+{
+	x_obj_t *p_pair = x_prim_eval_arg(p_base, x_firstobj(p_args)),
+		*p_val = x_prim_eval_arg(p_base,
+			x_firstobj(x_restobj(p_args)));
+
+	x_restobj(p_pair) = p_val;
+
+	return p_pair;
+}
+
+/* set-first-int: (set-first-int pair val) -> write raw integer to car */
+static x_obj_t *x_prim_set_first_int(x_obj_t *p_base, x_obj_t *p_args)
+{
+	x_obj_t *p_pair = x_prim_eval_arg(p_base, x_firstobj(p_args)),
+		*p_val = x_prim_eval_arg(p_base,
+			x_firstobj(x_restobj(p_args)));
+
+	x_firstint(p_pair) = x_atomint(p_val);
+
+	return p_pair;
+}
+
+/* set-rest-int: (set-rest-int pair val) -> write raw integer to cdr */
+static x_obj_t *x_prim_set_rest_int(x_obj_t *p_base, x_obj_t *p_args)
+{
+	x_obj_t *p_pair = x_prim_eval_arg(p_base, x_firstobj(p_args)),
+		*p_val = x_prim_eval_arg(p_base,
+			x_firstobj(x_restobj(p_args)));
+
+	x_restint(p_pair) = x_atomint(p_val);
+
+	return p_pair;
+}
+
 x_obj_t *x_prim_core_register(x_obj_t *p_base, x_obj_t *p_args)
 {
 	x_prim_bind(p_base, "lit", x_prim_quote);
@@ -397,6 +462,12 @@ x_obj_t *x_prim_core_register(x_obj_t *p_base, x_obj_t *p_args)
 	x_prim_bind(p_base, "guard", x_prim_guard);
 	x_prim_bind(p_base, "error", x_prim_error);
 	x_prim_bind(p_base, "%rewrite", x_prim_rewrite);
+	x_prim_bind(p_base, "first-int", x_prim_first_int);
+	x_prim_bind(p_base, "rest-int", x_prim_rest_int);
+	x_prim_bind(p_base, "set-first", x_prim_set_first);
+	x_prim_bind(p_base, "set-rest", x_prim_set_rest);
+	x_prim_bind(p_base, "set-first-int", x_prim_set_first_int);
+	x_prim_bind(p_base, "set-rest-int", x_prim_set_rest_int);
 
 	return p_base;
 }

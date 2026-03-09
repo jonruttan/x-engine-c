@@ -131,6 +131,11 @@ x_obj_t *x_type_buffer_read(x_obj_t *p_base, x_obj_t *p_args)
 	};
 
 	if (x_bufferwrite(p_buffer) <= x_bufferread(p_buffer)) {
+		/* Readonly buffers don't extend from stdin. */
+		if (x_obj_flags(p_buffer) & X_OBJ_FLAG_RO) {
+			return NULL;
+		}
+
 		p_char = x_base_read(p_base, (x_obj_t *)read_args);
 
 		if (x_obj_isnil(p_base, p_char)) {
