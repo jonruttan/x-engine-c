@@ -18,6 +18,7 @@
  */
 #include "x-prim.h"
 #include "x-base.h"
+#include "x-eval.h"
 #include "x-gc.h"
 #include "x-token.h"
 #include "x-type/buffer.h"
@@ -115,6 +116,48 @@ static x_obj_t *x_prim_gc(x_obj_t *p_base, x_obj_t *p_args)
 	return NULL;
 }
 
+/* repl: (repl) -> read-eval-print loop until EOF */
+x_obj_t *x_prim_repl(x_obj_t *p_base, x_obj_t *p_args)
+{
+	x_obj_t *p_buffer = x_base_field_buffer(p_base);
+	x_obj_t *p_exp, *p_result = NULL;
+	int fd = x_base_isset(p_base)
+		? x_atomint(x_base_field_fileout(p_base)) : STDOUT_FILENO;
+	x_satom_t exp_wrap = x_obj_set(NULL, X_OBJ_FLAG_NONE, { NULL });
+	x_spair_t eval_args[1] = {
+		x_obj_set(NULL, X_OBJ_FLAG_NONE, { exp_wrap }, { NULL })
+	};
+	x_spair_t read_args[1] = {
+		x_obj_set(NULL, X_OBJ_FLAG_NONE, { p_buffer }, { p_base })
+	};
+	x_spair_t write_args[1] = {
+		x_obj_set(NULL, X_OBJ_FLAG_NONE, { NULL }, { NULL })
+	};
+
+	for (;;) {
+		x_sys_write(fd, "> ", 2);
+
+		p_exp = x_token_read(p_base, (x_obj_t *)read_args);
+
+		if (x_obj_isnil(p_base, p_exp)) {
+			x_sys_write(fd, "\n", 1);
+			break;
+		}
+
+		x_firstobj((x_obj_t *)exp_wrap) = p_exp;
+		p_result = x_eval(p_base, (x_obj_t *)eval_args);
+
+		if ( ! x_obj_isnil(p_base, p_result)) {
+			x_firstobj((x_obj_t *)write_args) = p_result;
+			x_token_write(p_base, (x_obj_t *)write_args);
+		}
+
+		x_sys_write(fd, "\n", 1);
+	}
+
+	return p_result;
+}
+
 x_obj_t *x_prim_io_register(x_obj_t *p_base, x_obj_t *p_args)
 {
 	x_prim_bind(p_base, "write", x_prim_write);
@@ -126,6 +169,7 @@ x_obj_t *x_prim_io_register(x_obj_t *p_base, x_obj_t *p_args)
 	x_prim_bind(p_base, "clock", x_prim_clock);
 #endif /* X_CLOCK */
 	x_prim_bind(p_base, "gc", x_prim_gc);
+	x_prim_bind(p_base, "repl", x_prim_repl);
 
 	return p_base;
 }

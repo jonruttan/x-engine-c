@@ -17,9 +17,7 @@
  * # Includes
  */
 #include "x-base.h"
-#include "x-eval.h"
 #include "x-prim.h"
-#include "x-token.h"
 #include "x-type/buffer.h"
 #include "x-type/char.h"
 #include "x-type/comment.h"
@@ -104,15 +102,8 @@ static x_obj_t *x_prim_include(x_obj_t *p_base, x_obj_t *p_args)
 
 int main(int argc, char *argv[])
 {
-	x_obj_t *p_base, *p_buffer, *p_read_args, *p_exp, *p_result;
+	x_obj_t *p_base, *p_buffer;
 	x_char_t buffer[X_CLI_BUFFER_SIZE];
-	x_satom_t exp_wrap = x_obj_set(NULL, X_OBJ_FLAG_NONE, { NULL });
-	x_spair_t eval_args[1] = {
-		x_obj_set(NULL, X_OBJ_FLAG_NONE, { exp_wrap }, { NULL })
-	},
-	write_args[1] = {
-		x_obj_set(NULL, X_OBJ_FLAG_NONE, { NULL }, { NULL })
-	};
 	(void)argc;
 	(void)argv;
 
@@ -134,7 +125,6 @@ int main(int argc, char *argv[])
 	/* Set up read buffer. */
 	p_buffer = x_mkbuffer(p_base, buffer);
 	x_base_field_buffer(p_base) = p_buffer;
-	p_read_args = x_mkspair(p_base, p_buffer, p_base);
 
 	/* Register primitives. */
 	x_prim_register(p_base, p_base);
@@ -155,30 +145,8 @@ int main(int argc, char *argv[])
 	x_prim_bind(p_base, "include", x_prim_include);
 #endif
 
-	/* REPL loop. */
-	for (;;) {
-		x_sys_write(STDOUT_FILENO, "> ", 2);
-
-		/* Read. */
-		p_exp = x_token_read(p_base, p_read_args);
-
-		if (x_obj_isnil(p_base, p_exp)) {
-			x_sys_write(STDOUT_FILENO, "\n", 1);
-			break;
-		}
-
-		/* Eval. */
-		x_firstobj((x_obj_t *)exp_wrap) = p_exp;
-		p_result = x_eval(p_base, (x_obj_t *)eval_args);
-
-		/* Print. */
-		if ( ! x_obj_isnil(p_base, p_result)) {
-			x_firstobj((x_obj_t *)write_args) = p_result;
-			x_token_write(p_base, (x_obj_t *)write_args);
-		}
-
-		x_sys_write(STDOUT_FILENO, "\n", 1);
-	}
+	/* REPL. */
+	x_prim_repl(p_base, NULL);
 
 	return 0;
 }
