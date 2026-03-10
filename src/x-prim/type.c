@@ -55,6 +55,13 @@ static x_obj_t *x_prim_type_build_struct(x_obj_t *p_base,
 		type.p_call = x_restobj(p_entry);
 	}
 
+	p_sym = x_mksymbol(p_base, (x_char_t *)"eval");
+	x_firstobj((x_obj_t *)assoc_args) = p_sym;
+	p_entry = x_alist_assoc(p_base, (x_obj_t *)assoc_args);
+	if ( ! x_obj_isnil(p_base, p_entry)) {
+		type.p_eval = x_restobj(p_entry);
+	}
+
 	p_sym = x_mksymbol(p_base, (x_char_t *)"write");
 	x_firstobj((x_obj_t *)assoc_args) = p_sym;
 	p_entry = x_alist_assoc(p_base, (x_obj_t *)assoc_args);
