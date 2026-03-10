@@ -23,9 +23,9 @@
  * '(
  #   name
  #   data
- #   (make free dup units length)
+ #   (make free clone units length)
  #   (call eval convert)
- #   (analyse read write)
+ #   (analyse delimit write)
  # )
  * ```
  */
