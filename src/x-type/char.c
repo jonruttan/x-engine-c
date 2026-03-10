@@ -19,6 +19,8 @@
 #include "x-base.h"
 #include "x-type/buffer.h"
 #include "x-type/char.h"
+#include "x-type/int.h"
+#include "x-type/symbol.h"
 #include "x-token/sexp/char.h"
 
 x_satom_t x_type_char_name = x_obj_set(x_type_atom_obj, X_OBJ_FLAG_NONE, { .s = (x_char_t *)X_TYPE_CHAR_NAME }),
@@ -37,17 +39,39 @@ x_obj_t *x_make_char(x_obj_t *p_base, x_obj_flag_t flags, x_char_t c)
 	return x_type_char_make(p_base, (x_obj_t *)args);
 }
 
+#define sym(S)		x_mksymbol(p_base, (x_char_t *)(S))
+#define num(N)		x_mkint(p_base, (N))
+#define entry(S,N)	x_mkspair(p_base, sym(S), num(N))
+#define cons(A,B)	x_mkspair(p_base, (A), (B))
+
 x_obj_t *x_type_char_struct(x_obj_t *p_base, x_obj_t *p_obj)
 {
-	struct x_type_t type = {
-		.p_name = x_type_char_name,
-		.p_make = x_type_char_make_prim,
-		.p_analyse = x_sexp_char_analyse1_prim,
-		.p_write = x_sexp_char_write_prim
-	};
+	struct x_type_t type = { 0 };
+
+	/* Named character constants: '((name . code) ...) */
+	type.p_name = x_type_char_name;
+	type.p_make = x_type_char_make_prim;
+	type.p_analyse = x_sexp_char_analyse1_prim;
+	type.p_write = x_sexp_char_write_prim;
+	type.p_data =
+		cons(entry("alarm", '\a'),
+		cons(entry("backspace", '\b'),
+		cons(entry("delete", 127),
+		cons(entry("escape", '\033'),
+		cons(entry("newline", '\n'),
+		cons(entry("null", '\0'),
+		cons(entry("return", '\r'),
+		cons(entry("space", ' '),
+		cons(entry("tab", '\t'),
+		NULL)))))))));
 
 	return x_type_struct_make(p_base, type);
 }
+
+#undef sym
+#undef num
+#undef entry
+#undef cons
 
 x_obj_t *x_type_char_register(x_obj_t *p_base, x_obj_t *p_args)
 {
