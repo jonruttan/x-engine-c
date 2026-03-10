@@ -313,6 +313,64 @@ static x_obj_t *x_prim_ptr_set(x_obj_t *p_base, x_obj_t *p_args)
 	return p_ptr;
 }
 
+/* ptr-ref: (ptr-ref ptr offset) -> int
+ * Read sizeof(int) bytes from ptr+offset, return as int. */
+static x_obj_t *x_prim_ptr_ref(x_obj_t *p_base, x_obj_t *p_args)
+{
+	x_obj_t *p_ptr, *p_offset;
+	unsigned char *mem;
+	int val;
+
+	p_ptr = x_prim_eval_arg(p_base, x_firstobj(p_args));
+	p_offset = x_prim_eval_arg(p_base,
+		x_firstobj(x_restobj(p_args)));
+
+	mem = (unsigned char *)x_ptrval(p_ptr);
+	memcpy(&val, mem + x_intval(p_offset), sizeof(int));
+
+	return x_mkint(p_base, (x_int_t)val);
+}
+
+/* ptr-set-word!: (ptr-set-word! ptr offset value) -> ptr
+ * Write sizeof(long) bytes at ptr+offset. */
+static x_obj_t *x_prim_ptr_set_word(x_obj_t *p_base, x_obj_t *p_args)
+{
+	x_obj_t *p_ptr, *p_offset, *p_val;
+	unsigned char *mem;
+	long val;
+
+	p_ptr = x_prim_eval_arg(p_base, x_firstobj(p_args));
+	p_offset = x_prim_eval_arg(p_base,
+		x_firstobj(x_restobj(p_args)));
+	p_val = x_prim_eval_arg(p_base,
+		x_firstobj(x_restobj(x_restobj(p_args))));
+
+	mem = (unsigned char *)x_ptrval(p_ptr);
+	val = (long)x_intval(p_val);
+	memcpy(mem + x_intval(p_offset), &val, sizeof(long));
+
+	return p_ptr;
+}
+
+/* string->ptr: (string->ptr str) -> ptr
+ * Get raw char* of string as ptr. */
+static x_obj_t *x_prim_string_to_ptr(x_obj_t *p_base, x_obj_t *p_args)
+{
+	x_obj_t *p_str = x_prim_eval_arg(p_base, x_firstobj(p_args));
+
+	return x_mkptr(p_base, (void *)x_strval(p_str));
+}
+
+/* ptr->string: (ptr->string ptr) -> string
+ * Create string from null-terminated C char* at ptr. */
+static x_obj_t *x_prim_ptr_to_string(x_obj_t *p_base, x_obj_t *p_args)
+{
+	x_obj_t *p_ptr = x_prim_eval_arg(p_base, x_firstobj(p_args));
+	x_char_t *s = (x_char_t *)x_ptrval(p_ptr);
+
+	return x_mkstrown(p_base, x_lib_strndup(s, x_lib_strlen(s)));
+}
+
 x_obj_t *x_prim_ffi_register(x_obj_t *p_base, x_obj_t *p_args)
 {
 	x_prim_bind(p_base, "dlopen", x_prim_dlopen);
@@ -322,6 +380,10 @@ x_obj_t *x_prim_ffi_register(x_obj_t *p_base, x_obj_t *p_args)
 	x_prim_bind(p_base, "int->ptr", x_prim_int_to_ptr);
 	x_prim_bind(p_base, "ptr->int", x_prim_ptr_to_int);
 	x_prim_bind(p_base, "ptr-set!", x_prim_ptr_set);
+	x_prim_bind(p_base, "ptr-ref", x_prim_ptr_ref);
+	x_prim_bind(p_base, "ptr-set-word!", x_prim_ptr_set_word);
+	x_prim_bind(p_base, "string->ptr", x_prim_string_to_ptr);
+	x_prim_bind(p_base, "ptr->string", x_prim_ptr_to_string);
 
 	return p_base;
 }
