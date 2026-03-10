@@ -171,6 +171,17 @@ static x_obj_t *x_prim_typep(x_obj_t *p_base, x_obj_t *p_args)
 		? x_mksymbol(p_base, (x_char_t *)X_BASE_TRUE_STR) : NULL;
 }
 
+/* type-of: (type-of obj) -> type handle (name atom) for obj's type */
+static x_obj_t *x_prim_type_of(x_obj_t *p_base, x_obj_t *p_args)
+{
+	x_obj_t *p_obj = x_prim_eval_arg(p_base, x_firstobj(p_args));
+	x_spair_t name_args[1] = {
+		x_obj_set(NULL, X_OBJ_FLAG_NONE, { p_obj }, { p_base })
+	};
+
+	return x_obj_prim_type_name(p_base, (x_obj_t *)name_args);
+}
+
 /* type-name: (type-name obj) -> name string of obj's type */
 static x_obj_t *x_prim_type_name(x_obj_t *p_base, x_obj_t *p_args)
 {
@@ -290,43 +301,107 @@ static x_obj_t *x_prim_base_bind(x_obj_t *p_base, x_obj_t *p_args)
 	return p_val;
 }
 
-/* convert: (convert value target-type-handle) -> converted value or () */
+/* convert_alist_find: walk alist for matching key (pointer equality) */
+static x_obj_t *x_convert_alist_find(x_obj_t *p_base,
+	x_obj_t *p_alist, x_obj_t *p_key)
+{
+	while ( ! x_obj_isnil(p_base, p_alist)) {
+		if (x_firstobj(x_firstobj(p_alist)) == p_key) {
+			return x_firstobj(p_alist);
+		}
+		p_alist = x_restobj(p_alist);
+	}
+
+	return NULL;
+}
+
+/* convert: (convert value target-type-handle) -> converted value or ()
+ *
+ * The target type's convert field is an alist of
+ * (source-type-handle . converter-fn) pairs.
+ *
+ * Lookup order:
+ * 1. Short-circuit: value already target type
+ * 2. Exact match: source type handle in target's convert alist
+ * 3. Wildcard: 't' symbol key in target's convert alist
+ * 4. String fallback: write-to-string on source, find STRING handle
+ *    in convert alist, call with string */
 static x_obj_t *x_prim_convert(x_obj_t *p_base, x_obj_t *p_args)
 {
-	x_obj_t *p_val, *p_handle, *p_type, *p_convert_fn;
+	x_obj_t *p_val, *p_handle, *p_type, *p_convert_alist,
+		*p_source_handle, *p_entry, *p_converter;
 	x_spair_t lookup_args[1] = {
 		x_obj_set(NULL, X_OBJ_FLAG_NONE, { NULL }, { NULL })
 	};
 	x_spair_t call_args[2] = {
-		x_obj_set(NULL, X_OBJ_FLAG_NONE, { NULL }, { (x_obj_t *)(call_args + 1) }),
+		x_obj_set(NULL, X_OBJ_FLAG_NONE, { NULL },
+			{ (x_obj_t *)(call_args + 1) }),
 		x_obj_set(NULL, X_OBJ_FLAG_NONE, { NULL }, { NULL })
 	};
 
 	p_val = x_prim_eval_arg(p_base, x_firstobj(p_args));
-	p_handle = x_prim_eval_arg(p_base, x_firstobj(x_restobj(p_args)));
 
-	/* Short-circuit: already the target type. */
-	if ( ! x_obj_isnil(p_base, p_val)
+	if (x_obj_isnil(p_base, p_val)) {
+		return NULL;
+	}
+
+	p_handle = x_prim_eval_arg(p_base,
+		x_firstobj(x_restobj(p_args)));
+
+	/* 1. Short-circuit: already the target type. */
+	if ( ! x_obj_isnil(p_base, x_obj_type(p_val))
 		&& ! x_obj_isnil(p_base, x_obj_type(p_val))
 		&& x_type_field_name(x_obj_type(p_val)) == p_handle) {
 		return p_val;
 	}
 
+	/* Look up target type struct. */
 	x_firstobj((x_obj_t *)lookup_args) = p_handle;
-	p_type = x_base_type_alist_assoc(p_base, (x_obj_t *)lookup_args);
+	p_type = x_base_type_alist_assoc(p_base,
+		(x_obj_t *)lookup_args);
 
 	if (x_obj_isnil(p_base, p_type)) {
 		return NULL;
 	}
 
-	p_convert_fn = x_type_field_convert(p_type);
+	p_convert_alist = x_type_field_convert(p_type);
 
-	if (x_obj_isnil(p_base, p_convert_fn)) {
+	if (x_obj_isnil(p_base, p_convert_alist)) {
 		return NULL;
 	}
 
-	/* Call: (convert-fn value) */
-	x_firstobj((x_obj_t *)call_args) = p_convert_fn;
+	/* Get source type handle. */
+	{
+		x_spair_t name_args[1] = {
+			x_obj_set(NULL, X_OBJ_FLAG_NONE,
+				{ p_val }, { p_base })
+		};
+		p_source_handle = x_obj_prim_type_name(p_base,
+			(x_obj_t *)name_args);
+	}
+
+	/* 2. Exact match: source type handle in convert alist. */
+	p_entry = NULL;
+	if ( ! x_obj_isnil(p_base, p_source_handle)) {
+		p_entry = x_convert_alist_find(p_base,
+			p_convert_alist, p_source_handle);
+	}
+
+	/* 3. Wildcard: 't' symbol key. */
+	if (x_obj_isnil(p_base, p_entry)) {
+		x_obj_t *p_t = x_mksymbol(p_base,
+			(x_char_t *)X_BASE_TRUE_STR);
+		p_entry = x_convert_alist_find(p_base,
+			p_convert_alist, p_t);
+	}
+
+	if (x_obj_isnil(p_base, p_entry)) {
+		return NULL;
+	}
+
+	/* Call: (converter-fn value) */
+	p_converter = x_restobj(p_entry);
+	x_firstobj((x_obj_t *)call_args) = p_converter;
 	x_firstobj((x_obj_t *)(call_args + 1)) = p_val;
 
 	return x_type_prim_apply(p_base, (x_obj_t *)call_args);
@@ -410,6 +485,7 @@ x_obj_t *x_prim_type_register(x_obj_t *p_base, x_obj_t *p_args)
 	x_prim_bind(p_base, "base-make-type", x_prim_base_make_type);
 	x_prim_bind(p_base, "make-instance", x_prim_make_instance);
 	x_prim_bind(p_base, "type?", x_prim_typep);
+	x_prim_bind(p_base, "type-of", x_prim_type_of);
 	x_prim_bind(p_base, "type-name", x_prim_type_name);
 	x_prim_bind(p_base, "convert", x_prim_convert);
 	x_prim_bind(p_base, "buffer-token", x_prim_buffer_token);

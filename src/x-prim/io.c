@@ -101,6 +101,51 @@ static x_obj_t *x_prim_read_char(x_obj_t *p_base, x_obj_t *p_args)
 	return x_mkchar(p_base, x_bufferlastchar(p_buffer));
 }
 
+/* write-to-string: (write-to-string obj) -> string representation */
+x_obj_t *x_prim_write_to_string(x_obj_t *p_base, x_obj_t *p_args)
+{
+	x_obj_t *p_val;
+	int pipefd[2];
+	int saved_fd;
+	x_char_t *result;
+	x_int_t total, n;
+	x_spair_t write_args[1] = {
+		x_obj_set(NULL, X_OBJ_FLAG_NONE, { NULL }, { NULL })
+	};
+
+	p_val = x_prim_eval_arg(p_base, x_firstobj(p_args));
+
+	if (x_obj_isnil(p_base, p_val)) {
+		return x_mkstrown(p_base, x_lib_strndup((x_char_t *)"", 0));
+	}
+
+	if (pipe(pipefd) < 0) {
+		return NULL;
+	}
+
+	/* Swap fileout fd to pipe write end */
+	saved_fd = x_atomint(x_base_field_fileout(p_base));
+	x_atomint(x_base_field_fileout(p_base)) = pipefd[1];
+
+	x_firstobj((x_obj_t *)write_args) = p_val;
+	x_token_write(p_base, (x_obj_t *)write_args);
+
+	/* Restore and close write end */
+	x_atomint(x_base_field_fileout(p_base)) = saved_fd;
+	x_sys_close(pipefd[1]);
+
+	/* Read result from pipe */
+	total = 0;
+	result = (x_char_t *)x_sys_malloc(256);
+	while ((n = x_sys_read(pipefd[0], result + total, 255 - total)) > 0) {
+		total += n;
+	}
+	result[total] = '\0';
+	x_sys_close(pipefd[0]);
+
+	return x_mkstrown(p_base, result);
+}
+
 #ifdef X_CLOCK
 /* clock: (clock) -> CPU microseconds since process start */
 static x_obj_t *x_prim_clock(x_obj_t *p_base, x_obj_t *p_args)
@@ -178,6 +223,7 @@ x_obj_t *x_prim_io_register(x_obj_t *p_base, x_obj_t *p_args)
 	x_prim_bind(p_base, "newline", x_prim_newline);
 	x_prim_bind(p_base, "read", x_prim_read_expr);
 	x_prim_bind(p_base, "read-char", x_prim_read_char);
+	x_prim_bind(p_base, "write-to-string", x_prim_write_to_string);
 #ifdef X_CLOCK
 	x_prim_bind(p_base, "clock", x_prim_clock);
 #endif /* X_CLOCK */
