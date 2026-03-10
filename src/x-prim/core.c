@@ -442,6 +442,12 @@ static x_obj_t *x_prim_set_rest_int(x_obj_t *p_base, x_obj_t *p_args)
 	return p_pair;
 }
 
+/* %base: (%base) -> return current base object */
+static x_obj_t *x_prim_base(x_obj_t *p_base, x_obj_t *p_args)
+{
+	return p_base;
+}
+
 x_obj_t *x_prim_core_register(x_obj_t *p_base, x_obj_t *p_args)
 {
 	x_prim_bind(p_base, "lit", x_prim_quote);
@@ -468,6 +474,7 @@ x_obj_t *x_prim_core_register(x_obj_t *p_base, x_obj_t *p_args)
 	x_prim_bind(p_base, "set-rest", x_prim_set_rest);
 	x_prim_bind(p_base, "set-first-int", x_prim_set_first_int);
 	x_prim_bind(p_base, "set-rest-int", x_prim_set_rest_int);
+	x_prim_bind(p_base, "%base", x_prim_base);
 
 	return p_base;
 }

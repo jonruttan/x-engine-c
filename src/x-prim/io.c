@@ -24,6 +24,7 @@
 #include "x-type/buffer.h"
 #include "x-type/char.h"
 #include "x-type/int.h"
+#include "x-type/prim.h"
 #include "x-type/str.h"
 
 /* write: (write obj) -> output s-expression to stdout */
@@ -118,67 +119,56 @@ static x_obj_t *x_prim_gc(x_obj_t *p_base, x_obj_t *p_args)
 
 /* repl: (repl) -> read-eval-print loop until EOF
  *
- * Parses two x-lang forms from a source string:
- *   1. Setup: saves %do (before libraries can redefine do),
- *      defines temp variables %repl-exp and %repl-result
- *   2. Step: one REPL iteration (prompt, read, eval, print)
- * The C code loops evaluating the step form directly (no closure),
- * so def bindings from (eval exp) persist across iterations. */
+ * Pure C loop with three optional hooks from the base:
+ *   repl-prompt: called before read (no args)
+ *   repl-read:   called after read (receives expression)
+ *   repl-eval:   called after eval (receives result)
+ * Hooks are nil until a personality sets them. */
 x_obj_t *x_prim_repl(x_obj_t *p_base, x_obj_t *p_args)
 {
-	static const x_char_t repl_src[] =
-		"(do (def %do do) (def %repl-exp ()) (def %repl-result ()))"
-		" (%do (display \"" X_BASE_REPL_STR "\")"
-		" (set %repl-exp (read))"
-		" (if (null? %repl-exp) ()"
-		"  (%do (set %repl-result (eval %repl-exp))"
-		"   (if (null? %repl-result) () (write %repl-result))"
-		"   (newline) t)))";
-	x_int_t len = sizeof(repl_src) - 1;
-	x_char_t *buf = (x_char_t *)x_lib_strndup(repl_src, len);
-	x_obj_t *p_buffer, *p_setup, *p_step, *p_result;
-
-	p_buffer = x_mkfbufferown(p_base, X_OBJ_FLAG_RO, buf);
-	x_bufferwrite(p_buffer) = x_bufferval(p_buffer) + len;
-
-	{
-		x_spair_t read_args[1] = {
-			x_obj_set(NULL, X_OBJ_FLAG_NONE, { p_buffer }, { p_base })
-		};
-
-		/* Parse and eval setup (def temp vars). */
-		p_setup = x_token_read(p_base, (x_obj_t *)read_args);
-
-		{
-			x_satom_t wrap = x_obj_set(NULL, X_OBJ_FLAG_NONE, { p_setup });
-			x_spair_t eval_args[1] = {
-				x_obj_set(NULL, X_OBJ_FLAG_NONE, { wrap }, { NULL })
-			};
-
-			x_eval(p_base, (x_obj_t *)eval_args);
-		}
-
-		/* Parse step form (reused each iteration). */
-		p_step = x_token_read(p_base, (x_obj_t *)read_args);
-	}
-
-	/* REPL loop: eval step form until it returns nil (EOF). */
-	p_result = NULL;
+	x_obj_t *p_exp, *p_result, *p_hook;
 
 	for (;;) {
-		x_satom_t wrap = x_obj_set(NULL, X_OBJ_FLAG_NONE, { p_step });
-		x_spair_t eval_args[1] = {
-			x_obj_set(NULL, X_OBJ_FLAG_NONE, { wrap }, { NULL })
-		};
+		/* Call repl-prompt hook if set. */
+		p_hook = x_base_field_repl_prompt(p_base);
+		if ( ! x_obj_isnil(p_base, p_hook)) {
+			x_spair_t hook_args[1] = {
+				x_obj_set(NULL, X_OBJ_FLAG_NONE, { p_hook }, { NULL })
+			};
+			x_type_prim_apply(p_base, (x_obj_t *)hook_args);
+		}
 
-		p_result = x_eval(p_base, (x_obj_t *)eval_args);
-
-		if (x_obj_isnil(p_base, p_result)) {
+		/* Read expression. */
+		p_exp = x_prim_read_expr(p_base, NULL);
+		if (x_obj_isnil(p_base, p_exp)) {
 			break;
+		}
+
+		/* Call repl-read hook if set. */
+		p_hook = x_base_field_repl_read(p_base);
+		if ( ! x_obj_isnil(p_base, p_hook)) {
+			x_spair_t hook_args[2] = {
+				x_obj_set(NULL, X_OBJ_FLAG_NONE, { p_hook }, { (x_obj_t *)(hook_args + 1) }),
+				x_obj_set(NULL, X_OBJ_FLAG_NONE, { p_exp }, { NULL })
+			};
+			x_type_prim_apply(p_base, (x_obj_t *)hook_args);
+		}
+
+		/* Eval expression. */
+		p_result = x_prim_eval_arg(p_base, p_exp);
+
+		/* Call repl-eval hook if set. */
+		p_hook = x_base_field_repl_eval(p_base);
+		if ( ! x_obj_isnil(p_base, p_hook)) {
+			x_spair_t hook_args[2] = {
+				x_obj_set(NULL, X_OBJ_FLAG_NONE, { p_hook }, { (x_obj_t *)(hook_args + 1) }),
+				x_obj_set(NULL, X_OBJ_FLAG_NONE, { p_result }, { NULL })
+			};
+			x_type_prim_apply(p_base, (x_obj_t *)hook_args);
 		}
 	}
 
-	return p_result;
+	return NULL;
 }
 
 x_obj_t *x_prim_io_register(x_obj_t *p_base, x_obj_t *p_args)

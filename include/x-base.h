@@ -24,6 +24,7 @@
  *   (type-alist)
  *   (file:in file:out file:err)
  *   (env-alist symbol-list expr-list buffer token-cache error-handler tco-expr tco-env)
+ *   (repl-prompt repl-read repl-eval)
  * )
  * ```
  */
@@ -34,7 +35,6 @@
 #include <setjmp.h>
 
 #define X_BASE_TRUE_STR		"t"
-#define X_BASE_REPL_STR		"> "
 
 
 /*
@@ -65,6 +65,11 @@ typedef struct x_error_handler {
 #define x_base_field_error_handler(X)	x_firstobj(x_restobj(x_restobj(x_restobj(x_restobj(x_base_field_env((X)))))))
 #define x_base_field_tco_expr(X)		x_firstobj(x_restobj(x_restobj(x_restobj(x_restobj(x_restobj(x_base_field_env((X))))))))
 #define x_base_field_tco_env(X)			x_firstobj(x_restobj(x_restobj(x_restobj(x_restobj(x_restobj(x_restobj(x_base_field_env((X)))))))))
+
+#define x_base_field_repl(X)			x_firstobj(x_restobj(x_restobj(x_restobj(x_firstobj(X)))))
+#define x_base_field_repl_prompt(X)		x_firstobj(x_base_field_repl((X)))
+#define x_base_field_repl_read(X)		x_firstobj(x_restobj(x_base_field_repl((X))))
+#define x_base_field_repl_eval(X)		x_firstobj(x_restobj(x_restobj(x_base_field_repl((X)))))
 
 #define x_base_isset(B)					((B) != NULL && x_base((B)) != NULL)
 
