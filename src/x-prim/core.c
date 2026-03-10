@@ -169,6 +169,13 @@ static x_obj_t *x_prim_let(x_obj_t *p_base, x_obj_t *p_args)
 		if (x_obj_isnil(p_base, x_restobj(p_body))) {
 			x_base_field_tco_expr(p_base) = x_firstobj(p_body);
 
+			if (x_obj_isnil(p_base,
+				x_base_field_tco_expr(p_base))) {
+				/* Nil tail form: no TCO, restore env. */
+				x_base_field_env_alist(p_base) = p_saved_env;
+				return NULL;
+			}
+
 			if (x_obj_isnil(p_base, x_base_field_tco_env(p_base))) {
 				x_base_field_tco_env(p_base) = p_saved_env;
 			}
@@ -210,6 +217,13 @@ static x_obj_t *x_prim_apply(x_obj_t *p_base, x_obj_t *p_args)
 		while ( ! x_obj_isnil(p_base, p_body)) {
 			if (x_obj_isnil(p_base, x_restobj(p_body))) {
 				x_base_field_tco_expr(p_base) = x_firstobj(p_body);
+
+				if (x_obj_isnil(p_base,
+					x_base_field_tco_expr(p_base))) {
+					x_base_field_env_alist(p_base) =
+						p_saved_env;
+					return NULL;
+				}
 
 				if (x_obj_isnil(p_base, x_base_field_tco_env(p_base))) {
 					x_base_field_tco_env(p_base) = p_saved_env;

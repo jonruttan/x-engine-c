@@ -117,6 +117,14 @@ x_obj_t *x_type_procedure_call(x_obj_t *p_base, x_obj_t *p_args)
 				/* Last body form: tail position. */
 				x_base_field_tco_expr(p_base) = x_firstobj(p_body);
 
+				if (x_obj_isnil(p_base,
+					x_base_field_tco_expr(p_base))) {
+					/* Nil tail form: no TCO, restore env. */
+					x_base_field_env_alist(p_base) =
+						p_saved_env;
+					return NULL;
+				}
+
 				if (x_obj_isnil(p_base, x_base_field_tco_env(p_base))) {
 					x_base_field_tco_env(p_base) = p_saved_env;
 				}
