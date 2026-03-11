@@ -19,11 +19,6 @@
 #include "x-prim.h"
 #include "x-type/char.h"
 #include "x-type/int.h"
-#include "x-type/list.h"
-#include "x-type/prim.h"
-#include "x-type/procedure.h"
-#include "x-type/str.h"
-#include "x-type/symbol.h"
 
 /* eq?: (eq? a b) -> pointer equality */
 static x_obj_t *x_prim_eq(x_obj_t *p_base, x_obj_t *p_args)
@@ -54,64 +49,6 @@ static x_obj_t *x_prim_lt(x_obj_t *p_base, x_obj_t *p_args)
 		? x_base_field_true(p_base) : NULL;
 }
 
-/* null?: (null? x) -> t if nil */
-static x_obj_t *x_prim_nullp(x_obj_t *p_base, x_obj_t *p_args)
-{
-	x_obj_t *x = x_prim_eval_arg(p_base, x_firstobj(p_args));
-
-	return x_obj_isnil(p_base, x) ? x_base_field_true(p_base) : NULL;
-}
-
-/* pair?: (pair? x) -> t if list pair */
-static x_obj_t *x_prim_pairp(x_obj_t *p_base, x_obj_t *p_args)
-{
-	x_obj_t *x = x_prim_eval_arg(p_base, x_firstobj(p_args));
-
-	return x_obj_type_islist(p_base, x) ? x_base_field_true(p_base) : NULL;
-}
-
-/* number?: (number? x) -> t if integer */
-static x_obj_t *x_prim_numberp(x_obj_t *p_base, x_obj_t *p_args)
-{
-	x_obj_t *x = x_prim_eval_arg(p_base, x_firstobj(p_args));
-
-	return x_obj_type_isint(p_base, x) ? x_base_field_true(p_base) : NULL;
-}
-
-/* string?: (string? x) -> t if string */
-static x_obj_t *x_prim_stringp(x_obj_t *p_base, x_obj_t *p_args)
-{
-	x_obj_t *x = x_prim_eval_arg(p_base, x_firstobj(p_args));
-
-	return x_obj_type_isstr(p_base, x) ? x_base_field_true(p_base) : NULL;
-}
-
-/* symbol?: (symbol? x) -> t if symbol */
-static x_obj_t *x_prim_symbolp(x_obj_t *p_base, x_obj_t *p_args)
-{
-	x_obj_t *x = x_prim_eval_arg(p_base, x_firstobj(p_args));
-
-	return x_obj_type_issymbol(p_base, x) ? x_base_field_true(p_base) : NULL;
-}
-
-/* procedure?: (procedure? x) -> t if callable (fn or prim) */
-static x_obj_t *x_prim_procedurep(x_obj_t *p_base, x_obj_t *p_args)
-{
-	x_obj_t *x = x_prim_eval_arg(p_base, x_firstobj(p_args));
-
-	return (x_obj_type_isprocedure(p_base, x) || x_obj_type_isprim(p_base, x))
-		? x_base_field_true(p_base) : NULL;
-}
-
-/* char?: (char? x) -> t if character */
-static x_obj_t *x_prim_charp(x_obj_t *p_base, x_obj_t *p_args)
-{
-	x_obj_t *x = x_prim_eval_arg(p_base, x_firstobj(p_args));
-
-	return x_obj_type_ischar(p_base, x)
-		? x_base_field_true(p_base) : NULL;
-}
-
 /* char->integer: (char->integer c) -> integer char code */
 static x_obj_t *x_prim_char_to_integer(x_obj_t *p_base, x_obj_t *p_args)
 {
@@ -133,13 +70,6 @@ x_obj_t *x_prim_pred_register(x_obj_t *p_base, x_obj_t *p_args)
 	x_prim_bind(p_base, "eq?", x_prim_eq);
 	x_prim_bind(p_base, "=", x_prim_numeq);
 	x_prim_bind(p_base, "<", x_prim_lt);
-	x_prim_bind(p_base, "null?", x_prim_nullp);
-	x_prim_bind(p_base, "pair?", x_prim_pairp);
-	x_prim_bind(p_base, "number?", x_prim_numberp);
-	x_prim_bind(p_base, "string?", x_prim_stringp);
-	x_prim_bind(p_base, "symbol?", x_prim_symbolp);
-	x_prim_bind(p_base, "procedure?", x_prim_procedurep);
-	x_prim_bind(p_base, "char?", x_prim_charp);
 	x_prim_bind(p_base, "char->integer", x_prim_char_to_integer);
 	x_prim_bind(p_base, "integer->char", x_prim_integer_to_char);
 

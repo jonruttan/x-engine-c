@@ -141,57 +141,6 @@ static x_obj_t *x_prim_set(x_obj_t *p_base, x_obj_t *p_args)
 	return p_val;
 }
 
-/* let: (let ((name val)...) body...) -> local bindings */
-static x_obj_t *x_prim_let(x_obj_t *p_base, x_obj_t *p_args)
-{
-	x_obj_t *p_bindings = x_firstobj(p_args),
-		*p_body = x_restobj(p_args),
-		*p_params = NULL,
-		*p_vals = NULL,
-		*p_b;
-	x_obj_t *p_saved_env = x_base_field_env_alist(p_base),
-		*p_result = NULL;
-
-	/* Walk bindings to extract params and eval'd values. */
-	for (p_b = p_bindings; ! x_obj_isnil(p_base, p_b); p_b = x_restobj(p_b)) {
-		x_obj_t *p_binding = x_firstobj(p_b);
-		p_params = x_mkspair(p_base, x_firstobj(p_binding), p_params);
-		p_vals = x_mkspair(p_base,
-			x_prim_eval_arg(p_base, x_firstobj(x_restobj(p_binding))),
-			p_vals);
-	}
-
-	/* Extend current env with bindings, eval body, restore. */
-	x_base_field_env_alist(p_base) = x_prim_multiple_extend(
-		p_base, p_saved_env, p_params, p_vals);
-
-	while ( ! x_obj_isnil(p_base, p_body)) {
-		if (x_obj_isnil(p_base, x_restobj(p_body))) {
-			x_base_field_tco_expr(p_base) = x_firstobj(p_body);
-
-			if (x_obj_isnil(p_base,
-				x_base_field_tco_expr(p_base))) {
-				/* Nil tail form: no TCO, restore env. */
-				x_base_field_env_alist(p_base) = p_saved_env;
-				return NULL;
-			}
-
-			if (x_obj_isnil(p_base, x_base_field_tco_env(p_base))) {
-				x_base_field_tco_env(p_base) = p_saved_env;
-			}
-
-			return NULL;
-		}
-
-		p_result = x_prim_eval_arg(p_base, x_firstobj(p_body));
-		p_body = x_restobj(p_body);
-	}
-
-	x_base_field_env_alist(p_base) = p_saved_env;
-
-	return p_result;
-}
-
 /* apply: (apply f arg1 ... args) -> call callable with prefix + tail arg list */
 static x_obj_t *x_prim_apply(x_obj_t *p_base, x_obj_t *p_args)
 {
@@ -543,7 +492,6 @@ x_obj_t *x_prim_core_register(x_obj_t *p_base, x_obj_t *p_args)
 	x_prim_bind(p_base, "if", x_prim_if);
 	x_prim_bind(p_base, "do", x_prim_do);
 	x_prim_bind(p_base, "set", x_prim_set);
-	x_prim_bind(p_base, "let", x_prim_let);
 	x_prim_bind(p_base, "apply", x_prim_apply);
 	x_prim_bind(p_base, "eval", x_prim_eval);
 	x_prim_bind(p_base, "eval!", x_prim_eval_immediate);
