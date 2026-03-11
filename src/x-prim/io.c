@@ -101,6 +101,27 @@ static x_obj_t *x_prim_read_char(x_obj_t *p_base, x_obj_t *p_args)
 	return x_mkchar(p_base, x_bufferlastchar(p_buffer));
 }
 
+/* peek-char: (peek-char) -> peek at next character without consuming */
+static x_obj_t *x_prim_peek_char(x_obj_t *p_base, x_obj_t *p_args)
+{
+	x_obj_t *p_buffer = x_base_field_buffer(p_base);
+	x_char_t ch;
+	x_spair_t buf_args[1] = {
+		x_obj_set(NULL, X_OBJ_FLAG_NONE, { p_buffer }, { p_base })
+	};
+
+	p_buffer = x_type_buffer_read(p_base, (x_obj_t *)buf_args);
+
+	if (x_obj_isnil(p_base, p_buffer)) {
+		return NULL;
+	}
+
+	ch = x_bufferlastchar(p_buffer);
+	x_bufferread(p_buffer) -= 1;
+
+	return x_mkchar(p_base, ch);
+}
+
 /* write-to-string: (write-to-string obj) -> string representation */
 x_obj_t *x_prim_write_to_string(x_obj_t *p_base, x_obj_t *p_args)
 {
@@ -184,6 +205,7 @@ x_obj_t *x_prim_io_register(x_obj_t *p_base, x_obj_t *p_args)
 	x_prim_bind(p_base, "newline", x_prim_newline);
 	x_prim_bind(p_base, "read", x_prim_read_expr);
 	x_prim_bind(p_base, "read-char", x_prim_read_char);
+	x_prim_bind(p_base, "peek-char", x_prim_peek_char);
 	x_prim_bind(p_base, "write-to-string", x_prim_write_to_string);
 #ifdef X_CLOCK
 	x_prim_bind(p_base, "clock", x_prim_clock);
