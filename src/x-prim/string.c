@@ -98,23 +98,33 @@ static x_obj_t *x_prim_symbol_to_string(x_obj_t *p_base, x_obj_t *p_args)
 	return x_mkstr(p_base, x_symbolval(p_sym));
 }
 
-/* number->string: (number->string n) -> string representation */
+/* number->string: (number->string n [radix]) -> string representation */
 static x_obj_t *x_prim_number_to_string(x_obj_t *p_base, x_obj_t *p_args)
 {
 	x_obj_t *p_n = x_prim_eval_arg(p_base, x_firstobj(p_args));
-	x_char_t buf[22];
+	x_int_t radix = 10;
+	x_char_t buf[66];
 
-	x_lib_inttostr(x_intval(p_n), buf, 10);
+	if ( ! x_obj_isnil(p_base, x_restobj(p_args))) {
+		radix = x_intval(x_prim_eval_arg(p_base, x_firstobj(x_restobj(p_args))));
+	}
+
+	x_lib_inttostr(x_intval(p_n), buf, radix);
 
 	return x_mkstrown(p_base, x_lib_strndup(buf, x_lib_strlen(buf)));
 }
 
-/* string->number: (string->number str) -> integer */
+/* string->number: (string->number str [radix]) -> integer */
 static x_obj_t *x_prim_string_to_number(x_obj_t *p_base, x_obj_t *p_args)
 {
 	x_obj_t *p_str = x_prim_eval_arg(p_base, x_firstobj(p_args));
+	x_int_t radix = 0;
 
-	return x_mkint(p_base, x_lib_strtoint(x_strval(p_str), NULL, 0));
+	if ( ! x_obj_isnil(p_base, x_restobj(p_args))) {
+		radix = x_intval(x_prim_eval_arg(p_base, x_firstobj(x_restobj(p_args))));
+	}
+
+	return x_mkint(p_base, x_lib_strtoint(x_strval(p_str), NULL, radix));
 }
 
 /* list->string: (list->string list-of-chars) -> string */
