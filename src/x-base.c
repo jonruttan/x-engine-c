@@ -46,12 +46,7 @@ x_obj_t *x_base_make(x_obj_t *p_base, x_obj_t *p_args)
 			pair(nil,
 			pair(nil,
 			nil))))))),
-		pair(
-			pair(nil,
-			pair(nil,
-			pair(nil,
-			nil))),
-		nil))));
+		nil)));
 
 	return p_base;
 }

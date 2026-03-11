@@ -162,55 +162,16 @@ static x_obj_t *x_prim_gc(x_obj_t *p_base, x_obj_t *p_args)
 	return NULL;
 }
 
-/* repl: (repl) -> read-eval-print loop until EOF
- *
- * Pure C loop with three optional hooks from the base:
- *   repl-prompt: called before read (no args)
- *   repl-read:   called after read (receives expression)
- *   repl-eval:   called after eval (receives result)
- * Hooks are nil until a personality sets them. */
+/* repl: minimal read-eval loop until EOF (no output, no hooks) */
 x_obj_t *x_prim_repl(x_obj_t *p_base, x_obj_t *p_args)
 {
-	x_obj_t *p_exp, *p_result, *p_hook;
+	x_obj_t *p_exp;
 
 	for (;;) {
-		/* Call repl-prompt hook if set. */
-		p_hook = x_base_field_repl_prompt(p_base);
-		if ( ! x_obj_isnil(p_base, p_hook)) {
-			x_spair_t hook_args[1] = {
-				x_obj_set(NULL, X_OBJ_FLAG_NONE, { p_hook }, { NULL })
-			};
-			x_type_prim_apply(p_base, (x_obj_t *)hook_args);
-		}
-
-		/* Read expression. */
 		p_exp = x_prim_read_expr(p_base, NULL);
-		if (x_obj_isnil(p_base, p_exp)) {
+		if (x_obj_isnil(p_base, p_exp))
 			break;
-		}
-
-		/* Call repl-read hook if set. */
-		p_hook = x_base_field_repl_read(p_base);
-		if ( ! x_obj_isnil(p_base, p_hook)) {
-			x_spair_t hook_args[2] = {
-				x_obj_set(NULL, X_OBJ_FLAG_NONE, { p_hook }, { (x_obj_t *)(hook_args + 1) }),
-				x_obj_set(NULL, X_OBJ_FLAG_NONE, { p_exp }, { NULL })
-			};
-			x_type_prim_apply(p_base, (x_obj_t *)hook_args);
-		}
-
-		/* Eval expression. */
-		p_result = x_prim_eval_arg(p_base, p_exp);
-
-		/* Call repl-eval hook if set. */
-		p_hook = x_base_field_repl_eval(p_base);
-		if ( ! x_obj_isnil(p_base, p_hook)) {
-			x_spair_t hook_args[2] = {
-				x_obj_set(NULL, X_OBJ_FLAG_NONE, { p_hook }, { (x_obj_t *)(hook_args + 1) }),
-				x_obj_set(NULL, X_OBJ_FLAG_NONE, { p_result }, { NULL })
-			};
-			x_type_prim_apply(p_base, (x_obj_t *)hook_args);
-		}
+		x_prim_eval_arg(p_base, p_exp);
 	}
 
 	return NULL;
@@ -228,7 +189,6 @@ x_obj_t *x_prim_io_register(x_obj_t *p_base, x_obj_t *p_args)
 	x_prim_bind(p_base, "clock", x_prim_clock);
 #endif /* X_CLOCK */
 	x_prim_bind(p_base, "gc", x_prim_gc);
-	x_prim_bind(p_base, "repl", x_prim_repl);
 
 	return p_base;
 }

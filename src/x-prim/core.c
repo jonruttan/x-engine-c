@@ -457,6 +457,14 @@ static x_obj_t *x_prim_set_rest_int(x_obj_t *p_base, x_obj_t *p_args)
 }
 
 /* %base: (%base) -> return current base object */
+/* eval!: evaluate in current env, return result (no TCO, no env save/restore) */
+static x_obj_t *x_prim_eval_immediate(x_obj_t *p_base, x_obj_t *p_args)
+{
+	x_obj_t *p_expr = x_prim_eval_arg(p_base, x_firstobj(p_args));
+
+	return x_prim_eval_arg(p_base, p_expr);
+}
+
 static x_obj_t *x_prim_base(x_obj_t *p_base, x_obj_t *p_args)
 {
 	return p_base;
@@ -475,6 +483,7 @@ x_obj_t *x_prim_core_register(x_obj_t *p_base, x_obj_t *p_args)
 	x_prim_bind(p_base, "let", x_prim_let);
 	x_prim_bind(p_base, "apply", x_prim_apply);
 	x_prim_bind(p_base, "eval", x_prim_eval);
+	x_prim_bind(p_base, "eval!", x_prim_eval_immediate);
 	x_prim_bind(p_base, "fn", x_prim_closure);
 	x_prim_bind(p_base, "op", x_prim_operative);
 	x_prim_bind(p_base, "wrap", x_prim_wrap);
