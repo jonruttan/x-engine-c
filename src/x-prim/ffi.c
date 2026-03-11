@@ -163,7 +163,7 @@ static x_obj_t *x_prim_ffi_call(x_obj_t *p_base, x_obj_t *p_args)
 		memcpy(&a, &x_intval(p_a), sizeof(double));
 		memcpy(&b, &x_intval(p_b), sizeof(double));
 		return a < b
-			? x_mksymbol(p_base, (x_char_t *)X_BASE_TRUE_STR)
+			? x_base_field_true(p_base)
 			: NULL;
 	}
 
@@ -174,7 +174,7 @@ static x_obj_t *x_prim_ffi_call(x_obj_t *p_base, x_obj_t *p_args)
 		memcpy(&a, &x_intval(p_a), sizeof(double));
 		memcpy(&b, &x_intval(p_b), sizeof(double));
 		return a > b
-			? x_mksymbol(p_base, (x_char_t *)X_BASE_TRUE_STR)
+			? x_base_field_true(p_base)
 			: NULL;
 	}
 
@@ -185,7 +185,7 @@ static x_obj_t *x_prim_ffi_call(x_obj_t *p_base, x_obj_t *p_args)
 		memcpy(&a, &x_intval(p_a), sizeof(double));
 		memcpy(&b, &x_intval(p_b), sizeof(double));
 		return a == b
-			? x_mksymbol(p_base, (x_char_t *)X_BASE_TRUE_STR)
+			? x_base_field_true(p_base)
 			: NULL;
 	}
 
@@ -196,7 +196,7 @@ static x_obj_t *x_prim_ffi_call(x_obj_t *p_base, x_obj_t *p_args)
 		memcpy(&a, &x_intval(p_a), sizeof(double));
 		memcpy(&b, &x_intval(p_b), sizeof(double));
 		return a <= b
-			? x_mksymbol(p_base, (x_char_t *)X_BASE_TRUE_STR)
+			? x_base_field_true(p_base)
 			: NULL;
 	}
 
@@ -207,7 +207,7 @@ static x_obj_t *x_prim_ffi_call(x_obj_t *p_base, x_obj_t *p_args)
 		memcpy(&a, &x_intval(p_a), sizeof(double));
 		memcpy(&b, &x_intval(p_b), sizeof(double));
 		return a >= b
-			? x_mksymbol(p_base, (x_char_t *)X_BASE_TRUE_STR)
+			? x_base_field_true(p_base)
 			: NULL;
 	}
 

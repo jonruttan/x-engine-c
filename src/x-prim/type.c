@@ -175,7 +175,7 @@ static x_obj_t *x_prim_typep(x_obj_t *p_base, x_obj_t *p_args)
 	}
 
 	return x_type_field_name(x_obj_type(p_obj)) == p_handle
-		? x_mksymbol(p_base, (x_char_t *)X_BASE_TRUE_STR) : NULL;
+		? x_base_field_true(p_base) : NULL;
 }
 
 /* type-of: (type-of obj) -> type handle (name atom) for obj's type */
@@ -211,7 +211,7 @@ static x_obj_t *x_prim_type_name(x_obj_t *p_base, x_obj_t *p_args)
 /* make-token-base: (make-token-base) -> bare base for tokenization (no sexp types) */
 static x_obj_t *x_prim_make_token_base(x_obj_t *p_base, x_obj_t *p_args)
 {
-	return x_base_make(NULL, NULL);
+	return x_base_make(p_base, NULL);
 }
 
 /* make-base: (make-base) -> create fresh sandboxed interpreter */
@@ -386,10 +386,8 @@ static x_obj_t *x_prim_convert(x_obj_t *p_base, x_obj_t *p_args)
 
 			/* 3. Wildcard: 't' symbol key. */
 			if (x_obj_isnil(p_base, p_entry)) {
-				x_obj_t *p_t = x_mksymbol(p_base,
-					(x_char_t *)X_BASE_TRUE_STR);
 				p_entry = x_convert_alist_find(p_base,
-					p_from_alist, p_t);
+					p_from_alist, x_base_field_true(p_base));
 			}
 
 			if ( ! x_obj_isnil(p_base, p_entry)) {

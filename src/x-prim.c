@@ -83,11 +83,12 @@ void x_prim_bind(x_obj_t *p_base, x_char_t *name, x_prim_fn fn)
 
 x_obj_t *x_prim_register(x_obj_t *p_base, x_obj_t *p_args)
 {
-	/* Bind t as a self-evaluating truth symbol. */
+	/* Bind t as a self-evaluating truth symbol and cache in base. */
 	{
 		x_obj_t *p_t = x_mksymbol(p_base, (x_char_t *)X_BASE_TRUE_STR),
 			*p_pair = x_mkspair(p_base, p_t, p_t);
 		x_base_env_alist_extend(p_base, p_pair);
+		x_base_field_true(p_base) = p_t;
 	}
 
 	x_prim_core_register(p_base, p_args);

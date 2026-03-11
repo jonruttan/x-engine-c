@@ -79,7 +79,7 @@ static x_obj_t *x_prim_string_eq(x_obj_t *p_base, x_obj_t *p_args)
 		*p_b = x_prim_eval_arg(p_base, x_firstobj(x_restobj(p_args)));
 
 	return x_lib_strcmp(x_strval(p_a), x_strval(p_b)) == 0
-		? x_mksymbol(p_base, (x_char_t *)X_BASE_TRUE_STR) : NULL;
+		? x_base_field_true(p_base) : NULL;
 }
 
 /* string->symbol: (string->symbol str) -> convert string to symbol */

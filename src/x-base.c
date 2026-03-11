@@ -28,6 +28,8 @@
 
 x_obj_t *x_base_make(x_obj_t *p_base, x_obj_t *p_args)
 {
+	x_obj_t *p_parent = p_base;
+
 	p_base = x_obj_make(p_base, x_type_base_obj, X_OBJ_FLAG_BASE,
 		X_OBJ_LENGTH_ATOM, p_base);
 	x_atomobj(p_base) = pair(
@@ -47,6 +49,11 @@ x_obj_t *x_base_make(x_obj_t *p_base, x_obj_t *p_args)
 			pair(nil,
 			nil))))))),
 		nil)));
+
+	/* Append p_true slot after base is rooted (GC-safe).
+	 * Inherit parent's cached t symbol for child bases. */
+	x_restobj(x_restobj(x_restobj(x_firstobj(p_base)))) =
+		pair(p_parent ? x_base_field_true(p_parent) : nil, nil);
 
 	return p_base;
 }
