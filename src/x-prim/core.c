@@ -418,6 +418,28 @@ static x_obj_t *x_prim_error(x_obj_t *p_base, x_obj_t *p_args)
 	return NULL;
 }
 
+/* match: (match (test body)...) -> first truthy test's body (tail-eval) */
+static x_obj_t *x_prim_match(x_obj_t *p_base, x_obj_t *p_args)
+{
+	x_obj_t *p_clause, *p_test;
+
+	while ( ! x_obj_isnil(p_base, p_args)) {
+		p_clause = x_firstobj(p_args);
+		p_test = x_prim_eval_arg(p_base, x_firstobj(p_clause));
+
+		if ( ! x_obj_isnil(p_base, p_test)) {
+			x_base_field_tco_expr(p_base) =
+				x_firstobj(x_restobj(p_clause));
+
+			return NULL;
+		}
+
+		p_args = x_restobj(p_args);
+	}
+
+	return NULL;
+}
+
 /* %rewrite: (%rewrite pair new-first new-rest) -> mutate pair in-place */
 static x_obj_t *x_prim_rewrite(x_obj_t *p_base, x_obj_t *p_args)
 {
@@ -531,6 +553,7 @@ x_obj_t *x_prim_core_register(x_obj_t *p_base, x_obj_t *p_args)
 	x_prim_bind(p_base, "unwrap", x_prim_unwrap);
 	x_prim_bind(p_base, "guard", x_prim_guard);
 	x_prim_bind(p_base, "error", x_prim_error);
+	x_prim_bind(p_base, "match", x_prim_match);
 	x_prim_bind(p_base, "%rewrite", x_prim_rewrite);
 	x_prim_bind(p_base, "first-int", x_prim_first_int);
 	x_prim_bind(p_base, "rest-int", x_prim_rest_int);
