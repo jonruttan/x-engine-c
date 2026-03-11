@@ -24,7 +24,8 @@
  #   name
  #   data
  #   (make free clone units length)
- #   (call eval convert)
+ #   (call eval)
+ #   (from to)
  #   (analyse delimit write)
  # )
  * ```
@@ -56,9 +57,12 @@
 #define x_type_field_proc(X)          x_firstobj(x_restobj(x_restobj(x_restobj(X))))
 #define x_type_field_call(X)          x_firstobj(x_type_field_proc((X)))
 #define x_type_field_eval(X)          x_firstobj(x_restobj(x_type_field_proc((X))))
-#define x_type_field_convert(X)       x_firstobj(x_restobj(x_restobj(x_type_field_proc((X)))))
 
-#define x_type_field_io(X)            x_firstobj(x_restobj(x_restobj(x_restobj(x_restobj(X)))))
+#define x_type_field_cvt(X)           x_firstobj(x_restobj(x_restobj(x_restobj(x_restobj(X)))))
+#define x_type_field_from(X)          x_firstobj(x_type_field_cvt((X)))
+#define x_type_field_to(X)            x_firstobj(x_restobj(x_type_field_cvt((X))))
+
+#define x_type_field_io(X)            x_firstobj(x_restobj(x_restobj(x_restobj(x_restobj(x_restobj(X))))))
 #define x_type_field_analyse(X)       x_firstobj(x_type_field_io((X)))
 #define x_type_field_delimit(X)       x_firstobj(x_restobj(x_type_field_io((X))))
 #define x_type_field_write(X)         x_firstobj(x_restobj(x_restobj(x_type_field_io((X)))))
@@ -79,7 +83,8 @@ struct x_type_t
 	x_obj_t *p_length;
 	x_obj_t *p_call;
 	x_obj_t *p_eval;
-	x_obj_t *p_convert;
+	x_obj_t *p_from;
+	x_obj_t *p_to;
 	x_obj_t *p_analyse;
 	x_obj_t *p_delimit;
 	x_obj_t *p_write;

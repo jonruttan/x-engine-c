@@ -39,17 +39,20 @@ x_obj_t *x_type_struct_make(x_obj_t *p_base, struct x_type_t type)
 			pair(type.p_units,
 			pair(type.p_length,
 			nil))))),
-		/* Proc: '(call eval convert) */
+		/* Proc: '(call eval) */
 		pair(pair(type.p_call,
 			pair(type.p_eval,
-			pair(type.p_convert,
-			nil))),
+			nil)),
+		/* Cvt: '(from to) */
+		pair(pair(type.p_from,
+			pair(type.p_to,
+			nil)),
 		/* IO: '(analyse delimit write) */
 		pair(pair(type.p_analyse,
 			pair(type.p_delimit,
 			pair(type.p_write,
 			nil))),
-		nil)))));
+		nil))))));
 
 	return p_type;
 }

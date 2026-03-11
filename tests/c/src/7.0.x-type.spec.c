@@ -37,10 +37,11 @@
 #define TEST_TYPE_STRUCT_LENGTH		TEST_TYPE_MK_ENTRY(0x7)
 #define TEST_TYPE_STRUCT_CALL		TEST_TYPE_MK_ENTRY(0x8)
 #define TEST_TYPE_STRUCT_EVAL		TEST_TYPE_MK_ENTRY(0x9)
-#define TEST_TYPE_STRUCT_CONVERT	TEST_TYPE_MK_ENTRY(0xA)
-#define TEST_TYPE_STRUCT_ANALYSE	TEST_TYPE_MK_ENTRY(0xB)
-#define TEST_TYPE_STRUCT_DELIMIT	TEST_TYPE_MK_ENTRY(0xC)
-#define TEST_TYPE_STRUCT_WRITE		TEST_TYPE_MK_ENTRY(0xD)
+#define TEST_TYPE_STRUCT_FROM		TEST_TYPE_MK_ENTRY(0xA)
+#define TEST_TYPE_STRUCT_TO		TEST_TYPE_MK_ENTRY(0xB)
+#define TEST_TYPE_STRUCT_ANALYSE	TEST_TYPE_MK_ENTRY(0xC)
+#define TEST_TYPE_STRUCT_DELIMIT	TEST_TYPE_MK_ENTRY(0xD)
+#define TEST_TYPE_STRUCT_WRITE		TEST_TYPE_MK_ENTRY(0xE)
 
 
 /*
@@ -150,7 +151,8 @@ static char *test_type_struct_make(void)
 		TEST_TYPE_STRUCT_LENGTH,
 		TEST_TYPE_STRUCT_CALL,
 		TEST_TYPE_STRUCT_EVAL,
-		TEST_TYPE_STRUCT_CONVERT,
+		TEST_TYPE_STRUCT_FROM,
+		TEST_TYPE_STRUCT_TO,
 		TEST_TYPE_STRUCT_ANALYSE,
 		TEST_TYPE_STRUCT_DELIMIT,
 		TEST_TYPE_STRUCT_WRITE
@@ -200,8 +202,12 @@ static char *test_type_struct_make(void)
 		TEST_TYPE_STRUCT_EVAL == x_type_field_eval(p_type)
 	);
 
-	_it_should("set the Convert primitive",
-		TEST_TYPE_STRUCT_CONVERT == x_type_field_convert(p_type)
+	_it_should("set the From alist",
+		TEST_TYPE_STRUCT_FROM == x_type_field_from(p_type)
+	);
+
+	_it_should("set the To alist",
+		TEST_TYPE_STRUCT_TO == x_type_field_to(p_type)
 	);
 
 	_it_should("set the Analyse primitive",

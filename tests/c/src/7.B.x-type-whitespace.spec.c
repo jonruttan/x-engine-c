@@ -164,8 +164,12 @@ static char *test_type_whitespace_struct(void)
 		NULL == x_type_field_eval(p_type)
 	);
 
-	_it_should("not set the Convert primitive",
-		NULL == x_type_field_convert(p_type)
+	_it_should("not set the From alist",
+		NULL == x_type_field_from(p_type)
+	);
+
+	_it_should("not set the To alist",
+		NULL == x_type_field_to(p_type)
 	);
 
 	_it_should("set the Analyse primitive",

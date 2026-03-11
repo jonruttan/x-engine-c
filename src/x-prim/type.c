@@ -90,11 +90,18 @@ static x_obj_t *x_prim_type_build_struct(x_obj_t *p_base,
 		type.p_delimit = x_restobj(p_entry);
 	}
 
-	p_sym = x_mksymbol(p_base, (x_char_t *)"convert");
+	p_sym = x_mksymbol(p_base, (x_char_t *)"from");
 	x_firstobj((x_obj_t *)assoc_args) = p_sym;
 	p_entry = x_alist_assoc(p_base, (x_obj_t *)assoc_args);
 	if ( ! x_obj_isnil(p_base, p_entry)) {
-		type.p_convert = x_restobj(p_entry);
+		type.p_from = x_restobj(p_entry);
+	}
+
+	p_sym = x_mksymbol(p_base, (x_char_t *)"to");
+	x_firstobj((x_obj_t *)assoc_args) = p_sym;
+	p_entry = x_alist_assoc(p_base, (x_obj_t *)assoc_args);
+	if ( ! x_obj_isnil(p_base, p_entry)) {
+		type.p_to = x_restobj(p_entry);
 	}
 
 	return x_type_struct_make(p_base, type);
@@ -317,18 +324,14 @@ static x_obj_t *x_convert_alist_find(x_obj_t *p_base,
 
 /* convert: (convert value target-type-handle) -> converted value or ()
  *
- * The target type's convert field is an alist of
- * (source-type-handle . converter-fn) pairs.
- *
  * Lookup order:
  * 1. Short-circuit: value already target type
- * 2. Exact match: source type handle in target's convert alist
- * 3. Wildcard: 't' symbol key in target's convert alist
- * 4. String fallback: write-to-string on source, find STRING handle
- *    in convert alist, call with string */
+ * 2. Exact match: source handle in target's 'from' alist
+ * 3. Wildcard: 't' symbol key in target's 'from' alist
+ * 4. Outbound: target handle in source's 'to' alist */
 static x_obj_t *x_prim_convert(x_obj_t *p_base, x_obj_t *p_args)
 {
-	x_obj_t *p_val, *p_handle, *p_type, *p_convert_alist,
+	x_obj_t *p_val, *p_handle, *p_type, *p_from_alist,
 		*p_source_handle, *p_entry, *p_converter;
 	x_spair_t lookup_args[1] = {
 		x_obj_set(NULL, X_OBJ_FLAG_NONE, { NULL }, { NULL })
@@ -355,21 +358,6 @@ static x_obj_t *x_prim_convert(x_obj_t *p_base, x_obj_t *p_args)
 		return p_val;
 	}
 
-	/* Look up target type struct. */
-	x_firstobj((x_obj_t *)lookup_args) = p_handle;
-	p_type = x_base_type_alist_assoc(p_base,
-		(x_obj_t *)lookup_args);
-
-	if (x_obj_isnil(p_base, p_type)) {
-		return NULL;
-	}
-
-	p_convert_alist = x_type_field_convert(p_type);
-
-	if (x_obj_isnil(p_base, p_convert_alist)) {
-		return NULL;
-	}
-
 	/* Get source type handle. */
 	{
 		x_spair_t name_args[1] = {
@@ -380,25 +368,61 @@ static x_obj_t *x_prim_convert(x_obj_t *p_base, x_obj_t *p_args)
 			(x_obj_t *)name_args);
 	}
 
-	/* 2. Exact match: source type handle in convert alist. */
-	p_entry = NULL;
+	/* Look up target type struct. */
+	x_firstobj((x_obj_t *)lookup_args) = p_handle;
+	p_type = x_base_type_alist_assoc(p_base,
+		(x_obj_t *)lookup_args);
+
+	if ( ! x_obj_isnil(p_base, p_type)) {
+		p_from_alist = x_type_field_from(p_type);
+
+		if ( ! x_obj_isnil(p_base, p_from_alist)) {
+			/* 2. Exact match: source handle in target's from alist. */
+			p_entry = NULL;
+			if ( ! x_obj_isnil(p_base, p_source_handle)) {
+				p_entry = x_convert_alist_find(p_base,
+					p_from_alist, p_source_handle);
+			}
+
+			/* 3. Wildcard: 't' symbol key. */
+			if (x_obj_isnil(p_base, p_entry)) {
+				x_obj_t *p_t = x_mksymbol(p_base,
+					(x_char_t *)X_BASE_TRUE_STR);
+				p_entry = x_convert_alist_find(p_base,
+					p_from_alist, p_t);
+			}
+
+			if ( ! x_obj_isnil(p_base, p_entry)) {
+				goto call_converter;
+			}
+		}
+	}
+
+	/* 4. Outbound: target handle in source's 'to' alist. */
 	if ( ! x_obj_isnil(p_base, p_source_handle)) {
-		p_entry = x_convert_alist_find(p_base,
-			p_convert_alist, p_source_handle);
+		x_obj_t *p_source_type, *p_to_alist;
+
+		x_firstobj((x_obj_t *)lookup_args) = p_source_handle;
+		p_source_type = x_base_type_alist_assoc(p_base,
+			(x_obj_t *)lookup_args);
+
+		if ( ! x_obj_isnil(p_base, p_source_type)) {
+			p_to_alist = x_type_field_to(p_source_type);
+
+			if ( ! x_obj_isnil(p_base, p_to_alist)) {
+				p_entry = x_convert_alist_find(p_base,
+					p_to_alist, p_handle);
+
+				if ( ! x_obj_isnil(p_base, p_entry)) {
+					goto call_converter;
+				}
+			}
+		}
 	}
 
-	/* 3. Wildcard: 't' symbol key. */
-	if (x_obj_isnil(p_base, p_entry)) {
-		x_obj_t *p_t = x_mksymbol(p_base,
-			(x_char_t *)X_BASE_TRUE_STR);
-		p_entry = x_convert_alist_find(p_base,
-			p_convert_alist, p_t);
-	}
+	return NULL;
 
-	if (x_obj_isnil(p_base, p_entry)) {
-		return NULL;
-	}
-
+call_converter:
 	/* Call: (converter-fn value) */
 	p_converter = x_restobj(p_entry);
 	x_firstobj((x_obj_t *)call_args) = p_converter;
