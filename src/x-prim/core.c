@@ -192,11 +192,52 @@ static x_obj_t *x_prim_let(x_obj_t *p_base, x_obj_t *p_args)
 	return p_result;
 }
 
-/* apply: (apply f args) -> call callable with pre-evaluated arg list */
+/* apply: (apply f arg1 ... args) -> call callable with prefix + tail arg list */
 static x_obj_t *x_prim_apply(x_obj_t *p_base, x_obj_t *p_args)
 {
 	x_obj_t *p_fn = x_prim_eval_arg(p_base, x_firstobj(p_args)),
-		*p_vals = x_prim_eval_arg(p_base, x_firstobj(x_restobj(p_args)));
+		*p_evaled = x_prim_evlis(p_base, x_restobj(p_args)),
+		*p_vals, *p_walk, *p_tail;
+
+	/* Build combined arg list: prefix args prepended to tail list.
+	 * (apply f a b '(c d)) -> p_evaled = (a b (c d))
+	 * Single arg (backward compat): p_evaled = ((c d)) -> p_vals = (c d) */
+	if (x_obj_isnil(p_base, x_restobj(p_evaled))) {
+		p_vals = x_firstobj(p_evaled);
+	} else {
+		/* Walk to the last element (tail list), then prepend prefix
+		 * args in reverse. Find the second-to-last and last. */
+		p_walk = p_evaled;
+		while ( ! x_obj_isnil(p_base,
+			x_restobj(x_restobj(p_walk)))) {
+			p_walk = x_restobj(p_walk);
+		}
+		/* p_walk->first is second-to-last, p_walk->rest->first is
+		 * last (the tail list). */
+		p_tail = x_firstobj(x_restobj(p_walk));
+		/* Prepend prefix args from back to front. */
+		p_tail = x_mklist(p_base, x_firstobj(p_walk), p_tail);
+		p_walk = p_evaled;
+		/* Collect prefix args before the second-to-last. */
+		{
+			x_obj_t *p_prefix = NULL, *p_cur;
+
+			while ( ! x_obj_isnil(p_base,
+				x_restobj(x_restobj(p_walk)))) {
+				p_prefix = x_mklist(p_base,
+					x_firstobj(p_walk), p_prefix);
+				p_walk = x_restobj(p_walk);
+			}
+			/* Prepend collected prefix (reversed) to tail. */
+			p_cur = p_prefix;
+			while ( ! x_obj_isnil(p_base, p_cur)) {
+				p_tail = x_mklist(p_base,
+					x_firstobj(p_cur), p_tail);
+				p_cur = x_restobj(p_cur);
+			}
+		}
+		p_vals = p_tail;
+	}
 
 	/* C primitive: call directly with evaluated args. */
 	if (x_obj_type_isprim(p_base, p_fn)) {
