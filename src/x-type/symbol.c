@@ -132,7 +132,7 @@ x_obj_t *x_type_symbol_eval(x_obj_t *p_base, x_obj_t *p_args)
 
 	if (x_obj_isnil(p_base, p_sym)) {
 		/* TODO: Implement type name. */
-		x_obj_error(p_base, "Unbound "X_TYPE_SYMBOL_NAME, x_symbolval(x_firstobj(x_eval_arg_exp(p_args))));
+		x_obj_error(p_base, "Unbound "X_TYPE_SYMBOL_NAME, x_firstobj(x_eval_arg_exp(p_args)));
 
 		return NULL;
 	}

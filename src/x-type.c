@@ -49,11 +49,12 @@ x_obj_t *x_type_struct_make(x_obj_t *p_base, struct x_type_t type)
 		pair(pair(type.p_from,
 			pair(type.p_to,
 			nil)),
-		/* IO: '(analyse delimit write) */
+		/* IO: '(analyse delimit write error) */
 		pair(pair(type.p_analyse,
 			pair(type.p_delimit,
 			pair(type.p_write,
-			nil))),
+			pair(type.p_error,
+			nil)))),
 		nil))))));
 
 	return p_type;
@@ -102,7 +103,23 @@ x_obj_t *x_type_write(x_obj_t *p_base, x_obj_t *p_args)
 	return NULL;
 }
 
-x_obj_t *x_obj_prim_type_name(x_obj_t *p_base, x_obj_t *p_args)
+x_obj_t *x_type_error(x_obj_t *p_base, x_obj_t *p_args)
+{
+	x_obj_t *p_obj = x_firstobj(p_args),
+		*p_fn = x_type_field_error(x_obj_type(p_obj));
+	x_spair_t args[2] = {
+		x_obj_set(NULL, X_OBJ_FLAG_NONE, { p_fn }, { (x_obj_t *)(args + 1) }),
+		x_obj_set(NULL, X_OBJ_FLAG_NONE, { p_obj }, { NULL })
+	};
+
+	if ( ! x_obj_isnil(p_base, p_fn)) {
+		return x_type_prim_apply(p_base, (x_obj_t *)args);
+	}
+
+	return NULL;
+}
+
+x_obj_t *x_type_prim_type_name(x_obj_t *p_base, x_obj_t *p_args)
 {
 	x_obj_t *p_name, *p_obj;
 
@@ -125,7 +142,7 @@ x_obj_t *x_obj_prim_type_name(x_obj_t *p_base, x_obj_t *p_args)
 	return p_name;
 }
 
-x_obj_t *x_obj_prim_units(x_obj_t *p_base, x_obj_t *p_args)
+x_obj_t *x_type_prim_units(x_obj_t *p_base, x_obj_t *p_args)
 {
 	x_obj_t *p_units, *p_obj;
 
@@ -150,7 +167,7 @@ x_obj_t *x_obj_prim_units(x_obj_t *p_base, x_obj_t *p_args)
 	return (*x_atomfn(p_units))(p_base, p_args);
 }
 
-x_obj_t *x_obj_prim_length(x_obj_t *p_base, x_obj_t *p_args)
+x_obj_t *x_type_prim_length(x_obj_t *p_base, x_obj_t *p_args)
 {
 	x_obj_t *p_length, *p_obj;
 

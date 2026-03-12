@@ -20,6 +20,7 @@
 #include "x-alist.h"
 #include "x-base.h"
 #include "x-eval.h"
+#include <setjmp.h>
 #include "x-type/int.h"
 #include "x-type/list.h"
 #include "x-type/operative.h"
@@ -89,7 +90,7 @@ x_obj_t *x_prim_set(x_obj_t *p_base, x_obj_t *p_args)
 	p_pair = x_alist_assoc(p_base, (x_obj_t *)assoc_args);
 
 	if (x_obj_isnil(p_base, p_pair)) {
-		x_obj_error(p_base, "Unbound "X_TYPE_SYMBOL_NAME, x_symbolval(p_name));
+		x_obj_error(p_base, "Unbound "X_TYPE_SYMBOL_NAME, p_name);
 
 		return NULL;
 	}
@@ -254,24 +255,23 @@ x_obj_t *x_prim_unwrap(x_obj_t *p_base, x_obj_t *p_args)
 /* guard: (guard (var handler-body...) body...) -> error recovery */
 x_obj_t *x_prim_guard(x_obj_t *p_base, x_obj_t *p_args)
 {
-	x_error_handler_t handler;
+	jmp_buf jmp;
 	x_obj_t *p_clause = x_firstobj(p_args),
 		*p_var = x_firstobj(p_clause),
 		*p_handler_body = x_restobj(p_clause),
 		*p_body = x_restobj(p_args),
 		*p_prev_handler = x_base_field_error_handler(p_base),
-		*p_result = NULL;
+		*p_handler, *p_result = NULL;
 
-	/* Save env and push handler. */
-	handler.p_error = NULL;
-	handler.error_msg = NULL;
-	handler.error_msg_owned = 0;
-	handler.p_saved_env = x_base_field_env_alist(p_base);
-	handler.prev = x_obj_isnil(p_base, p_prev_handler)
-		? NULL : (x_error_handler_t *)x_ptrval(p_prev_handler);
-	x_base_field_error_handler(p_base) = x_mkptr(p_base, &handler);
+	/* Build handler pair tree: (jmp-ptr saved-env error-value) */
+	p_handler = x_mkspair(p_base,
+		x_mkptr(p_base, &jmp),
+		x_mkspair(p_base,
+			x_base_field_env_alist(p_base),
+			x_mkspair(p_base, NULL, NULL)));
+	x_base_field_error_handler(p_base) = p_handler;
 
-	if (setjmp(handler.jmp) == 0) {
+	if (setjmp(jmp) == 0) {
 		/* Normal execution: evaluate body. */
 		while ( ! x_obj_isnil(p_base, p_body)) {
 			p_result = x_prim_eval_arg(p_base, x_firstobj(p_body));
@@ -279,14 +279,8 @@ x_obj_t *x_prim_guard(x_obj_t *p_base, x_obj_t *p_args)
 		}
 	} else {
 		/* Error caught: bind error to var, run handler body. */
-		x_obj_t *p_err = x_obj_isnil(p_base, handler.p_error)
-			? x_mkstr(p_base, handler.error_msg) : handler.p_error;
+		x_obj_t *p_err = x_error_handler_error(p_handler);
 		x_obj_t *p_pair = x_mkspair(p_base, p_var, p_err);
-
-		if (handler.error_msg_owned && handler.error_msg) {
-			x_sys_free(handler.error_msg);
-			handler.error_msg_owned = 0;
-		}
 
 		x_base_env_alist_extend(p_base, p_pair);
 
@@ -296,12 +290,12 @@ x_obj_t *x_prim_guard(x_obj_t *p_base, x_obj_t *p_args)
 			p_handler_body = x_restobj(p_handler_body);
 		}
 
-		x_base_field_env_alist(p_base) = handler.p_saved_env;
+		x_base_field_env_alist(p_base)
+			= x_error_handler_saved_env(p_handler);
 	}
 
 	/* Pop handler. */
-	x_base_field_error_handler(p_base) = handler.prev
-		? x_mkptr(p_base, handler.prev) : NULL;
+	x_base_field_error_handler(p_base) = p_prev_handler;
 
 	return p_result;
 }
@@ -309,23 +303,22 @@ x_obj_t *x_prim_guard(x_obj_t *p_base, x_obj_t *p_args)
 /* error: (error message) -> signal an error */
 x_obj_t *x_prim_error(x_obj_t *p_base, x_obj_t *p_args)
 {
-	x_obj_t *p_msg = x_prim_eval_arg(p_base, x_firstobj(p_args));
+	x_obj_t *p_msg = x_prim_eval_arg(p_base, x_firstobj(p_args)),
+		*p_handler = x_base_field_error_handler(p_base);
 
 	/* If handler installed, use it. */
-	if ( ! x_obj_isnil(p_base, x_base_field_error_handler(p_base))) {
-		x_error_handler_t *handler =
-			(x_error_handler_t *)x_ptrval(x_base_field_error_handler(p_base));
-
-		handler->p_error = p_msg;
-		x_base_field_env_alist(p_base) = handler->p_saved_env;
-		longjmp(handler->jmp, 1);
+	if ( ! x_obj_isnil(p_base, p_handler)) {
+		x_error_handler_error(p_handler) = p_msg;
+		x_base_field_env_alist(p_base)
+			= x_error_handler_saved_env(p_handler);
+		longjmp(*(jmp_buf *)x_error_handler_jmp(p_handler), 1);
 	}
 
 	/* No handler: fall through to fatal error. */
 	if (x_obj_type_isstr(p_base, p_msg)) {
 		x_obj_error(p_base, x_strval(p_msg), NULL);
 	} else {
-		x_obj_error(p_base, "error", NULL);
+		x_obj_error(p_base, "error", p_msg);
 	}
 
 	return NULL;

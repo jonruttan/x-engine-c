@@ -19,6 +19,7 @@
 #include "x-prim.h"
 #include "x-alist.h"
 #include "x-base.h"
+#include <setjmp.h>
 #include "x-token.h"
 #include "x-type/char.h"
 #include "x-type/comment.h"
@@ -89,6 +90,13 @@ static x_obj_t *x_prim_type_build_struct(x_obj_t *p_base,
 	p_entry = x_alist_assoc(p_base, (x_obj_t *)assoc_args);
 	if ( ! x_obj_isnil(p_base, p_entry)) {
 		type.p_delimit = x_restobj(p_entry);
+	}
+
+	p_sym = x_mksymbol(p_base, (x_char_t *)"error");
+	x_firstobj((x_obj_t *)assoc_args) = p_sym;
+	p_entry = x_alist_assoc(p_base, (x_obj_t *)assoc_args);
+	if ( ! x_obj_isnil(p_base, p_entry)) {
+		type.p_error = x_restobj(p_entry);
 	}
 
 	p_sym = x_mksymbol(p_base, (x_char_t *)"from");
@@ -187,7 +195,7 @@ static x_obj_t *x_prim_type_of(x_obj_t *p_base, x_obj_t *p_args)
 		x_obj_set(NULL, X_OBJ_FLAG_NONE, { p_obj }, { p_base })
 	};
 
-	return x_obj_prim_type_name(p_base, (x_obj_t *)name_args);
+	return x_type_prim_type_name(p_base, (x_obj_t *)name_args);
 }
 
 /* type-name: (type-name obj) -> name string of obj's type */
@@ -248,47 +256,46 @@ static x_obj_t *x_prim_make_base(x_obj_t *p_base, x_obj_t *p_args)
 /* base-eval: (base-eval base expr) -> eval expr in target base */
 static x_obj_t *x_prim_base_eval(x_obj_t *p_base, x_obj_t *p_args)
 {
-	x_error_handler_t handler;
+	jmp_buf jmp;
 	x_obj_t *p_target = x_prim_eval_arg(p_base, x_firstobj(p_args)),
 		*p_expr = x_prim_eval_arg(p_base, x_firstobj(x_restobj(p_args))),
 		*p_prev_handler = x_base_field_error_handler(p_target),
-		*p_result;
+		*p_handler, *p_result;
 
-	/* Install bridge handler in target to propagate errors to parent. */
-	handler.p_error = NULL;
-	handler.error_msg = NULL;
-	handler.p_saved_env = x_base_field_env_alist(p_target);
-	handler.prev = x_obj_isnil(p_target, p_prev_handler)
-		? NULL : (x_error_handler_t *)x_ptrval(p_prev_handler);
-	x_base_field_error_handler(p_target) = x_mkptr(p_target, &handler);
+	/* Build handler pair tree: (jmp-ptr saved-env error-value) */
+	p_handler = x_mkspair(p_target,
+		x_mkptr(p_target, &jmp),
+		x_mkspair(p_target,
+			x_base_field_env_alist(p_target),
+			x_mkspair(p_target, NULL, NULL)));
+	x_base_field_error_handler(p_target) = p_handler;
 
-	if (setjmp(handler.jmp) == 0) {
+	if (setjmp(jmp) == 0) {
 		p_result = x_prim_eval_arg(p_target, p_expr);
 	} else {
+		x_obj_t *p_err = x_error_handler_error(p_handler);
+
 		/* Error caught from target: restore and re-signal in parent. */
-		x_base_field_error_handler(p_target) = handler.prev
-			? x_mkptr(p_target, handler.prev) : NULL;
-		x_base_field_env_alist(p_target) = handler.p_saved_env;
+		x_base_field_error_handler(p_target) = p_prev_handler;
+		x_base_field_env_alist(p_target)
+			= x_error_handler_saved_env(p_handler);
 
 		if ( ! x_obj_isnil(p_base, x_base_field_error_handler(p_base))) {
-			x_error_handler_t *p_parent =
-				(x_error_handler_t *)x_ptrval(
-					x_base_field_error_handler(p_base));
+			x_obj_t *p_parent = x_base_field_error_handler(p_base);
 
-			p_parent->p_error = handler.p_error;
-			p_parent->error_msg = handler.error_msg;
-			x_base_field_env_alist(p_base) = p_parent->p_saved_env;
-			longjmp(p_parent->jmp, 1);
+			x_error_handler_error(p_parent) = p_err;
+			x_base_field_env_alist(p_base)
+				= x_error_handler_saved_env(p_parent);
+			longjmp(*(jmp_buf *)x_error_handler_jmp(p_parent), 1);
 		}
 
-		x_obj_error(p_base, "error", NULL);
+		x_obj_error(p_base, "error", p_err);
 
 		return NULL;
 	}
 
 	/* Pop handler. */
-	x_base_field_error_handler(p_target) = handler.prev
-		? x_mkptr(p_target, handler.prev) : NULL;
+	x_base_field_error_handler(p_target) = p_prev_handler;
 
 	return p_result;
 }
@@ -365,7 +372,7 @@ static x_obj_t *x_prim_convert(x_obj_t *p_base, x_obj_t *p_args)
 			x_obj_set(NULL, X_OBJ_FLAG_NONE,
 				{ p_val }, { p_base })
 		};
-		p_source_handle = x_obj_prim_type_name(p_base,
+		p_source_handle = x_type_prim_type_name(p_base,
 			(x_obj_t *)name_args);
 	}
 

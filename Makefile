@@ -26,7 +26,7 @@ PREFIX?=/usr/local
 # Override default compiler and flags
 CC?=gcc
 CFLAGS+=-O2 -Wall -Wextra -Wno-unused-parameter
-CFLAGS+=-DX_HEAP -DX_TYPE -DX_CLOCK -DX_OBJ_OVERRIDE
+CFLAGS+=-DX_HEAP -DX_TYPE -DX_CLOCK
 
 # Smaller, faster, flakier?
 # CFLAGS+=-Wl,--gc-sections -fdata-sections -fno-stack-protector -Wa,--noexecstack -fno-builtin -fno-unwind-tables -fno-asynchronous-unwind-tables -Os

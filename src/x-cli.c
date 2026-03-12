@@ -90,7 +90,7 @@ static x_obj_t *x_prim_include(x_obj_t *p_base, x_obj_t *p_args)
 	x_int_t saved_line;
 
 	if (fd < 0) {
-		x_obj_error(p_base, "include: cannot open", x_strval(p_path));
+		x_obj_error(p_base, "include: cannot open", p_path);
 		return NULL;
 	}
 

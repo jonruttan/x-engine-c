@@ -17,9 +17,12 @@
  * # Includes
  */
 #include "x-base.h"
+#include "x-type.h"
 #include "x-alist.h"
 #include "x-eval.h"
 #include "x-type/ptr.h"
+#include "x-type/str.h"
+#include <setjmp.h>
 
 #include "x-token.h"
 
@@ -61,7 +64,14 @@ x_obj_t *x_base_make(x_obj_t *p_base, x_obj_t *p_args)
 		pair(
 			/* profile: '(allocs evals tco) */
 			pair(atom(0), pair(atom(0), pair(atom(0), nil))),
-		nil))))));
+		pair(
+			/* hooks: '(type-name units length error) */
+			pair(atom(x_type_prim_type_name),
+			pair(atom(x_type_prim_units),
+			pair(atom(x_type_prim_length),
+			pair(atom(x_base_error),
+			nil)))),
+		nil)))))));
 
 	return p_base;
 }
@@ -70,64 +80,34 @@ x_obj_t *x_base_make(x_obj_t *p_base, x_obj_t *p_args)
 #undef pair
 #undef atom
 
-/*
- * Output an error message to *stderr*, then **exit**.
- */
-void x_obj_error(x_obj_t *p_base, x_char_t *message, x_char_t *symbol)
+void x_base_error(x_obj_t *p_base, x_char_t *message, x_obj_t *p_obj)
 {
 	int fd;
+	x_char_t *symbol = NULL;
 
-	/* If an error handler is installed, longjmp to it. */
+	/* Extract symbol string from object if possible. */
+	if (p_obj != NULL && x_obj_type_issatom(p_obj)) {
+		symbol = x_atomstr(p_obj);
+	}
+
+	/* If an error handler is installed, build error string and longjmp. */
 	if (x_base_isset(p_base)
 		&& ! x_obj_isnil(p_base, x_base_field_error_handler(p_base))) {
-		x_error_handler_t *handler =
-			(x_error_handler_t *)x_ptrval(x_base_field_error_handler(p_base));
+		x_obj_t *p_handler = x_base_field_error_handler(p_base);
 		x_int_t line = x_atomint(x_base_field_line(p_base));
-		size_t msg_len = x_lib_strlen(message);
-		/* Build combined message: "message ['symbol] (line N)" */
-		/* Max line number digits: 20. Format: " (line " + digits + ")" = 28 */
-		size_t sym_len = symbol ? x_lib_strlen(symbol) : 0;
-		size_t total = msg_len + (symbol ? 2 + sym_len : 0) + 28;
-		x_char_t *combined = (x_char_t *)x_sys_malloc(total);
-		size_t pos = 0;
+		x_char_t buf[256];
 
-		x_lib_memcpy(combined, message, msg_len);
-		pos = msg_len;
 		if (symbol) {
-			combined[pos++] = ' ';
-			combined[pos++] = '\'';
-			x_lib_memcpy(combined + pos, symbol, sym_len);
-			pos += sym_len;
+			sprintf(buf, "%s '%s (line %ld)", message, symbol, (long)line);
+		} else {
+			sprintf(buf, "%s (line %ld)", message, (long)line);
 		}
-		/* Append line number. */
-		{
-			x_char_t line_buf[24];
-			x_int_t n = line, len = 0, i;
-			if (n == 0) {
-				line_buf[len++] = '0';
-			} else {
-				while (n > 0) {
-					line_buf[len++] = '0' + (n % 10);
-					n /= 10;
-				}
-			}
-			combined[pos++] = ' ';
-			combined[pos++] = '(';
-			combined[pos++] = 'l';
-			combined[pos++] = 'i';
-			combined[pos++] = 'n';
-			combined[pos++] = 'e';
-			combined[pos++] = ' ';
-			for (i = len - 1; i >= 0; i--)
-				combined[pos++] = line_buf[i];
-			combined[pos++] = ')';
-		}
-		combined[pos] = '\0';
-		handler->error_msg = combined;
-		handler->error_msg_owned = 1;
 
-		x_base_field_env_alist(p_base) = handler->p_saved_env;
-		longjmp(handler->jmp, 1);
+		x_error_handler_error(p_handler) = x_mkstrown(p_base,
+			x_lib_strndup(buf, x_lib_strlen(buf)));
+		x_base_field_env_alist(p_base)
+			= x_error_handler_saved_env(p_handler);
+		longjmp(*(jmp_buf *)x_error_handler_jmp(p_handler), 1);
 	}
 
 	fd = x_base_isset(p_base) ? x_atomint(x_base_field_fileerr(p_base)) : STDERR_FILENO;

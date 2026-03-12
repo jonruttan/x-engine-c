@@ -27,29 +27,25 @@
  *   p-true
  *   line-number
  *   (alloc-count eval-count tco-count)
+ *   (hook:type-name hook:units hook:length hook:error)
  * )
  * ```
+ *
+ * Error handler is a pair tree: `(jmp-ptr saved-env error-value)`
  */
 /*
  * # Includes
  */
 #include "x-obj.h"
-#include <setjmp.h>
 
 #define X_BASE_TRUE_STR		"t"
 
-
 /*
- * # Error Handler
+ * # Error Handler (pair tree macros)
  */
-typedef struct x_error_handler {
-	jmp_buf jmp;
-	x_obj_t *p_error;
-	x_char_t *error_msg;
-	int error_msg_owned;
-	x_obj_t *p_saved_env;
-	struct x_error_handler *prev;
-} x_error_handler_t;
+#define x_error_handler_jmp(H)			x_ptrval(x_firstobj(H))
+#define x_error_handler_saved_env(H)	x_firstobj(x_restobj(H))
+#define x_error_handler_error(H)		x_firstobj(x_restobj(x_restobj(H)))
 
 /* TODO: Add name and version fields. */
 #define x_base(X)						x_firstobj(X)
@@ -77,6 +73,12 @@ typedef struct x_error_handler {
 #define x_base_field_profile_evals(X)	x_firstobj(x_restobj(x_base_field_profile(X)))
 #define x_base_field_profile_tco(X)		x_firstobj(x_restobj(x_restobj(x_base_field_profile(X))))
 
+#define x_base_field_hooks(X)			x_firstobj(x_restobj(x_restobj(x_restobj(x_restobj(x_restobj(x_restobj(x_firstobj(X))))))))
+#define x_base_field_hook_type_name(X)	x_firstobj(x_base_field_hooks(X))
+#define x_base_field_hook_units(X)		x_firstobj(x_restobj(x_base_field_hooks(X)))
+#define x_base_field_hook_length(X)		x_firstobj(x_restobj(x_restobj(x_base_field_hooks(X))))
+#define x_base_field_hook_error(X)		x_firstobj(x_restobj(x_restobj(x_restobj(x_base_field_hooks(X)))))
+
 #define x_base_isset(B)					((B) != NULL && x_base((B)) != NULL)
 
 x_obj_t *x_base_make(x_obj_t *p_base, x_obj_t *p_args);
@@ -86,5 +88,6 @@ x_obj_t *x_base_env_alist_extend(x_obj_t *p_base, x_obj_t *p_args);
 x_obj_t *x_base_load(x_obj_t *p_base, x_obj_t *p_args);
 x_obj_t *x_base_read(x_obj_t *p_base, x_obj_t *p_args);
 x_obj_t *x_base_write(x_obj_t *p_base, x_obj_t *p_args);
+void x_base_error(x_obj_t *p_base, x_char_t *message, x_obj_t *p_obj);
 
 #endif /* X_BASE_H */
