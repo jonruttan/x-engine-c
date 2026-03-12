@@ -32,15 +32,18 @@ x_obj_t *x_base_make(x_obj_t *p_base, x_obj_t *p_args)
 	x_obj_t *p_parent = p_base;
 
 	p_base = x_obj_make(p_base, x_type_base_obj, X_OBJ_FLAG_NONE,
-		X_OBJ_LENGTH_ATOM, p_base);
+		X_OBJ_LENGTH_ATOM, NULL);
 	x_atomobj(p_base) = pair(
+		/* type-alist */
 		nil,
 		pair(
+			/* files: '(filein-stack fileout fileerr) */
 			pair(pair(atom(STDIN_FILENO), nil),
 			pair(atom(STDOUT_FILENO),
 			pair(atom(STDERR_FILENO),
 			nil))),
 		pair(
+			/* env-state: '(alist eval-list (buffer-stack) cache error tco-expr tco-env) */
 			pair(nil,
 			pair(nil,
 			pair(pair(nil, nil),
@@ -49,15 +52,16 @@ x_obj_t *x_base_make(x_obj_t *p_base, x_obj_t *p_args)
 			pair(nil,
 			pair(nil,
 			nil))))))),
-		nil)));
-
-	/* Append p_true and line counter slots after base is rooted (GC-safe).
-	 * Inherit parent's cached t symbol for child bases. */
-	x_restobj(x_restobj(x_restobj(x_firstobj(p_base)))) =
-		pair(p_parent ? x_base_field_true(p_parent) : nil,
-		pair(atom(1),
-		pair(pair(atom(0), pair(atom(0), pair(atom(0), nil))),
-		nil)));
+		pair(
+			/* true symbol (inherit from parent) */
+			p_parent ? x_base_field_true(p_parent) : nil,
+		pair(
+			/* line counter */
+			atom(1),
+		pair(
+			/* profile: '(allocs evals tco) */
+			pair(atom(0), pair(atom(0), pair(atom(0), nil))),
+		nil))))));
 
 	return p_base;
 }
