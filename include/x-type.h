@@ -23,7 +23,7 @@
  * '(
  #   name
  #   data
- #   (make free clone units length)
+ #   (mark make free clone units length)
  #   (call eval)
  #   (from to)
  #   (analyse delimit write)
@@ -48,11 +48,12 @@
 #define x_type_field_data(X)          x_firstobj(x_restobj(X))
 
 #define x_type_field_heap(X)          x_firstobj(x_restobj(x_restobj(X)))
-#define x_type_field_make(X)          x_firstobj(x_type_field_heap((X)))
-#define x_type_field_free(X)          x_firstobj(x_restobj(x_type_field_heap((X))))
-#define x_type_field_clone(X)         x_firstobj(x_restobj(x_restobj(x_type_field_heap((X)))))
-#define x_type_field_units(X)         x_firstobj(x_restobj(x_restobj(x_restobj(x_type_field_heap((X))))))
-#define x_type_field_length(X)        x_firstobj(x_restobj(x_restobj(x_restobj(x_restobj(x_type_field_heap((X)))))))
+#define x_type_field_mark(X)          x_firstobj(x_type_field_heap((X)))
+#define x_type_field_make(X)          x_firstobj(x_restobj(x_type_field_heap((X))))
+#define x_type_field_free(X)          x_firstobj(x_restobj(x_restobj(x_type_field_heap((X)))))
+#define x_type_field_clone(X)         x_firstobj(x_restobj(x_restobj(x_restobj(x_type_field_heap((X))))))
+#define x_type_field_units(X)         x_firstobj(x_restobj(x_restobj(x_restobj(x_restobj(x_type_field_heap((X)))))))
+#define x_type_field_length(X)        x_firstobj(x_restobj(x_restobj(x_restobj(x_restobj(x_restobj(x_type_field_heap((X))))))))
 
 #define x_type_field_proc(X)          x_firstobj(x_restobj(x_restobj(x_restobj(X))))
 #define x_type_field_call(X)          x_firstobj(x_type_field_proc((X)))
@@ -76,6 +77,7 @@ struct x_type_t
 {
 	x_obj_t *p_name;
 	x_obj_t *p_data;
+	x_obj_t *p_mark;
 	x_obj_t *p_make;
 	x_obj_t *p_free;
 	x_obj_t *p_clone;
@@ -94,5 +96,8 @@ struct x_type_t
 x_obj_t *x_type_struct_make(x_obj_t *p_base, struct x_type_t type);
 x_obj_t *x_type_struct_get(x_obj_t *p_base, x_obj_t *p_args);
 x_obj_t *x_type_write(x_obj_t *p_base, x_obj_t *p_args);
+
+x_obj_t *x_type_heap_mark(x_obj_t *p_base, x_obj_t *p_obj, x_obj_flag_t flags);
+void x_type_heap_free(x_obj_t *p_base, x_obj_t *p_obj);
 
 #endif /* X_TYPE_H */

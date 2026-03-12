@@ -21,6 +21,7 @@
 #include "x-eval.h"
 #include "x-heap.h"
 #include "x-token.h"
+#include "x-type.h"
 #include "x-type/buffer.h"
 #include "x-type/char.h"
 #include "x-type/int.h"
@@ -178,7 +179,8 @@ static x_obj_t *x_prim_clock(x_obj_t *p_base, x_obj_t *p_args)
 /* heap-sweep: (heap-sweep) -> sweep unmarked objects from heap */
 static x_obj_t *x_prim_heap_sweep(x_obj_t *p_base, x_obj_t *p_args)
 {
-	x_heap_sweep(p_base, x_obj_heap(p_base), X_OBJ_FLAG_HEAP);
+	x_heap_sweep(p_base, x_obj_heap(p_base), X_OBJ_FLAG_HEAP,
+		x_type_heap_free);
 
 	return NULL;
 }
@@ -200,19 +202,8 @@ static x_obj_t *x_prim_heap_count(x_obj_t *p_base, x_obj_t *p_args)
 /* heap-mark: (heap-mark) -> mark reachable objects on heap */
 static x_obj_t *x_prim_heap_mark(x_obj_t *p_base, x_obj_t *p_args)
 {
-	x_obj_t *p_stack;
-
-	x_heap_mark(p_base, x_atomobj(p_base), X_OBJ_FLAG_HEAP);
-
-	/* Buffer inner objects have raw data in their slots, so the
-	 * generic type-walk cannot traverse them. Mark each buffer's
-	 * inner bookkeeping object explicitly. */
-	p_stack = x_base_field_buffer_stack(p_base);
-	while ( ! x_obj_isnil(p_base, p_stack)) {
-		x_heap_mark(p_base, x_restobj(x_firstobj(p_stack)),
-			X_OBJ_FLAG_HEAP);
-		p_stack = x_restobj(p_stack);
-	}
+	x_heap_mark(p_base, x_atomobj(p_base), X_OBJ_FLAG_HEAP,
+		x_type_heap_mark);
 
 	return NULL;
 }
@@ -221,7 +212,8 @@ static x_obj_t *x_prim_heap_mark(x_obj_t *p_base, x_obj_t *p_args)
 static x_obj_t *x_prim_heap_collect(x_obj_t *p_base, x_obj_t *p_args)
 {
 	x_prim_heap_mark(p_base, p_args);
-	x_heap_sweep(p_base, x_obj_heap(p_base), X_OBJ_FLAG_HEAP);
+	x_heap_sweep(p_base, x_obj_heap(p_base), X_OBJ_FLAG_HEAP,
+		x_type_heap_free);
 
 	return NULL;
 }

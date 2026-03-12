@@ -18,6 +18,7 @@
  */
 #include "x-type.h"
 #include "x-base.h"
+#include "x-heap.h"
 #include "x-obj.h"
 #include "x-type/prim.h"
 
@@ -32,13 +33,14 @@ x_obj_t *x_type_struct_make(x_obj_t *p_base, struct x_type_t type)
 		pair(type.p_name,
 		/* data */
 		pair(type.p_data,
-		/* Heap: '(make free clone units length) */
-		pair(pair(type.p_make,
+		/* Heap: '(mark make free clone units length) */
+		pair(pair(type.p_mark,
+			pair(type.p_make,
 			pair(type.p_free,
 			pair(type.p_clone,
 			pair(type.p_units,
 			pair(type.p_length,
-			nil))))),
+			nil)))))),
 		/* Proc: '(call eval) */
 		pair(pair(type.p_call,
 			pair(type.p_eval,
@@ -171,5 +173,74 @@ x_obj_t *x_obj_prim_length(x_obj_t *p_base, x_obj_t *p_args)
 	}
 
 	return (*x_atomfn(p_length))(p_base, p_args);
+}
+
+x_obj_t *x_type_heap_mark(x_obj_t *p_base, x_obj_t *p_obj, x_obj_flag_t flags)
+{
+	x_obj_t *p_type = x_obj_type(p_obj);
+
+	if (p_type != NULL && x_obj_type_isspair(p_type)) {
+		x_obj_t *p_mark = x_type_field_mark(p_type);
+
+		if (p_mark != NULL) {
+			/* Call type's custom mark callback:
+			 * (mark p_obj flags) */
+			x_spair_t mark_args[2];
+
+			mark_args[0][X_OBJ_META_TYPE].p = NULL;
+			mark_args[0][X_OBJ_META_FLAGS].i = X_OBJ_FLAG_NONE;
+			x_firstobj((x_obj_t *)mark_args) = p_obj;
+			x_restobj((x_obj_t *)mark_args)
+				= (x_obj_t *)(mark_args + 1);
+
+			mark_args[1][X_OBJ_META_TYPE].p = NULL;
+			mark_args[1][X_OBJ_META_FLAGS].i = X_OBJ_FLAG_NONE;
+			x_firstint((x_obj_t *)(mark_args + 1)) = flags;
+			x_restobj((x_obj_t *)(mark_args + 1)) = NULL;
+
+			x_atomfn(p_mark)(p_base, (x_obj_t *)mark_args);
+			return NULL;
+		}
+
+		{
+			/* Fall back to p_units generic N-slot traversal. */
+			x_obj_t *p_units = x_type_field_units(p_type);
+
+			if (p_units != NULL) {
+				x_int_t n = x_atomint(p_units);
+				x_int_t i;
+
+				for (i = 0; i < n - 1; i++) {
+					x_heap_mark(p_base,
+						x_obj(x_obj_data_i(p_obj, i)),
+						flags, x_type_heap_mark);
+				}
+				/* Return last slot for tail-iteration. */
+				return x_obj(x_obj_data_i(p_obj, n - 1));
+			}
+		}
+	}
+
+	return NULL;
+}
+
+void x_type_heap_free(x_obj_t *p_base, x_obj_t *p_obj)
+{
+	x_obj_t *p_type = x_obj_type(p_obj);
+
+	if (p_type != NULL && x_obj_type_isspair(p_type)) {
+		x_obj_t *p_free = x_type_field_free(p_type);
+
+		if (p_free != NULL) {
+			x_spair_t a[1];
+
+			a[0][X_OBJ_META_TYPE].p = NULL;
+			a[0][X_OBJ_META_FLAGS].i = X_OBJ_FLAG_NONE;
+			x_firstobj((x_obj_t *)a) = p_obj;
+			x_restobj((x_obj_t *)a) = NULL;
+
+			x_atomfn(p_free)(p_base, (x_obj_t *)a);
+		}
+	}
 }
 

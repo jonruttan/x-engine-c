@@ -19,8 +19,10 @@
 #include "x-type/buffer.h"
 #include "x-type/char.h"
 #include "x-base.h"
+#include "x-heap.h"
 
 x_satom_t x_type_buffer_name = x_obj_set(x_type_atom_obj, X_OBJ_FLAG_NONE, { .s = (x_char_t *)X_TYPE_BUFFER_NAME }),
+	x_type_buffer_mark_prim = x_obj_set(x_type_atom_obj, X_OBJ_FLAG_NONE, { (x_obj_t *)&x_type_buffer_mark }),
 	x_type_buffer_make_prim = x_obj_set(x_type_atom_obj, X_OBJ_FLAG_NONE, { (x_obj_t *)&x_type_buffer_make }),
 	x_type_buffer_write_prim = x_obj_set(x_type_atom_obj, X_OBJ_FLAG_NONE, { (x_obj_t *)&x_type_buffer_write }),
 	x_type_buffer_struct_prim = x_obj_set(x_type_atom_obj, X_OBJ_FLAG_NONE, { (x_obj_t *)&x_type_buffer_struct });
@@ -37,10 +39,23 @@ x_obj_t *x_make_buffer(x_obj_t *p_base, x_obj_flag_t flags, void *p)
 	return x_type_buffer_make(p_base, (x_obj_t *)args);
 }
 
+x_obj_t *x_type_buffer_mark(x_obj_t *p_base, x_obj_t *p_args)
+{
+	x_obj_t *p_obj = x_firstobj(p_args);
+	x_obj_flag_t flags = x_firstint(x_firstobj(x_restobj(p_args)));
+
+	/* Buffer data slots contain raw char pointers, not objects.
+	 * Mark the inner bookkeeping pair explicitly. */
+	x_heap_mark(p_base, x_restobj(p_obj), flags, NULL);
+
+	return NULL;
+}
+
 x_obj_t *x_type_buffer_struct(x_obj_t *p_base, x_obj_t *p_args)
 {
 	struct x_type_t type = {
 		.p_name = x_type_buffer_name,
+		.p_mark = x_type_buffer_mark_prim,
 		.p_make = x_type_buffer_make_prim,
 		.p_write = x_type_buffer_write_prim
 	};
