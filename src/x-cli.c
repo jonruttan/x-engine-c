@@ -37,6 +37,22 @@
 
 #ifndef TESTS
 
+static int s_argc;
+static char **s_argv;
+
+/* Build argv list as x-lang list of strings. */
+static x_obj_t *x_cli_make_args(x_obj_t *p_base)
+{
+	x_obj_t *p_list = NULL;
+	int i;
+
+	for (i = s_argc - 1; i >= 0; i--)
+		p_list = x_mklist(p_base,
+			x_mkstr(p_base, (x_char_t *)s_argv[i]), p_list);
+
+	return p_list;
+}
+
 #ifdef X_SYSCALL
 static x_obj_t *x_prim_syscall(x_obj_t *p_base, x_obj_t *p_args)
 {
@@ -71,11 +87,16 @@ static x_obj_t *x_prim_include(x_obj_t *p_base, x_obj_t *p_args)
 	int fd = x_sys_open(x_strval(p_path), 0 /* O_RDONLY */);
 	x_obj_t *p_buffer, *p_result;
 	x_char_t *buf;
+	x_int_t saved_line;
 
 	if (fd < 0) {
 		x_obj_error(p_base, "include: cannot open", x_strval(p_path));
 		return NULL;
 	}
+
+	/* Save and reset line counter for included file. */
+	saved_line = x_atomint(x_base_field_line(p_base));
+	x_atomint(x_base_field_line(p_base)) = 1;
 
 	/* Push new input state. */
 	x_base_field_filein_stack(p_base) = x_mkspair(p_base,
@@ -89,12 +110,13 @@ static x_obj_t *x_prim_include(x_obj_t *p_base, x_obj_t *p_args)
 	/* Load all expressions. */
 	p_result = x_base_load(p_base, p_base);
 
-	/* Pop and close. */
+	/* Pop and close, restore line counter. */
 	x_base_field_filein_stack(p_base) =
 		x_restobj(x_base_field_filein_stack(p_base));
 	x_base_field_buffer_stack(p_base) =
 		x_restobj(x_base_field_buffer_stack(p_base));
 	x_sys_close(fd);
+	x_atomint(x_base_field_line(p_base)) = saved_line;
 
 	return p_result;
 }
@@ -104,8 +126,8 @@ int main(int argc, char *argv[])
 {
 	x_obj_t *p_base, *p_buffer;
 	x_char_t buffer[X_CLI_BUFFER_SIZE];
-	(void)argc;
-	(void)argv;
+	s_argc = argc;
+	s_argv = argv;
 
 	/* Create base object. */
 	p_base = x_base_make(NULL, NULL);
@@ -144,6 +166,15 @@ int main(int argc, char *argv[])
 	/* Register include primitive. */
 	x_prim_bind(p_base, "include", x_prim_include);
 #endif
+
+	/* Bind args as a list of command-line argument strings. */
+	{
+		x_obj_t *p_sym = x_make_symbol(p_base, X_OBJ_FLAG_NONE,
+			(x_char_t *)"args");
+		x_obj_t *p_args_list = x_cli_make_args(p_base);
+		x_obj_t *p_pair = x_mkspair(p_base, p_sym, p_args_list);
+		x_base_env_alist_extend(p_base, p_pair);
+	}
 
 	/* REPL. */
 	x_prim_repl(p_base, NULL);

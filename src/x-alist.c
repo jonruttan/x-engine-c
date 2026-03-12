@@ -18,8 +18,6 @@
  */
 #include "x-alist.h"
 
-
-
 x_obj_t *x_alist_extend(x_obj_t *p_base, x_obj_t *p_args)
 {
 	x_obj_t *p_assoc = x_firstobj(p_args), *p_alist = x_restobj(p_args);

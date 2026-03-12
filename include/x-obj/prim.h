@@ -23,8 +23,8 @@
 
 x_char_t *x_obj_prim_name(x_obj_t *p_base, x_obj_t *p_args);
 
-x_int_t x_obj_prim_units(x_obj_t *p_base, x_obj_t *p_args);
-x_int_t x_obj_prim_length(x_obj_t *p_base, x_obj_t *p_args);
+x_obj_t *x_obj_prim_units(x_obj_t *p_base, x_obj_t *p_args);
+x_obj_t *x_obj_prim_length(x_obj_t *p_base, x_obj_t *p_args);
 
 x_obj_t *x_obj_prim_make(x_obj_t *p_base, x_obj_t *p_args);
 x_obj_t *x_obj_prim_free(x_obj_t *p_base, x_obj_t *p_args);

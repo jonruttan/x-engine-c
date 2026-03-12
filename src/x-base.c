@@ -19,6 +19,7 @@
 #include "x-base.h"
 #include "x-alist.h"
 #include "x-eval.h"
+#include "x-type/ptr.h"
 
 #include "x-token.h"
 
@@ -50,10 +51,19 @@ x_obj_t *x_base_make(x_obj_t *p_base, x_obj_t *p_args)
 			nil))))))),
 		nil)));
 
-	/* Append p_true slot after base is rooted (GC-safe).
+	/* Append p_true and line counter slots after base is rooted (GC-safe).
 	 * Inherit parent's cached t symbol for child bases. */
 	x_restobj(x_restobj(x_restobj(x_firstobj(p_base)))) =
-		pair(p_parent ? x_base_field_true(p_parent) : nil, nil);
+		pair(p_parent ? x_base_field_true(p_parent) : nil,
+		pair(atom(1),
+#ifdef X_PROFILE
+		pair(pair(atom(0), pair(atom(0), pair(atom(0), nil))),
+#endif
+		nil
+#ifdef X_PROFILE
+		)
+#endif
+		));
 
 	return p_base;
 }
@@ -61,6 +71,71 @@ x_obj_t *x_base_make(x_obj_t *p_base, x_obj_t *p_args)
 #undef nil
 #undef pair
 #undef atom
+
+/*
+ * Output an error message to *stderr*, then **exit**.
+ */
+void x_obj_error(x_obj_t *p_base, x_char_t *message, x_char_t *symbol)
+{
+	int fd;
+
+	/* If an error handler is installed, longjmp to it. */
+	if (x_base_isset(p_base)
+		&& ! x_obj_isnil(p_base, x_base_field_error_handler(p_base))) {
+		x_error_handler_t *handler =
+			(x_error_handler_t *)x_ptrval(x_base_field_error_handler(p_base));
+		x_int_t line = x_atomint(x_base_field_line(p_base));
+		size_t msg_len = x_lib_strlen(message);
+		/* Build combined message: "message ['symbol] (line N)" */
+		/* Max line number digits: 20. Format: " (line " + digits + ")" = 28 */
+		size_t sym_len = symbol ? x_lib_strlen(symbol) : 0;
+		size_t total = msg_len + (symbol ? 2 + sym_len : 0) + 28;
+		x_char_t *combined = (x_char_t *)x_sys_malloc(total);
+		size_t pos = 0;
+
+		x_lib_memcpy(combined, message, msg_len);
+		pos = msg_len;
+		if (symbol) {
+			combined[pos++] = ' ';
+			combined[pos++] = '\'';
+			x_lib_memcpy(combined + pos, symbol, sym_len);
+			pos += sym_len;
+		}
+		/* Append line number. */
+		{
+			x_char_t line_buf[24];
+			x_int_t n = line, len = 0, i;
+			if (n == 0) {
+				line_buf[len++] = '0';
+			} else {
+				while (n > 0) {
+					line_buf[len++] = '0' + (n % 10);
+					n /= 10;
+				}
+			}
+			combined[pos++] = ' ';
+			combined[pos++] = '(';
+			combined[pos++] = 'l';
+			combined[pos++] = 'i';
+			combined[pos++] = 'n';
+			combined[pos++] = 'e';
+			combined[pos++] = ' ';
+			for (i = len - 1; i >= 0; i--)
+				combined[pos++] = line_buf[i];
+			combined[pos++] = ')';
+		}
+		combined[pos] = '\0';
+		handler->error_msg = combined;
+		handler->error_msg_owned = 1;
+
+		x_base_field_env_alist(p_base) = handler->p_saved_env;
+		longjmp(handler->jmp, 1);
+	}
+
+	fd = x_base_isset(p_base) ? x_atomint(x_base_field_fileerr(p_base)) : STDERR_FILENO;
+
+	x_error(fd, message, symbol);
+}
 
 x_obj_t *x_base_type_alist_extend(x_obj_t *p_base, x_obj_t *p_args)
 {

@@ -147,6 +147,11 @@ x_obj_t *x_type_buffer_read(x_obj_t *p_base, x_obj_t *p_args)
 
 	x_bufferread(p_buffer) += 1;
 
+	/* Track line numbers for error reporting. */
+	if (x_bufferlastchar(p_buffer) == '\n' && x_base_isset(p_base)) {
+		x_atomint(x_base_field_line(p_base)) += 1;
+	}
+
 	return p_buffer;
 }
 

@@ -25,6 +25,8 @@
  *   (file:in file:out file:err)
  *   (env-alist symbol-list expr-list buffer token-cache error-handler tco-expr tco-env)
  *   p-true
+ *   line-number
+ *   (alloc-count eval-count tco-count)  ; X_PROFILE only
  * )
  * ```
  */
@@ -44,6 +46,7 @@ typedef struct x_error_handler {
 	jmp_buf jmp;
 	x_obj_t *p_error;
 	x_char_t *error_msg;
+	int error_msg_owned;
 	x_obj_t *p_saved_env;
 	struct x_error_handler *prev;
 } x_error_handler_t;
@@ -67,6 +70,14 @@ typedef struct x_error_handler {
 #define x_base_field_tco_env(X)			x_firstobj(x_restobj(x_restobj(x_restobj(x_restobj(x_restobj(x_restobj(x_base_field_env((X)))))))))
 
 #define x_base_field_true(X)			x_firstobj(x_restobj(x_restobj(x_restobj(x_firstobj(X)))))
+#define x_base_field_line(X)			x_firstobj(x_restobj(x_restobj(x_restobj(x_restobj(x_firstobj(X))))))
+
+#ifdef X_PROFILE
+#define x_base_field_profile(X)			x_firstobj(x_restobj(x_restobj(x_restobj(x_restobj(x_restobj(x_firstobj(X)))))))
+#define x_base_field_profile_allocs(X)	x_firstobj(x_base_field_profile(X))
+#define x_base_field_profile_evals(X)	x_firstobj(x_restobj(x_base_field_profile(X)))
+#define x_base_field_profile_tco(X)		x_firstobj(x_restobj(x_restobj(x_base_field_profile(X))))
+#endif /* X_PROFILE */
 
 #define x_base_isset(B)					((B) != NULL && x_base((B)) != NULL)
 

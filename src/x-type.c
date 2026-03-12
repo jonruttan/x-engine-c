@@ -100,3 +100,76 @@ x_obj_t *x_type_write(x_obj_t *p_base, x_obj_t *p_args)
 	return NULL;
 }
 
+x_obj_t *x_obj_prim_type_name(x_obj_t *p_base, x_obj_t *p_args)
+{
+	x_obj_t *p_name, *p_obj;
+
+	if (x_obj_isnil(p_base, p_args) || x_obj_isnil(p_base, (p_obj = x_firstobj(p_args)))) {
+		return NULL;
+	}
+
+	if (x_obj_type_issatom(p_obj)
+			|| x_obj_type_isspair(p_obj)
+			|| x_obj_isnil(p_base, x_obj_type(p_obj))) {
+		return x_obj_type(p_obj);
+	}
+
+	p_name = x_type_field_name(x_obj_type(p_obj));
+
+	if (x_obj_isnil(p_base, p_name)) {
+		return NULL;
+	}
+
+	return p_name;
+}
+
+x_obj_t *x_obj_prim_units(x_obj_t *p_base, x_obj_t *p_args)
+{
+	x_obj_t *p_units, *p_obj;
+
+	if (x_obj_isnil(p_base, p_args) || x_obj_isnil(p_base, (p_obj = x_firstobj(p_args)))) {
+		return NULL;
+	}
+
+	if (x_obj_type_isspair(p_obj)) {
+		return x_pair_prim_units(p_base, p_args);
+	}
+
+	if (x_obj_type_issatom(p_obj) || x_obj_isnil(p_base, x_obj_type(p_obj))) {
+		return x_atom_prim_units(p_base, p_args);
+	}
+
+	p_units = x_type_field_units(x_obj_type(p_obj));
+
+	if (x_obj_isnil(p_base, p_units) || x_obj_isnil(p_base, x_atomobj(p_units))) {
+		return NULL;
+	}
+
+	return (*x_atomfn(p_units))(p_base, p_args);
+}
+
+x_obj_t *x_obj_prim_length(x_obj_t *p_base, x_obj_t *p_args)
+{
+	x_obj_t *p_length, *p_obj;
+
+	if (x_obj_isnil(p_base, p_args) || x_obj_isnil(p_base, (p_obj = x_firstobj(p_args)))) {
+		return NULL;
+	}
+
+	if (x_obj_type_isspair(p_obj)) {
+		return x_pair_prim_length(p_base, p_args);
+	}
+
+	if (x_obj_type_issatom(p_obj) || x_obj_isnil(p_base, x_obj_type(p_obj))) {
+		return x_atom_prim_length(p_base, p_args);
+	}
+
+	p_length = x_type_field_length(x_obj_type(p_obj));
+
+	if (x_obj_isnil(p_base, p_length) || x_obj_isnil(p_base, x_atomobj(p_length))) {
+		return NULL;
+	}
+
+	return (*x_atomfn(p_length))(p_base, p_args);
+}
+

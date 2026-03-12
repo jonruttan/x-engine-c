@@ -25,8 +25,8 @@ PREFIX?=/usr/local
 
 # Override default compiler and flags
 CC?=gcc
-CFLAGS+=-Wall -Wextra -Wno-unused-parameter
-CFLAGS+=-DX_GC -DX_TYPE -DX_CLOCK
+CFLAGS+=-O2 -Wall -Wextra -Wno-unused-parameter
+CFLAGS+=-DX_HEAP -DX_TYPE -DX_CLOCK -DX_OBJ_OVERRIDE
 
 # Smaller, faster, flakier?
 # CFLAGS+=-Wl,--gc-sections -fdata-sections -fno-stack-protector -Wa,--noexecstack -fno-builtin -fno-unwind-tables -fno-asynchronous-unwind-tables -Os
@@ -82,7 +82,7 @@ SRCDIR=$(BASEDIR)/src
 
 # x-expr foundation library
 X_EXPR_DIR=ext/x-expr
-X_EXPR_SOURCES=$(filter-out $(X_EXPR_DIR)/src/x-obj.c, $(wildcard $(X_EXPR_DIR)/src/*.c))
+X_EXPR_SOURCES=$(wildcard $(X_EXPR_DIR)/src/*.c)
 X_EXPR_OBJECTS=$(X_EXPR_SOURCES:.c=.o)
 
 CFLAGS+=-I$(X_EXPR_DIR)/include -I$(INCDIR)
@@ -119,6 +119,12 @@ $(EXECUTABLE): $(OBJECTS) $(X_EXPR_OBJECTS) $(EXTRA_OBJS)
 $(EXECUTABLE)-debug: CFLAGS += -g -Og -DDEBUG
 $(EXECUTABLE)-debug: LDFLAGS += -g
 $(EXECUTABLE)-debug: $(EXECUTABLE)
+
+profile: $(EXECUTABLE)-profile
+
+$(EXECUTABLE)-profile: CFLAGS += -g -Og -DX_PROFILE
+$(EXECUTABLE)-profile: LDFLAGS += -g
+$(EXECUTABLE)-profile: $(EXECUTABLE)
 
 .c.o:
 	$(CC) -c $(CFLAGS) $(DEFS) -o $@ $<
@@ -208,6 +214,6 @@ uninstall:
 .PHONY: uninstall
 
 clean:
-	rm -f $(EXECUTABLE) $(EXECUTABLE)-debug *.out $(SRCDIR)/*.o $(SRCDIR)/**/*.o $(SRCDIR)/**/**/*.o $(X_EXPR_DIR)/src/*.o *.core core
+	rm -f $(EXECUTABLE) $(EXECUTABLE)-debug $(EXECUTABLE)-profile *.out $(SRCDIR)/*.o $(SRCDIR)/**/*.o $(SRCDIR)/**/**/*.o $(X_EXPR_DIR)/src/*.o *.core core
 	rm -Rf apidocs/
 .PHONY: clean

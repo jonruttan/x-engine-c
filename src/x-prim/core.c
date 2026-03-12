@@ -30,13 +30,13 @@
 #include "x-type/symbol.h"
 
 /* quote: (quote x) -> x, unevaluated */
-static x_obj_t *x_prim_quote(x_obj_t *p_base, x_obj_t *p_args)
+x_obj_t *x_prim_quote(x_obj_t *p_base, x_obj_t *p_args)
 {
 	return x_firstobj(p_args);
 }
 
 /* pair: (pair a b) -> (a . b) */
-static x_obj_t *x_prim_pair(x_obj_t *p_base, x_obj_t *p_args)
+x_obj_t *x_prim_pair(x_obj_t *p_base, x_obj_t *p_args)
 {
 	x_obj_t *a = x_prim_eval_arg(p_base, x_firstobj(p_args)),
 		*b = x_prim_eval_arg(p_base, x_firstobj(x_restobj(p_args)));
@@ -45,7 +45,7 @@ static x_obj_t *x_prim_pair(x_obj_t *p_base, x_obj_t *p_args)
 }
 
 /* first: (first x) -> first element */
-static x_obj_t *x_prim_first(x_obj_t *p_base, x_obj_t *p_args)
+x_obj_t *x_prim_first(x_obj_t *p_base, x_obj_t *p_args)
 {
 	x_obj_t *x = x_prim_eval_arg(p_base, x_firstobj(p_args));
 
@@ -53,7 +53,7 @@ static x_obj_t *x_prim_first(x_obj_t *p_base, x_obj_t *p_args)
 }
 
 /* rest: (rest x) -> rest */
-static x_obj_t *x_prim_rest(x_obj_t *p_base, x_obj_t *p_args)
+x_obj_t *x_prim_rest(x_obj_t *p_base, x_obj_t *p_args)
 {
 	x_obj_t *x = x_prim_eval_arg(p_base, x_firstobj(p_args));
 
@@ -61,7 +61,7 @@ static x_obj_t *x_prim_rest(x_obj_t *p_base, x_obj_t *p_args)
 }
 
 /* def: (def name value) -> bind name to eval'd value (supports recursion) */
-static x_obj_t *x_prim_define(x_obj_t *p_base, x_obj_t *p_args)
+x_obj_t *x_prim_define(x_obj_t *p_base, x_obj_t *p_args)
 {
 	x_obj_t *p_name = x_firstobj(p_args),
 		*p_pair = x_mkspair(p_base, p_name, NULL),
@@ -75,7 +75,7 @@ static x_obj_t *x_prim_define(x_obj_t *p_base, x_obj_t *p_args)
 }
 
 /* set: (set name value) -> mutate existing binding */
-static x_obj_t *x_prim_set(x_obj_t *p_base, x_obj_t *p_args)
+x_obj_t *x_prim_set(x_obj_t *p_base, x_obj_t *p_args)
 {
 	x_obj_t *p_name = x_firstobj(p_args),
 		*p_val = x_prim_eval_arg(p_base, x_firstobj(x_restobj(p_args)));
@@ -100,7 +100,7 @@ static x_obj_t *x_prim_set(x_obj_t *p_base, x_obj_t *p_args)
 }
 
 /* apply: (apply f arg1 ... args) -> call callable with prefix + tail arg list */
-static x_obj_t *x_prim_apply(x_obj_t *p_base, x_obj_t *p_args)
+x_obj_t *x_prim_apply(x_obj_t *p_base, x_obj_t *p_args)
 {
 	x_obj_t *p_fn = x_prim_eval_arg(p_base, x_firstobj(p_args)),
 		*p_evaled = x_prim_evlis(p_base, x_restobj(p_args)),
@@ -191,7 +191,7 @@ static x_obj_t *x_prim_apply(x_obj_t *p_base, x_obj_t *p_args)
 }
 
 /* eval: (eval expr [env]) -> evaluate expression, optionally in given env */
-static x_obj_t *x_prim_eval(x_obj_t *p_base, x_obj_t *p_args)
+x_obj_t *x_prim_eval(x_obj_t *p_base, x_obj_t *p_args)
 {
 	x_obj_t *p_expr = x_prim_eval_arg(p_base, x_firstobj(p_args)),
 		*p_env_arg = x_restobj(p_args);
@@ -215,7 +215,7 @@ static x_obj_t *x_prim_eval(x_obj_t *p_base, x_obj_t *p_args)
 }
 
 /* fn: (fn (params) body...) -> create closure */
-static x_obj_t *x_prim_closure(x_obj_t *p_base, x_obj_t *p_args)
+x_obj_t *x_prim_closure(x_obj_t *p_base, x_obj_t *p_args)
 {
 	x_obj_t *p_params = x_firstobj(p_args),
 		*p_body = x_restobj(p_args),
@@ -225,7 +225,7 @@ static x_obj_t *x_prim_closure(x_obj_t *p_base, x_obj_t *p_args)
 }
 
 /* op: (op formals env-param body...) -> create operative (user-level fexpr) */
-static x_obj_t *x_prim_operative(x_obj_t *p_base, x_obj_t *p_args)
+x_obj_t *x_prim_operative(x_obj_t *p_base, x_obj_t *p_args)
 {
 	x_obj_t *p_params = x_firstobj(p_args),
 		*p_envparam = x_firstobj(x_restobj(p_args)),
@@ -236,7 +236,7 @@ static x_obj_t *x_prim_operative(x_obj_t *p_base, x_obj_t *p_args)
 }
 
 /* wrap: (wrap combiner) -> create applicative from combiner */
-static x_obj_t *x_prim_wrap(x_obj_t *p_base, x_obj_t *p_args)
+x_obj_t *x_prim_wrap(x_obj_t *p_base, x_obj_t *p_args)
 {
 	x_obj_t *p_combiner = x_prim_eval_arg(p_base, x_firstobj(p_args));
 
@@ -244,7 +244,7 @@ static x_obj_t *x_prim_wrap(x_obj_t *p_base, x_obj_t *p_args)
 }
 
 /* unwrap: (unwrap applicative) -> extract underlying combiner */
-static x_obj_t *x_prim_unwrap(x_obj_t *p_base, x_obj_t *p_args)
+x_obj_t *x_prim_unwrap(x_obj_t *p_base, x_obj_t *p_args)
 {
 	x_obj_t *p_applicative = x_prim_eval_arg(p_base, x_firstobj(p_args));
 
@@ -252,7 +252,7 @@ static x_obj_t *x_prim_unwrap(x_obj_t *p_base, x_obj_t *p_args)
 }
 
 /* guard: (guard (var handler-body...) body...) -> error recovery */
-static x_obj_t *x_prim_guard(x_obj_t *p_base, x_obj_t *p_args)
+x_obj_t *x_prim_guard(x_obj_t *p_base, x_obj_t *p_args)
 {
 	x_error_handler_t handler;
 	x_obj_t *p_clause = x_firstobj(p_args),
@@ -265,6 +265,7 @@ static x_obj_t *x_prim_guard(x_obj_t *p_base, x_obj_t *p_args)
 	/* Save env and push handler. */
 	handler.p_error = NULL;
 	handler.error_msg = NULL;
+	handler.error_msg_owned = 0;
 	handler.p_saved_env = x_base_field_env_alist(p_base);
 	handler.prev = x_obj_isnil(p_base, p_prev_handler)
 		? NULL : (x_error_handler_t *)x_ptrval(p_prev_handler);
@@ -281,6 +282,11 @@ static x_obj_t *x_prim_guard(x_obj_t *p_base, x_obj_t *p_args)
 		x_obj_t *p_err = x_obj_isnil(p_base, handler.p_error)
 			? x_mkstr(p_base, handler.error_msg) : handler.p_error;
 		x_obj_t *p_pair = x_mkspair(p_base, p_var, p_err);
+
+		if (handler.error_msg_owned && handler.error_msg) {
+			x_sys_free(handler.error_msg);
+			handler.error_msg_owned = 0;
+		}
 
 		x_base_env_alist_extend(p_base, p_pair);
 
@@ -301,7 +307,7 @@ static x_obj_t *x_prim_guard(x_obj_t *p_base, x_obj_t *p_args)
 }
 
 /* error: (error message) -> signal an error */
-static x_obj_t *x_prim_error(x_obj_t *p_base, x_obj_t *p_args)
+x_obj_t *x_prim_error(x_obj_t *p_base, x_obj_t *p_args)
 {
 	x_obj_t *p_msg = x_prim_eval_arg(p_base, x_firstobj(p_args));
 
@@ -326,7 +332,7 @@ static x_obj_t *x_prim_error(x_obj_t *p_base, x_obj_t *p_args)
 }
 
 /* match: (match (test body)...) -> first truthy test's body (tail-eval) */
-static x_obj_t *x_prim_match(x_obj_t *p_base, x_obj_t *p_args)
+x_obj_t *x_prim_match(x_obj_t *p_base, x_obj_t *p_args)
 {
 	x_obj_t *p_clause, *p_test;
 
@@ -348,7 +354,7 @@ static x_obj_t *x_prim_match(x_obj_t *p_base, x_obj_t *p_args)
 }
 
 /* %rewrite: (%rewrite pair new-first new-rest) -> mutate pair in-place */
-static x_obj_t *x_prim_rewrite(x_obj_t *p_base, x_obj_t *p_args)
+x_obj_t *x_prim_rewrite(x_obj_t *p_base, x_obj_t *p_args)
 {
 	x_obj_t *p_pair = x_prim_eval_arg(p_base, x_firstobj(p_args)),
 		*p_first = x_prim_eval_arg(p_base,
@@ -363,7 +369,7 @@ static x_obj_t *x_prim_rewrite(x_obj_t *p_base, x_obj_t *p_args)
 }
 
 /* first-int: (first-int x) -> car slot as integer atom */
-static x_obj_t *x_prim_first_int(x_obj_t *p_base, x_obj_t *p_args)
+x_obj_t *x_prim_first_int(x_obj_t *p_base, x_obj_t *p_args)
 {
 	x_obj_t *x = x_prim_eval_arg(p_base, x_firstobj(p_args));
 
@@ -371,7 +377,7 @@ static x_obj_t *x_prim_first_int(x_obj_t *p_base, x_obj_t *p_args)
 }
 
 /* rest-int: (rest-int x) -> cdr slot as integer atom */
-static x_obj_t *x_prim_rest_int(x_obj_t *p_base, x_obj_t *p_args)
+x_obj_t *x_prim_rest_int(x_obj_t *p_base, x_obj_t *p_args)
 {
 	x_obj_t *x = x_prim_eval_arg(p_base, x_firstobj(p_args));
 
@@ -379,7 +385,7 @@ static x_obj_t *x_prim_rest_int(x_obj_t *p_base, x_obj_t *p_args)
 }
 
 /* set-first: (set-first pair val) -> write object pointer to car */
-static x_obj_t *x_prim_set_first(x_obj_t *p_base, x_obj_t *p_args)
+x_obj_t *x_prim_set_first(x_obj_t *p_base, x_obj_t *p_args)
 {
 	x_obj_t *p_pair = x_prim_eval_arg(p_base, x_firstobj(p_args)),
 		*p_val = x_prim_eval_arg(p_base,
@@ -391,7 +397,7 @@ static x_obj_t *x_prim_set_first(x_obj_t *p_base, x_obj_t *p_args)
 }
 
 /* set-rest: (set-rest pair val) -> write object pointer to cdr */
-static x_obj_t *x_prim_set_rest(x_obj_t *p_base, x_obj_t *p_args)
+x_obj_t *x_prim_set_rest(x_obj_t *p_base, x_obj_t *p_args)
 {
 	x_obj_t *p_pair = x_prim_eval_arg(p_base, x_firstobj(p_args)),
 		*p_val = x_prim_eval_arg(p_base,
@@ -403,7 +409,7 @@ static x_obj_t *x_prim_set_rest(x_obj_t *p_base, x_obj_t *p_args)
 }
 
 /* set-first-int: (set-first-int pair val) -> write raw integer to car */
-static x_obj_t *x_prim_set_first_int(x_obj_t *p_base, x_obj_t *p_args)
+x_obj_t *x_prim_set_first_int(x_obj_t *p_base, x_obj_t *p_args)
 {
 	x_obj_t *p_pair = x_prim_eval_arg(p_base, x_firstobj(p_args)),
 		*p_val = x_prim_eval_arg(p_base,
@@ -415,7 +421,7 @@ static x_obj_t *x_prim_set_first_int(x_obj_t *p_base, x_obj_t *p_args)
 }
 
 /* set-rest-int: (set-rest-int pair val) -> write raw integer to cdr */
-static x_obj_t *x_prim_set_rest_int(x_obj_t *p_base, x_obj_t *p_args)
+x_obj_t *x_prim_set_rest_int(x_obj_t *p_base, x_obj_t *p_args)
 {
 	x_obj_t *p_pair = x_prim_eval_arg(p_base, x_firstobj(p_args)),
 		*p_val = x_prim_eval_arg(p_base,
@@ -428,7 +434,7 @@ static x_obj_t *x_prim_set_rest_int(x_obj_t *p_base, x_obj_t *p_args)
 
 /* %base: (%base) -> return current base object */
 /* eval!: evaluate in current env, return result (no TCO, no env save/restore) */
-static x_obj_t *x_prim_eval_immediate(x_obj_t *p_base, x_obj_t *p_args)
+x_obj_t *x_prim_eval_immediate(x_obj_t *p_base, x_obj_t *p_args)
 {
 	x_obj_t *p_expr = x_prim_eval_arg(p_base, x_firstobj(p_args));
 
@@ -436,7 +442,7 @@ static x_obj_t *x_prim_eval_immediate(x_obj_t *p_base, x_obj_t *p_args)
 }
 
 /* tail-eval: (tail-eval expr env) -> TCO-compatible eval in given env */
-static x_obj_t *x_prim_tail_eval(x_obj_t *p_base, x_obj_t *p_args)
+x_obj_t *x_prim_tail_eval(x_obj_t *p_base, x_obj_t *p_args)
 {
 	x_obj_t *p_expr = x_prim_eval_arg(p_base, x_firstobj(p_args)),
 		*p_env = x_prim_eval_arg(p_base, x_firstobj(x_restobj(p_args)));
@@ -448,7 +454,7 @@ static x_obj_t *x_prim_tail_eval(x_obj_t *p_base, x_obj_t *p_args)
 }
 
 /* %seq: (%seq a b) -> eval a (blocking), tco-eval b */
-static x_obj_t *x_prim_seq(x_obj_t *p_base, x_obj_t *p_args)
+x_obj_t *x_prim_seq(x_obj_t *p_base, x_obj_t *p_args)
 {
 	x_prim_eval_arg(p_base, x_firstobj(p_args));
 	x_base_field_tco_expr(p_base) = x_firstobj(x_restobj(p_args));
@@ -456,7 +462,7 @@ static x_obj_t *x_prim_seq(x_obj_t *p_base, x_obj_t *p_args)
 	return NULL;
 }
 
-static x_obj_t *x_prim_base(x_obj_t *p_base, x_obj_t *p_args)
+x_obj_t *x_prim_base(x_obj_t *p_base, x_obj_t *p_args)
 {
 	return p_base;
 }

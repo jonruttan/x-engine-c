@@ -6,9 +6,9 @@
 #include "test-runner.h"
 
 /* No Garbage Collection structures. */
-#ifdef X_GC
-#undef X_GC
-#endif /* X_GC */
+#ifdef X_HEAP
+#undef X_HEAP
+#endif /* X_HEAP */
 
 #include "ext/x-expr/src/x-sys.c"
 #include "ext/x-expr/src/x-lib.c"
