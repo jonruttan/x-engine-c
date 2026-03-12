@@ -31,7 +31,7 @@ x_obj_t *x_base_make(x_obj_t *p_base, x_obj_t *p_args)
 {
 	x_obj_t *p_parent = p_base;
 
-	p_base = x_obj_make(p_base, x_type_base_obj, X_OBJ_FLAG_BASE,
+	p_base = x_obj_make(p_base, x_type_base_obj, X_OBJ_FLAG_NONE,
 		X_OBJ_LENGTH_ATOM, p_base);
 	x_atomobj(p_base) = pair(
 		nil,
@@ -56,14 +56,8 @@ x_obj_t *x_base_make(x_obj_t *p_base, x_obj_t *p_args)
 	x_restobj(x_restobj(x_restobj(x_firstobj(p_base)))) =
 		pair(p_parent ? x_base_field_true(p_parent) : nil,
 		pair(atom(1),
-#ifdef X_PROFILE
 		pair(pair(atom(0), pair(atom(0), pair(atom(0), nil))),
-#endif
-		nil
-#ifdef X_PROFILE
-		)
-#endif
-		));
+		nil)));
 
 	return p_base;
 }

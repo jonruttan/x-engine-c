@@ -79,6 +79,12 @@ x_obj_t *x_type_symbol_make(x_obj_t *p_base, x_obj_t *p_args)
 		return x_firstobj(p_obj);
 	}
 
+	/* Transfer string ownership from source to new symbol. */
+	if (x_obj_flags(p_symbol) & X_OBJ_FLAG_OWN) {
+		flags |= X_OBJ_FLAG_OWN;
+		x_obj_flags(p_symbol) &= ~X_OBJ_FLAG_OWN;
+	}
+
 	p_obj = x_obj_make(p_base, p_type, flags, X_OBJ_LENGTH_ATOM, x_symbolval(p_symbol));
 	x_symbol_data_list(p_type) = x_mkspair(p_base, p_obj, x_symbol_data_list(p_type));
 

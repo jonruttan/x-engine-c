@@ -30,10 +30,8 @@ x_obj_t *x_eval(x_obj_t *p_base, x_obj_t *p_args)
 	int trampolining = 0;
 
 eval_start:
-#ifdef X_PROFILE
 	if (x_base_isset(p_base))
 		x_atomint(x_base_field_profile_evals(p_base))++;
-#endif /* X_PROFILE */
 	p_exp = x_firstobj(x_eval_arg_exp(p_args));
 
 	if (x_obj_isnil(p_base, p_exp)) {
@@ -78,9 +76,7 @@ eval_start:
 		x_base_field_tco_env(p_base) = NULL;
 		x_firstobj(x_eval_arg_exp(p_args)) = x_base_field_tco_expr(p_base);
 		x_base_field_tco_expr(p_base) = NULL;
-#ifdef X_PROFILE
 		x_atomint(x_base_field_profile_tco(p_base))++;
-#endif /* X_PROFILE */
 		goto eval_start;
 	}
 

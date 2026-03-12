@@ -120,12 +120,6 @@ $(EXECUTABLE)-debug: CFLAGS += -g -Og -DDEBUG
 $(EXECUTABLE)-debug: LDFLAGS += -g
 $(EXECUTABLE)-debug: $(EXECUTABLE)
 
-profile: $(EXECUTABLE)-profile
-
-$(EXECUTABLE)-profile: CFLAGS += -g -Og -DX_PROFILE
-$(EXECUTABLE)-profile: LDFLAGS += -g
-$(EXECUTABLE)-profile: $(EXECUTABLE)
-
 .c.o:
 	$(CC) -c $(CFLAGS) $(DEFS) -o $@ $<
 
@@ -214,6 +208,6 @@ uninstall:
 .PHONY: uninstall
 
 clean:
-	rm -f $(EXECUTABLE) $(EXECUTABLE)-debug $(EXECUTABLE)-profile *.out $(SRCDIR)/*.o $(SRCDIR)/**/*.o $(SRCDIR)/**/**/*.o $(X_EXPR_DIR)/src/*.o *.core core
+	rm -f $(EXECUTABLE) $(EXECUTABLE)-debug *.out $(SRCDIR)/*.o $(SRCDIR)/**/*.o $(SRCDIR)/**/**/*.o $(X_EXPR_DIR)/src/*.o *.core core
 	rm -Rf apidocs/
 .PHONY: clean

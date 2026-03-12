@@ -44,13 +44,13 @@ x_obj_t *x_obj_alloc(x_obj_t *p_base, x_obj_t *p_type, x_obj_flag_t flags, size_
 	x_obj_flags(p_obj) = flags;
 
 #ifdef X_HEAP
-	if (p_base && (flags & 0x1F) != X_OBJ_FLAG_BASE) {
+	if (p_base) {
 		x_obj_heap(p_obj) = x_obj_heap(p_base);
 		x_obj_heap(p_base) = p_obj;
-#ifdef X_PROFILE
-		if (x_base_isset(p_base))
+		if (x_base_isset(p_base)
+			&& x_restobj(x_restobj(x_restobj(x_firstobj(p_base)))) != NULL
+			&& x_base_field_profile(p_base) != NULL)
 			x_atomint(x_base_field_profile_allocs(p_base))++;
-#endif /* X_PROFILE */
 	} else {
 		x_obj_heap(p_obj) = NULL;
 	}

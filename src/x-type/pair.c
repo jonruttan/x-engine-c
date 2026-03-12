@@ -53,6 +53,7 @@ x_obj_t *x_type_pair_struct(x_obj_t *p_base, x_obj_t *p_args)
 {
 	struct x_type_t type = {
 		.p_name = x_type_pair_name,
+		.p_units = (x_obj_t *)&x_type_units_pair_obj,
 		.p_make = x_type_pair_make_prim,
 		.p_length = x_type_pair_length_prim,
 		.p_write = x_sexp_pair_write_prim

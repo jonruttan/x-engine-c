@@ -21,6 +21,8 @@
 #include "x-obj/prim.h"
 #include "x-prim.h"
 
+static x_satom_t x_type_procedure_units_obj = x_obj_set(NULL, X_OBJ_FLAG_NONE, { .i = 3 });
+
 x_satom_t x_type_procedure_name = x_obj_set(x_type_atom_obj, X_OBJ_FLAG_NONE, { .s = (x_char_t *)X_TYPE_PROCEDURE_NAME }),
 	x_type_procedure_make_prim = x_obj_set(x_type_atom_obj, X_OBJ_FLAG_NONE, { (x_obj_t *)&x_type_procedure_make }),
 	x_type_procedure_call_prim = x_obj_set(x_type_atom_obj, X_OBJ_FLAG_NONE, { (x_obj_t *)&x_type_procedure_call }),
@@ -48,6 +50,7 @@ x_obj_t *x_type_procedure_struct(x_obj_t *p_base, x_obj_t *p_args)
 {
 	struct x_type_t type = {
 		.p_name = x_type_procedure_name,
+		.p_units = (x_obj_t *)&x_type_procedure_units_obj,
 		.p_make = x_type_procedure_make_prim,
 		.p_call = x_type_procedure_call_prim,
 		.p_write = x_type_procedure_write_prim

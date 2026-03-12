@@ -46,6 +46,7 @@ static x_obj_t *x_prim_type_build_struct(x_obj_t *p_base,
 	};
 
 	type.p_name = p_name_atom;
+	type.p_units = (x_obj_t *)&x_type_units_pair_obj;
 
 	/* Look up handler closures from the alist. */
 	p_sym = x_mksymbol(p_base, (x_char_t *)"call");
@@ -449,7 +450,7 @@ static x_obj_t *x_prim_token_discard(x_obj_t *p_base, x_obj_t *p_args)
  *
  * Tokenizes a string using the given base for token dispatch.
  * The token-base has shell types registered on its type-alist.
- * Closures from the calling base work because X_OBJ_FLAG_BASE
+ * Closures from the calling base work because objects with a NULL heap
  * makes any base object recognized as nil across bases, and
  * the token-base has its own TCO state (no interference). */
 static x_obj_t *x_prim_token_read_string(x_obj_t *p_base, x_obj_t *p_args)

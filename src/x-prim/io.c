@@ -175,7 +175,6 @@ static x_obj_t *x_prim_clock(x_obj_t *p_base, x_obj_t *p_args)
 }
 #endif /* X_CLOCK */
 
-#ifdef X_PROFILE
 /* heap-sweep: (heap-sweep) -> sweep unmarked objects from heap */
 static x_obj_t *x_prim_heap_sweep(x_obj_t *p_base, x_obj_t *p_args)
 {
@@ -197,12 +196,32 @@ static x_obj_t *x_prim_heap_count(x_obj_t *p_base, x_obj_t *p_args)
 
 	return x_mkint(p_base, count);
 }
-#endif /* X_PROFILE */
 
 /* heap-mark: (heap-mark) -> mark reachable objects on heap */
 static x_obj_t *x_prim_heap_mark(x_obj_t *p_base, x_obj_t *p_args)
 {
-	x_heap_mark(p_base, p_base, X_OBJ_FLAG_HEAP);
+	x_obj_t *p_stack;
+
+	x_heap_mark(p_base, x_atomobj(p_base), X_OBJ_FLAG_HEAP);
+
+	/* Buffer inner objects have raw data in their slots, so the
+	 * generic type-walk cannot traverse them. Mark each buffer's
+	 * inner bookkeeping object explicitly. */
+	p_stack = x_base_field_buffer_stack(p_base);
+	while ( ! x_obj_isnil(p_base, p_stack)) {
+		x_heap_mark(p_base, x_restobj(x_firstobj(p_stack)),
+			X_OBJ_FLAG_HEAP);
+		p_stack = x_restobj(p_stack);
+	}
+
+	return NULL;
+}
+
+/* heap-collect: (heap-collect) -> atomic mark+sweep */
+static x_obj_t *x_prim_heap_collect(x_obj_t *p_base, x_obj_t *p_args)
+{
+	x_prim_heap_mark(p_base, p_args);
+	x_heap_sweep(p_base, x_obj_heap(p_base), X_OBJ_FLAG_HEAP);
 
 	return NULL;
 }
@@ -241,10 +260,9 @@ x_obj_t *x_prim_io_register(x_obj_t *p_base, x_obj_t *p_args)
 	x_prim_bind(p_base, "clock", x_prim_clock);
 #endif /* X_CLOCK */
 	x_prim_bind(p_base, "heap-mark", x_prim_heap_mark);
-#ifdef X_PROFILE
 	x_prim_bind(p_base, "heap-sweep", x_prim_heap_sweep);
+	x_prim_bind(p_base, "heap-collect", x_prim_heap_collect);
 	x_prim_bind(p_base, "heap-count", x_prim_heap_count);
-#endif /* X_PROFILE */
 	x_prim_bind(p_base, "current-line", x_prim_current_line);
 
 	return p_base;

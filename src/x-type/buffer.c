@@ -67,7 +67,8 @@ x_obj_t *x_type_buffer_make(x_obj_t *p_base, x_obj_t *p_args)
 
 	return x_obj_make(p_base, p_type, flags, X_OBJ_LENGTH_PAIR,
 			x_bufferval(p_buffer),
-			x_obj_make(p_base, p_type, flags, X_OBJ_LENGTH_PAIR,
+			x_obj_make(p_base, p_type,
+				flags & ~X_OBJ_FLAG_OWN, X_OBJ_LENGTH_PAIR,
 				x_bufferval(p_buffer), x_bufferval(p_buffer)));
 }
 
