@@ -74,25 +74,6 @@ static x_obj_t *x_prim_define(x_obj_t *p_base, x_obj_t *p_args)
 	return p_val;
 }
 
-/* do: (do form...) -> evaluate each form, return last */
-static x_obj_t *x_prim_do(x_obj_t *p_base, x_obj_t *p_args)
-{
-	x_obj_t *p_result = NULL;
-
-	while ( ! x_obj_isnil(p_base, p_args)) {
-		if (x_obj_isnil(p_base, x_restobj(p_args))) {
-			x_base_field_tco_expr(p_base) = x_firstobj(p_args);
-
-			return NULL;
-		}
-
-		p_result = x_prim_eval_arg(p_base, x_firstobj(p_args));
-		p_args = x_restobj(p_args);
-	}
-
-	return p_result;
-}
-
 /* set: (set name value) -> mutate existing binding */
 static x_obj_t *x_prim_set(x_obj_t *p_base, x_obj_t *p_args)
 {
@@ -466,6 +447,15 @@ static x_obj_t *x_prim_tail_eval(x_obj_t *p_base, x_obj_t *p_args)
 	return NULL;
 }
 
+/* %seq: (%seq a b) -> eval a (blocking), tco-eval b */
+static x_obj_t *x_prim_seq(x_obj_t *p_base, x_obj_t *p_args)
+{
+	x_prim_eval_arg(p_base, x_firstobj(p_args));
+	x_base_field_tco_expr(p_base) = x_firstobj(x_restobj(p_args));
+
+	return NULL;
+}
+
 static x_obj_t *x_prim_base(x_obj_t *p_base, x_obj_t *p_args)
 {
 	return p_base;
@@ -478,7 +468,6 @@ x_obj_t *x_prim_core_register(x_obj_t *p_base, x_obj_t *p_args)
 	x_prim_bind(p_base, "first", x_prim_first);
 	x_prim_bind(p_base, "rest", x_prim_rest);
 	x_prim_bind(p_base, "def", x_prim_define);
-	x_prim_bind(p_base, "do", x_prim_do);
 	x_prim_bind(p_base, "set", x_prim_set);
 	x_prim_bind(p_base, "apply", x_prim_apply);
 	x_prim_bind(p_base, "eval", x_prim_eval);
@@ -498,6 +487,7 @@ x_obj_t *x_prim_core_register(x_obj_t *p_base, x_obj_t *p_args)
 	x_prim_bind(p_base, "set-first-int", x_prim_set_first_int);
 	x_prim_bind(p_base, "set-rest-int", x_prim_set_rest_int);
 	x_prim_bind(p_base, "tail-eval", x_prim_tail_eval);
+	x_prim_bind(p_base, "%seq", x_prim_seq);
 	x_prim_bind(p_base, "%base", x_prim_base);
 
 	return p_base;
