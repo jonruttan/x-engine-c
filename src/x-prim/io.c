@@ -28,36 +28,47 @@
 #include "x-type/prim.h"
 #include "x-type/str.h"
 
-/* write: (write obj) -> output s-expression to stdout */
+/* write: (write obj ...) -> output s-expressions to stdout */
 static x_obj_t *x_prim_write(x_obj_t *p_base, x_obj_t *p_args)
 {
-	x_obj_t *p_val = x_prim_eval_arg(p_base, x_firstobj(p_args));
+	x_obj_t *p_val;
 	x_spair_t write_args[1] = {
-		x_obj_set(NULL, X_OBJ_FLAG_NONE, { p_val }, { NULL })
+		x_obj_set(NULL, X_OBJ_FLAG_NONE, { NULL }, { NULL })
 	};
 
-	x_token_write(p_base, (x_obj_t *)write_args);
+	while ( ! x_obj_isnil(p_base, p_args)) {
+		p_val = x_prim_eval_arg(p_base, x_firstobj(p_args));
+		x_firstobj((x_obj_t *)write_args) = p_val;
+		x_token_write(p_base, (x_obj_t *)write_args);
+		p_args = x_restobj(p_args);
+	}
 
 	return NULL;
 }
 
-/* display: (display obj) -> output human-readable (strings unquoted) */
+/* display: (display obj ...) -> output human-readable (strings unquoted) */
 static x_obj_t *x_prim_display(x_obj_t *p_base, x_obj_t *p_args)
 {
-	x_obj_t *p_val = x_prim_eval_arg(p_base, x_firstobj(p_args));
+	x_obj_t *p_val;
+	int fd = x_base_isset(p_base)
+		? x_atomint(x_base_field_fileout(p_base)) : STDOUT_FILENO;
+	x_spair_t write_args[1] = {
+		x_obj_set(NULL, X_OBJ_FLAG_NONE, { NULL }, { NULL })
+	};
 
-	if (x_obj_type_isstr(p_base, p_val)) {
-		int fd = x_base_isset(p_base)
-			? x_atomint(x_base_field_fileout(p_base)) : STDOUT_FILENO;
-		x_char_t *s = x_strval(p_val);
+	while ( ! x_obj_isnil(p_base, p_args)) {
+		p_val = x_prim_eval_arg(p_base, x_firstobj(p_args));
 
-		x_sys_write(fd, s, x_lib_strlen(s));
-	} else {
-		x_spair_t write_args[1] = {
-			x_obj_set(NULL, X_OBJ_FLAG_NONE, { p_val }, { NULL })
-		};
+		if (x_obj_type_isstr(p_base, p_val)) {
+			x_char_t *s = x_strval(p_val);
 
-		x_token_write(p_base, (x_obj_t *)write_args);
+			x_sys_write(fd, s, x_lib_strlen(s));
+		} else {
+			x_firstobj((x_obj_t *)write_args) = p_val;
+			x_token_write(p_base, (x_obj_t *)write_args);
+		}
+
+		p_args = x_restobj(p_args);
 	}
 
 	return NULL;
