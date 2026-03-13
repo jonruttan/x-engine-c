@@ -65,6 +65,7 @@ x_obj_t *x_prim_ffi_register(x_obj_t *p_base, x_obj_t *p_args) { return p_base; 
 
 static void _setup(void)
 {
+	_buffer_index = -1;
 	helper_set_alloc(MEM_GUARANTEED);
 }
 
@@ -269,11 +270,175 @@ static char *test_tco_trampoline(void)
 	return NULL;
 }
 
+/*
+ * ## x_prim_eval_arg
+ */
+static char *test_eval_arg(void)
+{
+	x_obj_t *p_base, *p_result;
+
+	/* self-evaluating atom passes through eval */
+	p_base = x_base_make(NULL, NULL);
+	p_result = x_prim_eval_arg(p_base, x_mksatom(p_base, 42));
+	_it_should("eval_arg returns self-evaluating atom",
+		p_result != NULL && x_atomint(p_result) == 42);
+	test_cleanup(p_base);
+
+	/* nil arg returns NULL */
+	p_base = x_base_make(NULL, NULL);
+	p_result = x_prim_eval_arg(p_base, NULL);
+	_it_should("eval_arg returns NULL for nil", p_result == NULL);
+	test_cleanup(p_base);
+
+	return NULL;
+}
+
+/*
+ * ## x_prim_evlis
+ */
+static char *test_evlis(void)
+{
+	x_obj_t *p_base, *p_args, *p_result;
+
+	/* nil list returns NULL */
+	p_base = x_base_make(NULL, NULL);
+	p_result = x_prim_evlis(p_base, NULL);
+	_it_should("evlis returns NULL for nil", p_result == NULL);
+	test_cleanup(p_base);
+
+	/* single-element list */
+	p_base = x_base_make(NULL, NULL);
+	p_args = x_mklist(p_base, x_mksatom(p_base, 7), NULL);
+	p_result = x_prim_evlis(p_base, p_args);
+	_it_should("evlis single element",
+		p_result != NULL && x_atomint(x_firstobj(p_result)) == 7);
+	_it_should("evlis single element rest is nil",
+		x_obj_isnil(p_base, x_restobj(p_result)));
+	test_cleanup(p_base);
+
+	/* multi-element list */
+	p_base = x_base_make(NULL, NULL);
+	p_args = x_mklist(p_base, x_mksatom(p_base, 1),
+		x_mklist(p_base, x_mksatom(p_base, 2),
+		x_mklist(p_base, x_mksatom(p_base, 3), NULL)));
+	p_result = x_prim_evlis(p_base, p_args);
+	_it_should("evlis multi first", x_atomint(x_firstobj(p_result)) == 1);
+	_it_should("evlis multi second",
+		x_atomint(x_firstobj(x_restobj(p_result))) == 2);
+	_it_should("evlis multi third",
+		x_atomint(x_firstobj(x_restobj(x_restobj(p_result)))) == 3);
+	test_cleanup(p_base);
+
+	return NULL;
+}
+
+/*
+ * ## x_prim_multiple_extend
+ */
+static char *test_multiple_extend(void)
+{
+	x_obj_t *p_base, *p_env, *p_params, *p_vals, *p_result;
+
+	/* nil params returns env unchanged */
+	p_base = x_base_make(NULL, NULL);
+	p_env = x_mkspair(p_base, x_mksatom(p_base, 99), NULL);
+	p_result = x_prim_multiple_extend(p_base, p_env, NULL, NULL);
+	_it_should("nil params returns env", p_result == p_env);
+	test_cleanup(p_base);
+
+	/* single param binding (using pair-type param list) */
+	p_base = x_base_make(NULL, NULL);
+	p_env = NULL;
+	p_params = x_mkspair(p_base, x_mksatom(p_base, 1), NULL);
+	p_vals = x_mkspair(p_base, x_mksatom(p_base, 10), NULL);
+	p_result = x_prim_multiple_extend(p_base, p_env, p_params, p_vals);
+	_it_should("single binding: key is 1",
+		x_atomint(x_firstobj(x_firstobj(p_result))) == 1);
+	_it_should("single binding: val is 10",
+		x_atomint(x_restobj(x_firstobj(p_result))) == 10);
+	test_cleanup(p_base);
+
+	/* multiple param bindings */
+	p_base = x_base_make(NULL, NULL);
+	p_env = NULL;
+	p_params = x_mkspair(p_base, x_mksatom(p_base, 1),
+		x_mkspair(p_base, x_mksatom(p_base, 2), NULL));
+	p_vals = x_mkspair(p_base, x_mksatom(p_base, 10),
+		x_mkspair(p_base, x_mksatom(p_base, 20), NULL));
+	p_result = x_prim_multiple_extend(p_base, p_env, p_params, p_vals);
+	_it_should("multi binding: first entry key is 2",
+		x_atomint(x_firstobj(x_firstobj(p_result))) == 2);
+	_it_should("multi binding: first entry val is 20",
+		x_atomint(x_restobj(x_firstobj(p_result))) == 20);
+	_it_should("multi binding: second entry key is 1",
+		x_atomint(x_firstobj(x_firstobj(x_restobj(p_result)))) == 1);
+	test_cleanup(p_base);
+
+	/* variadic: symbol as params binds to entire arg list */
+	p_base = x_base_make(NULL, NULL);
+	p_env = NULL;
+	p_params = x_mksymbol(p_base, (x_char_t *)"rest");
+	p_vals = x_mkspair(p_base, x_mksatom(p_base, 1),
+		x_mkspair(p_base, x_mksatom(p_base, 2), NULL));
+	p_result = x_prim_multiple_extend(p_base, p_env, p_params, p_vals);
+	_it_should("variadic: val is entire list",
+		x_restobj(x_firstobj(p_result)) == p_vals);
+	test_cleanup(p_base);
+
+	return NULL;
+}
+
+/*
+ * ## x_prim_bind
+ */
+static char *test_bind(void)
+{
+	x_obj_t *p_base, *p_env;
+
+	/* bind adds symbol-prim pair to env */
+	p_base = x_base_make(NULL, NULL);
+	x_prim_bind(p_base, (x_char_t *)"test-fn", x_prim_body_eval);
+	p_env = x_base_field_env_alist(p_base);
+	_it_should("bind extends env", ! x_obj_isnil(p_base, p_env));
+	_it_should("bind: key is symbol",
+		x_obj_type_issymbol(p_base, x_firstobj(x_firstobj(p_env))));
+	_it_should("bind: val is prim",
+		x_obj_type_isprim(p_base, x_restobj(x_firstobj(p_env))));
+	test_cleanup(p_base);
+
+	return NULL;
+}
+
+/*
+ * ## x_prim_register
+ */
+static char *test_register(void)
+{
+	x_obj_t *p_base, *p_result;
+
+	/* register returns p_base and binds t */
+	p_base = x_base_make(NULL, NULL);
+	p_result = x_prim_register(p_base, NULL);
+	_it_should("register returns p_base", p_result == p_base);
+	_it_should("register binds t",
+		! x_obj_isnil(p_base, x_base_field_true(p_base)));
+	_it_should("t is a symbol",
+		x_obj_type_issymbol(p_base, x_base_field_true(p_base)));
+	test_cleanup(p_base);
+
+	return NULL;
+}
+
 static char *run_tests() {
 	_run_test(test_body_eval);
 	_run_test(test_body_eval_tco);
 	_run_test(test_body_eval_tco_simple);
 	_run_test(test_tco_trampoline);
+	_run_test(test_eval_arg);
+	_run_test(test_evlis);
+	_run_test(test_multiple_extend);
+	_run_test(test_bind);
+	_run_test(test_register);
 
 	return NULL;
 }

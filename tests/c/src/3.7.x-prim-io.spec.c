@@ -1,0 +1,312 @@
+/*
+ * # Unit Tests: *x-prim/io*
+ */
+
+#define TEST_RUNNER_OVERHEAD
+#include "test-runner.h"
+#include "x-type/buffer.h"
+
+#ifndef X_GC
+#define X_GC
+#endif /* X_GC */
+
+#include "ext/x-expr/src/x-sys.c"
+#include "ext/x-expr/src/x-lib.c"
+#include "ext/x-expr/src/x-obj.c"
+#include "src/x-obj/obj.c"
+#include "src/x-obj/prim.c"
+#include "ext/x-expr/src/x.c"
+#include "src/x-alist.c"
+#include "src/x-base.c"
+#include "src/x-eval.c"
+#include "src/x-type.c"
+#include "src/x-type/atom.c"
+#include "src/x-token/sexp/atom.c"
+#include "src/x-type/pair.c"
+#include "src/x-token/sexp/pair.c"
+#include "src/x-type/prim.c"
+#include "src/x-type/symbol.c"
+#include "src/x-token/sexp/symbol.c"
+#include "src/x-type/procedure.c"
+#include "src/x-type/operative.c"
+#include "src/x-type/list.c"
+#include "src/x-token/sexp/list.c"
+#include "src/x-type/str.c"
+#include "src/x-token/sexp/str.c"
+#include "src/x-type/int.c"
+#include "src/x-token/sexp/int.c"
+#include "src/x-type/char.c"
+#include "src/x-token/sexp/char.c"
+#include "src/x-type/ptr.c"
+#include "src/x-type/whitespace.c"
+#include "src/x-token/sexp/whitespace.c"
+#include "src/x-type/comment.c"
+#include "src/x-token/sexp/comment.c"
+#include "src/x-type/buffer.c"
+#include "src/x-type/iter.c"
+#include "ext/x-expr/src/x-heap.c"
+#include "src/x-token.c"
+#include "src/x-prim.c"
+
+#include "src/x-prim/io.c"
+
+/* Stubs for primitives not under test. */
+x_obj_t *x_prim_core_register(x_obj_t *p_base, x_obj_t *p_args) { return p_base; }
+x_obj_t *x_prim_arith_register(x_obj_t *p_base, x_obj_t *p_args) { return p_base; }
+x_obj_t *x_prim_pred_register(x_obj_t *p_base, x_obj_t *p_args) { return p_base; }
+x_obj_t *x_prim_string_register(x_obj_t *p_base, x_obj_t *p_args) { return p_base; }
+x_obj_t *x_prim_type_register(x_obj_t *p_base, x_obj_t *p_args) { return p_base; }
+x_obj_t *x_prim_ffi_register(x_obj_t *p_base, x_obj_t *p_args) { return p_base; }
+
+#include "ext/x-expr/tests/src/helper-system-functions.c"
+
+
+/*
+ * ## Test Overhead
+ */
+
+static void _setup(void)
+{
+	_buffer_index = -1;
+	helper_set_alloc(MEM_GUARANTEED);
+}
+
+static void _teardown(void)
+{
+}
+
+void test_cleanup(x_obj_t *p_base)
+{
+	x_obj_t *p_gc = p_base, *p_tmp;
+
+	while (p_gc) {
+		p_tmp = x_obj_heap(p_gc);
+		x_sys_free(p_gc);
+		p_gc = p_tmp;
+	}
+}
+
+
+/*
+ * ## Test Runners
+ */
+
+static char *test_io_newline(void)
+{
+	x_obj_t *p_base;
+	x_char_t s[8];
+
+	p_base = x_base_make(NULL, NULL);
+	x_prim_register(p_base, NULL);
+
+	helper_file_buffer_ptr[TEST_HELPER_FILE_STDOUT] = s;
+	helper_file_buffer_length[TEST_HELPER_FILE_STDOUT] = 8;
+	helper_file_reset();
+	s[0] = '\0';
+
+	x_prim_newline(p_base, NULL);
+	_it_should("newline writes a newline char",
+		s[0] == '\n');
+
+	test_cleanup(p_base);
+	return NULL;
+}
+
+static char *test_io_display(void)
+{
+	x_obj_t *p_base, *p_args;
+	x_char_t s[64];
+
+	p_base = x_base_make(NULL, NULL);
+	x_prim_register(p_base, NULL);
+
+	helper_file_buffer_ptr[TEST_HELPER_FILE_STDOUT] = s;
+	helper_file_buffer_length[TEST_HELPER_FILE_STDOUT] = 64;
+	helper_file_reset();
+	s[0] = '\0';
+
+	/* (display "hello") -> writes "hello" without quotes */
+	p_args = x_mkspair(p_base,
+		x_mkstr(p_base, "hello"), NULL);
+	x_prim_display(p_base, p_args);
+	_it_should("display writes string without quotes",
+		s[0] == 'h');
+
+	/* (display 42) -> writes "42" */
+	helper_file_buffer_ptr[TEST_HELPER_FILE_STDOUT] = s;
+	helper_file_buffer_length[TEST_HELPER_FILE_STDOUT] = 64;
+	helper_file_reset();
+	s[0] = '\0';
+
+	p_args = x_mkspair(p_base,
+		x_mkint(p_base, (x_int_t)42), NULL);
+	x_prim_display(p_base, p_args);
+	_it_should("display writes integer",
+		s[0] == '4');
+
+	test_cleanup(p_base);
+	return NULL;
+}
+
+static char *test_io_write(void)
+{
+	x_obj_t *p_base, *p_args;
+	x_char_t s[64];
+
+	p_base = x_base_make(NULL, NULL);
+	x_prim_register(p_base, NULL);
+
+	helper_file_buffer_ptr[TEST_HELPER_FILE_STDOUT] = s;
+	helper_file_buffer_length[TEST_HELPER_FILE_STDOUT] = 64;
+	helper_file_reset();
+	s[0] = '\0';
+
+	/* (write 42) */
+	p_args = x_mkspair(p_base,
+		x_mkint(p_base, (x_int_t)42), NULL);
+	x_prim_write(p_base, p_args);
+	_it_should("write outputs integer",
+		s[0] == '4');
+
+	test_cleanup(p_base);
+	return NULL;
+}
+
+static char *test_io_heap_count(void)
+{
+	x_obj_t *p_base, *p_result;
+
+	p_base = x_base_make(NULL, NULL);
+	x_prim_register(p_base, NULL);
+
+	p_result = x_prim_heap_count(p_base, NULL);
+	_it_should("heap-count returns an integer",
+		p_result != NULL);
+	_it_should("heap count is positive after setup",
+		x_intval(p_result) > 0);
+
+	test_cleanup(p_base);
+	return NULL;
+}
+
+static char *test_io_current_line(void)
+{
+	x_obj_t *p_base, *p_result;
+
+	p_base = x_base_make(NULL, NULL);
+	x_prim_register(p_base, NULL);
+
+	p_result = x_prim_current_line(p_base, NULL);
+	_it_should("current-line returns an integer",
+		p_result != NULL);
+	_it_should("initial line number is 1",
+		x_intval(p_result) == 1);
+
+	test_cleanup(p_base);
+	return NULL;
+}
+
+static char *test_io_read_char(void)
+{
+	x_obj_t *p_base, *p_result;
+	x_char_t buffer[32];
+
+	p_base = x_base_make(NULL, NULL);
+	x_prim_register(p_base, NULL);
+
+	/* Set up stdin with 'A' */
+	helper_file_buffer_ptr[TEST_HELPER_FILE_STDIN] = "A";
+	helper_file_reset();
+
+	/* Create and set buffer */
+	x_base_field_buffer(p_base) = x_mkbuffer(p_base, buffer);
+
+	p_result = x_prim_read_char(p_base, NULL);
+	_it_should("read-char returns a char",
+		p_result != NULL);
+	_it_should("read-char reads 'A'",
+		x_charval(p_result) == 'A');
+
+	test_cleanup(p_base);
+	return NULL;
+}
+
+static char *test_io_peek_char(void)
+{
+	x_obj_t *p_base, *p_result;
+	x_char_t buffer[32];
+
+	p_base = x_base_make(NULL, NULL);
+	x_prim_register(p_base, NULL);
+
+	helper_file_buffer_ptr[TEST_HELPER_FILE_STDIN] = "B";
+	helper_file_reset();
+
+	x_base_field_buffer(p_base) = x_mkbuffer(p_base, buffer);
+
+	p_result = x_prim_peek_char(p_base, NULL);
+	_it_should("peek-char returns a char",
+		p_result != NULL);
+	_it_should("peek-char reads 'B'",
+		x_charval(p_result) == 'B');
+
+	/* Peek shouldn't consume — read again should get same char */
+	helper_file_buffer_ptr[TEST_HELPER_FILE_STDIN] = "B";
+	helper_file_reset();
+	p_result = x_prim_peek_char(p_base, NULL);
+	_it_should("peek-char doesn't consume",
+		x_charval(p_result) == 'B');
+
+	test_cleanup(p_base);
+	return NULL;
+}
+
+static char *test_io_write_to_string(void)
+{
+	x_obj_t *p_base, *p_args, *p_result;
+
+	p_base = x_base_make(NULL, NULL);
+	x_prim_register(p_base, NULL);
+
+	/* (write-to-string 42) -> "42" */
+	p_args = x_mkspair(p_base,
+		x_mkint(p_base, (x_int_t)42), NULL);
+	p_result = x_prim_write_to_string(p_base, p_args);
+	_it_should("write-to-string returns a string",
+		p_result != NULL);
+	_it_should("write-to-string of 42 is \"42\"",
+		x_lib_strcmp(x_strval(p_result), "42") == 0);
+
+	/* (write-to-string "hello") -> "\"hello\"" */
+	p_args = x_mkspair(p_base,
+		x_mkstr(p_base, "hello"), NULL);
+	p_result = x_prim_write_to_string(p_base, p_args);
+	_it_should("write-to-string of string includes quotes",
+		x_strval(p_result)[0] == '"');
+
+	/* (write-to-string ()) -> "" */
+	p_args = x_mkspair(p_base, NULL, NULL);
+	p_result = x_prim_write_to_string(p_base, p_args);
+	_it_should("write-to-string of nil is empty string",
+		x_lib_strcmp(x_strval(p_result), "") == 0);
+
+	/* write-buf is restored after write-to-string */
+	_it_should("write-buf restored to nil after write-to-string",
+		x_obj_isnil(p_base, x_base_field_write_buf(p_base)));
+
+	test_cleanup(p_base);
+	return NULL;
+}
+
+static char *run_tests() {
+	_run_test(test_io_newline);
+	_run_test(test_io_display);
+	_run_test(test_io_write);
+	_run_test(test_io_heap_count);
+	_run_test(test_io_current_line);
+	_run_test(test_io_read_char);
+	_run_test(test_io_peek_char);
+	_run_test(test_io_write_to_string);
+
+	return NULL;
+}

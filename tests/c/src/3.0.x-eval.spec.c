@@ -43,6 +43,7 @@
 static void _setup(void)
 {
 	helper_set_alloc(MEM_GUARANTEED);
+	_buffer_index = -1;
 }
 
 static void _teardown(void)
@@ -181,8 +182,115 @@ static char *test_eval(void)
 	return NULL;
 }
 
+static int tco_eval_calls = 0;
+x_obj_t *test_tco_result = NULL;
+
+x_obj_t *test_type_tco_eval(x_obj_t *p_base, x_obj_t *p_args)
+{
+	x_obj_t *p_obj = x_00(p_args);
+
+	tco_eval_calls++;
+
+	/* Set a self-evaluating satom as the TCO bounce target */
+	test_tco_result = x_mksatom(p_base, 999);
+	x_base_field_tco_expr(p_base) = test_tco_result;
+
+	return p_obj;
+}
+
+static char *test_eval_tco(void)
+{
+	x_obj_t *p_base, *p_type, *p_obj, *p_args, *p_ret;
+	x_int_t tco_count;
+	struct x_type_t tco_type;
+	x_satom_t tco_type_name = x_obj_set(x_type_atom_obj, X_OBJ_FLAG_NONE,
+		{ .s = "TCO" });
+	x_satom_t tco_eval_prim = x_obj_set(x_type_atom_obj, X_OBJ_FLAG_NONE,
+		{ .fn = test_type_tco_eval });
+
+	/* TCO bounce: eval fn sets tco_expr, x_eval loops back */
+	p_base = x_base_make(NULL, NULL);
+
+	x_lib_memset(&tco_type, 0, sizeof(tco_type));
+	tco_type.p_name = tco_type_name;
+	tco_type.p_eval = tco_eval_prim;
+
+	p_type = x_type_struct_make(p_base, tco_type);
+	p_obj = x_obj_make(p_base, p_type, X_OBJ_FLAG_NONE,
+		X_OBJ_LENGTH_ATOM, 42);
+	p_args = x_mkspair(p_base,
+		x_mkspair(p_base, p_obj, NULL), NULL);
+
+	tco_eval_calls = 0;
+	p_ret = x_eval(p_base, p_args);
+	_it_should("bounce via TCO and return bounced result",
+		p_ret == test_tco_result);
+	_it_should("call eval fn once (bounce resolves to self-eval)",
+		1 == tco_eval_calls);
+
+	tco_count = x_atomint(x_base_field_profile_tco(p_base));
+	_it_should("increment TCO profile counter",
+		tco_count == 1);
+
+	test_cleanup(p_base);
+
+	/* TCO env restore: tco_env set by eval fn */
+	p_base = x_base_make(NULL, NULL);
+	p_type = x_type_struct_make(p_base, tco_type);
+	p_obj = x_obj_make(p_base, p_type, X_OBJ_FLAG_NONE,
+		X_OBJ_LENGTH_ATOM, 42);
+	p_args = x_mkspair(p_base,
+		x_mkspair(p_base, p_obj, NULL), NULL);
+
+	/* Set a tco_env so that after bounce, env is restored */
+	{
+		x_obj_t *p_saved_env = x_mkspair(p_base,
+			x_mkspair(p_base,
+				x_mksatom(p_base, "key"),
+				x_mksatom(p_base, "val")),
+			NULL);
+
+		x_base_field_tco_env(p_base) = p_saved_env;
+
+		/* Modify env to something else */
+		x_base_field_env_alist(p_base) = x_mkspair(p_base,
+			x_mkspair(p_base,
+				x_mksatom(p_base, "other"),
+				x_mksatom(p_base, "env")),
+			NULL);
+
+		tco_eval_calls = 0;
+		p_ret = x_eval(p_base, p_args);
+
+		/* After TCO bounce resolves, env should NOT be restored
+		 * because tco_env was set before the trampoline started
+		 * (it gets picked up as p_tco_env_save on first iteration) */
+		_it_should("TCO with tco_env bounces correctly",
+			p_ret == test_tco_result);
+	}
+
+	test_cleanup(p_base);
+
+	return NULL;
+}
+
+static char *test_eval_nil_base(void)
+{
+	x_obj_t *p_args, *p_ret;
+
+	/* nil expression returns NULL */
+	p_args = x_mkspair(NULL, x_mkspair(NULL, NULL, NULL), NULL);
+	p_ret = x_eval(NULL, p_args);
+	_it_should("return NULL for nil expression",
+		p_ret == NULL);
+
+	return NULL;
+}
+
 static char *run_tests() {
 	_run_test(test_eval);
+	_run_test(test_eval_tco);
+	_run_test(test_eval_nil_base);
 
 	return NULL;
 }

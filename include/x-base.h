@@ -22,7 +22,7 @@
  * ```lang=lisp
  * '(
  *   (type-alist)
- *   (file:in file:out file:err)
+ *   (file:in file:out file:err write-buf)
  *   (env-alist symbol-list expr-list buffer token-cache error-handler tco-expr tco-env)
  *   p-true
  *   line-number
@@ -55,6 +55,7 @@
 #define x_base_field_filein(X)			x_firstobj(x_base_field_filein_stack((X)))
 #define x_base_field_fileout(X)			x_firstobj(x_restobj(x_base_field_files((X))))
 #define x_base_field_fileerr(X)			x_firstobj(x_restobj(x_restobj(x_base_field_files((X)))))
+#define x_base_field_write_buf(X)		x_firstobj(x_restobj(x_restobj(x_restobj(x_base_field_files((X))))))
 #define x_base_field_env(X)				x_firstobj(x_restobj(x_restobj(x_firstobj(X))))
 #define x_base_field_env_alist(X)		x_firstobj(x_base_field_env((X)))
 #define x_base_field_eval_list(X)		x_firstobj(x_restobj(x_base_field_env((X))))

@@ -62,6 +62,7 @@
 static void _setup(void)
 {
 	helper_set_alloc(MEM_GUARANTEED);
+	_buffer_index = -1;
 }
 
 static void _teardown(void)
@@ -347,12 +348,323 @@ static char *test_type_write(void)
 	return NULL;
 }
 
+static char *test_type_write_null(void)
+{
+	x_obj_t *p_obj, *p_args, *p_ret;
+
+	p_obj = x_mkatom(NULL, NULL);
+	/* Explicitly clear the write field to test the NULL path */
+	x_type_field_write(x_obj_type(p_obj)) = NULL;
+	p_args = x_mkspair(NULL, p_obj, NULL);
+
+	p_ret = x_type_write(NULL, p_args);
+
+	_it_should("return NULL when write fn is nil",
+		p_ret == NULL
+	);
+
+	return NULL;
+}
+
+static int type_error_call_count = 0;
+x_obj_t *type_error_fn(x_obj_t *p_base, x_obj_t *p_args)
+{
+	++type_error_call_count;
+
+	return x_firstobj(p_args);
+}
+
+static char *test_type_error(void)
+{
+	x_obj_t *p_obj, *p_fn, *p_args, *p_ret;
+
+	/* With error fn set */
+	p_obj = x_mkatom(NULL, NULL);
+	p_fn = x_mksatom(NULL, type_error_fn);
+	x_type_field_error(x_obj_type(p_obj)) = p_fn;
+
+	p_args = x_mkspair(NULL, p_obj, NULL);
+
+	type_error_call_count = 0;
+	p_ret = x_type_error(NULL, p_args);
+
+	_it_should("call the error fn",
+		p_obj == p_ret
+		&& 1 == type_error_call_count
+	);
+
+	/* Without error fn (NULL) */
+	p_obj = x_mkatom(NULL, NULL);
+	p_args = x_mkspair(NULL, p_obj, NULL);
+
+	p_ret = x_type_error(NULL, p_args);
+
+	_it_should("return NULL when error fn is nil",
+		p_ret == NULL
+	);
+
+	return NULL;
+}
+
+static char *test_type_prim_type_name(void)
+{
+	x_obj_t *p_base, *p_obj, *p_args, *p_ret;
+
+	p_base = x_mksatom(NULL, 0);
+
+	/* nil args returns NULL */
+	p_ret = x_type_prim_type_name(p_base, NULL);
+	_it_should("return NULL for nil args", p_ret == NULL);
+
+	/* nil object returns NULL */
+	p_args = x_mkspair(p_base, NULL, NULL);
+	p_ret = x_type_prim_type_name(p_base, p_args);
+	_it_should("return NULL for nil object", p_ret == NULL);
+
+	/* satom returns its type directly */
+	p_obj = x_mksatom(p_base, 42);
+	p_args = x_mkspair(p_base, p_obj, NULL);
+	p_ret = x_type_prim_type_name(p_base, p_args);
+	_it_should("return type pointer for satom",
+		p_ret == x_obj_type(p_obj));
+
+	/* spair returns its type directly */
+	p_obj = x_mkspair(p_base, NULL, NULL);
+	p_args = x_mkspair(p_base, p_obj, NULL);
+	p_ret = x_type_prim_type_name(p_base, p_args);
+	_it_should("return type pointer for spair",
+		p_ret == x_obj_type(p_obj));
+
+	/* heap atom with NULL type returns type (NULL) */
+	p_obj = x_mkatom(p_base, NULL);
+	x_obj_type(p_obj) = NULL;
+	p_args = x_mkspair(p_base, p_obj, NULL);
+	p_ret = x_type_prim_type_name(p_base, p_args);
+	_it_should("return NULL type for obj with NULL type",
+		p_ret == NULL);
+
+	/* typed object returns the name field */
+	p_obj = x_mkatom(p_base, NULL);
+	p_args = x_mkspair(p_base, p_obj, NULL);
+	p_ret = x_type_prim_type_name(p_base, p_args);
+	_it_should("return name field for typed obj",
+		p_ret == x_type_field_name(x_obj_type(p_obj)));
+
+	test_cleanup(p_base);
+
+	return NULL;
+}
+
+static char *test_type_prim_units(void)
+{
+	x_obj_t *p_base, *p_obj, *p_args, *p_ret;
+
+	p_base = x_mksatom(NULL, 0);
+
+	/* nil args returns NULL */
+	p_ret = x_type_prim_units(p_base, NULL);
+	_it_should("return NULL for nil args", p_ret == NULL);
+
+	/* nil object returns NULL */
+	p_args = x_mkspair(p_base, NULL, NULL);
+	p_ret = x_type_prim_units(p_base, p_args);
+	_it_should("return NULL for nil object", p_ret == NULL);
+
+	/* spair goes to pair units */
+	p_obj = x_mkspair(p_base, NULL, NULL);
+	p_args = x_mkspair(p_base, p_obj, NULL);
+	p_ret = x_type_prim_units(p_base, p_args);
+	_it_should("return pair units for spair",
+		p_ret != NULL && x_atomint(p_ret) == X_OBJ_UNITS_PAIR);
+
+	/* satom goes to atom units */
+	p_obj = x_mksatom(p_base, 42);
+	p_args = x_mkspair(p_base, p_obj, NULL);
+	p_ret = x_type_prim_units(p_base, p_args);
+	_it_should("return atom units for satom",
+		p_ret != NULL && x_atomint(p_ret) == X_OBJ_UNITS_ATOM);
+
+	test_cleanup(p_base);
+
+	return NULL;
+}
+
+static char *test_type_prim_length(void)
+{
+	x_obj_t *p_base, *p_obj, *p_args, *p_ret;
+
+	p_base = x_mksatom(NULL, 0);
+
+	/* nil args returns NULL */
+	p_ret = x_type_prim_length(p_base, NULL);
+	_it_should("return NULL for nil args", p_ret == NULL);
+
+	/* nil object returns NULL */
+	p_args = x_mkspair(p_base, NULL, NULL);
+	p_ret = x_type_prim_length(p_base, p_args);
+	_it_should("return NULL for nil object", p_ret == NULL);
+
+	/* spair goes to pair length */
+	p_obj = x_mkspair(p_base, x_mksatom(p_base, 1), x_mksatom(p_base, 2));
+	p_args = x_mkspair(p_base, p_obj, NULL);
+	p_ret = x_type_prim_length(p_base, p_args);
+	_it_should("return pair length for spair",
+		p_ret != NULL && x_atomint(p_ret) == X_OBJ_UNITS_PAIR);
+
+	/* satom goes to atom length */
+	p_obj = x_mksatom(p_base, 42);
+	p_args = x_mkspair(p_base, p_obj, NULL);
+	p_ret = x_type_prim_length(p_base, p_args);
+	_it_should("return atom length for satom",
+		p_ret != NULL && x_atomint(p_ret) == X_OBJ_UNITS_ATOM);
+
+	test_cleanup(p_base);
+
+	return NULL;
+}
+
+static char *test_type_heap_mark(void)
+{
+	x_obj_t *p_base, *p_obj, *p_ret;
+
+	p_base = x_mksatom(NULL, 0);
+
+	/* Path 1: base type object returns x_atomobj */
+	p_obj = x_mksatom(p_base, 99);
+	x_obj_type(p_obj) = (x_obj_t *)&x_type_base_obj;
+	p_ret = x_type_heap_mark(p_base, p_obj, 0);
+	_it_should("base type returns atomobj",
+		p_ret == x_atomobj(p_obj));
+
+	/* Path 2: NULL type returns NULL */
+	p_obj = x_mksatom(p_base, 0);
+	x_obj_type(p_obj) = NULL;
+	p_ret = x_type_heap_mark(p_base, p_obj, 0);
+	_it_should("NULL type returns NULL", p_ret == NULL);
+
+	/* Path 3: satom type (not pair) returns NULL */
+	p_obj = x_mksatom(p_base, 0);
+	/* type is already x_type_atom_obj which is a satom */
+	p_ret = x_type_heap_mark(p_base, p_obj, 0);
+	_it_should("non-pair type returns NULL", p_ret == NULL);
+
+	test_cleanup(p_base);
+
+	/* Path 4: typed object with custom mark fn */
+	{
+		x_obj_t *p_type;
+		struct x_type_t type_desc;
+
+		p_base = x_mksatom(NULL, 0);
+
+		memset(&type_desc, 0, sizeof(type_desc));
+		type_desc.p_mark = x_mksatom(p_base, mock_fn);
+		type_desc.p_units = x_mksatom(p_base, 2);
+
+		p_type = x_type_struct_make(p_base, type_desc);
+		p_obj = x_obj_make(p_base, p_type, X_OBJ_FLAG_NONE, 2,
+			x_mksatom(p_base, 10), x_mksatom(p_base, 20));
+
+		mock_fn_calls = 0;
+		p_ret = x_type_heap_mark(p_base, p_obj, 0);
+		_it_should("custom mark: calls mark fn and returns NULL",
+			p_ret == NULL && mock_fn_calls == 1);
+
+		test_cleanup(p_base);
+	}
+
+	/* Path 5: typed object with units but no mark fn — generic traversal */
+	{
+		x_obj_t *p_type, *p_slot0, *p_slot1;
+		struct x_type_t type_desc;
+
+		p_base = x_mksatom(NULL, 0);
+
+		memset(&type_desc, 0, sizeof(type_desc));
+		type_desc.p_units = x_mksatom(p_base, 2);
+
+		p_type = x_type_struct_make(p_base, type_desc);
+		p_slot0 = x_mksatom(p_base, 10);
+		p_slot1 = x_mksatom(p_base, 20);
+		p_obj = x_obj_make(p_base, p_type, X_OBJ_FLAG_NONE, 2,
+			p_slot0, p_slot1);
+
+		p_ret = x_type_heap_mark(p_base, p_obj, 0);
+		_it_should("generic traversal: returns last slot",
+			p_ret == p_slot1);
+
+		test_cleanup(p_base);
+	}
+
+	return NULL;
+}
+
+static int type_free_call_count = 0;
+x_obj_t *type_free_fn(x_obj_t *p_base, x_obj_t *p_args)
+{
+	++type_free_call_count;
+
+	return NULL;
+}
+
+static char *test_type_heap_free(void)
+{
+	x_obj_t *p_base, *p_obj, *p_type;
+	struct x_type_t type_desc;
+
+	p_base = x_mksatom(NULL, 0);
+
+	/* With free fn */
+	memset(&type_desc, 0, sizeof(type_desc));
+	type_desc.p_free = x_mksatom(p_base, type_free_fn);
+
+	p_type = x_type_struct_make(p_base, type_desc);
+	p_obj = x_obj_make(p_base, p_type, X_OBJ_FLAG_NONE, 1, NULL);
+
+	type_free_call_count = 0;
+	x_type_heap_free(p_base, p_obj);
+	_it_should("call the free fn",
+		1 == type_free_call_count);
+
+	/* Without free fn */
+	memset(&type_desc, 0, sizeof(type_desc));
+	p_type = x_type_struct_make(p_base, type_desc);
+	p_obj = x_obj_make(p_base, p_type, X_OBJ_FLAG_NONE, 1, NULL);
+
+	type_free_call_count = 0;
+	x_type_heap_free(p_base, p_obj);
+	_it_should("not call free fn when NULL",
+		0 == type_free_call_count);
+
+	/* NULL type — no crash */
+	p_obj = x_mksatom(p_base, 0);
+	x_obj_type(p_obj) = NULL;
+	x_type_heap_free(p_base, p_obj);
+	_it_should("handle NULL type gracefully", 1);
+
+	/* satom type (not pair) — no crash */
+	p_obj = x_mksatom(p_base, 0);
+	x_type_heap_free(p_base, p_obj);
+	_it_should("handle non-pair type gracefully", 1);
+
+	test_cleanup(p_base);
+
+	return NULL;
+}
+
 static char *run_tests() {
 	_run_test(test_type_types);
 	_run_test(test_type_units);
 	_run_test(test_type_struct_make);
 	_run_test(test_type_struct_get);
 	_run_test(test_type_write);
+	_run_test(test_type_write_null);
+	_run_test(test_type_error);
+	_run_test(test_type_prim_type_name);
+	_run_test(test_type_prim_units);
+	_run_test(test_type_prim_length);
+	_run_test(test_type_heap_mark);
+	_run_test(test_type_heap_free);
 
 	return NULL;
 }

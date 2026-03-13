@@ -41,6 +41,7 @@ x_obj_t *x_base_env_alist_assoc(x_obj_t *p_base, x_obj_t *p_args) { return NULL;
 static void _setup(void)
 {
 	helper_set_alloc(MEM_GUARANTEED);
+	_buffer_index = -1;
 }
 
 static void _teardown(void)
@@ -129,6 +130,11 @@ static char *test_base_make(void)
 
 	p_obj = x_base_field_token_cache(p_base);
 	_it_should("return the Base object token cache",
+		x_obj_isnil(p_base, p_obj)
+	);
+
+	p_obj = x_base_field_write_buf(p_base);
+	_it_should("return the Base object write-buf (initially nil)",
 		x_obj_isnil(p_base, p_obj)
 	);
 
@@ -474,6 +480,96 @@ static char *test_base_write(void)
 	return NULL;
 }
 
+static char *test_base_error_no_handler(void)
+{
+	x_obj_t *p_base;
+	x_char_t s[64];
+
+	/* Without base — writes to stderr (fd 2) */
+	helper_file_buffer_ptr[TEST_HELPER_FILE_STDERR] = s;
+	helper_file_buffer_length[TEST_HELPER_FILE_STDERR] = 64;
+	helper_file_reset();
+
+	x_base_error(NULL, "test error", NULL);
+	_it_should("write error to stderr without base",
+		s[0] != '\0');
+
+	/* With base, no handler — writes to base's stderr fd */
+	p_base = x_base_make(NULL, NULL);
+
+	helper_file_buffer_ptr[TEST_HELPER_FILE_STDERR] = s;
+	helper_file_buffer_length[TEST_HELPER_FILE_STDERR] = 64;
+	helper_file_reset();
+	s[0] = '\0';
+
+	x_base_error(p_base, "base error", NULL);
+	_it_should("write error to stderr with base",
+		s[0] != '\0');
+
+	/* With symbol */
+	helper_file_buffer_ptr[TEST_HELPER_FILE_STDERR] = s;
+	helper_file_buffer_length[TEST_HELPER_FILE_STDERR] = 64;
+	helper_file_reset();
+	s[0] = '\0';
+
+	x_base_error(p_base, "undef", x_mksatom(p_base, "foo"));
+	_it_should("write error with symbol",
+		s[0] != '\0');
+
+	x_sys_free(p_base);
+
+	return NULL;
+}
+
+static char *test_base_error_with_handler(void)
+{
+	x_obj_t *p_base, *p_handler;
+	jmp_buf jmp;
+	int caught;
+
+	p_base = x_base_make(NULL, NULL);
+
+	/* Build handler: (jmp-ptr saved-env error-value) */
+	p_handler = x_mkspair(p_base,
+		x_mksatom(p_base, &jmp),
+		x_mkspair(p_base,
+			x_base_field_env_alist(p_base),
+			x_mkspair(p_base, NULL, NULL)));
+	x_base_field_error_handler(p_base) = p_handler;
+
+	caught = 0;
+	if (setjmp(jmp) == 0) {
+		x_base_error(p_base, "test err", NULL);
+	} else {
+		caught = 1;
+	}
+
+	_it_should("longjmp to handler on error",
+		1 == caught);
+
+	/* x_mkstrown is stubbed to return NULL, so error is NULL */
+	_it_should("handler error set (stub returns NULL)",
+		x_error_handler_error(p_handler) == NULL);
+
+	/* Test with symbol */
+	x_base_field_error_handler(p_base) = p_handler;
+	x_error_handler_error(p_handler) = NULL;
+
+	caught = 0;
+	if (setjmp(jmp) == 0) {
+		x_base_error(p_base, "undef", x_mksatom(p_base, "bar"));
+	} else {
+		caught = 1;
+	}
+
+	_it_should("longjmp to handler with symbol",
+		1 == caught);
+
+	x_sys_free(p_base);
+
+	return NULL;
+}
+
 static char *run_tests() {
 	_run_test(test_base_make);
 	_run_test(test_base_type_alist_extend);
@@ -482,6 +578,8 @@ static char *run_tests() {
 	_xrun_test(test_base_env_alist_assoc);
 	_run_test(test_base_read);
 	_run_test(test_base_write);
+	_run_test(test_base_error_no_handler);
+	_run_test(test_base_error_with_handler);
 
 	return NULL;
 }

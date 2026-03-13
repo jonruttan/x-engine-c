@@ -50,10 +50,16 @@ static x_obj_t *x_prim_write(x_obj_t *p_base, x_obj_t *p_args)
 static x_obj_t *x_prim_display(x_obj_t *p_base, x_obj_t *p_args)
 {
 	x_obj_t *p_val;
-	int fd = x_base_isset(p_base)
-		? x_atomint(x_base_field_fileout(p_base)) : STDOUT_FILENO;
 	x_spair_t write_args[1] = {
 		x_obj_set(NULL, X_OBJ_FLAG_NONE, { NULL }, { NULL })
+	};
+	x_satom_t data = x_obj_set(x_type_atom_obj, X_OBJ_FLAG_NONE,
+		{ .s = NULL }),
+		sz = x_obj_set(x_type_atom_obj, X_OBJ_FLAG_NONE, { .i = 0 });
+	x_spair_t bw_args[2] = {
+		x_obj_set(NULL, X_OBJ_FLAG_NONE,
+			{ data }, { (x_obj_t *)(bw_args + 1) }),
+		x_obj_set(NULL, X_OBJ_FLAG_NONE, { sz }, { NULL })
 	};
 
 	while ( ! x_obj_isnil(p_base, p_args)) {
@@ -62,7 +68,9 @@ static x_obj_t *x_prim_display(x_obj_t *p_base, x_obj_t *p_args)
 		if (x_obj_type_isstr(p_base, p_val)) {
 			x_char_t *s = x_strval(p_val);
 
-			x_sys_write(fd, s, x_lib_strlen(s));
+			x_atomstr(data) = s;
+			x_atomint(sz) = x_lib_strlen(s);
+			x_base_write(p_base, (x_obj_t *)bw_args);
 		} else {
 			x_firstobj((x_obj_t *)write_args) = p_val;
 			x_token_write(p_base, (x_obj_t *)write_args);
@@ -77,10 +85,16 @@ static x_obj_t *x_prim_display(x_obj_t *p_base, x_obj_t *p_args)
 /* newline: (newline) -> output newline character */
 static x_obj_t *x_prim_newline(x_obj_t *p_base, x_obj_t *p_args)
 {
-	int fd = x_base_isset(p_base)
-		? x_atomint(x_base_field_fileout(p_base)) : STDOUT_FILENO;
+	x_satom_t data = x_obj_set(x_type_atom_obj, X_OBJ_FLAG_NONE,
+		{ .s = "\n" }),
+		sz = x_obj_set(x_type_atom_obj, X_OBJ_FLAG_NONE, { .i = 1 });
+	x_spair_t args[2] = {
+		x_obj_set(NULL, X_OBJ_FLAG_NONE,
+			{ data }, { (x_obj_t *)(args + 1) }),
+		x_obj_set(NULL, X_OBJ_FLAG_NONE, { sz }, { NULL })
+	};
 
-	x_sys_write(fd, "\n", 1);
+	x_base_write(p_base, (x_obj_t *)args);
 
 	return NULL;
 }
@@ -137,11 +151,13 @@ static x_obj_t *x_prim_peek_char(x_obj_t *p_base, x_obj_t *p_args)
 /* write-to-string: (write-to-string obj) -> string representation */
 x_obj_t *x_prim_write_to_string(x_obj_t *p_base, x_obj_t *p_args)
 {
-	x_obj_t *p_val;
-	int pipefd[2];
-	int saved_fd;
-	x_char_t *result;
-	x_int_t total, n;
+	x_obj_t *p_val, *p_saved_buf;
+	x_char_t buf[256];
+	x_satom_t buf_pos = x_obj_set(NULL, X_OBJ_FLAG_NONE, { .i = 0 });
+	x_spair_t buf_obj[1] = {
+		x_obj_set(NULL, X_OBJ_FLAG_NONE,
+			{ .v = buf }, { (x_obj_t *)&buf_pos })
+	};
 	x_spair_t write_args[1] = {
 		x_obj_set(NULL, X_OBJ_FLAG_NONE, { NULL }, { NULL })
 	};
@@ -152,31 +168,17 @@ x_obj_t *x_prim_write_to_string(x_obj_t *p_base, x_obj_t *p_args)
 		return x_mkstrown(p_base, x_lib_strndup((x_char_t *)"", 0));
 	}
 
-	if (pipe(pipefd) < 0) {
-		return NULL;
-	}
-
-	/* Swap fileout fd to pipe write end */
-	saved_fd = x_atomint(x_base_field_fileout(p_base));
-	x_atomint(x_base_field_fileout(p_base)) = pipefd[1];
+	/* Swap write-buffer on base */
+	p_saved_buf = x_base_field_write_buf(p_base);
+	x_base_field_write_buf(p_base) = (x_obj_t *)buf_obj;
 
 	x_firstobj((x_obj_t *)write_args) = p_val;
 	x_token_write(p_base, (x_obj_t *)write_args);
 
-	/* Restore and close write end */
-	x_atomint(x_base_field_fileout(p_base)) = saved_fd;
-	x_sys_close(pipefd[1]);
+	x_base_field_write_buf(p_base) = p_saved_buf;
+	buf[x_atomint(buf_pos)] = '\0';
 
-	/* Read result from pipe */
-	total = 0;
-	result = (x_char_t *)x_sys_malloc(256);
-	while ((n = x_sys_read(pipefd[0], result + total, 255 - total)) > 0) {
-		total += n;
-	}
-	result[total] = '\0';
-	x_sys_close(pipefd[0]);
-
-	return x_mkstrown(p_base, result);
+	return x_mkstrown(p_base, x_lib_strndup(buf, x_atomint(buf_pos)));
 }
 
 #ifdef X_CLOCK

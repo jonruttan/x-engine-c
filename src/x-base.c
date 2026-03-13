@@ -40,11 +40,12 @@ x_obj_t *x_base_make(x_obj_t *p_base, x_obj_t *p_args)
 		/* type-alist */
 		nil,
 		pair(
-			/* files: '(filein-stack fileout fileerr) */
+			/* files: '(filein-stack fileout fileerr write-buf) */
 			pair(pair(atom(STDIN_FILENO), nil),
 			pair(atom(STDOUT_FILENO),
 			pair(atom(STDERR_FILENO),
-			nil))),
+			pair(nil,
+			nil)))),
 		pair(
 			/* env-state: '(alist eval-list (buffer-stack) cache error tco-expr tco-env) */
 			pair(nil,
@@ -214,12 +215,29 @@ x_obj_t *x_base_read(x_obj_t *p_base, x_obj_t *p_args)
 
 x_obj_t *x_base_write(x_obj_t *p_base, x_obj_t *p_args)
 {
-	int fd = x_base_isset(p_base) ? x_atomint(x_base_field_fileout(p_base)) : STDOUT_FILENO;
 	x_obj_t *p_atom = x_firstobj(p_args);
 	x_int_t size = x_atomint(x_firstobj(x_restobj(p_args)));
 
-	if (x_sys_write(fd, x_atomstr(p_atom), size) == size) {
-		return p_atom;
+	if (x_base_isset(p_base)) {
+		x_obj_t *p_buf = x_base_field_write_buf(p_base);
+
+		if ( ! x_obj_isnil(p_base, p_buf)) {
+			x_char_t *dst = (x_char_t *)x_ptrval(p_buf);
+			x_int_t pos = x_atomint(x_restobj(p_buf));
+
+			x_lib_memcpy(dst + pos, x_atomstr(p_atom), size);
+			x_atomint(x_restobj(p_buf)) = pos + size;
+			return p_atom;
+		}
+	}
+
+	{
+		int fd = x_base_isset(p_base)
+			? x_atomint(x_base_field_fileout(p_base)) : STDOUT_FILENO;
+
+		if (x_sys_write(fd, x_atomstr(p_atom), size) == size) {
+			return p_atom;
+		}
 	}
 
 	return NULL;

@@ -27,6 +27,7 @@
 static void _setup(void)
 {
 	helper_set_alloc(MEM_GUARANTEED);
+	_buffer_index = -1;
 }
 
 static void _teardown(void)
@@ -238,29 +239,47 @@ static char *test_obj_prim_call(void)
 {
 	x_obj_t *p_base, *p_type, *p_obj, *p_args, *p_ret;
 
-	helper_alloc_reset();
+	/* NULL args returns NULL */
+	p_ret = x_obj_prim_call(NULL, NULL);
+	_it_should("return NULL for nil args",
+		NULL == p_ret);
 
+	/* nil object returns NULL */
+	p_args = x_mkspair(NULL, NULL, NULL);
+	p_ret = x_obj_prim_call(NULL, p_args);
+	_it_should("return NULL for nil object",
+		NULL == p_ret);
+
+	/* Object with NULL type returns NULL */
+	p_obj = x_mksatom(NULL, 0);
+	x_obj_type(p_obj) = NULL;
+	p_args = x_mkspair(NULL, p_obj, NULL);
+	p_ret = x_obj_prim_call(NULL, p_args);
+	_it_should("return NULL for NULL type",
+		NULL == p_ret);
+
+	/* Typed object with NULL call field returns NULL */
 	p_base = x_mksatom(NULL, 0);
 	p_type = _test_make_type(p_base);
 	p_obj = x_obj_make(p_base, p_type, X_OBJ_FLAG_NONE, X_OBJ_LENGTH_ATOM, _test_prim_fn);
-	p_args = x_mkspair(p_base, p_obj, p_base);
+	p_args = x_mkspair(p_base, p_obj, NULL);
 
 	_test_prim_fn_calls = 0;
 	p_ret = x_obj_prim_call(p_base, p_args);
-	_it_should("not call the test function and return nil",
+	_it_should("return NULL when call field is nil",
 		NULL == p_ret
 		&& 0 == _test_prim_fn_calls
 	);
 
+	/* Set call field and call succeeds */
 	x_firstptr(x_type_field_call(p_type)) = _test_type_prim_call;
 
 	_test_prim_fn_calls = 0;
 	p_ret = x_obj_prim_call(p_base, p_args);
-	_it_should("call the test function and return p_base",
+	_it_should("call the fn and return result",
 		p_base == p_ret
 		&& 1 == _test_prim_fn_calls
 	);
-
 
 	return NULL;
 }

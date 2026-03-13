@@ -136,8 +136,6 @@ x_obj_t *x_sexp_char_write(x_obj_t *p_base, x_obj_t *p_args)
 	x_obj_t *p_ret, *p_type, *p_data, *p_entry;
 	x_char_t ch = x_atomchar(x_firstobj(p_args));
 	x_char_t *sym_name;
-	int fd = x_base_isset(p_base)
-		? x_atomint(x_base_field_fileout(p_base)) : STDOUT_FILENO;
 	x_satom_t buffer = x_obj_set(x_type_atom_obj, X_OBJ_FLAG_NONE,
 		{ .s = &x_atomchar(x_firstobj(p_args)) }),
 		size = x_obj_set(x_type_atom_obj, X_OBJ_FLAG_NONE, { .i = 1 });
@@ -157,7 +155,9 @@ x_obj_t *x_sexp_char_write(x_obj_t *p_base, x_obj_t *p_args)
 
 			if ((x_char_t)x_intval(x_restobj(p_entry)) == ch) {
 				sym_name = x_atomstr(x_firstobj(p_entry));
-				x_sys_write(fd, sym_name, x_lib_strlen(sym_name));
+				x_atomstr(buffer) = sym_name;
+				x_atomint(size) = x_lib_strlen(sym_name);
+				x_base_write(p_base, (x_obj_t *)args);
 				return x_firstobj(p_args);
 			}
 

@@ -129,15 +129,22 @@ x_obj_t *x_sexp_str_read(x_obj_t *p_base, x_obj_t *p_args)
 
 x_obj_t *x_sexp_str_write(x_obj_t *p_base, x_obj_t *p_args)
 {
-	int fd = x_base_isset(p_base) ? x_atomint(x_base_field_fileout(p_base)) : STDOUT_FILENO;
 	x_char_t *s = x_firststr(x_firstobj(p_args));
 	size_t len = x_lib_strlen(s);
 	size_t i = 0;
 	x_char_t hex[5];
 	const x_char_t *esc;
 	size_t run_start;
+	x_satom_t data = x_obj_set(x_type_atom_obj, X_OBJ_FLAG_NONE, { .s = NULL }),
+		sz = x_obj_set(x_type_atom_obj, X_OBJ_FLAG_NONE, { .i = 0 });
+	x_spair_t args[2] = {
+		x_obj_set(NULL, X_OBJ_FLAG_NONE, { data }, { (x_obj_t *)(args + 1) }),
+		x_obj_set(NULL, X_OBJ_FLAG_NONE, { sz }, { NULL })
+	};
 
-	x_sys_write(fd, X_SEXP_STR_PRE_STR, X_SEXP_STR_PRE_STR_LEN);
+	x_atomstr(data) = X_SEXP_STR_PRE_STR;
+	x_atomint(sz) = X_SEXP_STR_PRE_STR_LEN;
+	x_base_write(p_base, (x_obj_t *)args);
 
 	while (i < len) {
 		/* Find next character that needs escaping */
@@ -155,7 +162,9 @@ x_obj_t *x_sexp_str_write(x_obj_t *p_base, x_obj_t *p_args)
 
 		/* Write run of safe characters */
 		if (i > run_start) {
-			x_sys_write(fd, s + run_start, i - run_start);
+			x_atomstr(data) = s + run_start;
+			x_atomint(sz) = i - run_start;
+			x_base_write(p_base, (x_obj_t *)args);
 		}
 
 		/* Write escape sequence */
@@ -178,12 +187,16 @@ x_obj_t *x_sexp_str_write(x_obj_t *p_base, x_obj_t *p_args)
 				esc = hex;
 				break;
 			}
-			x_sys_write(fd, esc, x_lib_strlen(esc));
+			x_atomstr(data) = (x_char_t *)esc;
+			x_atomint(sz) = x_lib_strlen(esc);
+			x_base_write(p_base, (x_obj_t *)args);
 			i++;
 		}
 	}
 
-	x_sys_write(fd, X_SEXP_STR_POST_STR, X_SEXP_STR_POST_STR_LEN);
+	x_atomstr(data) = X_SEXP_STR_POST_STR;
+	x_atomint(sz) = X_SEXP_STR_POST_STR_LEN;
+	x_base_write(p_base, (x_obj_t *)args);
 
 	return x_firstobj(p_args);
 }

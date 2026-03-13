@@ -46,6 +46,7 @@
 
 static void _setup(void)
 {
+	_buffer_index = -1;
 	helper_set_alloc(MEM_GUARANTEED);
 	x_obj_hook_type_name = x_type_prim_type_name;
 	x_obj_hook_units = x_type_prim_units;
@@ -522,6 +523,129 @@ static char *test_type_list_iter(void)
 	return NULL;
 }
 
+static char *test_type_list_length(void)
+{
+	x_obj_t *p_base, *p_list, *p_args, *p_ret;
+
+	/* empty list */
+	p_base = x_base_make(NULL, NULL);
+	p_args = pair(nil, nil);
+	p_ret = x_type_list_length(p_base, p_args);
+	_it_should("return 0 for nil list", x_atomint(p_ret) == 0);
+	test_cleanup(p_base);
+
+	/* single element */
+	p_base = x_base_make(NULL, NULL);
+	p_list = x_mklist(p_base, atom(1), nil);
+	p_args = pair(p_list, nil);
+	p_ret = x_type_list_length(p_base, p_args);
+	_it_should("return 1 for single-element list", x_atomint(p_ret) == 1);
+	test_cleanup(p_base);
+
+	/* three elements */
+	p_base = x_base_make(NULL, NULL);
+	p_list = x_mklist(p_base, atom(1),
+		x_mklist(p_base, atom(2),
+		x_mklist(p_base, atom(3), nil)));
+	p_args = pair(p_list, nil);
+	p_ret = x_type_list_length(p_base, p_args);
+	_it_should("return 3 for three-element list", x_atomint(p_ret) == 3);
+	test_cleanup(p_base);
+
+	return NULL;
+}
+
+static char *test_type_list_call(void)
+{
+	x_obj_t *p_base, *p_list, *p_args, *p_ret;
+
+	/* no args returns nil */
+	p_base = x_base_make(NULL, NULL);
+	p_list = x_mklist(p_base, atom(10), x_mklist(p_base, atom(20), nil));
+	p_args = pair(p_list, nil);
+	p_ret = x_type_list_call(p_base, p_args);
+	_it_should("return nil with no args", p_ret == NULL);
+	test_cleanup(p_base);
+
+	/* single index 0 */
+	p_base = x_base_make(NULL, NULL);
+	p_list = x_mklist(p_base, atom(10),
+		x_mklist(p_base, atom(20),
+		x_mklist(p_base, atom(30), nil)));
+	p_args = pair(p_list, pair(atom(0), nil));
+	p_ret = x_type_list_call(p_base, p_args);
+	_it_should("index 0 returns first element",
+		p_ret != NULL && x_atomint(p_ret) == 10);
+	test_cleanup(p_base);
+
+	/* single index 2 */
+	p_base = x_base_make(NULL, NULL);
+	p_list = x_mklist(p_base, atom(10),
+		x_mklist(p_base, atom(20),
+		x_mklist(p_base, atom(30), nil)));
+	p_args = pair(p_list, pair(atom(2), nil));
+	p_ret = x_type_list_call(p_base, p_args);
+	_it_should("index 2 returns third element",
+		p_ret != NULL && x_atomint(p_ret) == 30);
+	test_cleanup(p_base);
+
+	/* out of bounds index */
+	p_base = x_base_make(NULL, NULL);
+	p_list = x_mklist(p_base, atom(10), nil);
+	p_args = pair(p_list, pair(atom(5), nil));
+	p_ret = x_type_list_call(p_base, p_args);
+	_it_should("out of bounds returns nil", p_ret == NULL);
+	test_cleanup(p_base);
+
+	/* negative index -1 */
+	p_base = x_base_make(NULL, NULL);
+	p_list = x_mklist(p_base, atom(10),
+		x_mklist(p_base, atom(20),
+		x_mklist(p_base, atom(30), nil)));
+	p_args = pair(p_list, pair(atom((x_int_t)-1), nil));
+	p_ret = x_type_list_call(p_base, p_args);
+	_it_should("index -1 returns last element",
+		p_ret != NULL && x_atomint(p_ret) == 30);
+	test_cleanup(p_base);
+
+	/* negative index -2 */
+	p_base = x_base_make(NULL, NULL);
+	p_list = x_mklist(p_base, atom(10),
+		x_mklist(p_base, atom(20),
+		x_mklist(p_base, atom(30), nil)));
+	p_args = pair(p_list, pair(atom((x_int_t)-2), nil));
+	p_ret = x_type_list_call(p_base, p_args);
+	_it_should("index -2 returns second-to-last",
+		p_ret != NULL && x_atomint(p_ret) == 20);
+	test_cleanup(p_base);
+
+	/* slice: (list 1 2) from (10 20 30 40) */
+	p_base = x_base_make(NULL, NULL);
+	p_list = x_mklist(p_base, atom(10),
+		x_mklist(p_base, atom(20),
+		x_mklist(p_base, atom(30),
+		x_mklist(p_base, atom(40), nil))));
+	p_args = pair(p_list, pair(atom(1), pair(atom(2), nil)));
+	p_ret = x_type_list_call(p_base, p_args);
+	_it_should("slice returns first element 20",
+		p_ret != NULL && x_atomint(x_firstobj(p_ret)) == 20);
+	_it_should("slice returns second element 30",
+		x_atomint(x_firstobj(x_restobj(p_ret))) == 30);
+	_it_should("slice has two elements",
+		x_obj_isnil(p_base, x_restobj(x_restobj(p_ret))));
+	test_cleanup(p_base);
+
+	/* slice: start=0 len=0 returns nil */
+	p_base = x_base_make(NULL, NULL);
+	p_list = x_mklist(p_base, atom(10), nil);
+	p_args = pair(p_list, pair(atom(0), pair(atom(0), nil)));
+	p_ret = x_type_list_call(p_base, p_args);
+	_it_should("slice with len=0 returns nil", p_ret == NULL);
+	test_cleanup(p_base);
+
+	return NULL;
+}
+
 static char *run_tests() {
 	_run_test(test_obj_type_islist);
 	_run_test(test_mklist);
@@ -533,6 +657,8 @@ static char *run_tests() {
 	_run_test(test_type_list_make);
 	_run_test(test_type_list_eval);
 	_run_test(test_type_list_iter);
+	_run_test(test_type_list_length);
+	_run_test(test_type_list_call);
 
 	return NULL;
 }
