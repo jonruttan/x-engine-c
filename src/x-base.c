@@ -95,16 +95,29 @@ void x_base_error(x_obj_t *p_base, x_char_t *message, x_obj_t *p_obj)
 		&& ! x_obj_isnil(p_base, x_base_field_error_handler(p_base))) {
 		x_obj_t *p_handler = x_base_field_error_handler(p_base);
 		x_int_t line = x_atomint(x_base_field_line(p_base));
-		x_char_t buf[256];
+		x_char_t line_buf[24], *line_str;
+		size_t msg_len = x_lib_strlen(message);
+		size_t sym_len = symbol ? x_lib_strlen(symbol) : 0;
+		size_t line_len, total;
+		x_char_t *combined, *p;
 
+		line_str = x_lib_inttostr(line, line_buf, 10);
+		line_len = x_lib_strlen(line_str);
+		/* "message ['symbol] (line N)\0" */
+		total = msg_len + (symbol ? 2 + sym_len : 0) + 7 + line_len + 1 + 1;
+		combined = (x_char_t *)x_sys_malloc(total);
+		p = combined;
+
+		x_lib_memcpy(p, message, msg_len); p += msg_len;
 		if (symbol) {
-			sprintf(buf, "%s '%s (line %ld)", message, symbol, (long)line);
-		} else {
-			sprintf(buf, "%s (line %ld)", message, (long)line);
+			*p++ = ' '; *p++ = '\'';
+			x_lib_memcpy(p, symbol, sym_len); p += sym_len;
 		}
+		x_lib_memcpy(p, " (line ", 7); p += 7;
+		x_lib_memcpy(p, line_str, line_len); p += line_len;
+		*p++ = ')'; *p = '\0';
 
-		x_error_handler_error(p_handler) = x_mkstrown(p_base,
-			x_lib_strndup(buf, x_lib_strlen(buf)));
+		x_error_handler_error(p_handler) = x_mkstrown(p_base, combined);
 		x_base_field_env_alist(p_base)
 			= x_error_handler_saved_env(p_handler);
 		longjmp(*(jmp_buf *)x_error_handler_jmp(p_handler), 1);
