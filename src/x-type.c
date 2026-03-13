@@ -196,6 +196,12 @@ x_obj_t *x_type_heap_mark(x_obj_t *p_base, x_obj_t *p_obj, x_obj_flag_t flags)
 {
 	x_obj_t *p_type = x_obj_type(p_obj);
 
+	/* Child base objects (e.g. %sh-base): traverse their pair tree
+	 * so type alist entries, env, etc. are not freed by GC. */
+	if (p_type == (x_obj_t *)&x_type_base_obj) {
+		return x_atomobj(p_obj);
+	}
+
 	if (p_type != NULL && x_obj_type_isspair(p_type)) {
 		x_obj_t *p_mark = x_type_field_mark(p_type);
 
