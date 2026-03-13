@@ -69,6 +69,93 @@ x_obj_t *x_prim_multiple_extend(x_obj_t *p_base, x_obj_t *p_env,
 		x_restobj(p_vals));
 }
 
+x_obj_t *x_prim_body_eval(x_obj_t *p_base, x_obj_t *p_body)
+{
+	x_obj_t *p_result = NULL;
+
+	while ( ! x_obj_isnil(p_base, p_body)) {
+		p_result = x_prim_eval_arg(p_base, x_firstobj(p_body));
+		p_body = x_restobj(p_body);
+	}
+
+	return p_result;
+}
+
+x_obj_t *x_prim_body_eval_tco(x_obj_t *p_base, x_obj_t *p_body,
+	x_obj_t *p_saved_env)
+{
+	x_obj_t *p_result = NULL;
+
+	while ( ! x_obj_isnil(p_base, p_body)) {
+		if (x_obj_isnil(p_base, x_restobj(p_body))) {
+			x_base_field_tco_expr(p_base) = x_firstobj(p_body);
+
+			if (x_obj_isnil(p_base,
+				x_base_field_tco_expr(p_base))) {
+				x_base_field_env_alist(p_base) =
+					p_saved_env;
+				return NULL;
+			}
+
+			if (x_obj_isnil(p_base,
+				x_base_field_tco_env(p_base))) {
+				x_base_field_tco_env(p_base) = p_saved_env;
+			}
+
+			return NULL;
+		}
+
+		p_result = x_prim_eval_arg(p_base, x_firstobj(p_body));
+		p_body = x_restobj(p_body);
+	}
+
+	x_base_field_env_alist(p_base) = p_saved_env;
+
+	return p_result;
+}
+
+x_obj_t *x_prim_body_eval_tco_simple(x_obj_t *p_base, x_obj_t *p_body)
+{
+	x_obj_t *p_result = NULL;
+
+	while ( ! x_obj_isnil(p_base, p_body)) {
+		if (x_obj_isnil(p_base, x_restobj(p_body))) {
+			x_base_field_tco_expr(p_base) = x_firstobj(p_body);
+			return NULL;
+		}
+
+		p_result = x_prim_eval_arg(p_base, x_firstobj(p_body));
+		p_body = x_restobj(p_body);
+	}
+
+	return p_result;
+}
+
+x_obj_t *x_prim_tco_trampoline(x_obj_t *p_base, x_obj_t *p_result)
+{
+	x_obj_t *p_tco, *p_tco_env;
+
+	p_tco_env = NULL;
+
+	while ( ! x_obj_isnil(p_base, x_base_field_tco_expr(p_base))) {
+		p_tco = x_base_field_tco_expr(p_base);
+
+		if ( ! x_obj_isnil(p_base, x_base_field_tco_env(p_base))) {
+			p_tco_env = x_base_field_tco_env(p_base);
+		}
+
+		x_base_field_tco_expr(p_base) = NULL;
+		x_base_field_tco_env(p_base) = NULL;
+		p_result = x_prim_eval_arg(p_base, p_tco);
+	}
+
+	if (p_tco_env != NULL && ! x_obj_isnil(p_base, p_tco_env)) {
+		x_base_field_env_alist(p_base) = p_tco_env;
+	}
+
+	return p_result;
+}
+
 /*
  * # Registration
  */

@@ -92,60 +92,22 @@ x_obj_t *x_type_prim_apply(x_obj_t *p_base, x_obj_t *p_args)
 	x_obj_t *p_fn = x_firstobj(p_args);
 
 	if (x_obj_type_isprocedure(p_base, p_fn)) {
-		x_obj_t *p_params = x_procparams(p_fn),
-			*p_body = x_procbody(p_fn),
-			*p_closure_env = x_procenv(p_fn),
-			*p_saved_env,
+		x_obj_t *p_saved_env = x_base_field_env_alist(p_base),
 			*p_result;
 
-		p_saved_env = x_base_field_env_alist(p_base);
-
 		x_base_field_env_alist(p_base) = x_prim_multiple_extend(
-			p_base, p_closure_env, p_params, x_restobj(p_args));
+			p_base, x_procenv(p_fn), x_procparams(p_fn),
+			x_restobj(p_args));
 
-		/* Eval body forms. No TCO: called from C, not x_eval. */
-		p_result = NULL;
-		while ( ! x_obj_isnil(p_base, p_body)) {
-			p_result = x_prim_eval_arg(p_base, x_firstobj(p_body));
-			p_body = x_restobj(p_body);
-		}
-
+		p_result = x_prim_body_eval(p_base, x_procbody(p_fn));
 		x_base_field_env_alist(p_base) = p_saved_env;
 
 		return p_result;
 	}
 
 	if (x_obj_type_isoperative(p_base, p_fn)) {
-		x_obj_t *p_result, *p_tco, *p_tco_env;
-
-		p_tco_env = NULL;
-		p_result = x_type_operative_call(p_base, p_args);
-
-		/* Operative may set tco_expr for tail position.
-		 * We're not in x_eval's trampoline, so evaluate
-		 * eagerly and clear to avoid dangling tco_expr. */
-		while ( ! x_obj_isnil(p_base,
-			x_base_field_tco_expr(p_base))) {
-			p_tco = x_base_field_tco_expr(p_base);
-
-			if ( ! x_obj_isnil(p_base,
-				x_base_field_tco_env(p_base))) {
-				p_tco_env = x_base_field_tco_env(p_base);
-			}
-
-			x_base_field_tco_expr(p_base) = NULL;
-			x_base_field_tco_env(p_base) = NULL;
-			p_result = x_prim_eval_arg(p_base, p_tco);
-		}
-
-		/* Restore env: tco_env from operative points to
-		 * pre-params env, cleaning up param bindings. */
-		if (p_tco_env != NULL
-			&& ! x_obj_isnil(p_base, p_tco_env)) {
-			x_base_field_env_alist(p_base) = p_tco_env;
-		}
-
-		return p_result;
+		return x_prim_tco_trampoline(p_base,
+			x_type_operative_call(p_base, p_args));
 	}
 
 	return (*x_primval(p_fn))(p_base, x_restobj(p_args));

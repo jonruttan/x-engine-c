@@ -100,49 +100,14 @@ x_obj_t *x_type_procedure_call(x_obj_t *p_base, x_obj_t *p_args)
 	}
 
 	{
-		x_obj_t *p_params = x_procparams(p_proc),
-			*p_body = x_procbody(p_proc),
-			*p_closure_env = x_procenv(p_proc),
-			*p_saved_env,
-			*p_result;
+		x_obj_t *p_saved_env = x_base_field_env_alist(p_base);
 
-		/* Save current env. */
-		p_saved_env = x_base_field_env_alist(p_base);
-
-		/* Extend closure's captured env with param bindings. */
 		x_base_field_env_alist(p_base) = x_prim_multiple_extend(
-			p_base, p_closure_env, p_params, p_evaled_args);
+			p_base, x_procenv(p_proc), x_procparams(p_proc),
+			p_evaled_args);
 
-		/* Eval body forms sequentially (implicit do). */
-		p_result = NULL;
-		while ( ! x_obj_isnil(p_base, p_body)) {
-			if (x_obj_isnil(p_base, x_restobj(p_body))) {
-				/* Last body form: tail position. */
-				x_base_field_tco_expr(p_base) = x_firstobj(p_body);
-
-				if (x_obj_isnil(p_base,
-					x_base_field_tco_expr(p_base))) {
-					/* Nil tail form: no TCO, restore env. */
-					x_base_field_env_alist(p_base) =
-						p_saved_env;
-					return NULL;
-				}
-
-				if (x_obj_isnil(p_base, x_base_field_tco_env(p_base))) {
-					x_base_field_tco_env(p_base) = p_saved_env;
-				}
-
-				return NULL;
-			}
-
-			p_result = x_prim_eval_arg(p_base, x_firstobj(p_body));
-			p_body = x_restobj(p_body);
-		}
-
-		/* Restore saved env. */
-		x_base_field_env_alist(p_base) = p_saved_env;
-
-		return p_result;
+		return x_prim_body_eval_tco(p_base, x_procbody(p_proc),
+			p_saved_env);
 	}
 }
 

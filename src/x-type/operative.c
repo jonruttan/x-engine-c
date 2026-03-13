@@ -93,8 +93,7 @@ x_obj_t *x_type_operative_call(x_obj_t *p_base, x_obj_t *p_args)
 		*p_envparam = x_openvparam(p_op),
 		*p_body = x_opbody(p_op),
 		*p_caller_env,
-		*p_env,
-		*p_result;
+		*p_env;
 
 	/* Capture the caller's environment. */
 	p_caller_env = x_base_field_env_alist(p_base);
@@ -113,21 +112,7 @@ x_obj_t *x_type_operative_call(x_obj_t *p_base, x_obj_t *p_args)
 
 	x_base_field_env_alist(p_base) = p_env;
 
-	/* Eval body forms sequentially (implicit do). */
-	p_result = NULL;
-	while ( ! x_obj_isnil(p_base, p_body)) {
-		if (x_obj_isnil(p_base, x_restobj(p_body))) {
-			/* Last body form: tail position. */
-			x_base_field_tco_expr(p_base) = x_firstobj(p_body);
-
-			return NULL;
-		}
-
-		p_result = x_prim_eval_arg(p_base, x_firstobj(p_body));
-		p_body = x_restobj(p_body);
-	}
-
-	return p_result;
+	return x_prim_body_eval_tco_simple(p_base, p_body);
 }
 
 x_obj_t *x_type_operative_write(x_obj_t *p_base, x_obj_t *p_args)
