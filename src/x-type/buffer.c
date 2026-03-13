@@ -42,7 +42,7 @@ x_obj_t *x_make_buffer(x_obj_t *p_base, x_obj_flag_t flags, void *p)
 x_obj_t *x_type_buffer_mark(x_obj_t *p_base, x_obj_t *p_args)
 {
 	x_obj_t *p_obj = x_firstobj(p_args);
-	x_obj_flag_t flags = x_firstint(x_firstobj(x_restobj(p_args)));
+	x_obj_flag_t flags = x_firstint(x_restobj(p_args));
 
 	/* Buffer data slots contain raw char pointers, not objects.
 	 * Mark the inner bookkeeping pair explicitly. */
