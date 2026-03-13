@@ -90,7 +90,10 @@ x_obj_t *x_prim_set(x_obj_t *p_base, x_obj_t *p_args)
 	p_pair = x_alist_assoc(p_base, (x_obj_t *)assoc_args);
 
 	if (x_obj_isnil(p_base, p_pair)) {
-		x_obj_error(p_base, "Unbound "X_TYPE_SYMBOL_NAME, p_name);
+		x_satom_t sym_name = x_obj_set(x_type_atom_obj, X_OBJ_FLAG_NONE,
+			{ .s = x_symbolval(p_name) });
+		x_obj_error(p_base, "Unbound "X_TYPE_SYMBOL_NAME,
+			(x_obj_t *)&sym_name);
 
 		return NULL;
 	}
