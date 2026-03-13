@@ -13,7 +13,7 @@
 #include "ext/x-expr/src/x-sys.c"
 #include "ext/x-expr/src/x-lib.c"
 #include "ext/x-expr/src/x.c"
-#include "src/x-obj.c"
+#include "ext/x-expr/src/x-obj.c"
 #include "src/x-alist.c"
 #include "src/x-base.c"
 #include "src/x-eval.c"
@@ -27,7 +27,18 @@
 #include "src/x-token/sexp/list.c"
 #include "src/x-token.c"
 
-#include "helper-system-functions.c"
+#define STUB_X_PRIM
+#define STUB_X_PROCEDURE
+#define STUB_X_OPERATIVE
+#define STUB_X_HEAP
+#define STUB_X_OBJ_OBJ
+#define STUB_X_STR
+#define STUB_X_INT
+#define STUB_X_SYMBOL
+#define STUB_X_PRIM_REGISTER
+#include "helper-stubs.c"
+
+#include "ext/x-expr/tests/src/helper-system-functions.c"
 
 /*
  * ## Test Overhead
@@ -36,6 +47,10 @@
 static void _setup(void)
 {
 	helper_set_alloc(MEM_GUARANTEED);
+	x_obj_hook_type_name = x_type_prim_type_name;
+	x_obj_hook_units = x_type_prim_units;
+	x_obj_hook_length = x_type_prim_length;
+	x_obj_hook_error = x_base_error;
 }
 
 static void _teardown(void)
@@ -47,7 +62,7 @@ void test_cleanup(x_obj_t *p_base)
 	x_obj_t *p_gc = p_base, *p_tmp;
 
 	while (p_gc) {
-		p_tmp = x_obj_gc(p_gc);
+		p_tmp = x_obj_heap(p_gc);
 		x_sys_free(p_gc);
 		p_gc = p_tmp;
 	}
@@ -57,7 +72,7 @@ void test_cleanup(x_obj_t *p_base)
  * ## Test Runners
  */
 
-#define nil     p_base
+#define nil     NULL
 #define pair(X,Y) (x_mkspair(p_base, (X), (Y)))
 #define atom(X)   (x_mksatom(p_base, (X)))
 
@@ -103,10 +118,10 @@ static char *test_mklist(void)
 	p_obj = x_mklist(p_base, (void *)i1, (void *)i2);
 	_it_should("make a List object, attach it to the Base object, and set its first and rest values",
 		! x_obj_isnil(p_base, p_obj)
-		&& p_obj == x_obj_gc(p_base)
+		&& p_obj == x_obj_heap(p_base)
 		&& x_obj_type_islist(p_base, p_obj)
 		&& X_OBJ_FLAG_NONE == x_obj_flags(p_obj)
-		&& p_obj == x_obj_gc(p_base)
+		&& p_obj == x_obj_heap(p_base)
 		&& i1 == x_firstint(p_obj)
 		&& i2 == x_restint(p_obj)
 	);
@@ -141,7 +156,7 @@ static char *test_mkflist(void)
 		! x_obj_isnil(p_base, p_obj)
 		&& x_obj_type_islist(p_base, p_obj)
 		&& flags == x_obj_flags(p_obj)
-		&& p_obj == x_obj_gc(p_base)
+		&& p_obj == x_obj_heap(p_base)
 		&& i1 == x_firstint(p_obj)
 		&& i2 == x_restint(p_obj)
 	);
@@ -176,7 +191,7 @@ static char *test_make_list(void)
 		! x_obj_isnil(p_base, p_obj)
 		&& x_obj_type_islist(p_base, p_obj)
 		&& flags == x_obj_flags(p_obj)
-		&& p_obj == x_obj_gc(p_base)
+		&& p_obj == x_obj_heap(p_base)
 		&& i1 == x_firstint(p_obj)
 		&& i2 == x_restint(p_obj)
 	);
@@ -201,7 +216,7 @@ static char *test_type_list_register(void)
 		p_type == x_firstobj(x_base_field_type_alist(p_base))
 	);
 
-	x_sys_free(p_base);
+	test_cleanup(p_base);
 
 	return NULL;
 }
@@ -239,16 +254,16 @@ static char *test_type_list_struct(void)
 		NULL == x_type_field_clone(p_type)
 	);
 
-	_it_should("not set the Units primitive",
-		NULL == x_type_field_units(p_type)
+	_it_should("set the Units primitive",
+		(x_obj_t *)&x_type_units_pair_obj == x_type_field_units(p_type)
 	);
 
-	_it_should("not set the Length primitive",
-		NULL == x_type_field_length(p_type)
+	_it_should("set the Length primitive",
+		x_type_list_length_prim == x_type_field_length(p_type)
 	);
 
 	_it_should("set the Call primitive",
-		NULL == x_type_field_call(p_type)
+		x_type_list_call_prim == x_type_field_call(p_type)
 	);
 
 	/* TODO: Eval */
@@ -264,15 +279,15 @@ static char *test_type_list_struct(void)
 		NULL == x_type_field_to(p_type)
 	);
 
-	_it_should("not set the Analyse primitive",
+	_it_should("set the Analyse primitive",
 		x_sexp_list_analyse_prim == x_type_field_analyse(p_type)
 	);
 
-	_it_should("not set the Delimit primitive",
+	_it_should("set the Delimit primitive",
 		x_sexp_list_delimit_prim == x_type_field_delimit(p_type)
 	);
 
-	_it_should("not set the Write primitive",
+	_it_should("set the Write primitive",
 		x_sexp_list_write_prim == x_type_field_write(p_type)
 	);
 
@@ -455,8 +470,8 @@ static char *test_type_list_eval(void)
 	p_type = x_type_struct_make(p_base, type);
 	p_prim = x_obj_make(p_base, p_type, X_OBJ_FLAG_NONE, X_OBJ_LENGTH_ATOM, test_prim);
 	p_atom = x_mksatom(p_base, "Hello, World!");
-	p_list = x_mklist(p_base, p_prim, x_mkspair(p_base, p_atom, p_base));
-	p_args = x_mkspair(p_base, x_mkspair(p_base, p_list, p_base), p_base);
+	p_list = x_mklist(p_base, p_prim, x_mkspair(p_base, p_atom, NULL));
+	p_args = x_mkspair(p_base, x_mkspair(p_base, p_list, NULL), NULL);
 	p_ret = x_type_list_eval(p_base, p_args);
 	_it_should("return the first argument", p_atom == p_ret);
 	p_ret = x_eval(p_base, p_args);
@@ -478,9 +493,9 @@ static char *test_type_list_iter(void)
 	p_list = x_mkspair(p_base, x_mksatom(p_base, 0),
 		x_mkspair(p_base, x_mksatom(p_base, 1),
 		x_mkspair(p_base, x_mksatom(p_base, 2),
-		p_base)));
+		NULL)));
 	p_iter = x_mkiter(p_base, x_type_list_iter_prim, p_list);
-	p_args = x_mkspair(p_base, p_iter, p_base);
+	p_args = x_mkspair(p_base, p_iter, NULL);
 	p_ret = x_type_list_iter(p_base, p_args);
 	_it_should("return the first item in the list",
 		x_0(p_list) == p_ret

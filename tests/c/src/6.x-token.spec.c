@@ -17,7 +17,7 @@
 #include "ext/x-expr/src/x-sys.c"
 #include "ext/x-expr/src/x-lib.c"
 #include "ext/x-expr/src/x.c"
-#include "src/x-obj.c"
+#include "ext/x-expr/src/x-obj.c"
 #include "src/x-alist.c"
 #include "src/x-base.c"
 #include "src/x-type.c"
@@ -38,7 +38,19 @@ x_satom_t x_sexp_list_analyse_prim = x_obj_set(x_type_atom_obj, X_OBJ_FLAG_NONE,
 #include "src/x-type/list.c"
 #include "src/x-token.c"
 
-#include "helper-system-functions.c"
+x_obj_t *x_sexp_atom_write(x_obj_t *p_base, x_obj_t *p_args) { return p_args; }
+x_obj_t *x_sexp_pair_write(x_obj_t *p_base, x_obj_t *p_args) { return p_args; }
+
+#define STUB_X_PRIM
+#define STUB_X_PROCEDURE
+#define STUB_X_OPERATIVE
+#define STUB_X_HEAP
+#define STUB_X_OBJ_OBJ
+#define STUB_X_STR
+#define STUB_X_SEXP_PAIR_WRITE
+#include "helper-stubs.c"
+
+#include "ext/x-expr/tests/src/helper-system-functions.c"
 
 
 /*
@@ -58,7 +70,7 @@ void test_cleanup(x_obj_t *p_base)
 	x_obj_t *p_gc = p_base, *p_tmp;
 
 	while (p_gc) {
-		p_tmp = x_obj_gc(p_gc);
+		p_tmp = x_obj_heap(p_gc);
 		x_sys_free(p_gc);
 		p_gc = p_tmp;
 	}
@@ -91,7 +103,7 @@ x_obj_t *test_token_read_analyse_whitespace(x_obj_t *p_base, x_obj_t *p_args)
 		return p_score;
 	}
 
-	return p_base;
+	return NULL;
 }
 
 x_obj_t *test_token_read_delimit_whitespace(x_obj_t *p_base, x_obj_t *p_args)
@@ -103,7 +115,7 @@ x_obj_t *test_token_read_delimit_whitespace(x_obj_t *p_base, x_obj_t *p_args)
 		return p_buffer;
 	}
 
-	return p_base;
+	return NULL;
 }
 
 x_obj_t *test_token_read_read_whitespace(x_obj_t *p_base, x_obj_t *p_args)
@@ -152,7 +164,7 @@ x_obj_t *test_token_read_analyse1(x_obj_t *p_base, x_obj_t *p_args)
 	x_bufferread(p_buffer)--;
 
 	if (x_bufferlen(p_buffer) < 1) {
-		return p_base;
+		return NULL;
 	}
 
 	x_firstint(p_score) = x_bufferlen(p_buffer);
@@ -184,7 +196,7 @@ x_obj_t *test_token_read_analyse2_1(x_obj_t *p_base, x_obj_t *p_args)
 		return test_token_read_analyse2_2_prim;
 	}
 
-	return p_base;
+	return NULL;
 }
 
 x_obj_t *test_token_read_analyse2_2(x_obj_t *p_base, x_obj_t *p_args)
@@ -198,7 +210,7 @@ x_obj_t *test_token_read_analyse2_2(x_obj_t *p_base, x_obj_t *p_args)
 		return p_score;
 	}
 
-	return p_base;
+	return NULL;
 }
 
 x_obj_t *test_token_read_read2(x_obj_t *p_base, x_obj_t *p_args)

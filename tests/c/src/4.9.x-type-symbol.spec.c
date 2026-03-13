@@ -13,7 +13,7 @@
 #include "ext/x-expr/src/x-sys.c"
 #include "ext/x-expr/src/x-lib.c"
 #include "ext/x-expr/src/x.c"
-#include "src/x-obj.c"
+#include "ext/x-expr/src/x-obj.c"
 #include "src/x-alist.c"
 #include "src/x-base.c"
 #include "src/x-token/sexp/atom.c"
@@ -33,7 +33,16 @@
 #include "src/x-type/symbol.c"
 #include "src/x-token/sexp/symbol.c"
 
-#include "helper-system-functions.c"
+#define STUB_X_PRIM
+#define STUB_X_PROCEDURE
+#define STUB_X_OPERATIVE
+#define STUB_X_HEAP
+#define STUB_X_OBJ_OBJ
+#define STUB_X_INT
+#define STUB_X_PRIM_REGISTER
+#include "helper-stubs.c"
+
+#include "ext/x-expr/tests/src/helper-system-functions.c"
 
 /*
  * ## Test Overhead
@@ -42,6 +51,10 @@
 static void _setup(void)
 {
 	helper_set_alloc(MEM_GUARANTEED);
+	x_obj_hook_type_name = x_type_prim_type_name;
+	x_obj_hook_units = x_type_prim_units;
+	x_obj_hook_length = x_type_prim_length;
+	x_obj_hook_error = x_base_error;
 }
 
 static void _teardown(void)
@@ -53,7 +66,7 @@ void test_cleanup(x_obj_t *p_base)
 	x_obj_t *p_gc = p_base, *p_tmp;
 
 	while (p_gc) {
-		p_tmp = x_obj_gc(p_gc);
+		p_tmp = x_obj_heap(p_gc);
 		x_sys_free(p_gc);
 		p_gc = p_tmp;
 	}
@@ -65,7 +78,7 @@ void test_cleanup(x_obj_t *p_base)
 
 #define X_TEST_SYMBOL_VALUE		"TEST"
 
-#define nil			p_base
+#define nil			NULL
 #define pair(X,Y)	(x_mkspair(p_base, (X), (Y)))
 #define atom(X)		(x_mksatom(p_base, (X)))
 
@@ -161,8 +174,8 @@ static char *test_mksymbol(void)
 		! x_obj_isnil(p_base, p_obj)
 		&& x_obj_type_issymbol(p_base, p_obj)
 		&& X_OBJ_FLAG_NONE == x_obj_flags(p_obj)
-		&& p_obj == x_obj_gc(x_symbol_data_list(x_obj_type(p_obj)))
-		&& x_symbol_data_list(x_obj_type(p_obj)) == x_obj_gc(p_base)
+		&& p_obj == x_obj_heap(x_symbol_data_list(x_obj_type(p_obj)))
+		&& x_symbol_data_list(x_obj_type(p_obj)) == x_obj_heap(p_base)
 		&& 0 == strcmp(X_TEST_SYMBOL_VALUE, x_symbolval(p_obj))
 	);
 
@@ -194,8 +207,8 @@ static char *test_mkfsymbol(void)
 		! x_obj_isnil(p_base, p_obj)
 		&& x_obj_type_issymbol(p_base, p_obj)
 		&& flags == x_obj_flags(p_obj)
-		&& p_obj == x_obj_gc(x_symbol_data_list(x_obj_type(p_obj)))
-		&& x_symbol_data_list(x_obj_type(p_obj)) == x_obj_gc(p_base)
+		&& p_obj == x_obj_heap(x_symbol_data_list(x_obj_type(p_obj)))
+		&& x_symbol_data_list(x_obj_type(p_obj)) == x_obj_heap(p_base)
 		&& 0 == strcmp(X_TEST_SYMBOL_VALUE, x_symbolval(p_obj))
 	);
 
@@ -226,8 +239,8 @@ static char *test_mksymbolown(void)
 		! x_obj_isnil(p_base, p_obj)
 		&& x_obj_type_issymbol(p_base, p_obj)
 		&& X_OBJ_FLAG_OWN == x_obj_flags(p_obj)
-		&& p_obj == x_obj_gc(x_symbol_data_list(x_obj_type(p_obj)))
-		&& x_symbol_data_list(x_obj_type(p_obj)) == x_obj_gc(p_base)
+		&& p_obj == x_obj_heap(x_symbol_data_list(x_obj_type(p_obj)))
+		&& x_symbol_data_list(x_obj_type(p_obj)) == x_obj_heap(p_base)
 		&& 0 == strcmp(X_TEST_SYMBOL_VALUE, x_symbolval(p_obj))
 	);
 
@@ -259,8 +272,8 @@ static char *test_mkfsymbolown(void)
 		! x_obj_isnil(p_base, p_obj)
 		&& x_obj_type_issymbol(p_base, p_obj)
 		&& (X_OBJ_FLAG_OWN | flags) == x_obj_flags(p_obj)
-		&& p_obj == x_obj_gc(x_symbol_data_list(x_obj_type(p_obj)))
-		&& x_symbol_data_list(x_obj_type(p_obj)) == x_obj_gc(p_base)
+		&& p_obj == x_obj_heap(x_symbol_data_list(x_obj_type(p_obj)))
+		&& x_symbol_data_list(x_obj_type(p_obj)) == x_obj_heap(p_base)
 		&& 0 == strcmp(X_TEST_SYMBOL_VALUE, x_symbolval(p_obj))
 	);
 
@@ -292,8 +305,8 @@ static char *test_make_symbol(void)
 		! x_obj_isnil(p_base, p_obj)
 		&& x_obj_type_issymbol(p_base, p_obj)
 		&& flags == x_obj_flags(p_obj)
-		&& p_obj == x_obj_gc(x_symbol_data_list(x_obj_type(p_obj)))
-		&& x_symbol_data_list(x_obj_type(p_obj)) == x_obj_gc(p_base)
+		&& p_obj == x_obj_heap(x_symbol_data_list(x_obj_type(p_obj)))
+		&& x_symbol_data_list(x_obj_type(p_obj)) == x_obj_heap(p_base)
 		&& 0 == strcmp(X_TEST_SYMBOL_VALUE, x_symbolval(p_obj))
 	);
 
@@ -396,7 +409,7 @@ static char *test_type_symbol_register(void)
 		&& x_obj_isnil(p_base, x_symbol_data_list(p_type))
 	);
 
-	x_sys_free(p_base);
+	test_cleanup(p_base);
 
 	return NULL;
 }
@@ -490,7 +503,7 @@ static char *test_type_symbol_make(void)
 
 	/* Empty p_base object */
 	p_base = x_mksatom(NULL, NULL);
-	p_args = x_mkspair(p_base, p_str, p_base);
+	p_args = x_mkspair(p_base, p_str, NULL);
 	p_obj[0] = x_type_symbol_make(p_base, p_args);
 	_it_should("make a symbol object",
 		! x_obj_isnil(NULL, p_obj[0])
@@ -502,7 +515,7 @@ static char *test_type_symbol_make(void)
 	x_sys_free(p_args);
 
 
-	p_args = x_mkspair(p_base, p_str, p_base);
+	p_args = x_mkspair(p_base, p_str, NULL);
 	p_obj[1] = x_type_symbol_make(p_base, p_args);
 	_it_should("make a second symbol object",
 		! x_obj_isnil(NULL, p_obj[1])
@@ -533,14 +546,14 @@ static char *test_type_symbol_make(void)
 		x_obj_isnil(p_base, x_symbol_data_list(p_type))
 	);
 
-	p_args = x_mkspair(p_base, p_str, p_base);
+	p_args = x_mkspair(p_base, p_str, NULL);
 	p_obj[0] = x_type_symbol_make(p_base, p_args);
 	_it_should("make a Symbol object with a base object",
 		! x_obj_isnil(NULL, p_obj[0])
 		&& x_obj_type_issymbol(p_base, p_obj[0])
 		&& X_OBJ_FLAG_NONE == x_obj_flags(p_obj[0])
-		&& p_obj[0] == x_obj_gc(x_symbol_data_list(x_obj_type(p_obj[0])))
-		&& x_symbol_data_list(x_obj_type(p_obj[0])) == x_obj_gc(p_base)
+		&& p_obj[0] == x_obj_heap(x_symbol_data_list(x_obj_type(p_obj[0])))
+		&& x_symbol_data_list(x_obj_type(p_obj[0])) == x_obj_heap(p_base)
 		&& 0 == strcmp(x_strval(p_str), x_symbolval(p_obj[0]))
 	);
 
@@ -552,7 +565,7 @@ static char *test_type_symbol_make(void)
 	x_sys_free(p_args);
 
 
-	p_args = x_mkspair(p_base, p_str, p_base);
+	p_args = x_mkspair(p_base, p_str, NULL);
 	p_obj[1] = x_type_symbol_make(p_base, p_args);
 	_it_should("returned the same Symbol object with a base object",
 		p_obj[0] == p_obj[1]
@@ -570,7 +583,7 @@ static char *test_type_symbol_make(void)
 
 	p_str = x_mkstr(NULL, X_TEST_SYMBOL_VALUE "1");
 
-	p_args = x_mkspair(p_base, p_str, p_base);
+	p_args = x_mkspair(p_base, p_str, NULL);
 	p_obj[1] = x_type_symbol_make(p_base, p_args);
 	_it_should("make a new Symbol object with a base object",
 		p_obj[0] != p_obj[1]
@@ -604,11 +617,11 @@ static char *test_type_symbol_find(void)
 	p_base = x_base_make(NULL, NULL);
 
 	p_str = x_mkstr(p_base, "SYMBOL");
-	p_args = x_mkspair(p_base, p_str, p_base);
+	p_args = x_mkspair(p_base, p_str, NULL);
 
 	p_obj = x_type_symbol_find(p_base, p_args);
 	_it_should("not find the symbol in the symbol list",
-		p_base == p_obj
+		NULL == p_obj
 	);
 
 
@@ -621,7 +634,7 @@ static char *test_type_symbol_find(void)
 
 
 	p_str = x_mkstr(p_base, "ANOTHER SYMBOL");
-	p_args = x_mkspair(p_base, p_symbol, p_base);
+	p_args = x_mkspair(p_base, p_symbol, NULL);
 	p_symbol = x_type_symbol_make(p_base, p_args);
 
 	p_obj = x_type_symbol_find(p_base, p_args);
@@ -644,7 +657,7 @@ static char *test_type_symbol_eval(void)
 	/* With p_base object */
 	p_base = x_base_make(NULL, NULL);
 	p_symbol = x_mksatom(p_base, "SYMBOL");
-	p_args = x_mkspair(p_base, p_symbol, p_base);
+	p_args = x_mkspair(p_base, p_symbol, NULL);
 
 
 	helper_file_buffer_ptr[TEST_HELPER_FILE_STDERR] = buffer;

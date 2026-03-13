@@ -25,7 +25,8 @@ PREFIX?=/usr/local
 
 # Override default compiler and flags
 CC?=gcc
-CFLAGS+=-O2 -Wall -Wextra -Wno-unused-parameter
+CFLAGS?=-O2
+CFLAGS+=-Wall -Wextra -Wno-unused-parameter
 CFLAGS+=-DX_HEAP -DX_TYPE -DX_CLOCK
 
 # Smaller, faster, flakier?

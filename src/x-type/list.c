@@ -191,12 +191,14 @@ x_obj_t *x_type_list_eval(x_obj_t *p_base, x_obj_t *p_args)
 
 x_obj_t *x_type_list_iter(x_obj_t *p_base, x_obj_t *p_args)
 {
-	x_obj_t *p_iter = x_firstobj(p_args),
-		*p_obj = x_firstobj(x_iterval(p_iter));
+	x_obj_t *p_iter = x_firstobj(p_args), *p_obj;
 
-	if ( ! x_obj_isnil(p_base, x_iterval(p_iter))) {
-		x_iterval(p_iter) = x_restobj(x_iterval(p_iter));
+	if (x_obj_isnil(p_base, x_iterval(p_iter))) {
+		return NULL;
 	}
+
+	p_obj = x_firstobj(x_iterval(p_iter));
+	x_iterval(p_iter) = x_restobj(x_iterval(p_iter));
 
 	return p_obj;
 }

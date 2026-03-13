@@ -16,7 +16,7 @@
 #include "ext/x-expr/src/x-sys.c"
 #include "ext/x-expr/src/x-lib.c"
 #include "ext/x-expr/src/x.c"
-#include "src/x-obj.c"
+#include "ext/x-expr/src/x-obj.c"
 #include "src/x-alist.c"
 #include "src/x-base.c"
 #include "src/x-type.c"
@@ -25,7 +25,21 @@
 #include "src/x-type/pair.c"
 #include "src/x-type/iter.c"
 
-#include "helper-system-functions.c"
+#define STUB_X_PRIM
+#define STUB_X_PROCEDURE
+#define STUB_X_OPERATIVE
+#define STUB_X_EVAL
+#define STUB_X_TOKEN
+#define STUB_X_HEAP
+#define STUB_X_OBJ_OBJ
+#define STUB_X_STR
+#define STUB_X_INT
+#define STUB_X_SYMBOL
+#define STUB_X_PRIM_REGISTER
+#define STUB_X_SEXP_PAIR_WRITE
+#include "helper-stubs.c"
+
+#include "ext/x-expr/tests/src/helper-system-functions.c"
 
 /*
  * ## Test Overhead
@@ -34,6 +48,10 @@
 static void _setup(void)
 {
 	helper_set_alloc(MEM_GUARANTEED);
+	x_obj_hook_type_name = x_type_prim_type_name;
+	x_obj_hook_units = x_type_prim_units;
+	x_obj_hook_length = x_type_prim_length;
+	x_obj_hook_error = x_base_error;
 }
 
 static void _teardown(void)
@@ -45,7 +63,7 @@ void test_cleanup(x_obj_t *p_base)
 	x_obj_t *p_gc = p_base, *p_tmp;
 
 	while (p_gc) {
-		p_tmp = x_obj_gc(p_gc);
+		p_tmp = x_obj_heap(p_gc);
 		x_sys_free(p_gc);
 		p_gc = p_tmp;
 	}
@@ -66,7 +84,7 @@ x_obj_t *list_iter_prim(x_obj_t *p_base, x_obj_t *p_args)
  * ## Test Runners
  */
 
-#define nil			p_base
+#define nil			NULL
 #define pair(X,Y)	(x_mkspair(p_base, (X), (Y)))
 #define atom(X)		(x_mksatom(p_base, (X)))
 
@@ -163,7 +181,7 @@ static char *test_mkiter(void)
 		! x_obj_isnil(p_base, p_obj)
 		&& x_obj_type_isiter(p_base, p_obj)
 		&& X_OBJ_FLAG_NONE == x_obj_flags(p_obj)
-		&& p_obj == x_obj_gc(p_base)
+		&& p_obj == x_obj_heap(p_base)
 		&& (void *)i == x_iterprim(p_obj)
 		&& (void *)j == x_iterval(p_obj)
 	);
@@ -197,7 +215,7 @@ static char *test_mkfiter(void)
 		! x_obj_isnil(p_base, p_obj)
 		&& x_obj_type_isiter(p_base, p_obj)
 		&& flags == x_obj_flags(p_obj)
-		&& p_obj == x_obj_gc(p_base)
+		&& p_obj == x_obj_heap(p_base)
 		&& (void *)i == x_iterprim(p_obj)
 		&& (void *)j == x_iterval(p_obj)
 	);
@@ -231,7 +249,7 @@ static char *test_make_iter(void)
 		! x_obj_isnil(p_base, p_obj)
 		&& x_obj_type_isiter(p_base, p_obj)
 		&& flags == x_obj_flags(p_obj)
-		&& p_obj == x_obj_gc(p_base)
+		&& p_obj == x_obj_heap(p_base)
 		&& (void *)i == x_iterprim(p_obj)
 		&& (void *)j == x_iterval(p_obj)
 	);
@@ -255,7 +273,7 @@ static char *test_type_iter_register(void)
 		p_type == x_firstobj(x_base_field_type_alist(p_base))
 	);
 
-	x_sys_free(p_base);
+	test_cleanup(p_base);
 
 	return NULL;
 }
@@ -301,7 +319,7 @@ static char *test_type_iter_struct(void)
 		NULL == x_type_field_length(p_type)
 	);
 
-	_it_should("set the Call primitive",
+	_it_should("not set the Call primitive",
 		NULL == x_type_field_call(p_type)
 	);
 
@@ -325,8 +343,8 @@ static char *test_type_iter_struct(void)
 		NULL == x_type_field_delimit(p_type)
 	);
 
-	_it_should("not set the Write primitive",
-		NULL == x_type_field_write(p_type)
+	_it_should("set the Write primitive",
+		x_type_iter_write_prim == x_type_field_write(p_type)
 	);
 
 	test_cleanup(p_base);

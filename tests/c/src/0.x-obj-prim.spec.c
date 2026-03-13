@@ -13,11 +13,13 @@
 #include "ext/x-expr/src/x-sys.c"
 #include "ext/x-expr/src/x-lib.c"
 #include "ext/x-expr/src/x.c"
-#include "src/x-obj.c"
+#include "ext/x-expr/src/x-obj.c"
 #include "src/x-obj/prim.c"
 
-#include "helper-system-functions.c"
+#define STUB_X_PROCEDURE
+#include "helper-stubs.c"
 
+#include "ext/x-expr/tests/src/helper-system-functions.c"
 
 /*
  * ## Test Overhead
@@ -46,11 +48,12 @@ x_obj_t *_test_make_type(x_obj_t *p_base)
 {
 	return
 		pair(atom("ONE"),
+		pair(atom(NULL),
+		pair(pair(atom(NULL), pair(atom(NULL), pair(atom(NULL), pair(atom(NULL), pair(atom(NULL), atom(NULL)))))),
+		pair(pair(atom(NULL), atom(NULL)),
 		pair(pair(atom(NULL), atom(NULL)),
 		pair(pair(atom(NULL), pair(atom(NULL), pair(atom(NULL), atom(NULL)))),
-		pair(pair(atom(NULL), pair(atom(NULL), atom(NULL))),
-		pair(pair(atom(NULL), pair(atom(NULL), atom(NULL))),
-	nil)))));
+	nil))))));
 }
 
 static char *test_obj_prim_make(void)
@@ -244,8 +247,8 @@ static char *test_obj_prim_call(void)
 
 	_test_prim_fn_calls = 0;
 	p_ret = x_obj_prim_call(p_base, p_args);
-	_it_should("not call the test function and return p_base",
-		p_base == p_ret
+	_it_should("not call the test function and return nil",
+		NULL == p_ret
 		&& 0 == _test_prim_fn_calls
 	);
 

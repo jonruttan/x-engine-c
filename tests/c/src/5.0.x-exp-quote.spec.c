@@ -13,7 +13,7 @@
 #include "ext/x-expr/src/x-sys.c"
 #include "ext/x-expr/src/x-lib.c"
 #include "ext/x-expr/src/x.c"
-#include "src/x-obj.c"
+#include "ext/x-expr/src/x-obj.c"
 #include "src/x-alist.c"
 #include "src/x-base.c"
 #include "src/x-eval.c"
@@ -28,7 +28,15 @@
 #include "src/x-token.c"
 #include "src/x-exp/quote.c"
 
-#include "helper-system-functions.c"
+#define STUB_X_PRIM
+#define STUB_X_PROCEDURE
+#define STUB_X_OPERATIVE
+#define STUB_X_HEAP
+#define STUB_X_OBJ_OBJ
+#define STUB_X_STR
+#include "helper-stubs.c"
+
+#include "ext/x-expr/tests/src/helper-system-functions.c"
 
 /*
  * ## Test Overhead
@@ -48,7 +56,7 @@ void test_cleanup(x_obj_t *p_base)
 	x_obj_t *p_gc = p_base, *p_tmp;
 
 	while (p_gc) {
-		p_tmp = x_obj_gc(p_gc);
+		p_tmp = x_obj_heap(p_gc);
 		x_sys_free(p_gc);
 		p_gc = p_tmp;
 	}

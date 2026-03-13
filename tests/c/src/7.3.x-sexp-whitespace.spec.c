@@ -15,7 +15,7 @@
 #include "ext/x-expr/src/x-sys.c"
 #include "ext/x-expr/src/x-lib.c"
 #include "ext/x-expr/src/x.c"
-#include "src/x-obj.c"
+#include "ext/x-expr/src/x-obj.c"
 #include "src/x-alist.c"
 #include "src/x-base.c"
 #include "src/x-type.c"
@@ -36,7 +36,16 @@
 #include "src/x-token/sexp/list.c"
 #include "src/x-token.c"
 
-#include "helper-system-functions.c"
+#define STUB_X_PRIM
+#define STUB_X_PROCEDURE
+#define STUB_X_OPERATIVE
+#define STUB_X_HEAP
+#define STUB_X_OBJ_OBJ
+#define STUB_X_INT
+#define STUB_X_SYMBOL
+#include "helper-stubs.c"
+
+#include "ext/x-expr/tests/src/helper-system-functions.c"
 
 /*
  * ## Test Overhead
@@ -56,7 +65,7 @@ void test_cleanup(x_obj_t *p_base)
 	x_obj_t *p_gc = p_base, *p_tmp;
 
 	while (p_gc) {
-		p_tmp = x_obj_gc(p_gc);
+		p_tmp = x_obj_heap(p_gc);
 		x_sys_free(p_gc);
 		p_gc = p_tmp;
 	}
@@ -97,7 +106,7 @@ static char *test_sexp_whitespace_analyse1(void)
 
 	p_obj = x_type_buffer_read(p_base, p_args);
 	p_obj = x_sexp_whitespace_analyse1(p_base, p_args);
-	_it_should("return the Base", p_base == p_obj);
+	_it_should("return NULL", NULL == p_obj);
 
 
 	test_cleanup(p_base);
@@ -179,7 +188,7 @@ static char *test_sexp_whitespace_delimit(void)
 
 	p_obj = x_type_buffer_read(p_base, p_args);
 	p_obj = x_sexp_whitespace_delimit(p_base, p_args);
-	_it_should("return the base object", p_base == p_obj);
+	_it_should("return NULL", NULL == p_obj);
 
 
 	test_cleanup(p_base);
@@ -226,7 +235,7 @@ x_obj_t *test_token_read_analyse_catchall(x_obj_t *p_base, x_obj_t *p_args)
 		|| x_lib_strchr(X_SEXP_WHITESPACE_CHARS_STR, x_bufferlastchar(p_buffer))) {
 		x_bufferread(p_buffer)--;
 		if (x_bufferlen(p_buffer) < 1) {
-			return p_base;
+			return NULL;
 		}
 		x_firstint(p_score) = -x_bufferlen(p_buffer);
 		x_restobj(p_score) = test_token_read_read_catchall_prim;

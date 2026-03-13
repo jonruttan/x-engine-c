@@ -7,7 +7,7 @@
 
 #include "ext/x-expr/src/x-sys.c"
 #include "ext/x-expr/src/x-lib.c"
-#include "src/x-obj.c"
+#include "ext/x-expr/src/x-obj.c"
 #include "ext/x-expr/src/x.c"
 #include "src/x-alist.c"
 #include "src/x-base.c"
@@ -16,7 +16,12 @@
 x_obj_t *x_token_read(x_obj_t *p_base, x_obj_t *p_args) { return p_base; }
 x_obj_t *x_eval(x_obj_t *p_base, x_obj_t *p_args) { return p_base; }
 
-#include "helper-system-functions.c"
+#define STUB_X_OBJ_OBJ
+#define STUB_X_STR
+#define STUB_X_TYPE_PRIM
+#include "helper-stubs.c"
+
+#include "ext/x-expr/tests/src/helper-system-functions.c"
 
 
 /*

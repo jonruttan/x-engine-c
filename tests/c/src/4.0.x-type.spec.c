@@ -15,14 +15,25 @@
 #include "ext/x-expr/src/x-sys.c"
 #include "ext/x-expr/src/x-lib.c"
 #include "ext/x-expr/src/x.c"
-#include "src/x-obj.c"
+#include "ext/x-expr/src/x-obj.c"
 #include "src/x-alist.c"
 #include "src/x-base.c"
 #include "src/x-type.c"
 #include "src/x-type/atom.c"
 #include "src/x-type/prim.c"
 
-#include "helper-system-functions.c"
+#define STUB_X_PRIM
+#define STUB_X_PROCEDURE
+#define STUB_X_OPERATIVE
+#define STUB_X_EVAL
+#define STUB_X_TOKEN
+#define STUB_X_HEAP
+#define STUB_X_OBJ_OBJ
+#define STUB_X_STR
+#define STUB_X_PRIM_REGISTER
+#include "helper-stubs.c"
+
+#include "ext/x-expr/tests/src/helper-system-functions.c"
 
 /*
  * ## Test Macros
@@ -62,7 +73,7 @@ void test_cleanup(x_obj_t *p_base)
 	x_obj_t *p_gc = p_base, *p_tmp;
 
 	while (p_gc) {
-		p_tmp = x_obj_gc(p_gc);
+		p_tmp = x_obj_heap(p_gc);
 		x_sys_free(p_gc);
 		p_gc = p_tmp;
 	}
@@ -144,6 +155,7 @@ static char *test_type_struct_make(void)
 	struct x_type_t type = {
 		TEST_TYPE_STRUCT_NAME,
 		TEST_TYPE_STRUCT_DATA,
+		NULL,	/* p_mark */
 		TEST_TYPE_STRUCT_MAKE,
 		TEST_TYPE_STRUCT_FREE,
 		TEST_TYPE_STRUCT_CLONE,
@@ -155,7 +167,8 @@ static char *test_type_struct_make(void)
 		TEST_TYPE_STRUCT_TO,
 		TEST_TYPE_STRUCT_ANALYSE,
 		TEST_TYPE_STRUCT_DELIMIT,
-		TEST_TYPE_STRUCT_WRITE
+		TEST_TYPE_STRUCT_WRITE,
+		NULL	/* p_error */
 	};
 
 	helper_alloc_reset();

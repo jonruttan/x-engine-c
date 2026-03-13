@@ -13,7 +13,7 @@
 #include "ext/x-expr/src/x-sys.c"
 #include "ext/x-expr/src/x-lib.c"
 #include "ext/x-expr/src/x.c"
-#include "src/x-obj.c"
+#include "ext/x-expr/src/x-obj.c"
 #include "src/x-alist.c"
 #include "src/x-base.c"
 #include "src/x-type.c"
@@ -24,7 +24,19 @@
 #include "src/x-type/str.c"
 #include "src/x-token/sexp/str.c"
 
-#include "helper-system-functions.c"
+#define STUB_X_PRIM
+#define STUB_X_PROCEDURE
+#define STUB_X_OPERATIVE
+#define STUB_X_EVAL
+#define STUB_X_TOKEN
+#define STUB_X_HEAP
+#define STUB_X_OBJ_OBJ
+#define STUB_X_INT
+#define STUB_X_SYMBOL
+#define STUB_X_PRIM_REGISTER
+#include "helper-stubs.c"
+
+#include "ext/x-expr/tests/src/helper-system-functions.c"
 
 /*
  * ## Test Overhead
@@ -33,6 +45,10 @@
 static void _setup(void)
 {
 	helper_set_alloc(MEM_GUARANTEED);
+	x_obj_hook_type_name = x_type_prim_type_name;
+	x_obj_hook_units = x_type_prim_units;
+	x_obj_hook_length = x_type_prim_length;
+	x_obj_hook_error = x_base_error;
 }
 
 static void _teardown(void)
@@ -44,7 +60,7 @@ void test_cleanup(x_obj_t *p_base)
 	x_obj_t *p_gc = p_base, *p_tmp;
 
 	while (p_gc) {
-		p_tmp = x_obj_gc(p_gc);
+		p_tmp = x_obj_heap(p_gc);
 		x_sys_free(p_gc);
 		p_gc = p_tmp;
 	}
@@ -56,7 +72,7 @@ void test_cleanup(x_obj_t *p_base)
 
 #define X_TEST_STR_VALUE		"TEST"
 
-#define nil			p_base
+#define nil			NULL
 #define pair(X,Y)	(x_mkspair(p_base, (X), (Y)))
 #define atom(X)		(x_mksatom(p_base, (X)))
 
@@ -117,7 +133,7 @@ static char *test_mkstr(void)
 		! x_obj_isnil(p_base, p_obj)
 		&& x_obj_type_isstr(NULL, p_obj)
 		&& X_OBJ_FLAG_NONE == x_obj_flags(p_obj)
-		&& p_obj == x_obj_gc(p_base)
+		&& p_obj == x_obj_heap(p_base)
 		&& 0 == strcmp(X_TEST_STR_VALUE, x_strval(p_obj))
 	);
 
@@ -149,7 +165,7 @@ static char *test_mkfstr(void)
 		! x_obj_isnil(p_base, p_obj)
 		&& x_obj_type_isstr(NULL, p_obj)
 		&& flags == x_obj_flags(p_obj)
-		&& p_obj == x_obj_gc(p_base)
+		&& p_obj == x_obj_heap(p_base)
 		&& 0 == strcmp(X_TEST_STR_VALUE, x_strval(p_obj))
 	);
 
@@ -180,7 +196,7 @@ static char *test_mkstrown(void)
 		! x_obj_isnil(p_base, p_obj)
 		&& x_obj_type_isstr(NULL, p_obj)
 		&& X_OBJ_FLAG_OWN == x_obj_flags(p_obj)
-		&& p_obj == x_obj_gc(p_base)
+		&& p_obj == x_obj_heap(p_base)
 		&& 0 == strcmp(X_TEST_STR_VALUE, x_strval(p_obj))
 	);
 
@@ -212,7 +228,7 @@ static char *test_mkfstrown(void)
 		! x_obj_isnil(p_base, p_obj)
 		&& x_obj_type_isstr(p_base, p_obj)
 		&& flags == x_obj_flags(p_obj)
-		&& p_obj == x_obj_gc(p_base)
+		&& p_obj == x_obj_heap(p_base)
 		&& 0 == strcmp(X_TEST_STR_VALUE, x_strval(p_obj))
 	);
 
@@ -244,7 +260,7 @@ static char *test_make_str(void)
 		! x_obj_isnil(p_base, p_obj)
 		&& x_obj_type_isstr(p_base, p_obj)
 		&& flags == x_obj_flags(p_obj)
-		&& p_obj == x_obj_gc(p_base)
+		&& p_obj == x_obj_heap(p_base)
 		&& 0 == strcmp(X_TEST_STR_VALUE, x_strval(p_obj))
 	);
 
@@ -311,7 +327,11 @@ static char *test_type_str_struct(void)
 		NULL == x_type_field_to(p_type)
 	);
 
-	_it_should("not set the Analyse primitive",
+	_it_should("set the Analyse primitive",
+		x_sexp_str_analyse1_prim == x_type_field_analyse(p_type)
+	);
+
+	_it_should("not set the Delimit primitive",
 		NULL == x_type_field_delimit(p_type)
 	);
 
@@ -338,7 +358,7 @@ static char *test_type_str_register(void)
 		p_type == x_firstobj(x_base_field_type_alist(p_base))
 	);
 
-	x_sys_free(p_base);
+	test_cleanup(p_base);
 
 	return NULL;
 }
@@ -429,15 +449,7 @@ static char *test_type_str_make(void)
 	helper_alloc_reset();
 
 	/* With p_base object */
-	p_base = x_mksatom(NULL, NULL);
-	x_atomobj(p_base) = pair(
-		pair(nil, nil),
-		pair(
-			pair(atom(STDIN_FILENO),
-			pair(atom(STDOUT_FILENO),
-			pair(atom(STDERR_FILENO),
-			nil))),
-		nil));
+	p_base = x_base_make(NULL, NULL);
 	p_str = x_mksatom(p_base, value);
 	p_args = x_mkspair(p_base, p_str, NULL);
 
@@ -468,33 +480,22 @@ static char *test_type_str_make(void)
 
 static char *test_type_str_call(void)
 {
-	x_obj_t *p_base, *p_str, *p_args, *p_obj;
+	x_obj_t *p_base, *p_str, *p_idx, *p_args, *p_obj;
 
 	helper_alloc_reset();
 
 	/* With p_base object */
-	p_base = x_mksatom(NULL, NULL);
-	x_atomobj(p_base) =
-		pair(
-			pair(nil, nil),
-		pair(
-			pair(atom(STDIN_FILENO),
-			pair(atom(STDOUT_FILENO),
-			pair(atom(STDERR_FILENO),
-			nil))),
-		pair(
-			pair(nil, nil),
-		nil)));
+	p_base = x_base_make(NULL, NULL);
 
 	p_str = x_mksatom(p_base, X_TYPE_STR_NAME);
-	p_args = x_mkspair(p_base, p_str, p_base);
+	p_idx = x_mksatom(p_base, 0);
+	p_args = x_mkspair(p_base, p_str,
+		x_mkspair(p_base, p_idx, NULL));
 
 	p_obj = x_type_str_call(p_base, p_args);
-	_it_should("call the test function and return p_base",
+	_it_should("call the test function and return first char",
 		X_TYPE_STR_NAME[0] == x_charval(p_obj)
 	);
-
-	x_sys_free(p_args);
 
 	_mark_incomplete();
 

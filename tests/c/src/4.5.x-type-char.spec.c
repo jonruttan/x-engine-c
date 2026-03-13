@@ -13,7 +13,7 @@
 #include "ext/x-expr/src/x-sys.c"
 #include "ext/x-expr/src/x-lib.c"
 #include "ext/x-expr/src/x.c"
-#include "src/x-obj.c"
+#include "ext/x-expr/src/x-obj.c"
 #include "src/x-alist.c"
 #include "src/x-base.c"
 #include "src/x-type.c"
@@ -24,7 +24,19 @@
 #include "src/x-token/sexp/str.c"
 #include "src/x-type/buffer.c"
 
-#include "helper-system-functions.c"
+#define STUB_X_PRIM
+#define STUB_X_PROCEDURE
+#define STUB_X_OPERATIVE
+#define STUB_X_EVAL
+#define STUB_X_TOKEN
+#define STUB_X_HEAP
+#define STUB_X_OBJ_OBJ
+#define STUB_X_INT
+#define STUB_X_SYMBOL
+#define STUB_X_PRIM_REGISTER
+#include "helper-stubs.c"
+
+#include "ext/x-expr/tests/src/helper-system-functions.c"
 
 /*
  * ## Test Overhead
@@ -33,6 +45,10 @@
 static void _setup(void)
 {
 	helper_set_alloc(MEM_GUARANTEED);
+	x_obj_hook_type_name = x_type_prim_type_name;
+	x_obj_hook_units = x_type_prim_units;
+	x_obj_hook_length = x_type_prim_length;
+	x_obj_hook_error = x_base_error;
 }
 
 static void _teardown(void)
@@ -44,7 +60,7 @@ void test_cleanup(x_obj_t *p_base)
 	x_obj_t *p_gc = p_base, *p_tmp;
 
 	while (p_gc) {
-		p_tmp = x_obj_gc(p_gc);
+		p_tmp = x_obj_heap(p_gc);
 		x_sys_free(p_gc);
 		p_gc = p_tmp;
 	}
@@ -56,7 +72,7 @@ void test_cleanup(x_obj_t *p_base)
 
 #define X_TEST_CHAR_VALUE		'@'
 
-#define nil			p_base
+#define nil			NULL
 #define pair(X,Y)	(x_mkspair(p_base, (X), (Y)))
 #define atom(X)		(x_mksatom(p_base, (X)))
 
@@ -118,7 +134,7 @@ static char *test_mkchar(void)
 		! x_obj_isnil(p_base, p_obj)
 		&& x_obj_type_ischar(p_base, p_obj)
 		&& X_OBJ_FLAG_NONE == x_obj_flags(p_obj)
-		&& p_obj == x_obj_gc(p_base)
+		&& p_obj == x_obj_heap(p_base)
 		&& c == x_charval(p_obj)
 	);
 
@@ -151,7 +167,7 @@ static char *test_mkfchar(void)
 		! x_obj_isnil(p_base, p_obj)
 		&& x_obj_type_ischar(p_base, p_obj)
 		&& flags == x_obj_flags(p_obj)
-		&& p_obj == x_obj_gc(p_base)
+		&& p_obj == x_obj_heap(p_base)
 		&& c == x_charval(p_obj)
 	);
 
@@ -184,7 +200,7 @@ static char *test_make_char(void)
 		! x_obj_isnil(p_base, p_obj)
 		&& x_obj_type_ischar(p_base, p_obj)
 		&& flags == x_obj_flags(p_obj)
-		&& p_obj == x_obj_gc(p_base)
+		&& p_obj == x_obj_heap(p_base)
 		&& c == x_charval(p_obj)
 	);
 
@@ -211,8 +227,8 @@ static char *test_type_char_struct(void)
 		x_type_char_name == x_type_field_name(p_type)
 	);
 
-	_it_should("set the Data object to nil",
-		NULL == x_type_field_data(p_type)
+	_it_should("set the Data object",
+		NULL != x_type_field_data(p_type)
 	);
 
 	_it_should("set the Make primitive",
@@ -282,7 +298,7 @@ static char *test_type_char_register(void)
 		p_type == x_firstobj(x_base_field_type_alist(p_base))
 	);
 
-	x_sys_free(p_base);
+	test_cleanup(p_base);
 
 	return NULL;
 }
@@ -374,15 +390,7 @@ static char *test_type_char_make(void)
 	helper_alloc_reset();
 
 	/* With p_base object */
-	p_base = x_mksatom(NULL, NULL);
-	x_atomobj(p_base) = pair(
-		pair(nil, nil),
-		pair(
-			pair(atom(STDIN_FILENO),
-			pair(atom(STDOUT_FILENO),
-			pair(atom(STDERR_FILENO),
-			nil))),
-		nil));
+	p_base = x_base_make(NULL, NULL);
 	p_char = x_mksatom(p_base, value);
 	p_args = x_mkspair(p_base, p_char, NULL);
 

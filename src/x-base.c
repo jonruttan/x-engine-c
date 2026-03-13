@@ -73,6 +73,12 @@ x_obj_t *x_base_make(x_obj_t *p_base, x_obj_t *p_args)
 			nil)))),
 		nil)))))));
 
+	/* Set x-obj hooks for the type system. */
+	x_obj_hook_type_name = x_type_prim_type_name;
+	x_obj_hook_units = x_type_prim_units;
+	x_obj_hook_length = x_type_prim_length;
+	x_obj_hook_error = x_base_error;
+
 	return p_base;
 }
 

@@ -15,7 +15,7 @@
 #include "ext/x-expr/src/x-sys.c"
 #include "ext/x-expr/src/x-lib.c"
 #include "ext/x-expr/src/x.c"
-#include "src/x-obj.c"
+#include "ext/x-expr/src/x-obj.c"
 #include "src/x-alist.c"
 #include "src/x-base.c"
 #include "src/x-type.c"
@@ -36,7 +36,15 @@
 #include "src/x-token/sexp/list.c"
 #include "src/x-token.c"
 
-#include "helper-system-functions.c"
+#define STUB_X_PRIM
+#define STUB_X_PROCEDURE
+#define STUB_X_OPERATIVE
+#define STUB_X_HEAP
+#define STUB_X_OBJ_OBJ
+#define STUB_X_SYMBOL
+#include "helper-stubs.c"
+
+#include "ext/x-expr/tests/src/helper-system-functions.c"
 
 /*
  * ## Test Overhead
@@ -56,7 +64,7 @@ void test_cleanup(x_obj_t *p_base)
 	x_obj_t *p_gc = p_base, *p_tmp;
 
 	while (p_gc) {
-		p_tmp = x_obj_gc(p_gc);
+		p_tmp = x_obj_heap(p_gc);
 		x_sys_free(p_gc);
 		p_gc = p_tmp;
 	}
@@ -86,7 +94,7 @@ static char *test_sexp_int_analyse_digits(void)
 	p_args = x_mkspair(p_base, p_buffer, p_base);
 	p_obj = x_type_buffer_read(p_base, p_args);
 	p_obj = x_sexp_int_analyse_digits(p_base, p_args);
-	_it_should("return the Base", p_base == p_obj);
+	_it_should("return NULL", NULL == p_obj);
 
 	test_cleanup(p_base);
 
@@ -139,7 +147,7 @@ static char *test_sexp_int_analyse_xdigits(void)
 	p_args = x_mkspair(p_base, p_buffer, p_base);
 	p_obj = x_type_buffer_read(p_base, p_args);
 	p_obj = x_sexp_int_analyse_xdigits(p_base, p_args);
-	_it_should("return the Base", p_base == p_obj);
+	_it_should("return NULL", NULL == p_obj);
 
 	test_cleanup(p_base);
 
@@ -194,7 +202,7 @@ static char *test_sexp_int_analyse_base(void)
 	p_args = x_mkspair(p_base, p_buffer, p_base);
 	p_obj = x_type_buffer_read(p_base, p_args);
 	p_obj = x_sexp_int_analyse_base(p_base, p_args);
-	_it_should("return the Base", p_base == p_obj);
+	_it_should("return NULL", NULL == p_obj);
 
 	test_cleanup(p_base);
 
@@ -247,7 +255,7 @@ static char *test_sexp_int_analyse_prefix(void)
 	p_args = x_mkspair(p_base, p_buffer, p_base);
 	p_obj = x_type_buffer_read(p_base, p_args);
 	p_obj = x_sexp_int_analyse_prefix(p_base, p_args);
-	_it_should("return the Base", p_base == p_obj);
+	_it_should("return NULL", NULL == p_obj);
 
 	test_cleanup(p_base);
 
@@ -284,7 +292,7 @@ static char *test_sexp_int_analyse_sign(void)
 	p_args = x_mkspair(p_base, p_buffer, p_base);
 	p_obj = x_type_buffer_read(p_base, p_args);
 	p_obj = x_sexp_int_analyse_sign(p_base, p_args);
-	_it_should("return the Base", p_base == p_obj);
+	_it_should("return NULL", NULL == p_obj);
 
 	test_cleanup(p_base);
 
@@ -373,7 +381,7 @@ x_obj_t *test_token_read_analyse_whitespace(x_obj_t *p_base, x_obj_t *p_args)
 		return p_score;
 	}
 
-	return p_base;
+	return NULL;
 }
 
 x_obj_t *test_token_read_delimit_whitespace(x_obj_t *p_base, x_obj_t *p_args)
@@ -385,7 +393,7 @@ x_obj_t *test_token_read_delimit_whitespace(x_obj_t *p_base, x_obj_t *p_args)
 		return p_buffer;
 	}
 
-	return p_base;
+	return NULL;
 }
 
 x_obj_t *test_token_read_read_whitespace(x_obj_t *p_base, x_obj_t *p_args)

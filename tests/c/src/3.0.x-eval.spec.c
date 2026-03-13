@@ -11,7 +11,7 @@
 
 #include "ext/x-expr/src/x-sys.c"
 #include "ext/x-expr/src/x-lib.c"
-#include "src/x-obj.c"
+#include "ext/x-expr/src/x-obj.c"
 #include "ext/x-expr/src/x.c"
 #include "src/x-alist.c"
 #include "src/x-base.c"
@@ -23,10 +23,17 @@
 #include "src/x-token/sexp/pair.c"
 #include "src/x-type/prim.c"
 
-x_obj_t *x_token_read(x_obj_t *p_base, x_obj_t *p_args) { return p_base; }
-x_obj_t *x_token_write(x_obj_t *p_base, x_obj_t *p_args) { return p_args; }
+#define STUB_X_PRIM
+#define STUB_X_PROCEDURE
+#define STUB_X_OPERATIVE
+#define STUB_X_HEAP
+#define STUB_X_OBJ_OBJ
+#define STUB_X_STR
+#define STUB_X_PRIM_REGISTER
+#define STUB_X_TOKEN
+#include "helper-stubs.c"
 
-#include "helper-system-functions.c"
+#include "ext/x-expr/tests/src/helper-system-functions.c"
 
 
 /*
@@ -47,7 +54,7 @@ void test_cleanup(x_obj_t *p_base)
 	x_obj_t *p_gc = p_base, *p_tmp;
 
 	while (p_gc) {
-		p_tmp = x_obj_gc(p_gc);
+		p_tmp = x_obj_heap(p_gc);
 		x_sys_free(p_gc);
 		p_gc = p_tmp;
 	}
