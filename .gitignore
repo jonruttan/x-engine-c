@@ -68,6 +68,9 @@ apidocs/
 *.sublime-*
 *~
 
+# Coverage reports
+.coverage*/
+
 # Scratchpad
 tmp/
 \#*
