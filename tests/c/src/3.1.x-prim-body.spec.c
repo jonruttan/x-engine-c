@@ -125,38 +125,43 @@ static char *test_body_eval_tco(void)
 {
 	x_obj_t *p_base, *p_body, *p_saved_env, *p_result;
 
-	/* nil body restores env and returns NULL */
+	/* nil body pops save-stack, restores env, returns NULL */
 	p_base = x_base_make(NULL, NULL);
 	p_saved_env = x_mkspair(p_base, x_mksatom(p_base, 99), NULL);
+	x_base_field_save_stack(p_base) = x_mkspair(p_base,
+		p_saved_env, x_base_field_save_stack(p_base));
 	x_base_field_env_alist(p_base) = NULL;
-	p_result = x_prim_body_eval_tco(p_base, NULL, p_saved_env);
+	p_result = x_prim_body_eval_tco(p_base, NULL);
 	_it_should("restore env for nil body",
 		x_base_field_env_alist(p_base) == p_saved_env);
 	_it_should("return NULL for nil body (tco)", p_result == NULL);
 	test_cleanup(p_base);
 
-	/* single form sets tco_expr and tco_env */
+	/* single form sets tco_expr and tco_env, pops save-stack */
 	p_base = x_base_make(NULL, NULL);
 	p_saved_env = x_mkspair(p_base, x_mksatom(p_base, 88), NULL);
+	x_base_field_save_stack(p_base) = x_mkspair(p_base,
+		p_saved_env, x_base_field_save_stack(p_base));
 	p_body = x_mkspair(p_base, x_mksatom(p_base, 42), NULL);
 	x_base_field_tco_env(p_base) = NULL;
-	p_result = x_prim_body_eval_tco(p_base, p_body, p_saved_env);
+	p_result = x_prim_body_eval_tco(p_base, p_body);
 	_it_should("set tco_expr for single form",
 		x_base_field_tco_expr(p_base) != NULL
 		&& x_atomint(x_base_field_tco_expr(p_base)) == 42);
 	_it_should("set tco_env to saved_env",
 		x_base_field_tco_env(p_base) == p_saved_env);
 	_it_should("return NULL when setting tco_expr", p_result == NULL);
-	/* Clean up tco state so it doesn't interfere with cleanup. */
 	x_base_field_tco_expr(p_base) = NULL;
 	x_base_field_tco_env(p_base) = NULL;
 	test_cleanup(p_base);
 
-	/* nil last form: restores env, no TCO */
+	/* nil last form: pops save-stack, restores env, no TCO */
 	p_base = x_base_make(NULL, NULL);
 	p_saved_env = x_mkspair(p_base, x_mksatom(p_base, 77), NULL);
+	x_base_field_save_stack(p_base) = x_mkspair(p_base,
+		p_saved_env, x_base_field_save_stack(p_base));
 	p_body = x_mkspair(p_base, NULL, NULL);
-	p_result = x_prim_body_eval_tco(p_base, p_body, p_saved_env);
+	p_result = x_prim_body_eval_tco(p_base, p_body);
 	_it_should("restore env for nil last form",
 		x_base_field_env_alist(p_base) == p_saved_env);
 	_it_should("return NULL for nil last form", p_result == NULL);
@@ -167,11 +172,13 @@ static char *test_body_eval_tco(void)
 	/* multi-form body: evals all but last, sets tco_expr for last */
 	p_base = x_base_make(NULL, NULL);
 	p_saved_env = x_mkspair(p_base, x_mksatom(p_base, 44), NULL);
+	x_base_field_save_stack(p_base) = x_mkspair(p_base,
+		p_saved_env, x_base_field_save_stack(p_base));
 	p_body = x_mkspair(p_base, x_mksatom(p_base, 10),
 		x_mkspair(p_base, x_mksatom(p_base, 20),
 		x_mkspair(p_base, x_mksatom(p_base, 30), NULL)));
 	x_base_field_tco_env(p_base) = NULL;
-	p_result = x_prim_body_eval_tco(p_base, p_body, p_saved_env);
+	p_result = x_prim_body_eval_tco(p_base, p_body);
 	_it_should("set tco_expr to last form in multi-form body (tco)",
 		x_base_field_tco_expr(p_base) != NULL
 		&& x_atomint(x_base_field_tco_expr(p_base)) == 30);
@@ -187,9 +194,11 @@ static char *test_body_eval_tco(void)
 		x_obj_t *p_existing_tco_env = x_mkspair(p_base,
 			x_mksatom(p_base, 66), NULL);
 		p_saved_env = x_mkspair(p_base, x_mksatom(p_base, 55), NULL);
+		x_base_field_save_stack(p_base) = x_mkspair(p_base,
+			p_saved_env, x_base_field_save_stack(p_base));
 		p_body = x_mkspair(p_base, x_mksatom(p_base, 42), NULL);
 		x_base_field_tco_env(p_base) = p_existing_tco_env;
-		p_result = x_prim_body_eval_tco(p_base, p_body, p_saved_env);
+		p_result = x_prim_body_eval_tco(p_base, p_body);
 		_it_should("not overwrite existing tco_env",
 			x_base_field_tco_env(p_base) == p_existing_tco_env);
 		x_base_field_tco_expr(p_base) = NULL;

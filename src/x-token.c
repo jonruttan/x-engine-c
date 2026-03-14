@@ -47,9 +47,9 @@ x_obj_t *x_token_delimit(x_obj_t *p_base, x_obj_t *p_args)
 
 	/* Cycle through of all of the types. */
 	while ( ! x_obj_isnil(p_base, p_types)) {
-		prim_arg_prim = x_type_field_delimit(x_firstobj(p_types));
+		prim_arg_prim = x_type_field_delimit(x_restobj(x_firstobj(p_types)));
 
-		if (p_type != x_firstobj(p_types)
+		if (p_type != x_restobj(x_firstobj(p_types))
 			&& ! x_obj_isnil(p_base, prim_arg_prim)
 			&& x_type_prim_apply(p_base, (x_obj_t *)prim_args) == p_buffer
 		) {
@@ -73,7 +73,7 @@ x_obj_t *x_type_alist_iter(x_obj_t *p_base, x_obj_t *p_args)
 		return p_obj;
 	}
 
-	return x_type_field_analyse(p_obj);
+	return x_type_field_analyse(x_restobj(p_obj));
 }
 
 x_obj_t *x_token_analyse(x_obj_t *p_base, x_obj_t *p_args)

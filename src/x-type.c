@@ -29,32 +29,32 @@
 x_obj_t *x_type_struct_make(x_obj_t *p_base, struct x_type_t type)
 {
 	x_obj_t *p_type =
-		/* name */
-		pair(type.p_name,
-		/* data */
-		pair(type.p_data,
-		/* Heap: '(mark make free clone units length) */
-		pair(pair(type.p_mark,
-			pair(type.p_make,
-			pair(type.p_free,
-			pair(type.p_clone,
-			pair(type.p_units,
-			pair(type.p_length,
+		/* name-stack */
+		pair(pair(type.p_name, nil),
+		/* data-stack */
+		pair(pair(type.p_data, nil),
+		/* Heap: '(mark-stack make-stack free-stack clone-stack units-stack length-stack) */
+		pair(pair(pair(type.p_mark, nil),
+			pair(pair(type.p_make, nil),
+			pair(pair(type.p_free, nil),
+			pair(pair(type.p_clone, nil),
+			pair(pair(type.p_units, nil),
+			pair(pair(type.p_length, nil),
 			nil)))))),
-		/* Proc: '(call eval) */
-		pair(pair(type.p_call,
-			pair(type.p_eval,
+		/* Proc: '(call-stack eval-stack) */
+		pair(pair(pair(type.p_call, nil),
+			pair(pair(type.p_eval, nil),
 			nil)),
-		/* Cvt: '(from to) */
-		pair(pair(type.p_from,
-			pair(type.p_to,
+		/* Cvt: '(from-stack to-stack) */
+		pair(pair(pair(type.p_from, nil),
+			pair(pair(type.p_to, nil),
 			nil)),
-		/* IO: '(analyse delimit write display error) */
-		pair(pair(type.p_analyse,
-			pair(type.p_delimit,
-			pair(type.p_write,
-			pair(type.p_display,
-			pair(type.p_error,
+		/* IO: '(analyse-stack delimit-stack write-stack display-stack error-stack) */
+		pair(pair(pair(type.p_analyse, nil),
+			pair(pair(type.p_delimit, nil),
+			pair(pair(type.p_write, nil),
+			pair(pair(type.p_display, nil),
+			pair(pair(type.p_error, nil),
 			nil))))),
 		nil))))));
 

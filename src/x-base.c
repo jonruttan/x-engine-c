@@ -37,40 +37,40 @@ x_obj_t *x_base_make(x_obj_t *p_base, x_obj_t *p_args)
 	p_base = x_obj_make(p_base, x_type_base_obj, X_OBJ_FLAG_NONE,
 		X_OBJ_LENGTH_ATOM, NULL);
 	x_atomobj(p_base) = pair(
-		/* type-alist */
-		nil,
+		/* type-alist (stack-wrapped) */
+		pair(nil, nil),
 		pair(
-			/* files: '(filein-stack fileout fileerr write-buf) */
+			/* files: '(filein-stack fileout-stack fileerr-stack write-buf-stack) */
 			pair(pair(atom(STDIN_FILENO), nil),
-			pair(atom(STDOUT_FILENO),
-			pair(atom(STDERR_FILENO),
-			pair(nil,
+			pair(pair(atom(STDOUT_FILENO), nil),
+			pair(pair(atom(STDERR_FILENO), nil),
+			pair(pair(nil, nil),
 			nil)))),
 		pair(
-			/* env-state: '(alist eval-list buffer-stack cache error tco-expr tco-env) */
-			pair(nil,
-			pair(nil,
+			/* env-state: all stack-wrapped */
 			pair(pair(nil, nil),
-			pair(nil,
-			pair(nil,
-			pair(nil,
-			pair(nil,
+			pair(pair(nil, nil),
+			pair(pair(nil, nil),
+			pair(pair(nil, nil),
+			pair(pair(nil, nil),
+			pair(pair(nil, nil),
+			pair(pair(nil, nil),
 			nil))))))),
 		pair(
-			/* true symbol (inherit from parent) */
-			p_parent ? x_base_field_true(p_parent) : nil,
+			/* true symbol (stack-wrapped) */
+			pair(p_parent ? x_base_field_true(p_parent) : nil, nil),
 		pair(
-			/* line counter */
-			atom(1),
+			/* line counter (stack-wrapped) */
+			pair(atom(1), nil),
 		pair(
-			/* profile: '(allocs evals tco) */
-			pair(atom(0), pair(atom(0), pair(atom(0), nil))),
+			/* profile: all stack-wrapped */
+			pair(pair(atom(0), nil), pair(pair(atom(0), nil), pair(pair(atom(0), nil), nil))),
 		pair(
-			/* hooks: '(type-name units length error) */
-			pair(atom(x_type_prim_type_name),
-			pair(atom(x_type_prim_units),
-			pair(atom(x_type_prim_length),
-			pair(atom(x_base_error),
+			/* hooks: all stack-wrapped */
+			pair(pair(atom(x_type_prim_type_name), nil),
+			pair(pair(atom(x_type_prim_units), nil),
+			pair(pair(atom(x_type_prim_length), nil),
+			pair(pair(atom(x_base_error), nil),
 			nil)))),
 		pair(
 			/* save-stack */
@@ -140,12 +140,18 @@ void x_base_error(x_obj_t *p_base, x_char_t *message, x_obj_t *p_obj)
 
 x_obj_t *x_base_type_alist_extend(x_obj_t *p_base, x_obj_t *p_args)
 {
-	x_spair_t args = x_obj_set(NULL, X_OBJ_FLAG_NONE, { p_args }, { NULL });
+	x_obj_t *p_entry;
+	x_spair_t args[1] = {
+		x_obj_set(NULL, X_OBJ_FLAG_NONE, { NULL }, { NULL })
+	};
 
 	if ( ! x_base_isset(p_base)) {
 		return NULL;
 	}
 
+	/* Wrap type struct as (name . type_struct) for alist keying */
+	p_entry = x_mkspair(p_base, x_type_field_name(p_args), p_args);
+	x_firstobj((x_obj_t *)args) = p_entry;
 	x_restobj((x_obj_t *)args) = x_base_field_type_alist(p_base);
 
 	return x_base_field_type_alist(p_base) = x_alist_extend(p_base, (x_obj_t *)args);
@@ -153,6 +159,7 @@ x_obj_t *x_base_type_alist_extend(x_obj_t *p_base, x_obj_t *p_args)
 
 x_obj_t *x_base_type_alist_assoc(x_obj_t *p_base, x_obj_t *p_args)
 {
+	x_obj_t *p_result;
 	x_spair_t args[2] = {
 		x_obj_set(NULL, X_OBJ_FLAG_NONE, { x_firstobj(p_args) }, { (x_obj_t *)(args + 1) }),
 		x_obj_set(NULL, X_OBJ_FLAG_NONE, { NULL }, { NULL })
@@ -164,7 +171,10 @@ x_obj_t *x_base_type_alist_assoc(x_obj_t *p_base, x_obj_t *p_args)
 
 	x_firstobj((x_obj_t *)args[1]) = x_base_field_type_alist(p_base);
 
-	return x_alist_assoc(p_base, (x_obj_t *)args);
+	p_result = x_alist_assoc(p_base, (x_obj_t *)args);
+
+	/* Unwrap (name . type_struct) entry to return bare type struct */
+	return x_obj_isnil(p_base, p_result) ? NULL : x_restobj(p_result);
 }
 
 x_obj_t *x_base_env_alist_extend(x_obj_t *p_base, x_obj_t *p_args)

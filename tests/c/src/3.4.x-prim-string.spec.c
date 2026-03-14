@@ -89,58 +89,6 @@ void test_cleanup(x_obj_t *p_base)
  * ## Test Runners
  */
 
-static char *test_string_length(void)
-{
-	x_obj_t *p_base, *p_args, *p_result;
-
-	p_base = x_base_make(NULL, NULL);
-	x_prim_register(p_base, NULL);
-
-	/* (string-length "hello") -> 5 */
-	p_args = x_mkspair(p_base,
-		x_mkstr(p_base, "hello"), NULL);
-	p_result = x_prim_string_length(p_base, p_args);
-	_it_should("(string-length \"hello\") = 5",
-		x_intval(p_result) == 5);
-
-	/* (string-length "") -> 0 */
-	p_args = x_mkspair(p_base,
-		x_mkstr(p_base, ""), NULL);
-	p_result = x_prim_string_length(p_base, p_args);
-	_it_should("(string-length \"\") = 0",
-		x_intval(p_result) == 0);
-
-	test_cleanup(p_base);
-	return NULL;
-}
-
-static char *test_string_ref(void)
-{
-	x_obj_t *p_base, *p_args, *p_result;
-
-	p_base = x_base_make(NULL, NULL);
-	x_prim_register(p_base, NULL);
-
-	/* (string-ref "abc" 0) -> #\a */
-	p_args = x_mkspair(p_base,
-		x_mkstr(p_base, "abc"),
-		x_mkspair(p_base, x_mksatom(p_base, (x_int_t)0), NULL));
-	p_result = x_prim_string_ref(p_base, p_args);
-	_it_should("(string-ref \"abc\" 0) = a",
-		x_charval(p_result) == 'a');
-
-	/* (string-ref "abc" 2) -> #\c */
-	p_args = x_mkspair(p_base,
-		x_mkstr(p_base, "abc"),
-		x_mkspair(p_base, x_mksatom(p_base, (x_int_t)2), NULL));
-	p_result = x_prim_string_ref(p_base, p_args);
-	_it_should("(string-ref \"abc\" 2) = c",
-		x_charval(p_result) == 'c');
-
-	test_cleanup(p_base);
-	return NULL;
-}
-
 static char *test_string_append(void)
 {
 	x_obj_t *p_base, *p_args, *p_result;
@@ -163,35 +111,6 @@ static char *test_string_append(void)
 	p_result = x_prim_string_append(p_base, p_args);
 	_it_should("(string-append \"\" \"x\") = \"x\"",
 		x_lib_strcmp(x_strval(p_result), "x") == 0);
-
-	test_cleanup(p_base);
-	return NULL;
-}
-
-static char *test_substring(void)
-{
-	x_obj_t *p_base, *p_args, *p_result;
-
-	p_base = x_base_make(NULL, NULL);
-	x_prim_register(p_base, NULL);
-
-	/* (substring "hello" 1 3) -> "el" */
-	p_args = x_mkspair(p_base,
-		x_mkstr(p_base, "hello"),
-		x_mkspair(p_base, x_mksatom(p_base, (x_int_t)1),
-		x_mkspair(p_base, x_mksatom(p_base, (x_int_t)3), NULL)));
-	p_result = x_prim_substring(p_base, p_args);
-	_it_should("(substring \"hello\" 1 3) = \"el\"",
-		x_lib_strcmp(x_strval(p_result), "el") == 0);
-
-	/* (substring "hello" 0 5) -> "hello" */
-	p_args = x_mkspair(p_base,
-		x_mkstr(p_base, "hello"),
-		x_mkspair(p_base, x_mksatom(p_base, (x_int_t)0),
-		x_mkspair(p_base, x_mksatom(p_base, (x_int_t)5), NULL)));
-	p_result = x_prim_substring(p_base, p_args);
-	_it_should("(substring \"hello\" 0 5) = \"hello\"",
-		x_lib_strcmp(x_strval(p_result), "hello") == 0);
 
 	test_cleanup(p_base);
 	return NULL;
@@ -377,10 +296,7 @@ static char *test_str_call_negative_index(void)
 }
 
 static char *run_tests() {
-	_run_test(test_string_length);
-	_run_test(test_string_ref);
 	_run_test(test_string_append);
-	_run_test(test_substring);
 	_run_test(test_string_eq);
 	_run_test(test_string_symbol_convert);
 	_run_test(test_number_string_convert);

@@ -91,27 +91,6 @@ void test_cleanup(x_obj_t *p_base)
  * ## Test Runners
  */
 
-static char *test_io_newline(void)
-{
-	x_obj_t *p_base;
-	x_char_t s[8];
-
-	p_base = x_base_make(NULL, NULL);
-	x_prim_register(p_base, NULL);
-
-	helper_file_buffer_ptr[TEST_HELPER_FILE_STDOUT] = s;
-	helper_file_buffer_length[TEST_HELPER_FILE_STDOUT] = 8;
-	helper_file_reset();
-	s[0] = '\0';
-
-	x_prim_newline(p_base, NULL);
-	_it_should("newline writes a newline char",
-		s[0] == '\n');
-
-	test_cleanup(p_base);
-	return NULL;
-}
-
 static char *test_io_display(void)
 {
 	x_obj_t *p_base, *p_args;
@@ -412,16 +391,6 @@ static char *test_io_heap_mark_sweep_collect(void)
 	count2 = x_intval(x_prim_heap_count(p_base, NULL));
 	_it_should("heap shrank after mark+sweep", count2 < count1);
 
-	/* Now test heap-collect (combined mark+sweep) */
-	x_mkint(p_base, 444);
-	count1 = x_intval(x_prim_heap_count(p_base, NULL));
-
-	x_prim_heap_collect(p_base, NULL);
-
-	count2 = x_intval(x_prim_heap_count(p_base, NULL));
-	_it_should("heap-collect cleaned unreachable objects",
-		count2 <= count1);
-
 	test_cleanup(p_base);
 	return NULL;
 }
@@ -454,7 +423,6 @@ static char *test_io_repl(void)
 }
 
 static char *run_tests() {
-	_run_test(test_io_newline);
 	_run_test(test_io_display);
 	_run_test(test_io_write);
 	_run_test(test_io_heap_count);

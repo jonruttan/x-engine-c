@@ -94,22 +94,17 @@ x_obj_t *x_type_prim_apply(x_obj_t *p_base, x_obj_t *p_args)
 	if (x_obj_type_isprocedure(p_base, p_fn)) {
 		x_obj_t *p_result;
 
-		/* Push saved env onto base save-stack */
-		x_base_field_save_stack(p_base) = x_mkspair(p_base,
-			x_base_field_env_alist(p_base),
-			x_base_field_save_stack(p_base));
-
-		x_base_field_env_alist(p_base) = x_prim_multiple_extend(
-			p_base, x_procenv(p_fn), x_procparams(p_fn),
-			x_restobj(p_args));
+		/* Push new env onto env_alist_stack */
+		x_base_field_env_alist_stack(p_base) = x_mkspair(p_base,
+			x_prim_multiple_extend(p_base, x_procenv(p_fn),
+				x_procparams(p_fn), x_restobj(p_args)),
+			x_base_field_env_alist_stack(p_base));
 
 		p_result = x_prim_body_eval(p_base, x_procbody(p_fn));
 
-		/* Pop save-stack and restore env */
-		x_base_field_env_alist(p_base)
-			= x_firstobj(x_base_field_save_stack(p_base));
-		x_base_field_save_stack(p_base)
-			= x_restobj(x_base_field_save_stack(p_base));
+		/* Pop env_alist_stack */
+		x_base_field_env_alist_stack(p_base)
+			= x_restobj(x_base_field_env_alist_stack(p_base));
 
 		return p_result;
 	}

@@ -288,6 +288,8 @@ static char *test_make_symbol(void)
 	x_obj_t *p_base, *p_obj;
 	x_obj_flag_t flags = rand();
 
+	helper_alloc_reset();
+
 	p_obj = x_make_symbol(NULL, flags, X_TEST_SYMBOL_VALUE);
 	_it_should("make a Symbol object and set its value",
 		! x_obj_isnil(NULL, p_obj)
@@ -402,7 +404,7 @@ static char *test_type_symbol_register(void)
 		0 == x_lib_strcmp(X_TYPE_SYMBOL_NAME, x_strval(x_type_field_name(p_type)))
 	);
 	_it_should("add the Symbol type to the Type alist",
-		p_type == x_firstobj(x_base_field_type_alist(p_base))
+		p_type == x_restobj(x_firstobj(x_base_field_type_alist(p_base)))
 	);
 	_it_should("create the Symbol data structure",
 		x_obj_type_isspair(x_symbol_data(p_type))
@@ -421,11 +423,11 @@ static char *test_base_alist_assoc(void)
 	helper_alloc_reset();
 
 	p_base = x_base_make(NULL, NULL);
-	x_base_type_alist_extend(p_base, x_mkspair(p_base, x_type_symbol_name, atom(1)));
+	x_base_type_alist_extend(p_base, x_mkspair(p_base, x_mkspair(p_base, x_type_symbol_name, NULL), atom(1)));
 
 	p_type = x_base_type_alist_assoc(p_base, x_mkspair(p_base, x_type_symbol_name, NULL));
 	_it_should("find the type in the alist and return its properties",
-		x_type_symbol_name == x_firstobj(p_type)
+		x_type_symbol_name == x_type_field_name(p_type)
 	);
 
 	return NULL;

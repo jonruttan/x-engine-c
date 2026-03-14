@@ -146,7 +146,8 @@ x_obj_t *mock_fn(x_obj_t *p_base, x_obj_t *p_args)
 {
 	mock_fn_calls++;
 
-	return mock_obj = x_mkspair(p_base, x_mksatom(p_base, mock_str), p_base);
+	return mock_obj = x_mkspair(p_base,
+		x_mkspair(p_base, x_mksatom(p_base, mock_str), NULL), p_base);
 }
 
 

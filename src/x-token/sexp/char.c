@@ -136,7 +136,6 @@ x_obj_t *x_sexp_char_write(x_obj_t *p_base, x_obj_t *p_args)
 {
 	x_obj_t *p_ret, *p_type, *p_data, *p_entry;
 	x_char_t ch = x_atomchar(x_firstobj(p_args));
-	x_char_t *sym_name;
 	x_satom_t str = x_obj_set(x_type_atom_obj, X_OBJ_FLAG_NONE,
 		{ .s = &x_atomchar(x_firstobj(p_args)) }),
 		sz = x_obj_set(x_type_atom_obj, X_OBJ_FLAG_NONE, { .i = 1 });
@@ -155,9 +154,12 @@ x_obj_t *x_sexp_char_write(x_obj_t *p_base, x_obj_t *p_args)
 			p_entry = x_firstobj(p_data);
 
 			if ((x_char_t)x_intval(x_restobj(p_entry)) == ch) {
-				sym_name = x_atomstr(x_firstobj(p_entry));
-				x_atomstr(str) = sym_name;
-				x_base_write_str(p_base, (x_obj_t *)wrap);
+				x_satom_t name_str = x_obj_set(x_type_atom_obj,
+					X_OBJ_FLAG_NONE,
+					{ .s = x_atomstr(x_firstobj(p_entry)) });
+				x_spair_t name_wrap = x_obj_set(NULL,
+					X_OBJ_FLAG_NONE, { name_str }, { NULL });
+				x_base_write_str(p_base, (x_obj_t *)&name_wrap);
 				return x_firstobj(p_args);
 			}
 

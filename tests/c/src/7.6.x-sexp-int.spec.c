@@ -52,6 +52,7 @@
 
 static void _setup(void)
 {
+	_buffer_index = -1;
 	helper_set_alloc(MEM_GUARANTEED);
 }
 

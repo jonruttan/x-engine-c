@@ -71,32 +71,36 @@ static x_obj_t *x_prim_include(x_obj_t *p_base, x_obj_t *p_args)
 	int fd = x_sys_open(x_strval(p_path), 0 /* O_RDONLY */);
 	x_obj_t *p_buffer, *p_result;
 	x_char_t *buf;
-	x_int_t saved_line;
 
 	if (fd < 0) {
 		x_obj_error(p_base, "include: cannot open", p_path);
 		return NULL;
 	}
 
-	/* Save and reset line counter for included file. */
-	saved_line = x_atomint(x_base_field_line(p_base));
-	x_atomint(x_base_field_line(p_base)) = 1;
+	/* Push line counter for included file. */
+	x_base_field_line_stack(p_base) = x_mkspair(p_base,
+		x_mksatom(p_base, 1), x_base_field_line_stack(p_base));
 
 	/* Push new input state. */
-	x_base_filein_push(p_base, fd);
+	x_base_field_filein_stack(p_base) = x_mkspair(p_base,
+		x_mksatom(p_base, fd), x_base_field_filein_stack(p_base));
 
 	buf = (x_char_t *)x_sys_malloc(X_CLI_BUFFER_SIZE);
 	p_buffer = x_mkbufferown(p_base, buf);
-	x_base_buffer_push(p_base, p_buffer);
+	x_base_field_buffer_stack(p_base) = x_mkspair(p_base,
+		p_buffer, x_base_field_buffer_stack(p_base));
 
 	/* Load all expressions. */
 	p_result = x_base_load(p_base, p_base);
 
 	/* Pop and close, restore line counter. */
-	x_base_filein_pop(p_base);
-	x_base_buffer_pop(p_base);
+	x_base_field_filein_stack(p_base)
+		= x_restobj(x_base_field_filein_stack(p_base));
+	x_base_field_buffer_stack(p_base)
+		= x_restobj(x_base_field_buffer_stack(p_base));
 	x_sys_close(fd);
-	x_atomint(x_base_field_line(p_base)) = saved_line;
+	x_base_field_line_stack(p_base)
+		= x_restobj(x_base_field_line_stack(p_base));
 
 	return p_result;
 }
@@ -125,7 +129,8 @@ x_obj_t * init(x_obj_t *p_base, x_char_t *buffer)
 
 	/* Set up read buffer. */
 	p_buffer = x_mkbuffer(p_base, buffer);
-	x_base_buffer_push(p_base, p_buffer);
+	x_base_field_buffer_stack(p_base) = x_mkspair(p_base,
+		p_buffer, x_base_field_buffer_stack(p_base));
 
 	/* Register primitives. */
 	x_prim_register(p_base, p_base);

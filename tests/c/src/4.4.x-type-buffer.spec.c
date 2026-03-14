@@ -455,7 +455,7 @@ static char *test_type_buffer_register(void)
 		0 == x_lib_strcmp(X_TYPE_BUFFER_NAME, x_strval(x_type_field_name(p_type)))
 	);
 	_it_should("add the Buffer type to the Type alist",
-		p_type == x_firstobj(x_base_field_type_alist(p_base))
+		p_type == x_restobj(x_firstobj(x_base_field_type_alist(p_base)))
 	);
 
 	test_cleanup(p_base);
@@ -470,11 +470,11 @@ static char *test_base_alist_assoc(void)
 	helper_alloc_reset();
 
 	p_base = x_base_make(NULL, NULL);
-	x_base_type_alist_extend(p_base, x_mkspair(p_base, x_type_buffer_name, atom(1)));
+	x_base_type_alist_extend(p_base, x_mkspair(p_base, x_mkspair(p_base, x_type_buffer_name, NULL), atom(1)));
 
 	p_type = x_base_type_alist_assoc(p_base, x_mkspair(p_base, x_type_buffer_name, NULL));
 	_it_should("find the type in the Type alist and return its properties",
-		x_type_buffer_name == x_firstobj(p_type)
+		x_type_buffer_name == x_type_field_name(p_type)
 	);
 
 	return NULL;

@@ -170,17 +170,13 @@ static char *test_base_make(void)
 
 static char *test_base_type_alist_extend(void)
 {
-	x_obj_t *p_base, *p_alist, *p_atoms[3], *p_args;
+	x_obj_t *p_base, *p_alist, *p_args;
+	x_obj_t *p_type0, *p_type1, *p_name0, *p_name1;
 
-	p_base = x_mksatom(NULL, 0);
+	/* Mock type structs: ((name_satom . nil) . nil) matches real layout
+	 * so x_type_field_name returns name_satom */
 
-	p_atoms[0] = x_mksatom(p_base, 1);
-	p_atoms[1] = x_mksatom(p_base, 2);
-	p_atoms[2] = x_mksatom(p_base, 3);
-
-
-	p_alist = p_base;
-	p_args = x_mkspair(NULL, p_atoms[0], p_atoms[1]);
+	p_args = x_mkspair(NULL, NULL, NULL);
 	p_alist = x_base_type_alist_extend(NULL, p_args);
 	_it_should("return NULL when base is NULL",
 		NULL == p_alist
@@ -188,7 +184,7 @@ static char *test_base_type_alist_extend(void)
 
 
 	p_base = x_mksatom(NULL, NULL);
-	p_args = x_mkspair(p_base, p_atoms[0], p_atoms[1]);
+	p_args = x_mkspair(p_base, NULL, NULL);
 	p_alist = x_base_type_alist_extend(p_base, p_args);
 	_it_should("return nil when base is not set",
 		NULL == p_alist
@@ -198,26 +194,31 @@ static char *test_base_type_alist_extend(void)
 
 
 	p_base = x_base_make(NULL, NULL);
-	p_args = x_mkspair(p_base, p_atoms[0], p_atoms[1]);
-	p_alist = x_base_type_alist_extend(p_base, p_args);
-	_it_should("extend alist with (#<0x1:0x0> . #<0x1:0x1>)",
+
+	/* Build mock type struct with name stack: ((name . nil) . nil) */
+	p_name0 = x_mksatom(p_base, "type0");
+	p_type0 = x_mkspair(p_base, x_mkspair(p_base, p_name0, NULL), NULL);
+	p_alist = x_base_type_alist_extend(p_base, p_type0);
+	/* Entry is (name . type_struct) */
+	_it_should("extend alist with first type",
 		x_obj_type_isspair(p_alist)
 		&& x_obj_type_isspair(x_firstobj(p_alist))
-		&& x_firstobj(x_firstobj(p_alist)) == p_atoms[0]
-		&& x_restobj(x_firstobj(p_alist)) == p_atoms[1]
+		&& x_firstobj(x_firstobj(p_alist)) == p_name0
+		&& x_restobj(x_firstobj(p_alist)) == p_type0
 	);
 
 
-	p_args = x_mkspair(p_base, p_atoms[1], p_atoms[2]);
-	p_alist = x_base_type_alist_extend(p_base, p_args);
-	_it_should("extend alist with (#<0x1:0x2> . #<0x1:0x3>)",
+	p_name1 = x_mksatom(p_base, "type1");
+	p_type1 = x_mkspair(p_base, x_mkspair(p_base, p_name1, NULL), NULL);
+	p_alist = x_base_type_alist_extend(p_base, p_type1);
+	_it_should("extend alist with second type",
 		x_obj_type_isspair(p_alist)
 		&& x_obj_type_isspair(x_firstobj(p_alist))
-		&& x_firstobj(x_firstobj(p_alist)) == p_atoms[1]
-		&& x_restobj(x_firstobj(p_alist)) == p_atoms[2]
+		&& x_firstobj(x_firstobj(p_alist)) == p_name1
+		&& x_restobj(x_firstobj(p_alist)) == p_type1
 		&& x_obj_type_isspair(x_firstobj(x_restobj(p_alist)))
-		&& x_firstobj(x_firstobj(x_restobj(p_alist))) == p_atoms[0]
-		&& x_restobj(x_firstobj(x_restobj(p_alist))) == p_atoms[1]
+		&& x_firstobj(x_firstobj(x_restobj(p_alist))) == p_name0
+		&& x_restobj(x_firstobj(x_restobj(p_alist))) == p_type0
 	);
 
 	x_sys_free(p_base);
@@ -227,7 +228,8 @@ static char *test_base_type_alist_extend(void)
 
 static char *test_base_type_alist_assoc(void)
 {
-	x_obj_t *p_base, *p_obj[2], *p_args, *p_assoc[2];
+	x_obj_t *p_base, *p_obj[2], *p_args, *p_type[2];
+	x_obj_t *p_name[2];
 	x_char_t *s[3] = {
 		"item1",
 		"item2",
@@ -262,14 +264,18 @@ static char *test_base_type_alist_assoc(void)
 	);
 
 
-	p_assoc[0] = x_mkspair(p_base, x_mksatom(p_base, s[0]), NULL);
-	p_assoc[1] = x_mkspair(p_base, x_mksatom(p_base, s[1]), NULL);
-	x_base_type_alist_extend(p_base, p_assoc[0]);
-	x_base_type_alist_extend(p_base, p_assoc[1]);
+	/* Build mock type structs: ((name_satom . nil) . nil) */
+	p_name[0] = x_mksatom(p_base, s[0]);
+	p_type[0] = x_mkspair(p_base, x_mkspair(p_base, p_name[0], NULL), NULL);
+	p_name[1] = x_mksatom(p_base, s[1]);
+	p_type[1] = x_mkspair(p_base, x_mkspair(p_base, p_name[1], NULL), NULL);
+	x_base_type_alist_extend(p_base, p_type[0]);
+	x_base_type_alist_extend(p_base, p_type[1]);
 
+	/* assoc returns the unwrapped type struct */
 	p_obj[0] = x_base_type_alist_assoc(p_base, p_args);
-	_it_should("return item when found",
-		x_firstobj(p_assoc[0]) == x_firstobj(p_obj[0])
+	_it_should("return type struct when found",
+		p_obj[0] == p_type[0]
 	);
 
 	p_obj[1] = x_base_type_alist_assoc(p_base, p_args);
@@ -280,8 +286,8 @@ static char *test_base_type_alist_assoc(void)
 
 	p_args = x_mkspair(p_base, x_mksatom(p_base, s[1]), NULL);
 	p_obj[0] = x_base_type_alist_assoc(p_base, p_args);
-	_it_should("return second item when found",
-		x_firstobj(p_assoc[1]) == x_firstobj(p_obj[0])
+	_it_should("return second type struct when found",
+		p_obj[0] == p_type[1]
 	);
 
 	p_args = x_mkspair(p_base, x_mksatom(p_base, s[2]), NULL);

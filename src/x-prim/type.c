@@ -207,7 +207,8 @@ static x_obj_t *x_prim_make_base(x_obj_t *p_base, x_obj_t *p_args)
 
 	/* Set up read buffer. */
 	p_buffer = x_mkbuffer(p_new_base, buffer);
-	x_base_buffer_push(p_new_base, p_buffer);
+	x_base_field_buffer_stack(p_new_base) = x_mkspair(p_new_base,
+		p_buffer, x_base_field_buffer_stack(p_new_base));
 
 	/* Register primitives. */
 	x_prim_register(p_new_base, p_new_base);
@@ -221,7 +222,6 @@ static x_obj_t *x_prim_base_eval(x_obj_t *p_base, x_obj_t *p_args)
 	jmp_buf jmp;
 	x_obj_t *p_target = x_prim_eval_arg(p_base, x_firstobj(p_args)),
 		*p_expr = x_prim_eval_arg(p_base, x_firstobj(x_restobj(p_args))),
-		*p_prev_handler = x_base_field_error_handler(p_target),
 		*p_handler, *p_result;
 
 	/* Build handler pair tree: (jmp-ptr saved-env error-value) */
@@ -230,15 +230,19 @@ static x_obj_t *x_prim_base_eval(x_obj_t *p_base, x_obj_t *p_args)
 		x_mkspair(p_target,
 			x_base_field_env_alist(p_target),
 			x_mkspair(p_target, NULL, NULL)));
-	x_base_field_error_handler(p_target) = p_handler;
+
+	/* Push handler onto error_handler_stack */
+	x_base_field_error_handler_stack(p_target) = x_mkspair(p_target,
+		p_handler, x_base_field_error_handler_stack(p_target));
 
 	if (setjmp(jmp) == 0) {
 		p_result = x_prim_eval_arg(p_target, p_expr);
 	} else {
 		x_obj_t *p_err = x_error_handler_error(p_handler);
 
-		/* Error caught from target: restore and re-signal in parent. */
-		x_base_field_error_handler(p_target) = p_prev_handler;
+		/* Error caught from target: pop handler, restore env, re-signal in parent. */
+		x_base_field_error_handler_stack(p_target)
+			= x_restobj(x_base_field_error_handler_stack(p_target));
 		x_base_field_env_alist(p_target)
 			= x_error_handler_saved_env(p_handler);
 
@@ -256,8 +260,9 @@ static x_obj_t *x_prim_base_eval(x_obj_t *p_base, x_obj_t *p_args)
 		return NULL;
 	}
 
-	/* Pop handler. */
-	x_base_field_error_handler(p_target) = p_prev_handler;
+	/* Pop error_handler_stack */
+	x_base_field_error_handler_stack(p_target)
+		= x_restobj(x_base_field_error_handler_stack(p_target));
 
 	return p_result;
 }

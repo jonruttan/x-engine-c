@@ -107,7 +107,7 @@ static x_obj_t *x_prim_peek_char(x_obj_t *p_base, x_obj_t *p_args)
 static x_obj_t *x_prim_to_string(x_obj_t *p_base, x_obj_t *p_args,
 	x_obj_t *(*dispatch)(x_obj_t *, x_obj_t *))
 {
-	x_obj_t *p_val, *p_saved_buf;
+	x_obj_t *p_val;
 	x_char_t buf[256];
 	x_satom_t buf_pos = x_obj_set(NULL, X_OBJ_FLAG_NONE, { .i = 0 });
 	x_spair_t buf_obj[1] = {
@@ -124,14 +124,16 @@ static x_obj_t *x_prim_to_string(x_obj_t *p_base, x_obj_t *p_args,
 		return x_mkstrown(p_base, x_lib_strndup((x_char_t *)"", 0));
 	}
 
-	/* Swap write-buffer on base */
-	p_saved_buf = x_base_field_write_buf(p_base);
-	x_base_field_write_buf(p_base) = (x_obj_t *)buf_obj;
+	/* Push write-buffer onto write_buf_stack */
+	x_base_field_write_buf_stack(p_base) = x_mkspair(p_base,
+		(x_obj_t *)buf_obj, x_base_field_write_buf_stack(p_base));
 
 	x_firstobj((x_obj_t *)dispatch_args) = p_val;
 	dispatch(p_base, (x_obj_t *)dispatch_args);
 
-	x_base_field_write_buf(p_base) = p_saved_buf;
+	/* Pop write_buf_stack */
+	x_base_field_write_buf_stack(p_base)
+		= x_restobj(x_base_field_write_buf_stack(p_base));
 	buf[x_atomint(buf_pos)] = '\0';
 
 	return x_mkstrown(p_base, x_lib_strndup(buf, x_atomint(buf_pos)));

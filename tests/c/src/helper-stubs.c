@@ -19,8 +19,7 @@ x_obj_t *x_prim_evlis(x_obj_t *p_base, x_obj_t *p_args) { return p_args; }
 x_obj_t *x_prim_multiple_extend(x_obj_t *p_base, x_obj_t *p_env,
 	x_obj_t *p_params, x_obj_t *p_vals) { return p_env; }
 x_obj_t *x_prim_body_eval(x_obj_t *p_base, x_obj_t *p_body) { return NULL; }
-x_obj_t *x_prim_body_eval_tco(x_obj_t *p_base, x_obj_t *p_body,
-	x_obj_t *p_saved_env) { return NULL; }
+x_obj_t *x_prim_body_eval_tco(x_obj_t *p_base, x_obj_t *p_body) { return NULL; }
 x_obj_t *x_prim_body_eval_tco_simple(x_obj_t *p_base, x_obj_t *p_body) { return NULL; }
 x_obj_t *x_prim_tco_trampoline(x_obj_t *p_base, x_obj_t *p_result) { return p_result; }
 void x_prim_bind(x_obj_t *p_base, x_char_t *name, x_prim_fn fn) {}

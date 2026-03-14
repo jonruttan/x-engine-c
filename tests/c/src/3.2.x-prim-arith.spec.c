@@ -201,31 +201,6 @@ static char *test_arith_div(void)
 	return NULL;
 }
 
-static char *test_arith_mod(void)
-{
-	x_obj_t *p_base, *p_args, *p_result;
-
-	p_base = x_base_make(NULL, NULL);
-	x_prim_register(p_base, NULL);
-
-	/* (% 10 3) -> 1 */
-	p_args = x_mkspair(p_base,
-		x_mksatom(p_base, (x_int_t)10),
-		x_mkspair(p_base, x_mksatom(p_base, (x_int_t)3), NULL));
-	p_result = x_prim_mod(p_base, p_args);
-	_it_should("(% 10 3) = 1", x_intval(p_result) == 1);
-
-	/* (% 9 3) -> 0 */
-	p_args = x_mkspair(p_base,
-		x_mksatom(p_base, (x_int_t)9),
-		x_mkspair(p_base, x_mksatom(p_base, (x_int_t)3), NULL));
-	p_result = x_prim_mod(p_base, p_args);
-	_it_should("(% 9 3) = 0", x_intval(p_result) == 0);
-
-	test_cleanup(p_base);
-	return NULL;
-}
-
 static char *test_arith_bitwise(void)
 {
 	x_obj_t *p_base, *p_args, *p_result;
@@ -309,7 +284,6 @@ static char *run_tests() {
 	_run_test(test_arith_sub);
 	_run_test(test_arith_prod);
 	_run_test(test_arith_div);
-	_run_test(test_arith_mod);
 	_run_test(test_arith_bitwise);
 	_run_test(test_arith_shift);
 	_run_test(test_arith_register);

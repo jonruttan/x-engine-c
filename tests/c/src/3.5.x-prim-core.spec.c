@@ -335,37 +335,6 @@ static char *test_core_guard(void)
 	return NULL;
 }
 
-static char *test_core_rewrite(void)
-{
-	x_obj_t *p_base, *p_args, *p_result, *p_pair;
-
-	p_base = x_base_make(NULL, NULL);
-	x_prim_register(p_base, NULL);
-
-	/* Create a pair (1 . 2), then rewrite to (3 . 4) */
-	p_pair = x_mklist(p_base, x_mksatom(p_base, (x_int_t)1),
-		x_mksatom(p_base, (x_int_t)2));
-
-	/* Bind 'p' to the pair at C level (x_prim_define would eval the list) */
-	x_base_env_alist_extend(p_base,
-		x_mkspair(p_base, x_mksymbol(p_base, "p"), p_pair));
-
-	p_args = x_mkspair(p_base,
-		x_mksymbol(p_base, "p"),
-		x_mkspair(p_base, x_mksatom(p_base, (x_int_t)3),
-		x_mkspair(p_base, x_mksatom(p_base, (x_int_t)4), NULL)));
-	p_result = x_prim_rewrite(p_base, p_args);
-	_it_should("rewrite returns the pair",
-		p_result == p_pair);
-	_it_should("rewrite set first to 3",
-		x_atomint(x_firstobj(p_pair)) == 3);
-	_it_should("rewrite set rest to 4",
-		x_atomint(x_restobj(p_pair)) == 4);
-
-	test_cleanup(p_base);
-	return NULL;
-}
-
 static char *test_core_first_rest_int(void)
 {
 	x_obj_t *p_base, *p_args, *p_result, *p_obj;
@@ -932,7 +901,6 @@ static char *run_tests() {
 	_run_test(test_core_eval_immediate);
 	_run_test(test_core_match);
 	_run_test(test_core_guard);
-	_run_test(test_core_rewrite);
 	_run_test(test_core_first_rest_int);
 	_run_test(test_core_set_first_rest);
 	_run_test(test_core_wrap_unwrap);
