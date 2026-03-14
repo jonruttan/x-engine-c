@@ -62,6 +62,8 @@ x_obj_t *x_token_delimit(x_obj_t *p_base, x_obj_t *p_args)
 	return NULL;
 }
 
+extern x_satom_t x_type_list_iter_prim;
+
 x_obj_t *x_type_alist_iter(x_obj_t *p_base, x_obj_t *p_args);
 x_satom_t x_type_alist_iter_prim = x_obj_set(x_type_atom_obj, X_OBJ_FLAG_NONE, { .fn = x_type_alist_iter });
 
@@ -79,12 +81,12 @@ x_obj_t *x_type_alist_iter(x_obj_t *p_base, x_obj_t *p_args)
 x_obj_t *x_token_analyse(x_obj_t *p_base, x_obj_t *p_args)
 {
 	x_int_t i_best, i_consumed;
-	x_obj_t *p_buffer = x_firstobj(p_args), *p_read, *p_analyse, *p_obj;
+	x_obj_t *p_buffer = x_firstobj(p_args), *p_winner, *p_entry, *p_analyse, *p_obj;
 	x_satom_t chr = x_obj_set(NULL, X_OBJ_FLAG_NONE, { .c = '\0' } ),
 		arg_chr = x_obj_set(NULL, X_OBJ_FLAG_NONE, { .i = 0 });
 	x_spair_t
 		score = x_obj_set(NULL, X_OBJ_FLAG_NONE, {}),
-		type_iter = x_obj_set(NULL, X_OBJ_FLAG_NONE, { x_type_alist_iter_prim }, { x_base_field_type_alist(p_base) }),
+		type_iter = x_obj_set(NULL, X_OBJ_FLAG_NONE, { x_type_list_iter_prim }, { x_base_field_type_alist(p_base) }),
 		iter_args[2] = {
 			x_obj_set(NULL, X_OBJ_FLAG_NONE, { type_iter }, { (x_obj_t *)(iter_args + 1) }),
 			x_obj_set(NULL, X_OBJ_FLAG_NONE, { NULL }, { NULL }),
@@ -107,18 +109,20 @@ x_obj_t *x_token_analyse(x_obj_t *p_base, x_obj_t *p_args)
 	/* Retain: ensure bufferval == bufferread for correct x_bufferlen. */
 	x_type_buffer_retain(p_base, (x_obj_t *)buffer_args);
 
-	/* Cycle through of all of the types. */
-	p_read = NULL;
+	/* Cycle through all types, tracking the winning type entry. */
+	p_winner = NULL;
 	i_best = 0;
 
 	while ( ! x_iterempty(p_base, (x_obj_t *)type_iter)) {
-		p_analyse = x_type_iter_next(p_base, (x_obj_t *)iter_args);
+		p_entry = x_type_iter_next(p_base, (x_obj_t *)iter_args);
+
+		if ( ! x_obj_isnil(p_base, p_entry)) {
+		p_analyse = x_type_field_analyse(x_restobj(p_entry));
 
 		if ( ! x_obj_isnil(p_base, p_analyse)) {
 
 			/* Clear score for this type. */
 			x_firstint(p_score) = 0;
-			x_restobj(p_score) = NULL;
 
 			while (1) {
 
@@ -154,7 +158,7 @@ x_obj_t *x_token_analyse(x_obj_t *p_base, x_obj_t *p_args)
 					/* If this is the longest match, mark this type as best. */
 					if (x_firstint(p_score) >= i_best || (i_best < 1 && x_firstint(p_score) <= i_best)) {
 						i_best = x_firstint(p_score);
-						p_read = x_restobj(p_score);
+						p_winner = p_entry;
 					}
 
 					x_bufferread(p_buffer) = x_bufferval(p_buffer);
@@ -165,13 +169,13 @@ x_obj_t *x_token_analyse(x_obj_t *p_base, x_obj_t *p_args)
 				p_analyse = p_obj;
 			}
 
-			/* EOF auto-score: if chars were consumed and a reader
-			 * was registered (via set-first-int/set-rest side
-			 * effect on first match), use the sign from the partial
-			 * score to compute final score from total consumed. */
+			/* EOF auto-score: if chars were consumed and a score
+			 * was set (via set-first-int side effect on first
+			 * match), use the sign from the partial score to
+			 * compute final score from total consumed. */
 			i_consumed = x_bufferlen(p_buffer);
 			if (i_consumed > 0
-				&& ! x_obj_isnil(p_base, x_restobj(p_score))) {
+				&& x_firstint(p_score) != 0) {
 				x_int_t i_score = (x_firstint(p_score) < 0 ? -1 : 1)
 					* i_consumed;
 
@@ -179,21 +183,22 @@ x_obj_t *x_token_analyse(x_obj_t *p_base, x_obj_t *p_args)
 					|| (i_best < 1
 						&& i_score <= i_best)) {
 					i_best = i_score;
-					p_read = x_restobj(p_score);
+					p_winner = p_entry;
 				}
 			}
 			x_bufferread(p_buffer) = x_bufferval(p_buffer);
+		}
 		}
 	}
 
 	x_bufferread(p_buffer) = x_bufferread(p_buffer) + x_lib_abs(i_best);
 
-	return p_read;
+	return p_winner;
 }
 
 x_obj_t *x_token_read(x_obj_t *p_base, x_obj_t *p_args)
 {
-	x_obj_t *p_buffer = x_firstobj(p_args), *p_read, *p_obj;
+	x_obj_t *p_buffer = x_firstobj(p_args), *p_entry, *p_read, *p_obj;
 	x_spair_t buffer_args[3] = {
 			x_obj_set(NULL, X_OBJ_FLAG_NONE, { p_buffer }, { (x_obj_t *)(buffer_args + 1) }),
 			x_obj_set(NULL, X_OBJ_FLAG_NONE, { NULL }, { NULL }),
@@ -203,10 +208,18 @@ x_obj_t *x_token_read(x_obj_t *p_base, x_obj_t *p_args)
 		};
 
 	for (;;) {
-		p_read = x_token_analyse(p_base, p_args);
+		p_entry = x_token_analyse(p_base, p_args);
+
+		if (x_obj_isnil(p_base, p_entry)) {
+			return NULL;
+		}
+
+		p_read = x_type_field_read(x_restobj(p_entry));
 
 		if (x_obj_isnil(p_base, p_read)) {
-			return NULL;
+			/* Discard (null reader): retain buffer, fetch another. */
+			x_type_buffer_retain(p_base, (x_obj_t *)buffer_args);
+			continue;
 		}
 
 		prim_arg_prim = p_read;
@@ -217,11 +230,7 @@ x_obj_t *x_token_read(x_obj_t *p_base, x_obj_t *p_args)
 		}
 
 		x_type_buffer_retain(p_base, (x_obj_t *)buffer_args);
-
-		/* Not a token (whitespace/comment), fetch another. */
-		if (p_obj != (x_obj_t *)buffer_args) {
-			return p_obj;
-		}
+		return p_obj;
 	}
 }
 

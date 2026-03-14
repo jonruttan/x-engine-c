@@ -74,7 +74,6 @@ x_obj_t *x_sexp_char_analyse3(x_obj_t *p_base, x_obj_t *p_args)
 
 	/* Non-letter: single character literal, score immediately */
 	x_firstint(p_score) = x_bufferlen(p_buffer);
-	x_restobj(p_score) = x_sexp_char_read_prim;
 	return p_score;
 }
 
@@ -92,7 +91,6 @@ static x_obj_t *x_sexp_char_analyse4(x_obj_t *p_base, x_obj_t *p_args)
 	x_bufferread(p_buffer)--;
 
 	x_firstint(p_score) = x_bufferlen(p_buffer);
-	x_restobj(p_score) = x_sexp_char_read_prim;
 	return p_score;
 }
 

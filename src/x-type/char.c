@@ -52,6 +52,7 @@ x_obj_t *x_type_char_struct(x_obj_t *p_base, x_obj_t *p_obj)
 	type.p_name = x_type_char_name;
 	type.p_make = x_type_char_make_prim;
 	type.p_analyse = x_sexp_char_analyse1_prim;
+	type.p_read = x_sexp_char_read_prim;
 	type.p_write = x_sexp_char_write_prim;
 	type.p_display = x_sexp_char_display_prim;
 	type.p_data =

@@ -62,6 +62,7 @@ static x_obj_t *x_prim_type_build_struct(x_obj_t *p_base,
 			{ "length",  offsetof(struct x_type_t, p_length) },
 			{ "analyse", offsetof(struct x_type_t, p_analyse) },
 			{ "delimit", offsetof(struct x_type_t, p_delimit) },
+			{ "read",    offsetof(struct x_type_t, p_read) },
 			{ "error",   offsetof(struct x_type_t, p_error) },
 			{ "from",    offsetof(struct x_type_t, p_from) },
 			{ "to",      offsetof(struct x_type_t, p_to) }
@@ -454,12 +455,6 @@ static x_obj_t *x_prim_buffer_token(x_obj_t *p_base, x_obj_t *p_args)
 	return x_mkstrown(p_base, str);
 }
 
-/* %token-discard: read hook that signals discard (returns p_args) */
-static x_obj_t *x_prim_token_discard(x_obj_t *p_base, x_obj_t *p_args)
-{
-	return p_args;
-}
-
 /* token-read-string: (token-read-string token-base string) -> list of tokens
  *
  * Tokenizes a string using the given base for token dispatch.
@@ -531,8 +526,7 @@ x_obj_t *x_prim_type_register(x_obj_t *p_base, x_obj_t *p_args)
 		{ "make-base", x_prim_make_base },
 		{ "base-eval", x_prim_base_eval },
 		{ "base-bind", x_prim_base_bind },
-		{ "token-read-string", x_prim_token_read_string },
-		{ "%token-discard", x_prim_token_discard }
+		{ "token-read-string", x_prim_token_read_string }
 	};
 
 	x_prim_bind_table(p_base, entries,

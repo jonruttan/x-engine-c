@@ -42,12 +42,10 @@
  */
 extern x_satom_t x_sexp_whitespace_analyse1_prim,
 	x_sexp_whitespace_analyse2_prim,
-	x_sexp_whitespace_delimit_prim,
-	x_sexp_whitespace_read_prim;
+	x_sexp_whitespace_delimit_prim;
 
 x_obj_t *x_sexp_whitespace_analyse1(x_obj_t *p_base, x_obj_t *p_args);
 x_obj_t *x_sexp_whitespace_analyse2(x_obj_t *p_base, x_obj_t *p_args);
 x_obj_t *x_sexp_whitespace_delimit(x_obj_t *p_base, x_obj_t *p_args);
-x_obj_t *x_sexp_whitespace_read(x_obj_t *p_base, x_obj_t *p_args);
 
 #endif /* X_SEXP_WHITESPACE_H */

@@ -42,6 +42,7 @@ x_obj_t *x_type_int_struct(x_obj_t *p_base, x_obj_t *p_obj)
 		.p_name = x_type_int_name,
 		.p_make = x_type_int_make_prim,
 		.p_analyse = x_sexp_int_analyse_sign_prim,
+		.p_read = x_sexp_int_read_prim,
 		.p_write = x_sexp_int_write_prim
 	};
 

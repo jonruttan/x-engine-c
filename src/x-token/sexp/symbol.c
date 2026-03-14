@@ -41,7 +41,6 @@ x_obj_t *x_sexp_symbol_analyse(x_obj_t *p_base, x_obj_t *p_args)
 	}
 
 	x_firstint(p_score) = -x_bufferlen(p_buffer);
-	x_restobj(p_score) = x_sexp_symbol_read_prim;
 
 	return p_score;
 }

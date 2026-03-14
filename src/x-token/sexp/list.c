@@ -35,7 +35,6 @@ x_obj_t *x_sexp_list_analyse(x_obj_t *p_base, x_obj_t *p_args)
 
 	if (x_lib_strchr(X_SEXP_LIST_CHARS_STR, x_bufferlastchar(p_buffer))) {
 		x_firstint(p_score) = x_bufferlen(p_buffer);
-		x_restobj(p_score) = x_sexp_list_read_prim;
 		return p_score;
 	}
 

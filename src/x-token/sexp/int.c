@@ -49,7 +49,6 @@ x_obj_t *x_sexp_int_analyse_digits(x_obj_t *p_base, x_obj_t *p_args)
 	}
 
 	x_firstint(p_score) = x_bufferlen(p_buffer);
-	x_restobj(p_score) = x_sexp_int_read_prim;
 	return p_score;
 }
 
@@ -70,7 +69,6 @@ x_obj_t *x_sexp_int_analyse_xdigits(x_obj_t *p_base, x_obj_t *p_args)
 	}
 
 	x_firstint(p_score) = x_bufferlen(p_buffer);
-	x_restobj(p_score) = x_sexp_int_read_prim;
 	return p_score;
 }
 

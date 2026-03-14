@@ -49,13 +49,14 @@ x_obj_t *x_type_struct_make(x_obj_t *p_base, struct x_type_t type)
 		pair(pair(pair(type.p_from, nil),
 			pair(pair(type.p_to, nil),
 			nil)),
-		/* IO: '(analyse-stack delimit-stack write-stack display-stack error-stack) */
+		/* IO: '(analyse-stack delimit-stack read-stack write-stack display-stack error-stack) */
 		pair(pair(pair(type.p_analyse, nil),
 			pair(pair(type.p_delimit, nil),
+			pair(pair(type.p_read, nil),
 			pair(pair(type.p_write, nil),
 			pair(pair(type.p_display, nil),
 			pair(pair(type.p_error, nil),
-			nil))))),
+			nil)))))),
 		nil))))));
 
 	return p_type;

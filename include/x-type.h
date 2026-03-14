@@ -80,11 +80,13 @@
 #define x_type_field_analyse(X)       x_firstobj(x_type_field_analyse_stack((X)))
 #define x_type_field_delimit_stack(X) x_firstobj(x_restobj(x_type_field_io((X))))
 #define x_type_field_delimit(X)       x_firstobj(x_type_field_delimit_stack((X)))
-#define x_type_field_write_stack(X)   x_firstobj(x_restobj(x_restobj(x_type_field_io((X)))))
+#define x_type_field_read_stack(X)    x_firstobj(x_restobj(x_restobj(x_type_field_io((X)))))
+#define x_type_field_read(X)          x_firstobj(x_type_field_read_stack((X)))
+#define x_type_field_write_stack(X)   x_firstobj(x_restobj(x_restobj(x_restobj(x_type_field_io((X))))))
 #define x_type_field_write(X)         x_firstobj(x_type_field_write_stack((X)))
-#define x_type_field_display_stack(X) x_firstobj(x_restobj(x_restobj(x_restobj(x_type_field_io((X))))))
+#define x_type_field_display_stack(X) x_firstobj(x_restobj(x_restobj(x_restobj(x_restobj(x_type_field_io((X)))))))
 #define x_type_field_display(X)       x_firstobj(x_type_field_display_stack((X)))
-#define x_type_field_error_stack(X)   x_firstobj(x_restobj(x_restobj(x_restobj(x_restobj(x_type_field_io((X)))))))
+#define x_type_field_error_stack(X)   x_firstobj(x_restobj(x_restobj(x_restobj(x_restobj(x_restobj(x_type_field_io((X))))))))
 #define x_type_field_error(X)         x_firstobj(x_type_field_error_stack((X)))
 
 #define x_type_arg_type(X)            x_firstobj((X))
@@ -108,6 +110,7 @@ struct x_type_t
 	x_obj_t *p_to;
 	x_obj_t *p_analyse;
 	x_obj_t *p_delimit;
+	x_obj_t *p_read;
 	x_obj_t *p_write;
 	x_obj_t *p_display;
 	x_obj_t *p_error;

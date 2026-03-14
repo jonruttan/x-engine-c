@@ -68,7 +68,6 @@ x_obj_t *x_sexp_str_analyse2(x_obj_t *p_base, x_obj_t *p_args)
 			x_bufferread(p_buffer) - X_SEXP_STR_PRE_STR_LEN,
 			X_SEXP_STR_POST_STR_LEN)) {
 		x_firstint(p_score) = x_bufferlen(p_buffer);
-		x_restobj(p_score) = x_sexp_str_read_prim;
 		return p_score;
 	}
 
