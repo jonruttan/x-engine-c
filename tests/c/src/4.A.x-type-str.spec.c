@@ -478,26 +478,47 @@ static char *test_type_str_make(void)
 	return NULL;
 }
 
-static char *test_type_str_call(void)
+static char *test_type_str_length(void)
 {
-	x_obj_t *p_base, *p_str, *p_idx, *p_args, *p_obj;
+	x_obj_t *p_base, *p_str, *p_args, *p_ret;
 
 	helper_alloc_reset();
 
-	/* With p_base object */
+	p_base = x_base_make(NULL, NULL);
+	p_str = x_mkstr(p_base, "hello");
+	p_args = x_mkspair(p_base, p_str, NULL);
+
+	p_ret = x_type_str_length(p_base, p_args);
+	_it_should("return 5 for 'hello'",
+		5 == x_atomint(p_ret));
+
+	return NULL;
+}
+
+static char *test_type_str_call(void)
+{
+	x_obj_t *p_base, *p_str, *p_args, *p_obj;
+
+	helper_alloc_reset();
+
 	p_base = x_base_make(NULL, NULL);
 
 	p_str = x_mksatom(p_base, X_TYPE_STR_NAME);
-	p_idx = x_mksatom(p_base, 0);
-	p_args = x_mkspair(p_base, p_str,
-		x_mkspair(p_base, p_idx, NULL));
 
+	/* No args — returns NULL */
+	p_args = x_mkspair(p_base, p_str, NULL);
 	p_obj = x_type_str_call(p_base, p_args);
-	_it_should("call the test function and return first char",
-		X_TYPE_STR_NAME[0] == x_charval(p_obj)
-	);
+	_it_should("return NULL with no index arg",
+		NULL == p_obj);
 
-	_mark_incomplete();
+	/* Slice: (str start len) */
+	p_str = x_mksatom(p_base, X_TYPE_STR_NAME);
+	p_args = x_mkspair(p_base, p_str,
+		x_mkspair(p_base, x_mksatom(p_base, 0),
+		x_mkspair(p_base, x_mksatom(p_base, 3), NULL)));
+	p_obj = x_type_str_call(p_base, p_args);
+	_it_should("return substring for slice",
+		0 == x_lib_strncmp(x_strval(p_obj), X_TYPE_STR_NAME, 3));
 
 	return NULL;
 }
@@ -514,6 +535,7 @@ static char *run_tests() {
 	_run_test(test_type_str_register);
 	_run_test(test_base_alist_assoc);
 	_run_test(test_type_str_make);
+	_run_test(test_type_str_length);
 	_run_test(test_type_str_call);
 
 	return NULL;

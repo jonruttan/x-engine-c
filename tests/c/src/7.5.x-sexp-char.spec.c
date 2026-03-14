@@ -37,9 +37,24 @@
 #define STUB_X_OPERATIVE
 #define STUB_X_HEAP
 #define STUB_X_OBJ_OBJ
-#define STUB_X_INT
-#define STUB_X_SYMBOL
 #include "helper-stubs.c"
+
+/*
+ * Minimal int/symbol stubs that allocate real objects (needed for
+ * x_type_char_struct's named-character data alist).
+ */
+x_obj_t *x_make_int(x_obj_t *p_base, x_obj_flag_t flags, x_int_t i)
+{
+	x_obj_t *p_type = NULL;
+	return x_obj_make(p_base, p_type, flags, X_OBJ_LENGTH_ATOM, i);
+}
+
+x_obj_t *x_make_symbol(x_obj_t *p_base, x_obj_flag_t flags, x_char_t *s)
+{
+	x_obj_t *p_type = NULL;
+	return x_obj_make(p_base, p_type, flags, X_OBJ_LENGTH_ATOM,
+		x_lib_strndup(s, x_lib_strlen(s)));
+}
 
 #include "ext/x-expr/tests/src/helper-system-functions.c"
 
@@ -49,6 +64,7 @@
 
 static void _setup(void)
 {
+	helper_alloc_reset();
 	helper_set_alloc(MEM_GUARANTEED);
 }
 
@@ -263,6 +279,106 @@ static char *test_sexp_char_read_token(void)
 	return NULL;
 }
 
+static char *test_sexp_char_read_named(void)
+{
+	x_obj_t *p_base, *p_args, *p_buffer, *p_obj;
+	x_char_t buffer[64];
+	x_int_t len;
+
+	/* #\newline -> '\n' */
+	p_base = x_base_make(NULL, NULL);
+	x_type_char_register(p_base, p_base);
+	p_buffer = x_mkbuffer(p_base, buffer);
+	p_args = x_mkspair(p_base, p_buffer, p_base);
+
+	len = x_lib_strlen("#\\newline");
+	x_lib_memcpy(x_bufferval(p_buffer), "#\\newline", len);
+	x_bufferread(p_buffer) = x_bufferval(p_buffer) + len;
+
+	p_obj = x_sexp_char_read(p_base, p_args);
+	_it_should("return a char for #\\newline",
+		x_obj_type_ischar(p_base, p_obj)
+	);
+	_it_should("set the char to '\\n'", '\n' == x_charval(p_obj));
+
+	test_cleanup(p_base);
+
+
+	/* #\space -> ' ' */
+	p_base = x_base_make(NULL, NULL);
+	x_type_char_register(p_base, p_base);
+	p_buffer = x_mkbuffer(p_base, buffer);
+	p_args = x_mkspair(p_base, p_buffer, p_base);
+
+	len = x_lib_strlen("#\\space");
+	x_lib_memcpy(x_bufferval(p_buffer), "#\\space", len);
+	x_bufferread(p_buffer) = x_bufferval(p_buffer) + len;
+
+	p_obj = x_sexp_char_read(p_base, p_args);
+	_it_should("return a char for #\\space",
+		x_obj_type_ischar(p_base, p_obj)
+	);
+	_it_should("set the char to ' '", ' ' == x_charval(p_obj));
+
+	test_cleanup(p_base);
+
+
+	/* #\tab -> '\t' */
+	p_base = x_base_make(NULL, NULL);
+	x_type_char_register(p_base, p_base);
+	p_buffer = x_mkbuffer(p_base, buffer);
+	p_args = x_mkspair(p_base, p_buffer, p_base);
+
+	len = x_lib_strlen("#\\tab");
+	x_lib_memcpy(x_bufferval(p_buffer), "#\\tab", len);
+	x_bufferread(p_buffer) = x_bufferval(p_buffer) + len;
+
+	p_obj = x_sexp_char_read(p_base, p_args);
+	_it_should("return a char for #\\tab",
+		x_obj_type_ischar(p_base, p_obj)
+	);
+	_it_should("set the char to '\\t'", '\t' == x_charval(p_obj));
+
+	test_cleanup(p_base);
+
+
+	return NULL;
+}
+
+static char *test_sexp_char_read_named_token(void)
+{
+	x_obj_t *p_base, *p_type, *p_args, *p_buffer, *p_obj;
+	x_char_t *s, buffer[64];
+	struct x_type_t type_whitespace;
+
+	/* Read #\newline through the full tokenizer (exercises analyse4) */
+	s = X_SEXP_CHAR_PRE_STR "newline ";
+	helper_file_buffer_ptr[TEST_HELPER_FILE_STDIN] = s;
+	helper_file_reset();
+
+	p_base = x_base_make(NULL, NULL);
+	x_type_char_register(p_base, p_base);
+	x_lib_memset(&type_whitespace, 0, sizeof(type_whitespace));
+	type_whitespace.p_name = x_mkstr(p_base, "WHITESPACE");
+	type_whitespace.p_analyse = test_token_read_analyse_whitespace_prim;
+	type_whitespace.p_delimit = x_mkatom(p_base, test_token_read_delimit_whitespace);
+	p_type = x_type_struct_make(p_base, type_whitespace);
+	x_base_type_alist_extend(p_base, p_type);
+	p_buffer = x_mkbuffer(p_base, buffer);
+	p_args = x_mkspair(p_base, p_buffer, p_base);
+
+	p_obj = x_token_read(p_base, p_args);
+	_it_should("return a char for tokenized #\\newline",
+		x_obj_type_ischar(p_base, p_obj)
+	);
+	_it_should("set the char to '\\n'", '\n' == x_charval(p_obj));
+
+	test_cleanup(p_base);
+
+
+	return NULL;
+}
+
 static char *test_sexp_char_write(void)
 {
 	x_obj_t *p_args, *p_obj, *p_ret;
@@ -287,12 +403,109 @@ static char *test_sexp_char_write(void)
 	return NULL;
 }
 
+static char *test_sexp_char_write_named(void)
+{
+	x_obj_t *p_base, *p_args, *p_obj, *p_ret;
+	x_char_t out_buffer[32];
+
+	/* Write newline char — should output "newline" (the named form) */
+	helper_file_buffer_ptr[TEST_HELPER_FILE_STDOUT] = out_buffer;
+	helper_file_reset();
+
+	p_base = x_base_make(NULL, NULL);
+	x_type_char_register(p_base, p_base);
+
+	p_obj = x_mkchar(p_base, '\n');
+	p_args = x_mkspair(p_base, p_obj, p_base);
+	p_ret = x_sexp_char_write(p_base, p_args);
+	_it_should("return the char object for named write",
+		p_obj == p_ret
+	);
+	_it_should("write 'newline' for \\n",
+		0 == x_lib_strncmp(out_buffer, "newline", 7)
+	);
+
+	test_cleanup(p_base);
+
+
+	/* Write non-named char with base — should fall through to raw byte */
+	helper_file_buffer_ptr[TEST_HELPER_FILE_STDOUT] = out_buffer;
+	helper_file_reset();
+
+	p_base = x_base_make(NULL, NULL);
+	x_type_char_register(p_base, p_base);
+
+	p_obj = x_mkchar(p_base, 'Z');
+	p_args = x_mkspair(p_base, p_obj, p_base);
+	p_ret = x_sexp_char_write(p_base, p_args);
+	_it_should("return the char object for non-named write",
+		p_obj == p_ret
+	);
+	_it_should("write 'Z' for non-named char",
+		out_buffer[0] == 'Z'
+	);
+
+	/* Write failure: limit stdout to 0 bytes */
+	helper_file_buffer_length[TEST_HELPER_FILE_STDOUT] = 0;
+	p_ret = x_sexp_char_write(p_base, p_args);
+	_it_should("return NULL on write failure", NULL == p_ret);
+	helper_file_buffer_length[TEST_HELPER_FILE_STDOUT]
+		= TEST_HELPER_FILE_UNDEFINED;
+
+	test_cleanup(p_base);
+
+
+	return NULL;
+}
+
+static int test_error_called = 0;
+static void test_error_hook(x_obj_t *p_base, x_char_t *msg, x_obj_t *p_obj)
+{
+	test_error_called = 1;
+}
+
+static char *test_sexp_char_read_unknown(void)
+{
+	x_obj_t *p_base, *p_args, *p_buffer, *p_obj;
+	x_char_t buffer[64];
+	x_int_t len;
+
+	/* #\xyzzy — unknown named character */
+	p_base = x_base_make(NULL, NULL);
+	x_type_char_register(p_base, p_base);
+	p_buffer = x_mkbuffer(p_base, buffer);
+	p_args = x_mkspair(p_base, p_buffer, p_base);
+
+	len = x_lib_strlen("#\\xyzzy");
+	x_lib_memcpy(x_bufferval(p_buffer), "#\\xyzzy", len);
+	x_bufferread(p_buffer) = x_bufferval(p_buffer) + len;
+
+	/* Install error hook to prevent exit */
+	test_error_called = 0;
+	x_obj_hook_error = test_error_hook;
+
+	p_obj = x_sexp_char_read(p_base, p_args);
+	_it_should("return NULL for unknown named char",
+		x_obj_isnil(p_base, p_obj));
+	_it_should("trigger error for unknown named char",
+		test_error_called == 1);
+
+	x_obj_hook_error = NULL;
+	test_cleanup(p_base);
+
+	return NULL;
+}
+
 static char *run_tests() {
 	_run_test(test_sexp_char_analyse1);
 	_run_test(test_sexp_char_analyse2);
 	_run_test(test_sexp_char_read);
 	_run_test(test_sexp_char_read_token);
+	_run_test(test_sexp_char_read_named);
+	_run_test(test_sexp_char_read_named_token);
 	_run_test(test_sexp_char_write);
+	_run_test(test_sexp_char_write_named);
+	_run_test(test_sexp_char_read_unknown);
 
 	return NULL;
 }

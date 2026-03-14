@@ -176,7 +176,6 @@ x_obj_t *x_sexp_str_write(x_obj_t *p_base, x_obj_t *p_args)
 			case '\n': esc = "\\n";  break;
 			case '\t': esc = "\\t";  break;
 			case '\r': esc = "\\r";  break;
-			case '\0': esc = "\\0";  break;
 			default:
 				/* Non-printable: \xHH */
 				hex[0] = '\\';

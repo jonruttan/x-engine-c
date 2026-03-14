@@ -48,20 +48,18 @@ endif
 LDFLAGS?=$(CFLAGS)
 
 # Customise the settings for the compiler
-ifeq ("$(CCOMPILER)", "c89")
-CFLAGS+=-ansi -fdiagnostics-color=always -Wno-unused-result
-DUMPMACHINE=$(shell $(CC) $(CFLAGS) -dumpmachine)
-else ifeq ("$(CCOMPILER)", "c99")
-CFLAGS+=-fdiagnostics-color=always -Wno-unused-result
-DUMPMACHINE=$(shell $(CC) $(CFLAGS) -dumpmachine)
-else ifeq ("$(CCOMPILER)", "gcc")
-CFLAGS+=-ansi -fdiagnostics-color=always -Wno-unused-result
-DUMPMACHINE=$(shell $(CC) $(CFLAGS) -dumpmachine)
-else ifeq ("$(CCOMPILER)", "clang")
-CFLAGS+=-ansi -fdiagnostics-color=always -Wno-array-bounds
-DUMPMACHINE=$(shell $(CC) $(CFLAGS) -dumpmachine)
-else ifeq ("$(CCOMPILER)", "tcc")
 CFLAGS+=-fdiagnostics-color=always
+ifneq ("$(CCOMPILER)", "tcc")
+DUMPMACHINE=$(shell $(CC) $(CFLAGS) -dumpmachine)
+endif
+ifeq ("$(CCOMPILER)", "c89")
+CFLAGS+=-ansi -Wno-unused-result
+else ifeq ("$(CCOMPILER)", "c99")
+CFLAGS+=-Wno-unused-result
+else ifeq ("$(CCOMPILER)", "gcc")
+CFLAGS+=-ansi -Wno-unused-result
+else ifeq ("$(CCOMPILER)", "clang")
+CFLAGS+=-ansi -Wno-array-bounds
 endif
 
 # Fallback command to use when compiler doesn't support `-dumpmachine`
@@ -105,13 +103,13 @@ MANDIR?=$(PREFIX)/man/man1
 # Set up environment to be used during the build process
 BUILD_ENV=env X_LIBRARY_PATH=.:lib:ext:contrib
 
-default: all strip
+default: all strip ## Build and strip
 
-all: $(SOURCES) $(EXECUTABLE)
+all: $(SOURCES) $(EXECUTABLE) ## Build all
 
-debug: $(EXECUTABLE)-debug
+debug: $(EXECUTABLE)-debug ## Build debug target
 
-strip: $(EXECUTABLE)
+strip: $(EXECUTABLE) ## Strip symbols from target
 	strip $(EXECUTABLE)
 
 $(EXECUTABLE): $(OBJECTS) $(X_EXPR_OBJECTS) $(EXTRA_OBJS)
@@ -124,18 +122,18 @@ $(EXECUTABLE)-debug: $(EXECUTABLE)
 .c.o:
 	$(CC) -c $(CFLAGS) $(DEFS) -o $@ $<
 
-defs:
+defs: ## Generate ctags definitions
 	ctags -f - src/**/*.c | awk 'BEGIN {FS = "\t"} /\/.*\$\/;"/ { printf("%s;\n", substr($$3,3,length($$3)-6)) }' | sort -u > defs
 
-apidocs: README.md $(SOURCES)
+apidocs: README.md $(SOURCES) ## Generate API docs
 	grock --glob='*.{h,c,md}' --index=README.md --style=thin --out=apidocs
 	LD_LIBRARY_PATH=/usr/lib/llvm-12/lib/ cldoc generate -I./include -- --report --language=c --output apidocs src/*.c
 
-lint:
+lint: ## Lint sources
 	$(CC) -fsyntax-only $(CFLAGS) -g -Wall -pedantic $(SOURCES)
 .PHONY: lint
 
-valgrind:
+valgrind: ## Run Valgrind on target
 	$(CC) $(CFLAGS) -g -Wall $(SOURCES) && valgrind -v --leak-check=full ./a.out && rm a.out
 .PHONY: valgrind
 
@@ -147,42 +145,39 @@ ifndef TESTS
 TESTS=$(PATH_TESTS_C)/src/*.spec.c
 endif
 
-test:
-	CFLAGS="$(CFLAGS) -fno-common -g -Og -I. -DTESTS" sh $(PATH_TESTS_C)/test-runner/test-runner.sh $(TESTS)
+TEST_CFLAGS=$(CFLAGS) -fno-common -g -Og -I. -DTESTS
+
+test: ## Run C unit tests
+	CFLAGS="$(TEST_CFLAGS)" sh $(PATH_TESTS_C)/test-runner/test-runner.sh $(TESTS)
 .PHONY: test
 
-test-quick:
-	CFLAGS="$(CFLAGS) -fno-common -g -Og -I. -DTESTS" RUNNER=command sh $(PATH_TESTS_C)/test-runner/test-runner.sh $(TESTS)
+test-quick: ## Run C unit tests (no Valgrind)
+	CFLAGS="$(TEST_CFLAGS)" RUNNER=command sh $(PATH_TESTS_C)/test-runner/test-runner.sh $(TESTS)
 .PHONY: test
 
-test-x: $(EXECUTABLE)
+test-x: $(EXECUTABLE) ## Run x-lang tests
 	sh tests/x/spec-runner.sh
 .PHONY: test-x
 
-test-r5rs: $(EXECUTABLE)
-	sh lang/r5rs/tests/spec-runner.sh
-.PHONY: test-r5rs
+# Auto-discover language personality tests: make test-lang LANG=r5rs
+# or run all: make test-langs
+LANGS=$(patsubst lang/%/tests/spec-runner.sh,%,$(wildcard lang/*/tests/spec-runner.sh))
 
-test-r7rs: $(EXECUTABLE)
-	sh lang/r7rs/tests/spec-runner.sh
-.PHONY: test-r7rs
+test-lang: $(EXECUTABLE) ## Run a language test (LANG=name)
+	sh lang/$(LANG)/tests/spec-runner.sh
+.PHONY: test-lang
 
-test-krn: $(EXECUTABLE)
-	sh lang/krn/tests/spec-runner.sh
-.PHONY: test-krn
+test-langs: $(EXECUTABLE) ## Run all language personality tests
+	@for lang in $(LANGS); do \
+		echo "== $$lang =="; \
+		sh lang/$$lang/tests/spec-runner.sh || exit 1; \
+	done
+.PHONY: test-langs
 
-test-ash: $(EXECUTABLE)
-	sh lang/ash/tests/spec-runner.sh
-.PHONY: test-ash
-
-test-sl: $(EXECUTABLE)
-	sh lang/sl/tests/spec-runner.sh
-.PHONY: test-sl
-
-tests: test test-x test-r5rs test-r7rs test-krn test-ash test-sl
+tests: test test-x test-langs ## Run all tests
 .PHONY: tests
 
-watch:
+watch: ## Watch source for changes
 	while true; do \
 		fswatch -o --event Created --event Updated --event MovedTo $(HEADERS) $(SOURCES) tests/c | \
 		make debug && make test && make apidocs; \
@@ -191,7 +186,7 @@ watch:
 
 # old version of install(1) may need -c
 #C=-c
-install:	$(EXECUTABLE) lib/$(EXECUTABLE).x $(EXECUTABLE).sh
+install:	$(EXECUTABLE) lib/$(EXECUTABLE).x $(EXECUTABLE).sh ## Install to PREFIX
 	install -d -m 0755 $(BINDIR)
 	install -d -m 0755 $(LIBDIR)/lib
 	install -d -m 0755 $(LIBDIR)/lang
@@ -202,13 +197,28 @@ install:	$(EXECUTABLE) lib/$(EXECUTABLE).x $(EXECUTABLE).sh
 	cp -R lang/* $(LIBDIR)/lang
 .PHONY: install
 
-uninstall:
+uninstall: ## Uninstall from PREFIX
 	rm -f $(LIBDIR)/* && rmdir $(LIBDIR)
 	rm -f $(BINDIR)/$(EXECUTABLE)
 	rm -f $(BINDIR)/$(EXECUTABLE).sh
 .PHONY: uninstall
 
-clean:
+COVERAGE_DIR=.coverage
+
+coverage: ## Run tests with coverage report
+	COVERAGE_DIR=$(COVERAGE_DIR) CFLAGS="$(TEST_CFLAGS)" sh $(PATH_TESTS_C)/test-runner/test-runner-coverage.sh $(TESTS)
+.PHONY: coverage
+
+coverage-clean: ## Clean coverage artifacts
+	rm -rf $(COVERAGE_DIR) *.gcov *.gcda *.gcno
+.PHONY: coverage-clean
+
+clean: ## Clean compiled files
 	rm -f $(EXECUTABLE) $(EXECUTABLE)-debug *.out $(SRCDIR)/*.o $(SRCDIR)/**/*.o $(SRCDIR)/**/**/*.o $(X_EXPR_DIR)/src/*.o *.core core
 	rm -Rf apidocs/
+	rm -rf $(COVERAGE_DIR) *.gcov *.gcda *.gcno
 .PHONY: clean
+
+help: ## Display this help section
+	@awk 'BEGIN {FS = ":.*?## "} /^[a-zA-Z0-9_-]+:.*?## / {printf "\033[32m%-38s\033[0m %s\n", $$1, $$2}' $(MAKEFILE_LIST)
+.PHONY: help

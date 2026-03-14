@@ -18,8 +18,6 @@
 
 #define STUB_X_PRIM
 #define STUB_X_PRIM_REGISTER
-#define STUB_X_EVAL
-#define STUB_X_TOKEN
 #define STUB_X_PROCEDURE
 #define STUB_X_OPERATIVE
 #define STUB_X_HEAP
@@ -30,6 +28,33 @@
 
 /* x_base_env_alist_assoc is not yet implemented */
 x_obj_t *x_base_env_alist_assoc(x_obj_t *p_base, x_obj_t *p_args) { return NULL; }
+
+/*
+ * Controllable stubs for x_token_read/write and x_eval.
+ * _token_read_returns[] is a NULL-terminated sequence of values;
+ * each call pops the next one.
+ */
+static x_obj_t **_token_read_returns;
+static int _token_read_index;
+
+x_obj_t *x_token_read(x_obj_t *p_base, x_obj_t *p_args)
+{
+	if (_token_read_returns != NULL
+		&& _token_read_returns[_token_read_index] != NULL) {
+		return _token_read_returns[_token_read_index++];
+	}
+	return NULL;
+}
+
+x_obj_t *x_token_write(x_obj_t *p_base, x_obj_t *p_args) { return NULL; }
+
+static x_obj_t *_eval_last;
+
+x_obj_t *x_eval(x_obj_t *p_base, x_obj_t *p_args)
+{
+	_eval_last = x_firstobj(x_firstobj(p_args));
+	return _eval_last;
+}
 
 #include "ext/x-expr/tests/src/helper-system-functions.c"
 
@@ -570,6 +595,102 @@ static char *test_base_error_with_handler(void)
 	return NULL;
 }
 
+static char *test_base_write_buf(void)
+{
+	x_obj_t *p_base, *p_args;
+	x_char_t buf[64];
+	x_satom_t buf_pos = x_obj_set(NULL, X_OBJ_FLAG_NONE, { .i = 0 });
+	x_spair_t buf_obj[1] = {
+		x_obj_set(NULL, X_OBJ_FLAG_NONE,
+			{ .v = buf }, { (x_obj_t *)&buf_pos })
+	};
+
+	p_base = x_base_make(NULL, NULL);
+
+	/* Install write-buffer on base */
+	x_base_field_write_buf(p_base) = (x_obj_t *)buf_obj;
+
+	p_args = x_mkspair(p_base,
+		x_mksatom(p_base, "hello"),
+		x_mkspair(p_base, x_mksatom(p_base, 5), NULL)
+	);
+	x_base_write(p_base, p_args);
+	_it_should("write to buffer", 5 == x_atomint(buf_pos));
+	buf[x_atomint(buf_pos)] = '\0';
+	_it_should("buffer contains hello",
+		0 == strncmp(buf, "hello", 5));
+
+	/* Write more data, position advances */
+	p_args = x_mkspair(p_base,
+		x_mksatom(p_base, "!"),
+		x_mkspair(p_base, x_mksatom(p_base, 1), NULL)
+	);
+	x_base_write(p_base, p_args);
+	_it_should("position advanced", 6 == x_atomint(buf_pos));
+	buf[x_atomint(buf_pos)] = '\0';
+	_it_should("buffer contains hello!",
+		0 == strncmp(buf, "hello!", 6));
+
+	/* Remove write-buffer, verify fallback to fd */
+	x_base_field_write_buf(p_base) = NULL;
+	{
+		x_char_t out[8];
+
+		helper_file_buffer_ptr[TEST_HELPER_FILE_STDOUT] = out;
+		helper_file_buffer_length[TEST_HELPER_FILE_STDOUT] = 8;
+		helper_file_reset();
+
+		p_args = x_mkspair(p_base,
+			x_mksatom(p_base, "X"),
+			x_mkspair(p_base, x_mksatom(p_base, 1), NULL)
+		);
+		x_base_write(p_base, p_args);
+		_it_should("write to fd when buf is nil", 'X' == out[0]);
+	}
+
+	helper_file_buffer_length[TEST_HELPER_FILE_STDOUT] = TEST_HELPER_FILE_UNDEFINED;
+
+	x_sys_free(p_base);
+
+	return NULL;
+}
+
+static char *test_base_load(void)
+{
+	x_obj_t *p_base, *p_ret;
+	x_obj_t *tokens[3];
+
+	p_base = x_base_make(NULL, NULL);
+	/* x_base_load reads x_base_field_buffer but our stubbed x_token_read
+	 * ignores it — just push a non-NULL dummy. */
+	x_base_buffer_push(p_base, x_mkspair(p_base, NULL, NULL));
+
+	/* Empty input — token_read returns NULL immediately */
+	_token_read_returns = NULL;
+	_token_read_index = 0;
+	_eval_last = NULL;
+
+	p_ret = x_base_load(p_base, NULL);
+	_it_should("return NULL for empty input", NULL == p_ret);
+
+	/* Two tokens then NULL */
+	tokens[0] = x_mksatom(p_base, 42);
+	tokens[1] = x_mksatom(p_base, 99);
+	tokens[2] = NULL;
+	_token_read_returns = tokens;
+	_token_read_index = 0;
+	_eval_last = NULL;
+
+	p_ret = x_base_load(p_base, NULL);
+	_it_should("return last eval result", _eval_last == p_ret);
+	_it_should("eval was called with second token",
+		tokens[1] == _eval_last);
+
+	x_sys_free(p_base);
+
+	return NULL;
+}
+
 static char *run_tests() {
 	_run_test(test_base_make);
 	_run_test(test_base_type_alist_extend);
@@ -578,6 +699,8 @@ static char *run_tests() {
 	_xrun_test(test_base_env_alist_assoc);
 	_run_test(test_base_read);
 	_run_test(test_base_write);
+	_run_test(test_base_write_buf);
+	_run_test(test_base_load);
 	_run_test(test_base_error_no_handler);
 	_run_test(test_base_error_with_handler);
 

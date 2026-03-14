@@ -35,23 +35,9 @@
 #include <sys/syscall.h>
 #endif
 
+#define X_CLI_BUFFER_SIZE 256
+
 #ifndef TESTS
-
-static int s_argc;
-static char **s_argv;
-
-/* Build argv list as x-lang list of strings. */
-static x_obj_t *x_cli_make_args(x_obj_t *p_base)
-{
-	x_obj_t *p_list = NULL;
-	int i;
-
-	for (i = s_argc - 1; i >= 0; i--)
-		p_list = x_mklist(p_base,
-			x_mkstr(p_base, (x_char_t *)s_argv[i]), p_list);
-
-	return p_list;
-}
 
 #ifdef X_SYSCALL
 static x_obj_t *x_prim_syscall(x_obj_t *p_base, x_obj_t *p_args)
@@ -78,8 +64,6 @@ static x_obj_t *x_prim_syscall(x_obj_t *p_base, x_obj_t *p_args)
 }
 #endif
 
-#define X_CLI_BUFFER_SIZE 256
-
 #ifdef X_INCLUDE
 static x_obj_t *x_prim_include(x_obj_t *p_base, x_obj_t *p_args)
 {
@@ -99,35 +83,30 @@ static x_obj_t *x_prim_include(x_obj_t *p_base, x_obj_t *p_args)
 	x_atomint(x_base_field_line(p_base)) = 1;
 
 	/* Push new input state. */
-	x_base_field_filein_stack(p_base) = x_mkspair(p_base,
-		x_mksatom(p_base, fd), x_base_field_filein_stack(p_base));
+	x_base_filein_push(p_base, fd);
 
 	buf = (x_char_t *)x_sys_malloc(X_CLI_BUFFER_SIZE);
 	p_buffer = x_mkbufferown(p_base, buf);
-	x_base_field_buffer_stack(p_base) = x_mkspair(p_base,
-		p_buffer, x_base_field_buffer_stack(p_base));
+	x_base_buffer_push(p_base, p_buffer);
 
 	/* Load all expressions. */
 	p_result = x_base_load(p_base, p_base);
 
 	/* Pop and close, restore line counter. */
-	x_base_field_filein_stack(p_base) =
-		x_restobj(x_base_field_filein_stack(p_base));
-	x_base_field_buffer_stack(p_base) =
-		x_restobj(x_base_field_buffer_stack(p_base));
+	x_base_filein_pop(p_base);
+	x_base_buffer_pop(p_base);
 	x_sys_close(fd);
 	x_atomint(x_base_field_line(p_base)) = saved_line;
 
 	return p_result;
 }
-#endif
+#endif /* X_INCLUDE */
 
-int main(int argc, char *argv[])
+#endif /* ! TESTS -- CLI-only helpers above */
+
+x_obj_t * init(x_obj_t *p_base, x_char_t *buffer)
 {
-	x_obj_t *p_base, *p_buffer;
-	x_char_t buffer[X_CLI_BUFFER_SIZE];
-	s_argc = argc;
-	s_argv = argv;
+	x_obj_t *p_buffer;
 
 	/* Create base object. */
 	p_base = x_base_make(NULL, NULL);
@@ -146,7 +125,7 @@ int main(int argc, char *argv[])
 
 	/* Set up read buffer. */
 	p_buffer = x_mkbuffer(p_base, buffer);
-	x_base_field_buffer(p_base) = p_buffer;
+	x_base_buffer_push(p_base, p_buffer);
 
 	/* Register primitives. */
 	x_prim_register(p_base, p_base);
@@ -167,14 +146,34 @@ int main(int argc, char *argv[])
 	x_prim_bind(p_base, "include", x_prim_include);
 #endif
 
-	/* Bind args as a list of command-line argument strings. */
-	{
-		x_obj_t *p_sym = x_make_symbol(p_base, X_OBJ_FLAG_NONE,
-			(x_char_t *)"args");
-		x_obj_t *p_args_list = x_cli_make_args(p_base);
-		x_obj_t *p_pair = x_mkspair(p_base, p_sym, p_args_list);
-		x_base_env_alist_extend(p_base, p_pair);
+	return p_base;
+}
+
+#ifndef TESTS
+
+int main(int argc, char *argv[])
+{
+	x_obj_t *p_base;
+	x_char_t buffer[X_CLI_BUFFER_SIZE];
+	x_obj_t *p_sym, *p_list = NULL, *p_pair;
+	int i;
+
+	p_base = init(NULL, buffer);
+
+	if (p_base == NULL) {
+		x_error(STDERR_FILENO, "Error: ", "Initialization");
+		return 1;
 	}
+
+	/* Bind args as a list of command-line argument strings. */
+	p_sym = x_make_symbol(p_base, X_OBJ_FLAG_NONE, (x_char_t *)"args");
+
+	for (i = argc - 1; i >= 0; i--) {
+		p_list = x_mklist(p_base, x_mkstr(p_base, (x_char_t *)argv[i]), p_list);
+	}
+
+	p_pair = x_mkspair(p_base, p_sym, p_list);
+	x_base_env_alist_extend(p_base, p_pair);
 
 	/* REPL. */
 	x_prim_repl(p_base, NULL);
@@ -182,4 +181,5 @@ int main(int argc, char *argv[])
 	return 0;
 }
 
-#endif
+
+#endif /* TESTS */

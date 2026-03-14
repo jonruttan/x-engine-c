@@ -58,6 +58,11 @@ x_obj_t *x_prim_type_register(x_obj_t *p_base, x_obj_t *p_args) { return p_base;
 
 #include "ext/x-expr/tests/src/helper-system-functions.c"
 
+/* Test helper functions for ffi-call d->d and dd->d conventions */
+static double test_ffi_double_negate(double x) { return -x; }
+static double test_ffi_double_add(double a, double b) { return a + b; }
+static double test_ffi_strtod(const char *s, void *endp) { (void)endp; return (double)(s[0] - '0'); }
+static long test_ffi_long_add3(long a, long b, long c, long d, long e, long f, long g) { (void)d; (void)e; (void)f; (void)g; return a + b + c; }
 
 /*
  * ## Test Overhead
@@ -402,6 +407,263 @@ static char *test_ffi_register(void)
 	return NULL;
 }
 
+static char *test_ffi_dlopen_dlsym(void)
+{
+	x_obj_t *p_base, *p_args, *p_handle, *p_sym;
+
+	p_base = x_base_make(NULL, NULL);
+	x_prim_register(p_base, NULL);
+
+	/* dlopen(NULL, RTLD_LAZY) -> handle to current process */
+	p_args = x_mkspair(p_base, NULL,
+		x_mkspair(p_base, x_mkint(p_base, (x_int_t)RTLD_LAZY),
+		NULL));
+	p_handle = x_prim_dlopen(p_base, p_args);
+	_it_should("dlopen returns handle for NULL path",
+		p_handle != NULL);
+
+	/* dlsym(handle, "x_prim_ffi_register") -> function pointer */
+	p_args = x_mkspair(p_base, p_handle,
+		x_mkspair(p_base, x_mkstr(p_base, "x_prim_ffi_register"),
+		NULL));
+	p_sym = x_prim_dlsym(p_base, p_args);
+	_it_should("dlsym finds known symbol",
+		p_sym != NULL);
+
+	/* dlsym with bogus name -> NULL */
+	p_args = x_mkspair(p_base, p_handle,
+		x_mkspair(p_base, x_mkstr(p_base, "____no_such_symbol____"),
+		NULL));
+	p_sym = x_prim_dlsym(p_base, p_args);
+	_it_should("dlsym returns NULL for unknown symbol",
+		p_sym == NULL);
+
+	/* dlopen with bogus path -> NULL */
+	p_args = x_mkspair(p_base,
+		x_mkstr(p_base, "/no/such/lib.so"),
+		x_mkspair(p_base, x_mkint(p_base, (x_int_t)RTLD_LAZY),
+		NULL));
+	p_handle = x_prim_dlopen(p_base, p_args);
+	_it_should("dlopen returns NULL for bad path",
+		p_handle == NULL);
+
+	test_cleanup(p_base);
+	return NULL;
+}
+
+static char *test_ffi_call_d_to_d(void)
+{
+	x_obj_t *p_base, *p_args, *p_result;
+	double r;
+
+	p_base = x_base_make(NULL, NULL);
+	x_prim_register(p_base, NULL);
+
+	/* (ffi-call "d->d" fptr 5.0) -> -5.0 */
+	p_args = x_mkspair(p_base, x_mkstr(p_base, "d->d"),
+		x_mkspair(p_base, x_mkptr(p_base, (void *)test_ffi_double_negate),
+		x_mkspair(p_base, x_mkint(p_base, double_to_bits(5.0)),
+		NULL)));
+	p_result = x_prim_ffi_call(p_base, p_args);
+	r = bits_to_double(x_intval(p_result));
+	_it_should("d->d: negate(5.0) = -5.0", r == -5.0);
+
+	test_cleanup(p_base);
+	return NULL;
+}
+
+static char *test_ffi_call_dd_to_d(void)
+{
+	x_obj_t *p_base, *p_args, *p_result;
+	double r;
+
+	p_base = x_base_make(NULL, NULL);
+	x_prim_register(p_base, NULL);
+
+	/* (ffi-call "dd->d" fptr 3.0 7.0) -> 10.0 */
+	p_args = x_mkspair(p_base, x_mkstr(p_base, "dd->d"),
+		x_mkspair(p_base, x_mkptr(p_base, (void *)test_ffi_double_add),
+		x_mkspair(p_base, x_mkint(p_base, double_to_bits(3.0)),
+		x_mkspair(p_base, x_mkint(p_base, double_to_bits(7.0)),
+		NULL))));
+	p_result = x_prim_ffi_call(p_base, p_args);
+	r = bits_to_double(x_intval(p_result));
+	_it_should("dd->d: add(3.0, 7.0) = 10.0", r == 10.0);
+
+	test_cleanup(p_base);
+	return NULL;
+}
+
+static char *test_ffi_compare_gt_le(void)
+{
+	x_obj_t *p_base, *p_args, *p_result;
+
+	p_base = x_base_make(NULL, NULL);
+	x_prim_register(p_base, NULL);
+
+	/* d>d: 5.0 > 3.0 -> t */
+	p_args = x_mkspair(p_base, x_mkstr(p_base, "d>d"),
+		x_mkspair(p_base, NULL,
+		x_mkspair(p_base, x_mkint(p_base, double_to_bits(5.0)),
+		x_mkspair(p_base, x_mkint(p_base, double_to_bits(3.0)),
+		NULL))));
+	p_result = x_prim_ffi_call(p_base, p_args);
+	_it_should("d>d: 5.0 > 3.0 is true",
+		p_result == x_base_field_true(p_base));
+
+	/* d>d: 1.0 > 2.0 -> nil */
+	p_args = x_mkspair(p_base, x_mkstr(p_base, "d>d"),
+		x_mkspair(p_base, NULL,
+		x_mkspair(p_base, x_mkint(p_base, double_to_bits(1.0)),
+		x_mkspair(p_base, x_mkint(p_base, double_to_bits(2.0)),
+		NULL))));
+	p_result = x_prim_ffi_call(p_base, p_args);
+	_it_should("d>d: 1.0 > 2.0 is false",
+		p_result == NULL);
+
+	/* d<=d: 3.0 <= 3.0 -> t */
+	p_args = x_mkspair(p_base, x_mkstr(p_base, "d<=d"),
+		x_mkspair(p_base, NULL,
+		x_mkspair(p_base, x_mkint(p_base, double_to_bits(3.0)),
+		x_mkspair(p_base, x_mkint(p_base, double_to_bits(3.0)),
+		NULL))));
+	p_result = x_prim_ffi_call(p_base, p_args);
+	_it_should("d<=d: 3.0 <= 3.0 is true",
+		p_result == x_base_field_true(p_base));
+
+	/* d<=d: 5.0 <= 3.0 -> nil */
+	p_args = x_mkspair(p_base, x_mkstr(p_base, "d<=d"),
+		x_mkspair(p_base, NULL,
+		x_mkspair(p_base, x_mkint(p_base, double_to_bits(5.0)),
+		x_mkspair(p_base, x_mkint(p_base, double_to_bits(3.0)),
+		NULL))));
+	p_result = x_prim_ffi_call(p_base, p_args);
+	_it_should("d<=d: 5.0 <= 3.0 is false",
+		p_result == NULL);
+
+	test_cleanup(p_base);
+	return NULL;
+}
+
+static char *test_ffi_call_s0_to_d(void)
+{
+	x_obj_t *p_base, *p_args, *p_result;
+	double r;
+
+	p_base = x_base_make(NULL, NULL);
+	x_prim_register(p_base, NULL);
+
+	/* (ffi-call "s0->d" fptr "5") -> 5.0 (our stub reads first char - '0') */
+	p_args = x_mkspair(p_base, x_mkstr(p_base, "s0->d"),
+		x_mkspair(p_base, x_mkptr(p_base, (void *)test_ffi_strtod),
+		x_mkspair(p_base, x_mkstr(p_base, "5"),
+		NULL)));
+	p_result = x_prim_ffi_call(p_base, p_args);
+	r = bits_to_double(x_intval(p_result));
+	_it_should("s0->d: strtod(\"5\") = 5.0", r == 5.0);
+
+	test_cleanup(p_base);
+	return NULL;
+}
+
+static char *test_ffi_unknown_convention(void)
+{
+	x_obj_t *p_base, *p_args, *p_result;
+
+	p_base = x_base_make(NULL, NULL);
+	x_prim_register(p_base, NULL);
+
+	/* (ffi-call "bogus" () 1) -> NULL */
+	p_args = x_mkspair(p_base, x_mkstr(p_base, "bogus"),
+		x_mkspair(p_base, NULL,
+		x_mkspair(p_base, x_mkint(p_base, (x_int_t)1),
+		NULL)));
+	p_result = x_prim_ffi_call(p_base, p_args);
+	_it_should("unknown convention returns NULL",
+		p_result == NULL);
+
+	test_cleanup(p_base);
+	return NULL;
+}
+
+static char *test_ffi_ptr_call(void)
+{
+	x_obj_t *p_base, *p_args, *p_result;
+
+	p_base = x_base_make(NULL, NULL);
+	x_prim_register(p_base, NULL);
+
+	/* (ptr-call fptr 10 20 30) -> 60 */
+	p_args = x_mkspair(p_base,
+		x_mkptr(p_base, (void *)test_ffi_long_add3),
+		x_mkspair(p_base, x_mkint(p_base, (x_int_t)10),
+		x_mkspair(p_base, x_mkint(p_base, (x_int_t)20),
+		x_mkspair(p_base, x_mkint(p_base, (x_int_t)30),
+		NULL))));
+	p_result = x_prim_ptr_call(p_base, p_args);
+	_it_should("ptr-call: add3(10,20,30) = 60",
+		x_intval(p_result) == 60);
+
+	test_cleanup(p_base);
+	return NULL;
+}
+
+static char *test_ffi_ptr_set_word(void)
+{
+	x_obj_t *p_base, *p_args, *p_result;
+	unsigned char mem[32];
+	long val;
+
+	p_base = x_base_make(NULL, NULL);
+	x_prim_register(p_base, NULL);
+
+	memset(mem, 0, sizeof(mem));
+
+	/* (ptr-set-word! ptr 0 12345) */
+	p_args = x_mkspair(p_base, x_mkptr(p_base, mem),
+		x_mkspair(p_base, x_mkint(p_base, (x_int_t)0),
+		x_mkspair(p_base, x_mkint(p_base, (x_int_t)12345),
+		NULL)));
+	p_result = x_prim_ptr_set_word(p_base, p_args);
+	_it_should("ptr-set-word! returns ptr",
+		p_result != NULL);
+	memcpy(&val, mem, sizeof(long));
+	_it_should("ptr-set-word! writes long value",
+		val == 12345);
+
+	test_cleanup(p_base);
+	return NULL;
+}
+
+static char *test_ffi_ptr_call_str_arg(void)
+{
+	x_obj_t *p_base, *p_args, *p_result;
+
+	p_base = x_base_make(NULL, NULL);
+	x_prim_register(p_base, NULL);
+
+	/* ptr-call with a string arg exercises the str branch */
+	p_args = x_mkspair(p_base,
+		x_mkptr(p_base, (void *)x_lib_strlen),
+		x_mkspair(p_base, x_mkstr(p_base, "hello"),
+		NULL));
+	p_result = x_prim_ptr_call(p_base, p_args);
+	_it_should("ptr-call with string arg: strlen(\"hello\") = 5",
+		x_intval(p_result) == 5);
+
+	/* ptr-call with a ptr arg exercises the ptr branch */
+	p_args = x_mkspair(p_base,
+		x_mkptr(p_base, (void *)x_lib_strlen),
+		x_mkspair(p_base, x_mkptr(p_base, (void *)"world"),
+		NULL));
+	p_result = x_prim_ptr_call(p_base, p_args);
+	_it_should("ptr-call with ptr arg: strlen(ptr(\"world\")) = 5",
+		x_intval(p_result) == 5);
+
+	test_cleanup(p_base);
+	return NULL;
+}
+
 static char *run_tests() {
 	_run_test(test_ffi_arith_add);
 	_run_test(test_ffi_arith_sub);
@@ -415,6 +677,15 @@ static char *run_tests() {
 	_run_test(test_ffi_ptr_set_ref);
 	_run_test(test_ffi_string_ptr_convert);
 	_run_test(test_ffi_register);
+	_run_test(test_ffi_dlopen_dlsym);
+	_run_test(test_ffi_call_d_to_d);
+	_run_test(test_ffi_call_dd_to_d);
+	_run_test(test_ffi_compare_gt_le);
+	_run_test(test_ffi_call_s0_to_d);
+	_run_test(test_ffi_unknown_convention);
+	_run_test(test_ffi_ptr_call);
+	_run_test(test_ffi_ptr_set_word);
+	_run_test(test_ffi_ptr_call_str_arg);
 
 	return NULL;
 }

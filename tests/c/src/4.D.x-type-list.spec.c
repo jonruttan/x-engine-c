@@ -483,6 +483,51 @@ static char *test_type_list_eval(void)
 	return NULL;
 }
 
+static char *test_type_list_eval_nil_operator(void)
+{
+	x_obj_t *p_base, *p_list, *p_args, *p_ret;
+
+	helper_alloc_reset();
+
+	/* List whose first element evaluates to nil -> returns p_exp */
+	p_base = x_base_make(NULL, NULL);
+	p_list = x_mklist(p_base, NULL, pair(atom(42), nil));
+	p_args = pair(pair(p_list, nil), nil);
+	p_ret = x_type_list_eval(p_base, p_args);
+	_it_should("return exp when operator is nil",
+		p_ret == p_list);
+	test_cleanup(p_base);
+
+	return NULL;
+}
+
+static char *test_type_list_eval_no_call(void)
+{
+	x_obj_t *p_base, *p_type, *p_obj, *p_list, *p_args, *p_ret;
+	struct x_type_t type_desc;
+
+	helper_alloc_reset();
+
+	/* Type with no call field -> returns p_exp */
+	p_base = x_base_make(NULL, NULL);
+
+	x_lib_memset(&type_desc, 0, sizeof(type_desc));
+	type_desc.p_name = x_mksatom(p_base, "NOCALL");
+	type_desc.p_units = (x_obj_t *)&x_type_units_pair_obj;
+
+	p_type = x_type_struct_make(p_base, type_desc);
+	p_obj = x_obj_make(p_base, p_type, X_OBJ_FLAG_NONE,
+		X_OBJ_LENGTH_PAIR, NULL, NULL);
+	p_list = x_mklist(p_base, p_obj, pair(atom(42), nil));
+	p_args = pair(pair(p_list, nil), nil);
+	p_ret = x_type_list_eval(p_base, p_args);
+	_it_should("return exp when operator type has no call field",
+		p_ret == p_list);
+	test_cleanup(p_base);
+
+	return NULL;
+}
+
 static char *test_type_list_iter(void)
 {
 	x_obj_t *p_base, *p_list, *p_iter, *p_args, *p_ret;
@@ -656,6 +701,8 @@ static char *run_tests() {
 	_run_test(test_base_alist_assoc);
 	_run_test(test_type_list_make);
 	_run_test(test_type_list_eval);
+	_run_test(test_type_list_eval_nil_operator);
+	_run_test(test_type_list_eval_no_call);
 	_run_test(test_type_list_iter);
 	_run_test(test_type_list_length);
 	_run_test(test_type_list_call);

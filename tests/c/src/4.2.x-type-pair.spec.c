@@ -448,6 +448,32 @@ static char *test_type_pair_make(void)
 	return NULL;
 }
 
+static char *test_type_pair_length(void)
+{
+	x_obj_t *p_base, *p_list, *p_args, *p_ret;
+
+	helper_alloc_reset();
+
+	p_base = x_base_make(NULL, NULL);
+
+	/* Empty list */
+	p_args = x_mkspair(p_base, NULL, NULL);
+	p_ret = x_type_pair_length(p_base, p_args);
+	_it_should("return 0 for an empty list",
+		0 == x_atomint(p_ret));
+
+	/* 3-element list */
+	p_list = x_mkspair(p_base, x_mksatom(p_base, 1),
+		x_mkspair(p_base, x_mksatom(p_base, 2),
+		x_mkspair(p_base, x_mksatom(p_base, 3), NULL)));
+	p_args = x_mkspair(p_base, p_list, NULL);
+	p_ret = x_type_pair_length(p_base, p_args);
+	_it_should("return 3 for a 3-element list",
+		3 == x_atomint(p_ret));
+
+	return NULL;
+}
+
 static char *run_tests() {
 	_run_test(test_obj_type_ispair);
 	_run_test(test_mkpair);
@@ -457,6 +483,7 @@ static char *run_tests() {
 	_run_test(test_type_pair_struct);
 	_run_test(test_base_alist_assoc);
 	_run_test(test_type_pair_make);
+	_run_test(test_type_pair_length);
 
 	return NULL;
 }

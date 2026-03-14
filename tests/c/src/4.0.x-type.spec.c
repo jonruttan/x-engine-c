@@ -450,6 +450,21 @@ static char *test_type_prim_type_name(void)
 	_it_should("return name field for typed obj",
 		p_ret == x_type_field_name(x_obj_type(p_obj)));
 
+	/* typed object with nil name returns NULL */
+	{
+		struct x_type_t type_desc;
+		x_obj_t *p_type;
+
+		memset(&type_desc, 0, sizeof(type_desc));
+		p_type = x_type_struct_make(p_base, type_desc);
+		p_obj = x_obj_make(p_base, p_type, X_OBJ_FLAG_NONE,
+			X_OBJ_LENGTH_ATOM, 0);
+		p_args = x_mkspair(p_base, p_obj, NULL);
+		p_ret = x_type_prim_type_name(p_base, p_args);
+		_it_should("return NULL for typed obj with nil name",
+			p_ret == NULL);
+	}
+
 	test_cleanup(p_base);
 
 	return NULL;
@@ -484,6 +499,40 @@ static char *test_type_prim_units(void)
 	_it_should("return atom units for satom",
 		p_ret != NULL && x_atomint(p_ret) == X_OBJ_UNITS_ATOM);
 
+	/* typed object with nil units returns NULL */
+	{
+		struct x_type_t type_desc;
+		x_obj_t *p_type;
+
+		memset(&type_desc, 0, sizeof(type_desc));
+		type_desc.p_name = x_mksatom(p_base, "TEST");
+		p_type = x_type_struct_make(p_base, type_desc);
+		p_obj = x_obj_make(p_base, p_type, X_OBJ_FLAG_NONE,
+			X_OBJ_LENGTH_ATOM, 0);
+		p_args = x_mkspair(p_base, p_obj, NULL);
+		p_ret = x_type_prim_units(p_base, p_args);
+		_it_should("return NULL for typed obj with nil units",
+			p_ret == NULL);
+	}
+
+	/* typed object with units function */
+	{
+		struct x_type_t type_desc;
+		x_obj_t *p_type;
+
+		memset(&type_desc, 0, sizeof(type_desc));
+		type_desc.p_name = x_mksatom(p_base, "TEST");
+		type_desc.p_units = x_mksatom(p_base, mock_fn);
+		p_type = x_type_struct_make(p_base, type_desc);
+		p_obj = x_obj_make(p_base, p_type, X_OBJ_FLAG_NONE,
+			X_OBJ_LENGTH_ATOM, 0);
+		p_args = x_mkspair(p_base, p_obj, NULL);
+		mock_fn_calls = 0;
+		p_ret = x_type_prim_units(p_base, p_args);
+		_it_should("call units fn for typed obj",
+			1 == mock_fn_calls);
+	}
+
 	test_cleanup(p_base);
 
 	return NULL;
@@ -517,6 +566,40 @@ static char *test_type_prim_length(void)
 	p_ret = x_type_prim_length(p_base, p_args);
 	_it_should("return atom length for satom",
 		p_ret != NULL && x_atomint(p_ret) == X_OBJ_UNITS_ATOM);
+
+	/* typed object with nil length returns NULL */
+	{
+		struct x_type_t type_desc;
+		x_obj_t *p_type;
+
+		memset(&type_desc, 0, sizeof(type_desc));
+		type_desc.p_name = x_mksatom(p_base, "TEST");
+		p_type = x_type_struct_make(p_base, type_desc);
+		p_obj = x_obj_make(p_base, p_type, X_OBJ_FLAG_NONE,
+			X_OBJ_LENGTH_ATOM, 0);
+		p_args = x_mkspair(p_base, p_obj, NULL);
+		p_ret = x_type_prim_length(p_base, p_args);
+		_it_should("return NULL for typed obj with nil length",
+			p_ret == NULL);
+	}
+
+	/* typed object with length function */
+	{
+		struct x_type_t type_desc;
+		x_obj_t *p_type;
+
+		memset(&type_desc, 0, sizeof(type_desc));
+		type_desc.p_name = x_mksatom(p_base, "TEST");
+		type_desc.p_length = x_mksatom(p_base, mock_fn);
+		p_type = x_type_struct_make(p_base, type_desc);
+		p_obj = x_obj_make(p_base, p_type, X_OBJ_FLAG_NONE,
+			X_OBJ_LENGTH_ATOM, 0);
+		p_args = x_mkspair(p_base, p_obj, NULL);
+		mock_fn_calls = 0;
+		p_ret = x_type_prim_length(p_base, p_args);
+		_it_should("call length fn for typed obj",
+			1 == mock_fn_calls);
+	}
 
 	test_cleanup(p_base);
 

@@ -219,7 +219,7 @@ static char *test_io_read_char(void)
 	helper_file_reset();
 
 	/* Create and set buffer */
-	x_base_field_buffer(p_base) = x_mkbuffer(p_base, buffer);
+	x_base_buffer_push(p_base, x_mkbuffer(p_base, buffer));
 
 	p_result = x_prim_read_char(p_base, NULL);
 	_it_should("read-char returns a char",
@@ -242,7 +242,7 @@ static char *test_io_peek_char(void)
 	helper_file_buffer_ptr[TEST_HELPER_FILE_STDIN] = "B";
 	helper_file_reset();
 
-	x_base_field_buffer(p_base) = x_mkbuffer(p_base, buffer);
+	x_base_buffer_push(p_base, x_mkbuffer(p_base, buffer));
 
 	p_result = x_prim_peek_char(p_base, NULL);
 	_it_should("peek-char returns a char",
@@ -298,6 +298,161 @@ static char *test_io_write_to_string(void)
 	return NULL;
 }
 
+static char *test_io_read_expr(void)
+{
+	x_obj_t *p_base, *p_result;
+	x_char_t buffer[32];
+
+	p_base = x_base_make(NULL, NULL);
+	x_prim_register(p_base, NULL);
+
+	/* Register types needed by the tokenizer */
+	x_type_int_register(p_base, p_base);
+	x_type_whitespace_register(p_base, p_base);
+
+	/* Provide "42\n" on stdin — read should parse integer 42.
+	 * remaining limits total bytes; returns 0 (EOF) when exhausted. */
+	helper_file_buffer_ptr[TEST_HELPER_FILE_STDIN] = "42\n";
+	helper_file_buffer_remaining[TEST_HELPER_FILE_STDIN] = 3;
+	helper_file_reset();
+	x_base_buffer_push(p_base, x_mkbuffer(p_base, buffer));
+
+	p_result = x_prim_read_expr(p_base, NULL);
+	_it_should("read returns an integer",
+		p_result != NULL && x_obj_type_isint(p_base, p_result));
+	_it_should("read returns 42",
+		x_intval(p_result) == 42);
+
+	helper_file_buffer_remaining[TEST_HELPER_FILE_STDIN] = TEST_HELPER_FILE_UNDEFINED;
+	test_cleanup(p_base);
+	return NULL;
+}
+
+static char *test_io_read_char_eof(void)
+{
+	x_obj_t *p_base, *p_result;
+	x_char_t buffer[32];
+
+	p_base = x_base_make(NULL, NULL);
+	x_prim_register(p_base, NULL);
+
+	/* Empty stdin — read-char should return NULL (EOF) */
+	helper_file_buffer_ptr[TEST_HELPER_FILE_STDIN] = "";
+	helper_file_buffer_remaining[TEST_HELPER_FILE_STDIN] = 0;
+	helper_file_reset();
+	x_base_buffer_push(p_base, x_mkbuffer(p_base, buffer));
+
+	p_result = x_prim_read_char(p_base, NULL);
+	_it_should("read-char returns NULL on EOF", NULL == p_result);
+
+	helper_file_buffer_remaining[TEST_HELPER_FILE_STDIN] = TEST_HELPER_FILE_UNDEFINED;
+	test_cleanup(p_base);
+	return NULL;
+}
+
+static char *test_io_peek_char_eof(void)
+{
+	x_obj_t *p_base, *p_result;
+	x_char_t buffer[32];
+
+	p_base = x_base_make(NULL, NULL);
+	x_prim_register(p_base, NULL);
+
+	/* Empty stdin — peek-char should return NULL (EOF) */
+	helper_file_buffer_ptr[TEST_HELPER_FILE_STDIN] = "";
+	helper_file_buffer_remaining[TEST_HELPER_FILE_STDIN] = 0;
+	helper_file_reset();
+	x_base_buffer_push(p_base, x_mkbuffer(p_base, buffer));
+
+	p_result = x_prim_peek_char(p_base, NULL);
+	_it_should("peek-char returns NULL on EOF", NULL == p_result);
+
+	helper_file_buffer_remaining[TEST_HELPER_FILE_STDIN] = TEST_HELPER_FILE_UNDEFINED;
+	test_cleanup(p_base);
+	return NULL;
+}
+
+static char *test_io_clock(void)
+{
+	x_obj_t *p_base, *p_result;
+
+	p_base = x_base_make(NULL, NULL);
+	x_prim_register(p_base, NULL);
+
+	p_result = x_prim_clock(p_base, NULL);
+	_it_should("clock returns an integer",
+		p_result != NULL && x_obj_type_isint(p_base, p_result));
+	_it_should("clock returns non-negative value",
+		x_intval(p_result) >= 0);
+
+	test_cleanup(p_base);
+	return NULL;
+}
+
+static char *test_io_heap_mark_sweep_collect(void)
+{
+	x_obj_t *p_base;
+	long count1, count2;
+
+	p_base = x_base_make(NULL, NULL);
+	x_prim_register(p_base, NULL);
+
+	/* Allocate some unreachable objects */
+	x_mkint(p_base, 111);
+	x_mkint(p_base, 222);
+	x_mkint(p_base, 333);
+
+	count1 = x_intval(x_prim_heap_count(p_base, NULL));
+	_it_should("heap has objects before collect", count1 > 0);
+
+	/* Mark reachable objects, then sweep unmarked */
+	x_prim_heap_mark(p_base, NULL);
+	x_prim_heap_sweep(p_base, NULL);
+
+	count2 = x_intval(x_prim_heap_count(p_base, NULL));
+	_it_should("heap shrank after mark+sweep", count2 < count1);
+
+	/* Now test heap-collect (combined mark+sweep) */
+	x_mkint(p_base, 444);
+	count1 = x_intval(x_prim_heap_count(p_base, NULL));
+
+	x_prim_heap_collect(p_base, NULL);
+
+	count2 = x_intval(x_prim_heap_count(p_base, NULL));
+	_it_should("heap-collect cleaned unreachable objects",
+		count2 <= count1);
+
+	test_cleanup(p_base);
+	return NULL;
+}
+
+static char *test_io_repl(void)
+{
+	x_obj_t *p_base;
+	x_char_t buffer[64], out[64];
+
+	p_base = x_base_make(NULL, NULL);
+	x_prim_register(p_base, NULL);
+
+	/* Register types needed by the tokenizer */
+	x_type_int_register(p_base, p_base);
+	x_type_whitespace_register(p_base, p_base);
+
+	/* Provide a simple expression then EOF — repl evals it and returns */
+	helper_file_buffer_ptr[TEST_HELPER_FILE_STDIN] = "42\n";
+	helper_file_buffer_remaining[TEST_HELPER_FILE_STDIN] = 3;
+	helper_file_buffer_ptr[TEST_HELPER_FILE_STDOUT] = out;
+	helper_file_reset();
+	x_base_buffer_push(p_base, x_mkbuffer(p_base, buffer));
+
+	x_prim_repl(p_base, NULL);
+	_it_should("repl returns without error on EOF", 1);
+
+	helper_file_buffer_remaining[TEST_HELPER_FILE_STDIN] = TEST_HELPER_FILE_UNDEFINED;
+	test_cleanup(p_base);
+	return NULL;
+}
+
 static char *run_tests() {
 	_run_test(test_io_newline);
 	_run_test(test_io_display);
@@ -305,8 +460,14 @@ static char *run_tests() {
 	_run_test(test_io_heap_count);
 	_run_test(test_io_current_line);
 	_run_test(test_io_read_char);
+	_run_test(test_io_read_char_eof);
 	_run_test(test_io_peek_char);
+	_run_test(test_io_peek_char_eof);
 	_run_test(test_io_write_to_string);
+	_run_test(test_io_clock);
+	_run_test(test_io_heap_mark_sweep_collect);
+	_run_test(test_io_read_expr);
+	_run_test(test_io_repl);
 
 	return NULL;
 }

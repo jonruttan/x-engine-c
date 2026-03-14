@@ -164,6 +164,23 @@ static char *test_body_eval_tco(void)
 		x_obj_isnil(p_base, x_base_field_tco_expr(p_base)));
 	test_cleanup(p_base);
 
+	/* multi-form body: evals all but last, sets tco_expr for last */
+	p_base = x_base_make(NULL, NULL);
+	p_saved_env = x_mkspair(p_base, x_mksatom(p_base, 44), NULL);
+	p_body = x_mkspair(p_base, x_mksatom(p_base, 10),
+		x_mkspair(p_base, x_mksatom(p_base, 20),
+		x_mkspair(p_base, x_mksatom(p_base, 30), NULL)));
+	x_base_field_tco_env(p_base) = NULL;
+	p_result = x_prim_body_eval_tco(p_base, p_body, p_saved_env);
+	_it_should("set tco_expr to last form in multi-form body (tco)",
+		x_base_field_tco_expr(p_base) != NULL
+		&& x_atomint(x_base_field_tco_expr(p_base)) == 30);
+	_it_should("return NULL for multi-form body (tco)",
+		p_result == NULL);
+	x_base_field_tco_expr(p_base) = NULL;
+	x_base_field_tco_env(p_base) = NULL;
+	test_cleanup(p_base);
+
 	/* tco_env idempotent: doesn't overwrite if already set */
 	p_base = x_base_make(NULL, NULL);
 	{
@@ -429,6 +446,81 @@ static char *test_register(void)
 	return NULL;
 }
 
+/*
+ * ## x_obj_prim_call — nil call field path
+ */
+static char *test_prim_call_nil_call(void)
+{
+	x_obj_t *p_base, *p_type, *p_obj, *p_args, *p_ret;
+	struct x_type_t type_desc;
+
+	p_base = x_base_make(NULL, NULL);
+	x_prim_register(p_base, NULL);
+
+	/* Type with nil call field */
+	x_lib_memset(&type_desc, 0, sizeof(type_desc));
+	type_desc.p_name = x_mksatom(p_base, "NOCALL");
+	type_desc.p_units = (x_obj_t *)&x_type_units_pair_obj;
+	p_type = x_type_struct_make(p_base, type_desc);
+
+	p_obj = x_obj_make(p_base, p_type, X_OBJ_FLAG_NONE,
+		X_OBJ_LENGTH_PAIR, NULL, NULL);
+	p_args = x_mkspair(p_base, p_obj, NULL);
+	p_ret = x_obj_prim_call(p_base, p_args);
+	_it_should("prim_call returns NULL for nil call field",
+		p_ret == NULL);
+
+	test_cleanup(p_base);
+
+	return NULL;
+}
+
+/*
+ * ## x_obj_prim_call — procedure call path
+ */
+static char *test_prim_call_procedure(void)
+{
+	x_obj_t *p_base, *p_proc, *p_type, *p_obj, *p_args, *p_ret;
+	struct x_type_t type_desc;
+	x_obj_t *p_body;
+
+	p_base = x_base_make(NULL, NULL);
+	x_prim_register(p_base, NULL);
+
+	/* Create a procedure: (fn () 42) — no params, body returns 42 */
+	p_body = x_mkspair(p_base, x_mksatom(p_base, 42), NULL);
+	p_proc = x_make_procedure(p_base, 0, NULL, p_body,
+		x_base_field_env_alist(p_base));
+
+	/* Create a custom type whose call field is the procedure */
+	x_lib_memset(&type_desc, 0, sizeof(type_desc));
+	type_desc.p_name = x_mksatom(p_base, "CALLABLE");
+	type_desc.p_units = (x_obj_t *)&x_type_units_pair_obj;
+	type_desc.p_call = p_proc;
+	p_type = x_type_struct_make(p_base, type_desc);
+
+	/* Create an instance of the callable type */
+	p_obj = x_obj_make(p_base, p_type, X_OBJ_FLAG_NONE,
+		X_OBJ_LENGTH_PAIR, NULL, NULL);
+
+	/* Call via x_obj_prim_call — exercises procedure path */
+	p_args = x_mkspair(p_base, p_obj, NULL);
+	x_base_field_tco_expr(p_base) = NULL;
+	p_ret = x_obj_prim_call(p_base, p_args);
+
+	/* procedure_call sets tco_expr, returns NULL */
+	_it_should("prim_call procedure path sets tco_expr",
+		x_base_field_tco_expr(p_base) != NULL
+		&& x_atomint(x_base_field_tco_expr(p_base)) == 42);
+	_it_should("prim_call procedure path returns NULL",
+		p_ret == NULL);
+
+	x_base_field_tco_expr(p_base) = NULL;
+	test_cleanup(p_base);
+
+	return NULL;
+}
+
 static char *run_tests() {
 	_run_test(test_body_eval);
 	_run_test(test_body_eval_tco);
@@ -439,6 +531,8 @@ static char *run_tests() {
 	_run_test(test_multiple_extend);
 	_run_test(test_bind);
 	_run_test(test_register);
+	_run_test(test_prim_call_nil_call);
+	_run_test(test_prim_call_procedure);
 
 	return NULL;
 }

@@ -446,6 +446,33 @@ static char *test_type_atom_make(void)
 	return NULL;
 }
 
+static char *test_type_atom_write(void)
+{
+	x_obj_t *p_base, *p_obj, *p_args, *p_ret;
+	char buf[64];
+
+	helper_alloc_reset();
+	memset(buf, 0, sizeof(buf));
+
+	p_base = x_base_make(NULL, NULL);
+	p_obj = x_mkatom(p_base, 0);
+	p_args = x_mkspair(p_base, p_obj, NULL);
+
+	helper_file_buffer_ptr[STDOUT_FILENO] = buf;
+	file_buffer_ptr[STDOUT_FILENO][TEST_HELPER_FILE_WRITE] = buf;
+	p_ret = x_type_atom_write(p_base, p_args);
+	file_buffer_ptr[STDOUT_FILENO][TEST_HELPER_FILE_WRITE] = NULL;
+	helper_file_buffer_ptr[STDOUT_FILENO] = NULL;
+
+	_it_should("return the original object",
+		p_obj == p_ret);
+	_it_should("write the atom representation",
+		0 == x_lib_strncmp(buf, X_TYPE_ATOM_WRITE_STR,
+			X_TYPE_ATOM_WRITE_LEN));
+
+	return NULL;
+}
+
 static char *run_tests() {
 	_run_test(test_obj_type_isatom);
 	_run_test(test_mkatom);
@@ -456,6 +483,7 @@ static char *run_tests() {
 	_run_test(test_type_atom_struct);
 	_run_test(test_base_alist_assoc);
 	_run_test(test_type_atom_make);
+	_run_test(test_type_atom_write);
 
 	return NULL;
 }

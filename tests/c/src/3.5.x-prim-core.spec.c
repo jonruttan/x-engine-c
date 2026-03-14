@@ -530,6 +530,398 @@ static char *test_core_tail_eval(void)
 	return NULL;
 }
 
+static char *test_core_rest(void)
+{
+	x_obj_t *p_base, *p_args, *p_result;
+	x_obj_t *p_a, *p_b, *p_pair;
+
+	p_base = x_base_make(NULL, NULL);
+	x_prim_register(p_base, NULL);
+
+	p_a = x_mksatom(p_base, (x_int_t)1);
+	p_b = x_mksatom(p_base, (x_int_t)2);
+	p_pair = x_mklist(p_base, p_a, p_b);
+
+	/* Bind pair so prim_rest can eval it */
+	x_base_env_alist_extend(p_base,
+		x_mkspair(p_base, x_mksymbol(p_base, "pp"), p_pair));
+
+	/* (rest pp) -> p_b */
+	p_args = x_mkspair(p_base, x_mksymbol(p_base, "pp"), NULL);
+	p_result = x_prim_rest(p_base, p_args);
+	_it_should("rest returns cdr of pair", p_result == p_b);
+
+	test_cleanup(p_base);
+	return NULL;
+}
+
+static char *test_core_rest_int(void)
+{
+	x_obj_t *p_base, *p_args, *p_result, *p_pair;
+
+	p_base = x_base_make(NULL, NULL);
+	x_prim_register(p_base, NULL);
+
+	/* Create a pair with raw int in rest slot */
+	p_pair = x_mklist(p_base, x_mksatom(p_base, (x_int_t)10), NULL);
+	x_restint(p_pair) = 77;
+	x_base_env_alist_extend(p_base,
+		x_mkspair(p_base, x_mksymbol(p_base, "rr"), p_pair));
+
+	/* (rest-int rr) reads cdr as raw integer */
+	p_args = x_mkspair(p_base, x_mksymbol(p_base, "rr"), NULL);
+	p_result = x_prim_rest_int(p_base, p_args);
+	_it_should("rest-int extracts cdr as integer",
+		x_intval(p_result) == 77);
+
+	test_cleanup(p_base);
+	return NULL;
+}
+
+static char *test_core_set_first_rest_int(void)
+{
+	x_obj_t *p_base, *p_args, *p_result, *p_pair;
+
+	p_base = x_base_make(NULL, NULL);
+	x_prim_register(p_base, NULL);
+
+	/* Create a pair with raw int slots */
+	p_pair = x_mklist(p_base, NULL, NULL);
+	x_firstint(p_pair) = 0;
+	x_restint(p_pair) = 0;
+	x_base_env_alist_extend(p_base,
+		x_mkspair(p_base, x_mksymbol(p_base, "pp"), p_pair));
+
+	/* set-first-int evals both args. Second is satom (self-eval). */
+	/* (set-first-int pp 55) */
+	p_args = x_mkspair(p_base,
+		x_mksymbol(p_base, "pp"),
+		x_mkspair(p_base, x_mksatom(p_base, (x_int_t)55), NULL));
+	p_result = x_prim_set_first_int(p_base, p_args);
+	_it_should("set-first-int returns pair", p_result == p_pair);
+	_it_should("set-first-int wrote car", x_firstint(p_pair) == 55);
+
+	/* (set-rest-int pp 66) */
+	p_args = x_mkspair(p_base,
+		x_mksymbol(p_base, "pp"),
+		x_mkspair(p_base, x_mksatom(p_base, (x_int_t)66), NULL));
+	p_result = x_prim_set_rest_int(p_base, p_args);
+	_it_should("set-rest-int returns pair", p_result == p_pair);
+	_it_should("set-rest-int wrote cdr", x_restint(p_pair) == 66);
+
+	test_cleanup(p_base);
+	return NULL;
+}
+
+static char *test_core_eval_with_env(void)
+{
+	x_obj_t *p_base, *p_args, *p_result;
+	x_obj_t *p_env, *p_sym, *p_quote_form;
+
+	p_base = x_base_make(NULL, NULL);
+	x_prim_register(p_base, NULL);
+
+	/* Create a custom env with binding: z -> 123 */
+	p_sym = x_mksymbol(p_base, "z");
+	p_env = x_base_field_env_alist(p_base);
+	p_env = x_mklist(p_base,
+		x_mkspair(p_base, p_sym, x_mksatom(p_base, (x_int_t)123)),
+		p_env);
+	x_base_env_alist_extend(p_base,
+		x_mkspair(p_base, x_mksymbol(p_base, "myenv"), p_env));
+
+	/* Build (lit z) — evaluates to the symbol z */
+	p_quote_form = x_mklist(p_base,
+		x_mksymbol(p_base, "lit"),
+		x_mklist(p_base, p_sym, NULL));
+
+	/* (eval (lit z) myenv) -> eval first evals (lit z) -> z,
+	 * then evals z in myenv -> 123 */
+	p_args = x_mkspair(p_base,
+		p_quote_form,
+		x_mkspair(p_base, x_mksymbol(p_base, "myenv"), NULL));
+	p_result = x_prim_eval(p_base, p_args);
+	_it_should("eval with env returns result from that env",
+		x_atomint(p_result) == 123);
+
+	/* Verify original env is restored */
+	_it_should("eval with env restores original env",
+		x_base_field_env_alist(p_base) != p_env);
+
+	test_cleanup(p_base);
+	return NULL;
+}
+
+static char *test_core_apply(void)
+{
+	x_obj_t *p_base, *p_args;
+	x_obj_t *p_fn, *p_arglist;
+
+	p_base = x_base_make(NULL, NULL);
+	x_prim_register(p_base, NULL);
+
+	/* Create (fn (x) x) — identity function */
+	p_args = x_mkspair(p_base,
+		x_mkspair(p_base, x_mksymbol(p_base, "x"), NULL),
+		x_mkspair(p_base, x_mksymbol(p_base, "x"), NULL));
+	p_fn = x_prim_closure(p_base, p_args);
+
+	/* Bind fn and arg list */
+	x_base_env_alist_extend(p_base,
+		x_mkspair(p_base, x_mksymbol(p_base, "idfn"), p_fn));
+	p_arglist = x_mklist(p_base,
+		x_mksatom(p_base, (x_int_t)42), NULL);
+	x_base_env_alist_extend(p_base,
+		x_mkspair(p_base, x_mksymbol(p_base, "args"), p_arglist));
+
+	/* (apply idfn args) — single trailing list, procedure path.
+	 * apply + procedure uses TCO: sets tco_expr = x, returns NULL. */
+	x_base_field_tco_expr(p_base) = NULL;
+	p_args = x_mkspair(p_base,
+		x_mksymbol(p_base, "idfn"),
+		x_mkspair(p_base, x_mksymbol(p_base, "args"), NULL));
+	x_prim_apply(p_base, p_args);
+	_it_should("apply single-arg sets tco_expr for TCO",
+		! x_obj_isnil(p_base, x_base_field_tco_expr(p_base)));
+
+	/* Test apply with prefix + tail: create (fn (a b) a) */
+	{
+		x_obj_t *p_fn2, *p_tl;
+
+		p_args = x_mkspair(p_base,
+			x_mkspair(p_base, x_mksymbol(p_base, "a"),
+				x_mkspair(p_base, x_mksymbol(p_base, "b"), NULL)),
+			x_mkspair(p_base, x_mksymbol(p_base, "a"), NULL));
+		p_fn2 = x_prim_closure(p_base, p_args);
+		x_base_env_alist_extend(p_base,
+			x_mkspair(p_base, x_mksymbol(p_base, "fn2"), p_fn2));
+
+		/* Tail list: bind '(200) to tl */
+		p_tl = x_mklist(p_base,
+			x_mksatom(p_base, (x_int_t)200), NULL);
+		x_base_env_alist_extend(p_base,
+			x_mkspair(p_base, x_mksymbol(p_base, "tl"), p_tl));
+
+		/* (apply fn2 100 tl) — prefix 100, tail (200): 2-arg splice path.
+		 * evlis on (100 tl) -> (100 (200)), walk to second-to-last (100),
+		 * splice: rest(100-node) = first(rest(100-node)) = (200)
+		 * -> p_vals = (100 200) */
+		x_base_field_tco_expr(p_base) = NULL;
+		p_args = x_mkspair(p_base,
+			x_mksymbol(p_base, "fn2"),
+			x_mkspair(p_base, x_mksatom(p_base, (x_int_t)100),
+			x_mkspair(p_base, x_mksymbol(p_base, "tl"), NULL)));
+		x_prim_apply(p_base, p_args);
+		_it_should("apply prefix+tail sets tco_expr",
+			! x_obj_isnil(p_base, x_base_field_tco_expr(p_base)));
+	}
+
+	/* Test apply with 3 prefix args + tail: walk loop (line 124) */
+	{
+		x_obj_t *p_fn3, *p_tl;
+
+		/* Create (fn (a b c) a) */
+		p_args = x_mkspair(p_base,
+			x_mkspair(p_base, x_mksymbol(p_base, "a"),
+			x_mkspair(p_base, x_mksymbol(p_base, "b"),
+			x_mkspair(p_base, x_mksymbol(p_base, "c"), NULL))),
+			x_mkspair(p_base, x_mksymbol(p_base, "a"), NULL));
+		p_fn3 = x_prim_closure(p_base, p_args);
+		x_base_env_alist_extend(p_base,
+			x_mkspair(p_base, x_mksymbol(p_base, "fn3"), p_fn3));
+
+		p_tl = x_mklist(p_base,
+			x_mksatom(p_base, (x_int_t)300), NULL);
+		x_base_env_alist_extend(p_base,
+			x_mkspair(p_base, x_mksymbol(p_base, "tl3"), p_tl));
+
+		/* (apply fn3 100 200 tl3) — 3 args total: 2 prefix + tail */
+		x_base_field_tco_expr(p_base) = NULL;
+		p_args = x_mkspair(p_base,
+			x_mksymbol(p_base, "fn3"),
+			x_mkspair(p_base, x_mksatom(p_base, (x_int_t)100),
+			x_mkspair(p_base, x_mksatom(p_base, (x_int_t)200),
+			x_mkspair(p_base, x_mksymbol(p_base, "tl3"), NULL))));
+		x_prim_apply(p_base, p_args);
+		_it_should("apply 3-prefix+tail sets tco_expr",
+			! x_obj_isnil(p_base, x_base_field_tco_expr(p_base)));
+	}
+
+	test_cleanup(p_base);
+
+	/* Test apply with operative (non-procedure path, lines 143-147). */
+	{
+		x_obj_t *p_op, *p_tl;
+
+		p_base = x_base_make(NULL, NULL);
+		x_prim_register(p_base, NULL);
+
+		/* Create (op (x) x) — identity operative */
+		p_args = x_mkspair(p_base,
+			x_mkspair(p_base, x_mksymbol(p_base, "x"), NULL),
+			x_mkspair(p_base, x_mksymbol(p_base, "x"), NULL));
+		p_op = x_prim_operative(p_base, p_args);
+		x_base_env_alist_extend(p_base,
+			x_mkspair(p_base, x_mksymbol(p_base, "myop"), p_op));
+
+		p_tl = x_mklist(p_base,
+			x_mksatom(p_base, (x_int_t)42), NULL);
+		x_base_env_alist_extend(p_base,
+			x_mkspair(p_base, x_mksymbol(p_base, "optl"), p_tl));
+
+		/* (apply myop optl) */
+		p_args = x_mkspair(p_base,
+			x_mksymbol(p_base, "myop"),
+			x_mkspair(p_base, x_mksymbol(p_base, "optl"), NULL));
+		x_prim_apply(p_base, p_args);
+		_it_should("apply with operative dispatches to type", 1);
+
+		test_cleanup(p_base);
+	}
+
+	return NULL;
+}
+
+static char *test_core_error_guard_catch(void)
+{
+	x_obj_t *p_base, *p_result;
+
+	p_base = x_base_make(NULL, NULL);
+	x_prim_register(p_base, NULL);
+
+	/* (guard (e e) (error 42)) -> guard catches error, e = 42, returns e */
+	/* Build: guard clause = (e e), body = (error 42) */
+	/* error is a prim, so body needs to be a call: we need (error 42) as an
+	 * expression that eval will dispatch. But x_prim_body_eval evaluates
+	 * each form. We can call error directly inside guard. */
+
+	/* Simpler: call x_prim_guard with handler body that returns the error
+	 * variable, and a body that calls x_prim_error directly. */
+
+	/* Actually, the test body needs to trigger an error via x_prim_error.
+	 * Since body forms are evaluated by x_prim_body_eval, we need the body
+	 * to be an expression that when evaluated calls error. The simplest:
+	 * use a C-level call approach.
+	 *
+	 * guard body = list of forms, each form evaluated by x_prim_eval_arg.
+	 * A self-evaluating atom won't trigger error. We need to construct
+	 * a form like (error 42) that evaluates to an error call. */
+
+	/* Build: (guard (e e) (error 42))
+	 * clause: (e . (e . nil)) = (e e)
+	 * body: ((error 42) . nil)
+	 * (error 42) = a list: (error-symbol . (42 . nil)) */
+	{
+		x_obj_t *p_error_sym, *p_error_form, *p_clause, *p_guard_args;
+
+		p_error_sym = x_mksymbol(p_base, "error");
+		p_error_form = x_mklist(p_base,
+			p_error_sym,
+			x_mklist(p_base,
+				x_mksatom(p_base, (x_int_t)42), NULL));
+
+		p_clause = x_mkspair(p_base,
+			x_mksymbol(p_base, "e"),
+			x_mkspair(p_base, x_mksymbol(p_base, "e"), NULL));
+
+		p_guard_args = x_mkspair(p_base,
+			p_clause,
+			x_mkspair(p_base, p_error_form, NULL));
+
+		p_result = x_prim_guard(p_base, p_guard_args);
+		_it_should("guard catches error and runs handler",
+			p_result != NULL);
+		_it_should("guard handler receives error value",
+			x_atomint(p_result) == 42);
+		_it_should("guard pops handler after catch",
+			x_base_field_error_handler(p_base) == NULL);
+	}
+
+	test_cleanup(p_base);
+	return NULL;
+}
+
+static char *test_core_set_unbound(void)
+{
+	x_obj_t *p_base, *p_args, *p_result;
+
+	p_base = x_base_make(NULL, NULL);
+	x_prim_register(p_base, NULL);
+
+	/* (set unbound-name 42) should trigger error path.
+	 * Wrap in guard to catch it. */
+	{
+		jmp_buf jmp;
+		x_obj_t *p_handler;
+
+		p_handler = x_mkspair(p_base,
+			x_mkptr(p_base, &jmp),
+			x_mkspair(p_base,
+				x_base_field_env_alist(p_base),
+				x_mkspair(p_base, NULL, NULL)));
+		x_base_field_error_handler(p_base) = p_handler;
+
+		if (setjmp(jmp) == 0) {
+			p_args = x_mkspair(p_base,
+				x_mksymbol(p_base, "nonexistent"),
+				x_mkspair(p_base, x_mksatom(p_base, (x_int_t)42), NULL));
+			x_prim_set(p_base, p_args);
+			/* Should not reach here */
+			_it_should("set unbound should have jumped", 0);
+		} else {
+			/* Error was caught */
+			p_result = x_error_handler_error(p_handler);
+			_it_should("set unbound triggers error",
+				p_result != NULL);
+		}
+
+		x_base_field_error_handler(p_base) = NULL;
+	}
+
+	test_cleanup(p_base);
+	return NULL;
+}
+
+static int test_error_hook_called;
+static void test_error_hook(x_obj_t *p_base, x_char_t *msg, x_obj_t *p_obj)
+{
+	test_error_hook_called = 1;
+}
+
+static char *test_core_error_no_handler_str(void)
+{
+	x_obj_t *p_base, *p_args, *p_ret;
+
+	p_base = x_base_make(NULL, NULL);
+	x_prim_register(p_base, NULL);
+
+	/* No guard handler; string error message */
+	x_obj_hook_error = test_error_hook;
+	test_error_hook_called = 0;
+	x_base_field_error_handler(p_base) = NULL;
+	p_args = x_mkspair(p_base, x_mkstr(p_base, "test error"), NULL);
+	p_ret = x_prim_error(p_base, p_args);
+	_it_should("error with string msg calls error hook",
+		test_error_hook_called == 1);
+	_it_should("error with no handler returns NULL",
+		p_ret == NULL);
+
+	/* No guard handler; non-string error message */
+	test_error_hook_called = 0;
+	x_base_field_error_handler(p_base) = NULL;
+	p_args = x_mkspair(p_base, x_mksatom(p_base, 42), NULL);
+	p_ret = x_prim_error(p_base, p_args);
+	_it_should("error with non-string msg calls error hook",
+		test_error_hook_called == 1);
+	_it_should("error with non-string msg returns NULL",
+		p_ret == NULL);
+
+	x_obj_hook_error = x_base_error;
+
+	test_cleanup(p_base);
+	return NULL;
+}
+
 static char *run_tests() {
 	_run_test(test_core_quote);
 	_run_test(test_core_pair_first_rest);
@@ -547,6 +939,14 @@ static char *run_tests() {
 	_run_test(test_core_base);
 	_run_test(test_core_seq);
 	_run_test(test_core_tail_eval);
+	_run_test(test_core_rest);
+	_run_test(test_core_rest_int);
+	_run_test(test_core_set_first_rest_int);
+	_run_test(test_core_eval_with_env);
+	_run_test(test_core_apply);
+	_run_test(test_core_error_guard_catch);
+	_run_test(test_core_set_unbound);
+	_run_test(test_core_error_no_handler_str);
 
 	return NULL;
 }

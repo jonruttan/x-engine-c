@@ -68,7 +68,7 @@ x_obj_t *x_prim_ffi_register(x_obj_t *p_base, x_obj_t *p_args) { return p_base; 
 
 static void _setup(void)
 {
-	_buffer_index = -1;
+	helper_alloc_reset();
 	helper_set_alloc(MEM_GUARANTEED);
 }
 
@@ -182,6 +182,86 @@ static char *test_sexp_list_delimit(void)
 	return NULL;
 }
 
+static char *test_sexp_list_read(void)
+{
+	x_obj_t *p_base, *p_args, *p_buffer, *p_obj;
+	x_char_t *s, buffer[64];
+
+	/* Use a single base for all read sub-tests to conserve allocations. */
+	s = "(42) (1 2 3) (1 . 2) ()";
+	helper_file_buffer_ptr[TEST_HELPER_FILE_STDIN] = s;
+	helper_file_buffer_remaining[TEST_HELPER_FILE_STDIN] = x_lib_strlen(s);
+	helper_file_reset();
+
+	p_base = x_base_make(NULL, NULL);
+	x_prim_register(p_base, NULL);
+
+	/* Register sexp types so the tokenizer has types to iterate. */
+	x_type_whitespace_register(p_base, p_base);
+	x_type_comment_register(p_base, p_base);
+	x_type_char_register(p_base, p_base);
+	x_type_int_register(p_base, p_base);
+	x_type_symbol_register(p_base, p_base);
+	x_type_str_register(p_base, p_base);
+	x_type_list_register(p_base, p_base);
+
+	p_buffer = x_mkbufferown(p_base, buffer);
+	p_args = x_mkpair(p_base, p_buffer, p_base);
+
+	/* Read (42) */
+	p_obj = x_token_read(p_base, p_args);
+	_it_should("return a list for (42)",
+		x_obj_type_islist(p_base, p_obj)
+	);
+	_it_should("first element is 42",
+		42 == x_intval(x_firstobj(p_obj))
+	);
+	_it_should("rest is nil",
+		x_obj_isnil(p_base, x_restobj(p_obj))
+	);
+
+	/* Read (1 2 3) — multi-element list */
+	p_obj = x_token_read(p_base, p_args);
+	_it_should("return a list for (1 2 3)",
+		x_obj_type_islist(p_base, p_obj)
+	);
+	_it_should("first is 1",
+		1 == x_intval(x_firstobj(p_obj))
+	);
+	_it_should("second is 2",
+		2 == x_intval(x_firstobj(x_restobj(p_obj)))
+	);
+	_it_should("third is 3",
+		3 == x_intval(x_firstobj(x_restobj(x_restobj(p_obj))))
+	);
+	_it_should("rest of third is nil",
+		x_obj_isnil(p_base, x_restobj(x_restobj(x_restobj(p_obj))))
+	);
+
+	/* Read (1 . 2) — dotted pair */
+	p_obj = x_token_read(p_base, p_args);
+	_it_should("return a list for (1 . 2)",
+		x_obj_type_islist(p_base, p_obj)
+	);
+	_it_should("first is 1",
+		1 == x_intval(x_firstobj(p_obj))
+	);
+	_it_should("rest is 2 (dotted)",
+		2 == x_intval(x_restobj(p_obj))
+	);
+
+	/* Read () — empty list */
+	p_obj = x_token_read(p_base, p_args);
+	_it_should("return nil for ()",
+		x_obj_isnil(p_base, p_obj)
+	);
+
+	helper_file_buffer_remaining[TEST_HELPER_FILE_STDIN] = TEST_HELPER_FILE_UNDEFINED;
+	test_cleanup(p_base);
+
+	return NULL;
+}
+
 static char *test_sexp_list_write(void)
 {
 	x_obj_t *p_base, *p_list, *p_args;
@@ -201,12 +281,12 @@ static char *test_sexp_list_write(void)
 	p_args = x_mkspair(p_base, p_list, NULL);
 	x_sexp_list_write(p_base, p_args);
 
-	_it_should("write something for empty list",
-		s[0] == '(');
+	_it_should("write () for empty list",
+		s[0] == '(' && s[1] == ')');
 
 	/* Write single-element list: (42) */
 	p_list = x_mklist(p_base,
-		x_mksatom(p_base, 42),
+		x_mkint(p_base, 42),
 		NULL);
 
 	helper_file_buffer_ptr[TEST_HELPER_FILE_STDOUT] = s;
@@ -216,9 +296,48 @@ static char *test_sexp_list_write(void)
 
 	p_args = x_mkspair(p_base, p_list, NULL);
 	x_sexp_list_write(p_base, p_args);
+	helper_file_str(TEST_HELPER_FILE_STDOUT);
 
-	_it_should("write open paren for single-element list",
-		s[0] == '(');
+	_it_should("write (42) for single-element list",
+		0 == x_lib_strncmp(s, "(42)", 4));
+
+	/* Write multi-element list: (1 2 3) */
+	p_list = x_mklist(p_base,
+		x_mkint(p_base, 1),
+		x_mklist(p_base,
+			x_mkint(p_base, 2),
+			x_mklist(p_base,
+				x_mkint(p_base, 3),
+				NULL)));
+
+	helper_file_buffer_ptr[TEST_HELPER_FILE_STDOUT] = s;
+	helper_file_buffer_length[TEST_HELPER_FILE_STDOUT] = 64;
+	helper_file_reset();
+	s[0] = '\0';
+
+	p_args = x_mkspair(p_base, p_list, NULL);
+	x_sexp_list_write(p_base, p_args);
+	helper_file_str(TEST_HELPER_FILE_STDOUT);
+
+	_it_should("write (1 2 3) for multi-element list",
+		0 == x_lib_strncmp(s, "(1 2 3)", 7));
+
+	/* Write dotted pair: (1 . 2) */
+	p_list = x_mklist(p_base,
+		x_mkint(p_base, 1),
+		x_mkint(p_base, 2));
+
+	helper_file_buffer_ptr[TEST_HELPER_FILE_STDOUT] = s;
+	helper_file_buffer_length[TEST_HELPER_FILE_STDOUT] = 64;
+	helper_file_reset();
+	s[0] = '\0';
+
+	p_args = x_mkspair(p_base, p_list, NULL);
+	x_sexp_list_write(p_base, p_args);
+	helper_file_str(TEST_HELPER_FILE_STDOUT);
+
+	_it_should("write (1 . 2) for dotted pair",
+		0 == x_lib_strncmp(s, "(1 . 2)", 7));
 
 	test_cleanup(p_base);
 
@@ -228,6 +347,7 @@ static char *test_sexp_list_write(void)
 static char *run_tests() {
 	_run_test(test_sexp_list_analyse);
 	_run_test(test_sexp_list_delimit);
+	_run_test(test_sexp_list_read);
 	_run_test(test_sexp_list_write);
 
 	return NULL;

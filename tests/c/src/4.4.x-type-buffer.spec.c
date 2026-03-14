@@ -727,6 +727,73 @@ static char *test_type_buffer_read_text(void)
 	return NULL;
 }
 
+static char *test_type_buffer_mark(void)
+{
+	x_obj_t *p_base, *p_buffer, *p_args, *p_ret;
+	x_char_t buffer[8];
+
+	helper_alloc_reset();
+
+	p_base = x_base_make(NULL, NULL);
+	p_buffer = x_mkbuffer(p_base, buffer);
+	p_args = x_mkspair(p_base, p_buffer,
+		x_mkspair(p_base, x_mksatom(p_base, 0), NULL));
+
+	p_ret = x_type_buffer_mark(p_base, p_args);
+	_it_should("return NULL after marking", NULL == p_ret);
+
+	return NULL;
+}
+
+static char *test_type_buffer_write(void)
+{
+	x_obj_t *p_base, *p_buffer, *p_args, *p_ret;
+	char buf[64];
+	x_char_t buffer[8];
+
+	helper_alloc_reset();
+	memset(buf, 0, sizeof(buf));
+
+	p_base = x_base_make(NULL, NULL);
+	p_buffer = x_mkbuffer(p_base, buffer);
+	p_args = x_mkspair(p_base, p_buffer, NULL);
+
+	helper_file_buffer_ptr[STDOUT_FILENO] = buf;
+	file_buffer_ptr[STDOUT_FILENO][TEST_HELPER_FILE_WRITE] = buf;
+
+	p_ret = x_type_buffer_write(p_base, p_args);
+
+	file_buffer_ptr[STDOUT_FILENO][TEST_HELPER_FILE_WRITE] = NULL;
+	helper_file_buffer_ptr[STDOUT_FILENO] = NULL;
+
+	_it_should("return the buffer object", p_buffer == p_ret);
+	_it_should("write the buffer representation",
+		0 == x_lib_strncmp(buf, X_TYPE_BUFFER_WRITE_STR,
+			X_TYPE_BUFFER_WRITE_LEN));
+
+	return NULL;
+}
+
+static char *test_type_buffer_read_readonly(void)
+{
+	x_obj_t *p_args, *p_buffer, *p_ret;
+	x_char_t buffer[2] = "";
+
+	helper_alloc_reset();
+
+	p_buffer = x_mkfbuffer(NULL, X_OBJ_FLAG_RO, buffer);
+	p_args = x_mkspair(NULL, p_buffer, NULL);
+
+	p_ret = x_type_buffer_read(NULL, p_args);
+	_it_should("return NULL for readonly buffer with no data",
+		NULL == p_ret);
+
+	x_sys_free(p_args);
+	x_sys_free(p_buffer);
+
+	return NULL;
+}
+
 static char *run_tests() {
 	_run_test(test_obj_type_isbuffer);
 	_run_test(test_bufferval);
@@ -749,6 +816,9 @@ static char *run_tests() {
 	_run_test(test_type_buffer_append);
 	_run_test(test_type_buffer_read);
 	_run_test(test_type_buffer_read_text);
+	_run_test(test_type_buffer_mark);
+	_run_test(test_type_buffer_write);
+	_run_test(test_type_buffer_read_readonly);
 
 	return NULL;
 }

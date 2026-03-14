@@ -441,6 +441,122 @@ static char *test_type_prim_call(void)
 	return NULL;
 }
 
+/*
+ * Helper: register a named type on p_base and return an object of that type.
+ */
+static x_obj_t *make_typed_obj(x_obj_t *p_base, x_char_t *name, int units)
+{
+	x_obj_t *p_name = x_mksatom(p_base, name);
+	struct x_type_t ts = { .p_name = p_name };
+	x_obj_t *p_type = x_type_struct_make(p_base, ts);
+
+	x_base_type_alist_extend(p_base, p_type);
+
+	return x_obj_make(p_base, p_type, X_OBJ_FLAG_NONE, units,
+		(x_obj_t *)NULL, (x_obj_t *)NULL,
+		(x_obj_t *)NULL, (x_obj_t *)NULL);
+}
+
+static char *test_type_prim_call_procedure(void)
+{
+	x_obj_t *p_base, *p_obj, *p_args, *p_ret;
+
+	helper_alloc_reset();
+
+	p_base = x_base_make(NULL, NULL);
+	p_obj = make_typed_obj(p_base, (x_char_t *)X_TYPE_PROCEDURE_NAME, 1);
+	p_args = x_mkspair(p_base, p_obj, NULL);
+
+	p_ret = x_type_prim_call(p_base, p_args);
+	_it_should("dispatch procedure to stub and return NULL",
+		NULL == p_ret);
+
+	return NULL;
+}
+
+static char *test_type_prim_call_operative(void)
+{
+	x_obj_t *p_base, *p_obj, *p_args, *p_ret;
+
+	helper_alloc_reset();
+
+	p_base = x_base_make(NULL, NULL);
+	p_obj = make_typed_obj(p_base, (x_char_t *)X_TYPE_OPERATIVE_NAME, 1);
+	p_args = x_mkspair(p_base, p_obj, NULL);
+
+	p_ret = x_type_prim_call(p_base, p_args);
+	_it_should("dispatch operative to stub and return NULL",
+		NULL == p_ret);
+
+	return NULL;
+}
+
+static char *test_type_prim_apply_procedure(void)
+{
+	x_obj_t *p_base, *p_obj, *p_args, *p_ret, *p_env;
+
+	helper_alloc_reset();
+
+	p_base = x_base_make(NULL, NULL);
+	p_env = x_base_field_env_alist(p_base);
+
+	/* Procedure needs 3 data fields: params, body, env */
+	p_obj = make_typed_obj(p_base, (x_char_t *)X_TYPE_PROCEDURE_NAME, 3);
+	p_args = x_mkspair(p_base, p_obj, NULL);
+
+	p_ret = x_type_prim_apply(p_base, p_args);
+	_it_should("apply procedure via stub and return NULL",
+		NULL == p_ret);
+	_it_should("restore the environment after apply",
+		p_env == x_base_field_env_alist(p_base));
+
+	return NULL;
+}
+
+static char *test_type_prim_apply_operative(void)
+{
+	x_obj_t *p_base, *p_obj, *p_args, *p_ret;
+
+	helper_alloc_reset();
+
+	p_base = x_base_make(NULL, NULL);
+	p_obj = make_typed_obj(p_base, (x_char_t *)X_TYPE_OPERATIVE_NAME, 1);
+	p_args = x_mkspair(p_base, p_obj, NULL);
+
+	p_ret = x_type_prim_apply(p_base, p_args);
+	_it_should("apply operative via stub and return NULL",
+		NULL == p_ret);
+
+	return NULL;
+}
+
+static char *test_type_prim_write(void)
+{
+	x_obj_t *p_base, *p_obj, *p_args, *p_ret;
+	char buf[64];
+
+	helper_alloc_reset();
+	memset(buf, 0, sizeof(buf));
+
+	p_base = x_base_make(NULL, NULL);
+	p_obj = x_mkprim(p_base, test_prim_fn);
+	p_args = x_mkspair(p_base, p_obj, NULL);
+
+	helper_file_buffer_ptr[STDOUT_FILENO] = buf;
+	file_buffer_ptr[STDOUT_FILENO][TEST_HELPER_FILE_WRITE] = buf;
+	p_ret = x_type_prim_write(p_base, p_args);
+	file_buffer_ptr[STDOUT_FILENO][TEST_HELPER_FILE_WRITE] = NULL;
+	helper_file_buffer_ptr[STDOUT_FILENO] = NULL;
+
+	_it_should("return the original object",
+		p_obj == p_ret);
+	_it_should("write the prim representation",
+		0 == x_lib_strncmp(buf, X_TYPE_PRIM_WRITE_STR,
+			X_TYPE_PRIM_WRITE_LEN));
+
+	return NULL;
+}
+
 static char *run_tests() {
 	_run_test(test_obj_type_isprim);
 	_run_test(test_primval);
@@ -452,6 +568,11 @@ static char *run_tests() {
 	_run_test(test_base_alist_assoc);
 	_run_test(test_type_prim_make);
 	_run_test(test_type_prim_call);
+	_run_test(test_type_prim_call_procedure);
+	_run_test(test_type_prim_call_operative);
+	_run_test(test_type_prim_apply_procedure);
+	_run_test(test_type_prim_apply_operative);
+	_run_test(test_type_prim_write);
 
 	return NULL;
 }

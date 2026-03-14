@@ -184,6 +184,7 @@ static char *test_eval(void)
 
 static int tco_eval_calls = 0;
 x_obj_t *test_tco_result = NULL;
+x_obj_t *test_tco_env_to_set = NULL;
 
 x_obj_t *test_type_tco_eval(x_obj_t *p_base, x_obj_t *p_args)
 {
@@ -195,6 +196,35 @@ x_obj_t *test_type_tco_eval(x_obj_t *p_base, x_obj_t *p_args)
 	test_tco_result = x_mksatom(p_base, 999);
 	x_base_field_tco_expr(p_base) = test_tco_result;
 
+	return p_obj;
+}
+
+/* Two-bounce eval: first call bounces with nil tco_env,
+ * second call bounces with non-nil tco_env (the "later iteration"
+ * path in x_eval lines 67-74), third call resolves. */
+x_obj_t *test_type_tco_eval_two_bounce(x_obj_t *p_base, x_obj_t *p_args)
+{
+	x_obj_t *p_obj = x_00(p_args);
+
+	tco_eval_calls++;
+
+	if (tco_eval_calls == 1) {
+		/* First bounce: leave tco_env nil */
+		x_base_field_tco_expr(p_base) = p_obj;
+		return p_obj;
+	}
+
+	if (tco_eval_calls == 2) {
+		/* Second bounce: set tco_env for env restore */
+		if (test_tco_env_to_set != NULL) {
+			x_base_field_tco_env(p_base) = test_tco_env_to_set;
+		}
+		x_base_field_tco_expr(p_base) = p_obj;
+		return p_obj;
+	}
+
+	/* Third call: resolve — don't set tco_expr */
+	test_tco_result = p_obj;
 	return p_obj;
 }
 
@@ -287,10 +317,57 @@ static char *test_eval_nil_base(void)
 	return NULL;
 }
 
+static char *test_eval_tco_env_restore(void)
+{
+	x_obj_t *p_base, *p_type, *p_obj, *p_args, *p_ret;
+	x_obj_t *p_restore_env;
+	struct x_type_t tco_type;
+	x_satom_t tco_type_name = x_obj_set(x_type_atom_obj, X_OBJ_FLAG_NONE,
+		{ .s = "TCO2" });
+	x_satom_t tco_eval_prim = x_obj_set(x_type_atom_obj, X_OBJ_FLAG_NONE,
+		{ .fn = test_type_tco_eval_two_bounce });
+
+	p_base = x_base_make(NULL, NULL);
+
+	x_lib_memset(&tco_type, 0, sizeof(tco_type));
+	tco_type.p_name = tco_type_name;
+	tco_type.p_eval = tco_eval_prim;
+
+	p_type = x_type_struct_make(p_base, tco_type);
+	p_obj = x_obj_make(p_base, p_type, X_OBJ_FLAG_NONE,
+		X_OBJ_LENGTH_ATOM, 42);
+	p_args = x_mkspair(p_base,
+		x_mkspair(p_base, p_obj, NULL), NULL);
+
+	/* Set up env to restore: initial tco_env nil, second bounce sets it */
+	p_restore_env = x_mkspair(p_base,
+		x_mkspair(p_base,
+			x_mksatom(p_base, "restored"),
+			x_mksatom(p_base, "env")),
+		NULL);
+
+	test_tco_env_to_set = p_restore_env;
+	tco_eval_calls = 0;
+	p_ret = x_eval(p_base, p_args);
+
+	_it_should("TCO two-bounce returns correct result",
+		p_ret == test_tco_result);
+	_it_should("called eval fn three times",
+		3 == tco_eval_calls);
+	_it_should("restore env from later tco_env",
+		x_base_field_env_alist(p_base) == p_restore_env);
+
+	test_tco_env_to_set = NULL;
+	test_cleanup(p_base);
+
+	return NULL;
+}
+
 static char *run_tests() {
 	_run_test(test_eval);
 	_run_test(test_eval_tco);
 	_run_test(test_eval_nil_base);
+	_run_test(test_eval_tco_env_restore);
 
 	return NULL;
 }

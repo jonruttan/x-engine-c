@@ -58,6 +58,7 @@ x_obj_t *x_sexp_pair_write(x_obj_t *p_base, x_obj_t *p_args) { return p_args; }
  */
 static void _setup(void)
 {
+	helper_alloc_reset();
 	helper_set_alloc(MEM_GUARANTEED);
 }
 
@@ -221,11 +222,103 @@ x_obj_t *test_token_read_read2(x_obj_t *p_base, x_obj_t *p_args)
 }
 
 
+/* NullReader type: scores successfully but reader returns NULL. */
+x_obj_t *test_token_read_read_null(x_obj_t *p_base, x_obj_t *p_args)
+{
+	return NULL;
+}
+
+x_satom_t test_token_read_read_null_prim = x_obj_set(x_type_atom_obj, X_OBJ_FLAG_NONE, { .fn = test_token_read_read_null });
+
+x_obj_t *test_token_read_analyse_null(x_obj_t *p_base, x_obj_t *p_args)
+{
+	x_obj_t *p_buffer = x_token_read_arg_buffer(p_args),
+		*p_score = x_token_read_arg_score(p_args);
+
+	/* Score with positive value but reader returns NULL */
+	x_firstint(p_score) = x_bufferlen(p_buffer);
+	x_restobj(p_score) = test_token_read_read_null_prim;
+	return p_score;
+}
+
+/* ContinueType: keeps returning buffer_args (continue), never scores.
+ * Used for RO EOF auto-score testing. */
+x_obj_t *test_token_read_analyse_continue(x_obj_t *p_base, x_obj_t *p_args)
+{
+	return p_args;
+}
+
+/* AutoScoreType: sets reader on score as side-effect, then continues.
+ * Used to exercise the EOF auto-score path (lines 175-184). */
+x_obj_t *test_token_read_analyse_autoscore(x_obj_t *p_base, x_obj_t *p_args)
+{
+	x_obj_t *p_score = x_token_read_arg_score(p_args);
+
+	/* Set the reader on the score via side-effect, then return
+	 * buffer_args (continue) to keep consuming chars. */
+	x_restobj(p_score) = test_token_read_read_catchall_prim;
+	x_firstint(p_score) = -1;
+
+	return p_args;
+}
+
+
 /*
  * ## Test Runners
  */
 static char *test_token_delimit(void)
 {
+	x_obj_t *p_base = x_base_make(NULL, NULL),
+		*p_base2 = x_base_make(NULL, NULL),
+		*p_type, *p_buffer, *p_args, *p_obj;
+	x_char_t buffer[32];
+	struct x_type_t type_whitespace = {
+		.p_name = x_mkatom(p_base, (void *)"WHITESPACE"),
+		.p_analyse = x_mkatom(p_base, test_token_read_analyse_whitespace),
+		.p_delimit = x_mkatom(p_base, test_token_read_delimit_whitespace)
+	}, type1 = {
+		.p_name = x_mkatom(p_base, (void *)"TYPE1"),
+		.p_analyse = x_mkatom(p_base, test_token_read_analyse1)
+	};
+
+	p_type = x_type_struct_make(p_base, type_whitespace);
+	x_base_type_alist_extend(p_base2, p_type);
+
+	p_type = x_type_struct_make(p_base, type1);
+	x_base_type_alist_extend(p_base2, p_type);
+
+	/* Space is a whitespace delimiter.
+	 * x_token_delimit expects (buffer, self-type, ...) where self-type
+	 * is the type to skip.  Pass NULL as self-type so no type is skipped. */
+	helper_file_buffer_ptr[TEST_HELPER_FILE_STDIN] = " ";
+	helper_file_reset();
+	p_buffer = x_mkbufferown(p_base, buffer);
+	x_type_buffer_read(p_base, x_mkspair(p_base, p_buffer, NULL));
+	{
+		x_spair_t delimit_args[2] = {
+			x_obj_set(NULL, X_OBJ_FLAG_NONE, { p_buffer }, { (x_obj_t *)(delimit_args + 1) }),
+			x_obj_set(NULL, X_OBJ_FLAG_NONE, { NULL }, { NULL }),
+		};
+		p_args = (x_obj_t *)delimit_args;
+
+		p_obj = x_token_delimit(p_base2, p_args);
+		_it_should("delimit returns buffer for space",
+			p_obj == p_buffer);
+
+		/* Non-delimiter char */
+		helper_file_buffer_ptr[TEST_HELPER_FILE_STDIN] = "A";
+		helper_file_reset();
+		x_type_buffer_reset(p_base, x_mkspair(p_base, p_buffer, NULL));
+		x_type_buffer_read(p_base, x_mkspair(p_base, p_buffer, NULL));
+
+		p_obj = x_token_delimit(p_base2, p_args);
+		_it_should("delimit returns NULL for non-delimiter",
+			x_obj_isnil(p_base, p_obj));
+	}
+
+	test_cleanup(p_base);
+	test_cleanup(p_base2);
+
 	return NULL;
 }
 
@@ -293,9 +386,190 @@ static char *test_token_read(void)
 	return NULL;
 }
 
+static char *test_token_read_eof(void)
+{
+	x_obj_t *p_base = x_base_make(NULL, NULL),
+		*p_base2 = x_base_make(NULL, NULL),
+		*p_type, *p_args, *p_buffer, *p_obj;
+	x_char_t buffer[32];
+	struct x_type_t type_catchall = {
+		.p_name = x_mkatom(p_base, (void *)"CATCHALL"),
+		.p_analyse = x_mkatom(p_base, test_token_read_analyse_catchall)
+	};
+
+	p_type = x_type_struct_make(p_base, type_catchall);
+	x_base_type_alist_extend(p_base2, p_type);
+
+	/* Empty input — analyse returns NULL → read returns NULL */
+	helper_file_buffer_ptr[TEST_HELPER_FILE_STDIN] = "";
+	helper_file_buffer_remaining[TEST_HELPER_FILE_STDIN] = 0;
+	helper_file_reset();
+
+	p_buffer = x_mkbufferown(p_base, buffer);
+	p_args = x_mkpair(p_base, p_buffer, p_base);
+
+	p_obj = x_token_read(p_base2, p_args);
+	_it_should("return NULL on empty input",
+		x_obj_isnil(p_base, p_obj));
+
+	/* RO buffer with data — exercises the RO EOF branch in analyse */
+	{
+		x_char_t ro_buf[] = "A";
+		x_obj_t *p_ro_buffer, *p_ro_args;
+
+		p_ro_buffer = x_mkbufferro(p_base, ro_buf);
+		x_bufferwrite(p_ro_buffer) = x_bufferval(p_ro_buffer) + 1;
+
+		p_ro_args = x_mkpair(p_base, p_ro_buffer, p_base);
+
+		p_obj = x_token_read(p_base2, p_ro_args);
+		_it_should("return token from RO buffer",
+			! x_obj_isnil(p_base, p_obj));
+	}
+
+	helper_file_buffer_remaining[TEST_HELPER_FILE_STDIN] = TEST_HELPER_FILE_UNDEFINED;
+	test_cleanup(p_base);
+	test_cleanup(p_base2);
+
+	return NULL;
+}
+
+static char *test_token_write(void)
+{
+	x_obj_t *p_base = x_base_make(NULL, NULL), *p_obj, *p_args, *p_ret;
+
+	/* Write satom — exercises x_sexp_atom_write path */
+	p_obj = x_mksatom(p_base, 'Z');
+	p_args = x_mkspair(p_base, p_obj, NULL);
+	p_ret = x_token_write(p_base, p_args);
+	_it_should("write satom returns non-NULL",
+		! x_obj_isnil(p_base, p_ret));
+
+	/* Write spair — exercises x_sexp_pair_write path */
+	p_obj = x_mkspair(p_base, x_mksatom(p_base, 'A'), x_mksatom(p_base, 'B'));
+	p_args = x_mkspair(p_base, p_obj, NULL);
+	p_ret = x_token_write(p_base, p_args);
+	_it_should("write spair returns non-NULL",
+		! x_obj_isnil(p_base, p_ret));
+
+	/* Write a typed heap object — exercises x_type_write path */
+	{
+		x_obj_t *p_base3 = x_base_make(NULL, NULL);
+		x_obj_t *p_prim_obj = x_make_prim(p_base3, X_OBJ_FLAG_NONE,
+			test_token_read_read_catchall);
+
+		p_args = x_mkspair(p_base3, p_prim_obj, NULL);
+		p_ret = x_token_write(p_base3, p_args);
+		_it_should("write typed obj returns non-NULL",
+			! x_obj_isnil(p_base3, p_ret));
+		test_cleanup(p_base3);
+	}
+
+	/* Object with NULL type — exercises final return NULL */
+	p_obj = x_obj_make(p_base, NULL, X_OBJ_FLAG_NONE, X_OBJ_LENGTH_ATOM, NULL);
+	p_args = x_mkspair(p_base, p_obj, NULL);
+	p_ret = x_token_write(p_base, p_args);
+	_it_should("write untyped obj returns NULL",
+		x_obj_isnil(p_base, p_ret));
+
+	test_cleanup(p_base);
+
+	return NULL;
+}
+
+static char *test_token_read_null_reader(void)
+{
+	x_obj_t *p_base = x_base_make(NULL, NULL),
+		*p_base2 = x_base_make(NULL, NULL),
+		*p_type, *p_args, *p_buffer, *p_obj;
+	x_char_t buffer[32];
+	struct x_type_t type_null = {
+		.p_name = x_mkatom(p_base, (void *)"NULL_READER"),
+		.p_analyse = x_mkatom(p_base, test_token_read_analyse_null)
+	};
+
+	p_type = x_type_struct_make(p_base, type_null);
+	x_base_type_alist_extend(p_base2, p_type);
+
+	helper_file_buffer_ptr[TEST_HELPER_FILE_STDIN] = "X";
+	helper_file_buffer_remaining[TEST_HELPER_FILE_STDIN] = 1;
+	helper_file_reset();
+
+	p_buffer = x_mkbufferown(p_base, buffer);
+	p_args = x_mkpair(p_base, p_buffer, p_base);
+
+	/* Reader returns NULL → x_token_read returns NULL */
+	p_obj = x_token_read(p_base2, p_args);
+	_it_should("read returns NULL when reader returns NULL",
+		x_obj_isnil(p_base, p_obj));
+
+	helper_file_buffer_remaining[TEST_HELPER_FILE_STDIN] = TEST_HELPER_FILE_UNDEFINED;
+	test_cleanup(p_base);
+	test_cleanup(p_base2);
+
+	return NULL;
+}
+
+static char *test_token_read_ro_eof(void)
+{
+	x_obj_t *p_base = x_base_make(NULL, NULL),
+		*p_base2 = x_base_make(NULL, NULL),
+		*p_type, *p_args, *p_obj;
+	x_char_t ro_buf[] = "AB";
+	x_obj_t *p_ro_buffer;
+	struct x_type_t type_autoscore = {
+		.p_name = x_mkatom(p_base, (void *)"AUTOSCORE"),
+		.p_analyse = x_mkatom(p_base, test_token_read_analyse_autoscore)
+	};
+
+	/* AutoScore type: sets reader via side-effect, returns continue.
+	 * When RO EOF is hit, auto-score path computes score from consumed
+	 * chars and the sign from the partial score. */
+	p_type = x_type_struct_make(p_base, type_autoscore);
+	x_base_type_alist_extend(p_base2, p_type);
+
+	/* RO buffer with 2 bytes of data */
+	p_ro_buffer = x_mkbufferro(p_base, ro_buf);
+	x_bufferwrite(p_ro_buffer) = x_bufferval(p_ro_buffer) + 2;
+
+	p_args = x_mkpair(p_base, p_ro_buffer, p_base);
+
+	/* This exercises RO EOF break (line 129) and catchall auto-score. */
+	p_obj = x_token_read(p_base2, p_args);
+	_it_should("RO EOF read returns a token",
+		! x_obj_isnil(p_base, p_obj));
+
+	test_cleanup(p_base);
+	test_cleanup(p_base2);
+
+	return NULL;
+}
+
+static char *test_alist_iter_nil(void)
+{
+	x_obj_t *p_base, *p_iter, *p_args, *p_obj;
+
+	p_base = x_base_make(NULL, NULL);
+
+	/* Iterator over empty list — x_type_alist_iter returns nil */
+	p_iter = x_mkiter(p_base, (x_obj_t *)&x_type_alist_iter_prim, NULL);
+	p_args = x_mkspair(p_base, p_iter, NULL);
+	p_obj = x_type_alist_iter(p_base, p_args);
+	_it_should("alist_iter returns nil for empty list",
+		x_obj_isnil(p_base, p_obj));
+
+	test_cleanup(p_base);
+	return NULL;
+}
+
 static char *run_tests() {
 	_run_test(test_token_delimit);
 	_run_test(test_token_read);
+	_run_test(test_token_read_eof);
+	_run_test(test_token_write);
+	_run_test(test_token_read_null_reader);
+	_run_test(test_token_read_ro_eof);
+	_run_test(test_alist_iter_nil);
 
 	return NULL;
 }

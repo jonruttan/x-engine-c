@@ -47,7 +47,7 @@ x_obj_t *x_base_make(x_obj_t *p_base, x_obj_t *p_args)
 			pair(nil,
 			nil)))),
 		pair(
-			/* env-state: '(alist eval-list (buffer-stack) cache error tco-expr tco-env) */
+			/* env-state: '(alist eval-list buffer-stack cache error tco-expr tco-env) */
 			pair(nil,
 			pair(nil,
 			pair(pair(nil, nil),
@@ -175,6 +175,36 @@ x_obj_t *x_base_env_alist_extend(x_obj_t *p_base, x_obj_t *p_args)
 	x_restobj((x_obj_t *)args) = x_base_field_env_alist(p_base);
 
 	return x_base_field_env_alist(p_base) = x_alist_extend(p_base, (x_obj_t *)args);
+}
+
+x_obj_t *x_base_filein_push(x_obj_t *p_base, x_int_t fd)
+{
+	x_base_field_filein_stack(p_base) = x_mkspair(p_base,
+		x_mksatom(p_base, fd), x_base_field_filein_stack(p_base));
+	return x_base_field_filein(p_base);
+}
+
+x_obj_t *x_base_filein_pop(x_obj_t *p_base)
+{
+	x_obj_t *p_top = x_base_field_filein(p_base);
+	x_base_field_filein_stack(p_base) =
+		x_restobj(x_base_field_filein_stack(p_base));
+	return p_top;
+}
+
+x_obj_t *x_base_buffer_push(x_obj_t *p_base, x_obj_t *p_buffer)
+{
+	x_base_field_buffer_stack(p_base) = x_mkspair(p_base,
+		p_buffer, x_base_field_buffer_stack(p_base));
+	return p_buffer;
+}
+
+x_obj_t *x_base_buffer_pop(x_obj_t *p_base)
+{
+	x_obj_t *p_top = x_base_field_buffer(p_base);
+	x_base_field_buffer_stack(p_base) =
+		x_restobj(x_base_field_buffer_stack(p_base));
+	return p_top;
 }
 
 x_obj_t *x_base_load(x_obj_t *p_base, x_obj_t *p_args)

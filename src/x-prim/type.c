@@ -245,7 +245,7 @@ static x_obj_t *x_prim_make_base(x_obj_t *p_base, x_obj_t *p_args)
 
 	/* Set up read buffer. */
 	p_buffer = x_mkbuffer(p_new_base, buffer);
-	x_base_field_buffer(p_new_base) = p_buffer;
+	x_base_buffer_push(p_new_base, p_buffer);
 
 	/* Register primitives. */
 	x_prim_register(p_new_base, p_new_base);

@@ -349,6 +349,33 @@ static char *test_make_string(void)
 	return NULL;
 }
 
+static char *test_str_call_negative_index(void)
+{
+	x_obj_t *p_base, *p_str, *p_args, *p_result;
+
+	p_base = x_base_make(NULL, NULL);
+	x_prim_register(p_base, NULL);
+
+	/* ("hello" -1) -> last char 'o' */
+	p_str = x_mkstr(p_base, "hello");
+	p_args = x_mkspair(p_base, p_str,
+		x_mkspair(p_base, x_mksatom(p_base, (x_int_t)-1), NULL));
+	p_result = x_type_str_call(p_base, p_args);
+	_it_should("(\"hello\" -1) returns 'o'",
+		p_result != NULL && x_atomchar(p_result) == 'o');
+
+	/* ("hello" 1) -> 'e' */
+	p_str = x_mkstr(p_base, "hello");
+	p_args = x_mkspair(p_base, p_str,
+		x_mkspair(p_base, x_mksatom(p_base, (x_int_t)1), NULL));
+	p_result = x_type_str_call(p_base, p_args);
+	_it_should("(\"hello\" 1) returns 'e'",
+		p_result != NULL && x_atomchar(p_result) == 'e');
+
+	test_cleanup(p_base);
+	return NULL;
+}
+
 static char *run_tests() {
 	_run_test(test_string_length);
 	_run_test(test_string_ref);
@@ -359,6 +386,7 @@ static char *run_tests() {
 	_run_test(test_number_string_convert);
 	_run_test(test_list_to_string);
 	_run_test(test_make_string);
+	_run_test(test_str_call_negative_index);
 
 	return NULL;
 }

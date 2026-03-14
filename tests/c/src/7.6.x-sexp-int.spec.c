@@ -481,6 +481,14 @@ static char *test_sexp_int_write(void)
 		&& 0 == strncmp(s, buffer, strlen(s))
 	);
 
+	/* Force write failure: limit stdout to 0 bytes so x_sys_write
+	 * returns 0 while x_base_write expects strlen("123") → NULL. */
+	helper_file_buffer_length[TEST_HELPER_FILE_STDOUT] = 0;
+	p_ret = x_sexp_int_write(NULL, p_args);
+	_it_should("return NULL on write error", NULL == p_ret);
+
+	helper_file_buffer_length[TEST_HELPER_FILE_STDOUT] = TEST_HELPER_FILE_UNDEFINED;
+
 	return NULL;
 }
 

@@ -303,12 +303,221 @@ static char *test_sexp_str_write(void)
 }
 
 
+static char *test_sexp_str_analyse2_escape(void)
+{
+	x_obj_t *p_base, *p_args, *p_buffer, *p_obj;
+	x_char_t *s, buffer[32];
+
+	/* Backslash should enter escape state (analyse3) */
+	s = "\\";
+	helper_file_buffer_ptr[TEST_HELPER_FILE_STDIN] = s;
+	helper_file_reset();
+
+	p_base = x_base_make(NULL, NULL);
+	p_buffer = x_mkbuffer(p_base, buffer);
+	{
+		x_spair_t score = x_obj_set(NULL, X_OBJ_FLAG_NONE, {});
+		x_spair_t buffer_args[3] = {
+			x_obj_set(NULL, X_OBJ_FLAG_NONE, { p_buffer }, { (x_obj_t *)(buffer_args + 1) }),
+			x_obj_set(NULL, X_OBJ_FLAG_NONE, { score }, { (x_obj_t *)(buffer_args + 2) }),
+			x_obj_set(NULL, X_OBJ_FLAG_NONE, { NULL }, { NULL }),
+		};
+
+		p_args = (x_obj_t *)buffer_args;
+		p_obj = x_type_buffer_read(p_base, p_args);
+		p_obj = x_sexp_str_analyse2(p_base, p_args);
+		_it_should("backslash enters escape state (analyse3)",
+			x_sexp_str_analyse3_prim == p_obj);
+	}
+
+	test_cleanup(p_base);
+	return NULL;
+}
+
+static char *test_sexp_str_analyse3_return(void)
+{
+	x_obj_t *p_base, *p_obj;
+
+	p_base = x_base_make(NULL, NULL);
+	/* analyse3 always returns analyse2 (go back to normal reading) */
+	p_obj = x_sexp_str_analyse3(p_base, NULL);
+	_it_should("analyse3 returns analyse2",
+		x_sexp_str_analyse2_prim == p_obj);
+
+	test_cleanup(p_base);
+	return NULL;
+}
+
+static char *test_sexp_str_read_escapes(void)
+{
+	x_obj_t *p_base, *p_args, *p_buffer, *p_obj;
+	x_char_t *s, buffer[64];
+
+	p_base = x_base_make(NULL, NULL);
+	p_buffer = x_mkbuffer(p_base, buffer);
+	p_args = x_mkspair(p_base, p_buffer, p_base);
+
+	/* Test \" escape */
+	s = "\"\\\"\"";
+	helper_file_buffer_ptr[TEST_HELPER_FILE_STDIN] = s;
+	helper_file_reset();
+	while ( ! x_obj_isnil(p_base, x_type_buffer_read_text(p_base, p_args))) {}
+	x_bufferread(p_buffer)--;
+	p_obj = x_sexp_str_read(p_base, p_args);
+	_it_should("unescape \\\" to quote",
+		x_strval(p_obj)[0] == '"' && x_strval(p_obj)[1] == '\0');
+
+	/* Test \\ escape */
+	x_type_buffer_reset(p_base, p_args);
+	s = "\"\\\\\"";
+	helper_file_buffer_ptr[TEST_HELPER_FILE_STDIN] = s;
+	helper_file_reset();
+	while ( ! x_obj_isnil(p_base, x_type_buffer_read_text(p_base, p_args))) {}
+	x_bufferread(p_buffer)--;
+	p_obj = x_sexp_str_read(p_base, p_args);
+	_it_should("unescape \\\\ to backslash",
+		x_strval(p_obj)[0] == '\\' && x_strval(p_obj)[1] == '\0');
+
+	/* Test \n escape */
+	x_type_buffer_reset(p_base, p_args);
+	s = "\"\\n\"";
+	helper_file_buffer_ptr[TEST_HELPER_FILE_STDIN] = s;
+	helper_file_reset();
+	while ( ! x_obj_isnil(p_base, x_type_buffer_read_text(p_base, p_args))) {}
+	x_bufferread(p_buffer)--;
+	p_obj = x_sexp_str_read(p_base, p_args);
+	_it_should("unescape \\n to newline",
+		x_strval(p_obj)[0] == '\n' && x_strval(p_obj)[1] == '\0');
+
+	/* Test \t escape */
+	x_type_buffer_reset(p_base, p_args);
+	s = "\"\\t\"";
+	helper_file_buffer_ptr[TEST_HELPER_FILE_STDIN] = s;
+	helper_file_reset();
+	while ( ! x_obj_isnil(p_base, x_type_buffer_read_text(p_base, p_args))) {}
+	x_bufferread(p_buffer)--;
+	p_obj = x_sexp_str_read(p_base, p_args);
+	_it_should("unescape \\t to tab",
+		x_strval(p_obj)[0] == '\t' && x_strval(p_obj)[1] == '\0');
+
+	/* Test \r escape */
+	x_type_buffer_reset(p_base, p_args);
+	s = "\"\\r\"";
+	helper_file_buffer_ptr[TEST_HELPER_FILE_STDIN] = s;
+	helper_file_reset();
+	while ( ! x_obj_isnil(p_base, x_type_buffer_read_text(p_base, p_args))) {}
+	x_bufferread(p_buffer)--;
+	p_obj = x_sexp_str_read(p_base, p_args);
+	_it_should("unescape \\r to carriage return",
+		x_strval(p_obj)[0] == '\r' && x_strval(p_obj)[1] == '\0');
+
+	/* Test \0 escape */
+	x_type_buffer_reset(p_base, p_args);
+	s = "\"\\0X\"";
+	helper_file_buffer_ptr[TEST_HELPER_FILE_STDIN] = s;
+	helper_file_reset();
+	while ( ! x_obj_isnil(p_base, x_type_buffer_read_text(p_base, p_args))) {}
+	x_bufferread(p_buffer)--;
+	p_obj = x_sexp_str_read(p_base, p_args);
+	_it_should("unescape \\0 to null byte",
+		x_strval(p_obj)[0] == '\0');
+
+	/* Test \x41 hex escape (= 'A') */
+	x_type_buffer_reset(p_base, p_args);
+	s = "\"\\x41\"";
+	helper_file_buffer_ptr[TEST_HELPER_FILE_STDIN] = s;
+	helper_file_reset();
+	while ( ! x_obj_isnil(p_base, x_type_buffer_read_text(p_base, p_args))) {}
+	x_bufferread(p_buffer)--;
+	p_obj = x_sexp_str_read(p_base, p_args);
+	_it_should("unescape \\x41 to 'A'",
+		x_strval(p_obj)[0] == 'A' && x_strval(p_obj)[1] == '\0');
+
+	/* Test \x with invalid hex (falls back to literal \x) */
+	x_type_buffer_reset(p_base, p_args);
+	s = "\"\\xZZ\"";
+	helper_file_buffer_ptr[TEST_HELPER_FILE_STDIN] = s;
+	helper_file_reset();
+	while ( ! x_obj_isnil(p_base, x_type_buffer_read_text(p_base, p_args))) {}
+	x_bufferread(p_buffer)--;
+	p_obj = x_sexp_str_read(p_base, p_args);
+	_it_should("invalid \\xZZ becomes literal \\xZZ",
+		x_strval(p_obj)[0] == '\\' && x_strval(p_obj)[1] == 'x');
+
+	/* Test unknown escape (\q -> literal \q) */
+	x_type_buffer_reset(p_base, p_args);
+	s = "\"\\q\"";
+	helper_file_buffer_ptr[TEST_HELPER_FILE_STDIN] = s;
+	helper_file_reset();
+	while ( ! x_obj_isnil(p_base, x_type_buffer_read_text(p_base, p_args))) {}
+	x_bufferread(p_buffer)--;
+	p_obj = x_sexp_str_read(p_base, p_args);
+	_it_should("unknown \\q becomes literal \\q",
+		x_strval(p_obj)[0] == '\\' && x_strval(p_obj)[1] == 'q');
+
+	test_cleanup(p_base);
+	return NULL;
+}
+
+static char *test_sexp_str_write_escapes(void)
+{
+	x_obj_t *p_args, *p_obj;
+	x_char_t buffer[64];
+	x_char_t input[8];
+
+	/* Test writing a string with special characters */
+	x_lib_memset(buffer, 0, 64);
+	helper_file_buffer_ptr[TEST_HELPER_FILE_STDOUT] = buffer;
+	helper_file_reset();
+
+	/* String containing: quote, backslash, newline, tab, cr */
+	input[0] = '"';
+	input[1] = '\\';
+	input[2] = '\n';
+	input[3] = '\t';
+	input[4] = '\r';
+	input[5] = '\0';
+	p_obj = x_mkstr(NULL, input);
+	p_args = x_mkspair(NULL, p_obj, NULL);
+	x_sexp_str_write(NULL, p_args);
+	/* Should produce: "\"\\n\t\r" */
+	_it_should("write escapes special characters",
+		buffer[0] == '"' && buffer[1] == '\\' && buffer[2] == '"');
+
+	x_sys_free(p_args);
+	x_sys_free(p_obj);
+
+	/* Test writing a string with a control character (\x01) */
+	x_lib_memset(buffer, 0, 64);
+	helper_file_buffer_ptr[TEST_HELPER_FILE_STDOUT] = buffer;
+	helper_file_reset();
+
+	input[0] = 1; /* control char */
+	input[1] = '\0';
+	p_obj = x_mkstr(NULL, input);
+	p_args = x_mkspair(NULL, p_obj, NULL);
+	x_sexp_str_write(NULL, p_args);
+	/* Should produce: "\x01" */
+	_it_should("write hex-escapes control characters",
+		buffer[0] == '"' && buffer[1] == '\\' && buffer[2] == 'x'
+		&& buffer[3] == '0' && buffer[4] == '1');
+
+	x_sys_free(p_args);
+	x_sys_free(p_obj);
+
+	return NULL;
+}
+
 static char *run_tests() {
 	_run_test(test_sexp_str_analyse1);
 	_run_test(test_sexp_str_analyse2);
 	_run_test(test_sexp_str_read);
 	_run_test(test_sexp_str_read_token);
 	_run_test(test_sexp_str_write);
+	_run_test(test_sexp_str_analyse2_escape);
+	_run_test(test_sexp_str_analyse3_return);
+	_run_test(test_sexp_str_read_escapes);
+	_run_test(test_sexp_str_write_escapes);
 
 	return NULL;
 }
