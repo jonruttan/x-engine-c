@@ -93,6 +93,7 @@ x_obj_t *x_base_buffer_pop(x_obj_t *p_base);
 x_obj_t *x_base_load(x_obj_t *p_base, x_obj_t *p_args);
 x_obj_t *x_base_read(x_obj_t *p_base, x_obj_t *p_args);
 x_obj_t *x_base_write(x_obj_t *p_base, x_obj_t *p_args);
+x_obj_t *x_base_write_str(x_obj_t *p_base, x_obj_t *p_args);
 void x_base_error(x_obj_t *p_base, x_char_t *message, x_obj_t *p_obj);
 
 #endif /* X_BASE_H */

@@ -35,7 +35,13 @@ x_obj_t *x_prim_body_eval_tco(x_obj_t *p_base, x_obj_t *p_body,
 x_obj_t *x_prim_body_eval_tco_simple(x_obj_t *p_base, x_obj_t *p_body);
 x_obj_t *x_prim_tco_trampoline(x_obj_t *p_base, x_obj_t *p_result);
 
+typedef struct {
+	x_char_t *name;
+	x_prim_fn fn;
+} x_prim_entry_t;
+
 void x_prim_bind(x_obj_t *p_base, x_char_t *name, x_prim_fn fn);
+void x_prim_bind_table(x_obj_t *p_base, const x_prim_entry_t *table, int count);
 
 x_obj_t *x_prim_core_register(x_obj_t *p_base, x_obj_t *p_args);
 x_obj_t *x_prim_arith_register(x_obj_t *p_base, x_obj_t *p_args);

@@ -410,32 +410,37 @@ x_obj_t *x_prim_base(x_obj_t *p_base, x_obj_t *p_args)
 
 x_obj_t *x_prim_core_register(x_obj_t *p_base, x_obj_t *p_args)
 {
-	x_prim_bind(p_base, "lit", x_prim_quote);
-	x_prim_bind(p_base, "pair", x_prim_pair);
-	x_prim_bind(p_base, "first", x_prim_first);
-	x_prim_bind(p_base, "rest", x_prim_rest);
-	x_prim_bind(p_base, "def", x_prim_define);
-	x_prim_bind(p_base, "set", x_prim_set);
-	x_prim_bind(p_base, "apply", x_prim_apply);
-	x_prim_bind(p_base, "eval", x_prim_eval);
-	x_prim_bind(p_base, "eval!", x_prim_eval_immediate);
-	x_prim_bind(p_base, "fn", x_prim_closure);
-	x_prim_bind(p_base, "op", x_prim_operative);
-	x_prim_bind(p_base, "wrap", x_prim_wrap);
-	x_prim_bind(p_base, "unwrap", x_prim_unwrap);
-	x_prim_bind(p_base, "guard", x_prim_guard);
-	x_prim_bind(p_base, "error", x_prim_error);
-	x_prim_bind(p_base, "match", x_prim_match);
-	x_prim_bind(p_base, "%rewrite", x_prim_rewrite);
-	x_prim_bind(p_base, "first-int", x_prim_first_int);
-	x_prim_bind(p_base, "rest-int", x_prim_rest_int);
-	x_prim_bind(p_base, "set-first", x_prim_set_first);
-	x_prim_bind(p_base, "set-rest", x_prim_set_rest);
-	x_prim_bind(p_base, "set-first-int", x_prim_set_first_int);
-	x_prim_bind(p_base, "set-rest-int", x_prim_set_rest_int);
-	x_prim_bind(p_base, "tail-eval", x_prim_tail_eval);
-	x_prim_bind(p_base, "%seq", x_prim_seq);
-	x_prim_bind(p_base, "%base", x_prim_base);
+	static const x_prim_entry_t entries[] = {
+		{ "lit", x_prim_quote },
+		{ "pair", x_prim_pair },
+		{ "first", x_prim_first },
+		{ "rest", x_prim_rest },
+		{ "def", x_prim_define },
+		{ "set", x_prim_set },
+		{ "apply", x_prim_apply },
+		{ "eval", x_prim_eval },
+		{ "eval!", x_prim_eval_immediate },
+		{ "fn", x_prim_closure },
+		{ "op", x_prim_operative },
+		{ "wrap", x_prim_wrap },
+		{ "unwrap", x_prim_unwrap },
+		{ "guard", x_prim_guard },
+		{ "error", x_prim_error },
+		{ "match", x_prim_match },
+		{ "%rewrite", x_prim_rewrite },
+		{ "first-int", x_prim_first_int },
+		{ "rest-int", x_prim_rest_int },
+		{ "set-first", x_prim_set_first },
+		{ "set-rest", x_prim_set_rest },
+		{ "set-first-int", x_prim_set_first_int },
+		{ "set-rest-int", x_prim_set_rest_int },
+		{ "tail-eval", x_prim_tail_eval },
+		{ "%seq", x_prim_seq },
+		{ "%base", x_prim_base }
+	};
+
+	x_prim_bind_table(p_base, entries,
+		sizeof(entries) / sizeof(entries[0]));
 
 	return p_base;
 }

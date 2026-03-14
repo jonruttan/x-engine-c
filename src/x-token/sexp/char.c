@@ -136,13 +136,13 @@ x_obj_t *x_sexp_char_write(x_obj_t *p_base, x_obj_t *p_args)
 	x_obj_t *p_ret, *p_type, *p_data, *p_entry;
 	x_char_t ch = x_atomchar(x_firstobj(p_args));
 	x_char_t *sym_name;
-	x_satom_t buffer = x_obj_set(x_type_atom_obj, X_OBJ_FLAG_NONE,
+	x_satom_t str = x_obj_set(x_type_atom_obj, X_OBJ_FLAG_NONE,
 		{ .s = &x_atomchar(x_firstobj(p_args)) }),
-		size = x_obj_set(x_type_atom_obj, X_OBJ_FLAG_NONE, { .i = 1 });
-	x_spair_t args[2] = {
+		sz = x_obj_set(x_type_atom_obj, X_OBJ_FLAG_NONE, { .i = 1 });
+	x_spair_t wrap[2] = {
 		x_obj_set(NULL, X_OBJ_FLAG_NONE,
-			{ buffer }, { (x_obj_t *)(args + 1) }),
-		x_obj_set(NULL, X_OBJ_FLAG_NONE, { size }, { NULL })
+			{ str }, { (x_obj_t *)(wrap + 1) }),
+		x_obj_set(NULL, X_OBJ_FLAG_NONE, { sz }, { NULL })
 	};
 
 	/* Named characters: reverse-lookup in type data alist */
@@ -155,9 +155,8 @@ x_obj_t *x_sexp_char_write(x_obj_t *p_base, x_obj_t *p_args)
 
 			if ((x_char_t)x_intval(x_restobj(p_entry)) == ch) {
 				sym_name = x_atomstr(x_firstobj(p_entry));
-				x_atomstr(buffer) = sym_name;
-				x_atomint(size) = x_lib_strlen(sym_name);
-				x_base_write(p_base, (x_obj_t *)args);
+				x_atomstr(str) = sym_name;
+				x_base_write_str(p_base, (x_obj_t *)wrap);
 				return x_firstobj(p_args);
 			}
 
@@ -165,8 +164,8 @@ x_obj_t *x_sexp_char_write(x_obj_t *p_base, x_obj_t *p_args)
 		}
 	}
 
-	/* Single character: write raw byte */
-	p_ret = x_base_write(p_base, (x_obj_t *)args);
+	/* Single character: write raw byte (explicit size, not null-terminated) */
+	p_ret = x_base_write_str(p_base, (x_obj_t *)wrap);
 
 	if ( ! x_obj_isnil(p_base, p_ret)) {
 		return x_firstobj(p_args);

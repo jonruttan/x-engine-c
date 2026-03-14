@@ -123,17 +123,22 @@ static x_obj_t *x_prim_shr(x_obj_t *p_base, x_obj_t *p_args)
 
 x_obj_t *x_prim_arith_register(x_obj_t *p_base, x_obj_t *p_args)
 {
-	x_prim_bind(p_base, "+", x_prim_sum);
-	x_prim_bind(p_base, "-", x_prim_sub);
-	x_prim_bind(p_base, "*", x_prim_prod);
-	x_prim_bind(p_base, "/", x_prim_div);
-	x_prim_bind(p_base, "%", x_prim_mod);
-	x_prim_bind(p_base, "~", x_prim_bitnot);
-	x_prim_bind(p_base, "&", x_prim_bitand);
-	x_prim_bind(p_base, "|", x_prim_bitor);
-	x_prim_bind(p_base, "^", x_prim_bitxor);
-	x_prim_bind(p_base, "<<", x_prim_shl);
-	x_prim_bind(p_base, ">>", x_prim_shr);
+	static const x_prim_entry_t entries[] = {
+		{ "+", x_prim_sum },
+		{ "-", x_prim_sub },
+		{ "*", x_prim_prod },
+		{ "/", x_prim_div },
+		{ "%", x_prim_mod },
+		{ "~", x_prim_bitnot },
+		{ "&", x_prim_bitand },
+		{ "|", x_prim_bitor },
+		{ "^", x_prim_bitxor },
+		{ "<<", x_prim_shl },
+		{ ">>", x_prim_shr }
+	};
+
+	x_prim_bind_table(p_base, entries,
+		sizeof(entries) / sizeof(entries[0]));
 
 	return p_base;
 }

@@ -29,8 +29,11 @@ CFLAGS?=-O2
 CFLAGS+=-Wall -Wextra -Wno-unused-parameter
 CFLAGS+=-DX_HEAP -DX_TYPE -DX_CLOCK
 
+# Dead code elimination: each function/data in its own section, stripped at link
+CFLAGS+=-ffunction-sections -fdata-sections
+
 # Smaller, faster, flakier?
-# CFLAGS+=-Wl,--gc-sections -fdata-sections -fno-stack-protector -Wa,--noexecstack -fno-builtin -fno-unwind-tables -fno-asynchronous-unwind-tables -Os
+# CFLAGS+=-fno-stack-protector -Wa,--noexecstack -fno-builtin -fno-unwind-tables -fno-asynchronous-unwind-tables -Os
 
 # Get the compiler name
 CCOMPILER=$(CC)
@@ -71,6 +74,13 @@ endif
 
 # Get the machine Target Triplet
 X_MACHINE?=\"$(DUMPMACHINE)\"
+
+# Dead strip unreferenced sections at link time
+ifneq (,$(findstring darwin,$(DUMPMACHINE)))
+LDFLAGS+=-Wl,-dead_strip
+else ifneq (,$(findstring linux,$(DUMPMACHINE)))
+LDFLAGS+=-Wl,--gc-sections
+endif
 
 # Uncomment the following, if you get "wrong interpreter" errors on OSX
 #LDFLAGS+=-Wl,-no_pie

@@ -167,17 +167,22 @@ static x_obj_t *x_prim_make_string(x_obj_t *p_base, x_obj_t *p_args)
 
 x_obj_t *x_prim_string_register(x_obj_t *p_base, x_obj_t *p_args)
 {
-	x_prim_bind(p_base, "string-length", x_prim_string_length);
-	x_prim_bind(p_base, "string-ref", x_prim_string_ref);
-	x_prim_bind(p_base, "string-append", x_prim_string_append);
-	x_prim_bind(p_base, "substring", x_prim_substring);
-	x_prim_bind(p_base, "string=?", x_prim_string_eq);
-	x_prim_bind(p_base, "string->symbol", x_prim_string_to_symbol);
-	x_prim_bind(p_base, "symbol->string", x_prim_symbol_to_string);
-	x_prim_bind(p_base, "number->string", x_prim_number_to_string);
-	x_prim_bind(p_base, "string->number", x_prim_string_to_number);
-	x_prim_bind(p_base, "list->string", x_prim_list_to_string);
-	x_prim_bind(p_base, "make-string", x_prim_make_string);
+	static const x_prim_entry_t entries[] = {
+		{ "string-length", x_prim_string_length },
+		{ "string-ref", x_prim_string_ref },
+		{ "string-append", x_prim_string_append },
+		{ "substring", x_prim_substring },
+		{ "string=?", x_prim_string_eq },
+		{ "string->symbol", x_prim_string_to_symbol },
+		{ "symbol->string", x_prim_symbol_to_string },
+		{ "number->string", x_prim_number_to_string },
+		{ "string->number", x_prim_string_to_number },
+		{ "list->string", x_prim_list_to_string },
+		{ "make-string", x_prim_make_string }
+	};
+
+	x_prim_bind_table(p_base, entries,
+		sizeof(entries) / sizeof(entries[0]));
 
 	return p_base;
 }

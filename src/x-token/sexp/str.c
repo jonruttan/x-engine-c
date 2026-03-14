@@ -144,7 +144,7 @@ x_obj_t *x_sexp_str_write(x_obj_t *p_base, x_obj_t *p_args)
 
 	x_atomstr(data) = X_SEXP_STR_PRE_STR;
 	x_atomint(sz) = X_SEXP_STR_PRE_STR_LEN;
-	x_base_write(p_base, (x_obj_t *)args);
+	x_base_write_str(p_base, (x_obj_t *)args);
 
 	while (i < len) {
 		/* Find next character that needs escaping */
@@ -164,7 +164,7 @@ x_obj_t *x_sexp_str_write(x_obj_t *p_base, x_obj_t *p_args)
 		if (i > run_start) {
 			x_atomstr(data) = s + run_start;
 			x_atomint(sz) = i - run_start;
-			x_base_write(p_base, (x_obj_t *)args);
+			x_base_write_str(p_base, (x_obj_t *)args);
 		}
 
 		/* Write escape sequence */
@@ -188,14 +188,14 @@ x_obj_t *x_sexp_str_write(x_obj_t *p_base, x_obj_t *p_args)
 			}
 			x_atomstr(data) = (x_char_t *)esc;
 			x_atomint(sz) = x_lib_strlen(esc);
-			x_base_write(p_base, (x_obj_t *)args);
+			x_base_write_str(p_base, (x_obj_t *)args);
 			i++;
 		}
 	}
 
 	x_atomstr(data) = X_SEXP_STR_POST_STR;
 	x_atomint(sz) = X_SEXP_STR_POST_STR_LEN;
-	x_base_write(p_base, (x_obj_t *)args);
+	x_base_write_str(p_base, (x_obj_t *)args);
 
 	return x_firstobj(p_args);
 }

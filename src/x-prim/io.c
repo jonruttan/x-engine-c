@@ -53,24 +53,16 @@ static x_obj_t *x_prim_display(x_obj_t *p_base, x_obj_t *p_args)
 	x_spair_t write_args[1] = {
 		x_obj_set(NULL, X_OBJ_FLAG_NONE, { NULL }, { NULL })
 	};
-	x_satom_t data = x_obj_set(x_type_atom_obj, X_OBJ_FLAG_NONE,
-		{ .s = NULL }),
-		sz = x_obj_set(x_type_atom_obj, X_OBJ_FLAG_NONE, { .i = 0 });
-	x_spair_t bw_args[2] = {
-		x_obj_set(NULL, X_OBJ_FLAG_NONE,
-			{ data }, { (x_obj_t *)(bw_args + 1) }),
-		x_obj_set(NULL, X_OBJ_FLAG_NONE, { sz }, { NULL })
-	};
+	x_satom_t str = x_obj_set(x_type_atom_obj, X_OBJ_FLAG_NONE,
+		{ .s = NULL });
+	x_spair_t wrap = x_obj_set(NULL, X_OBJ_FLAG_NONE, { str }, { NULL });
 
 	while ( ! x_obj_isnil(p_base, p_args)) {
 		p_val = x_prim_eval_arg(p_base, x_firstobj(p_args));
 
 		if (x_obj_type_isstr(p_base, p_val)) {
-			x_char_t *s = x_strval(p_val);
-
-			x_atomstr(data) = s;
-			x_atomint(sz) = x_lib_strlen(s);
-			x_base_write(p_base, (x_obj_t *)bw_args);
+			x_atomstr(str) = x_strval(p_val);
+			x_base_write_str(p_base, (x_obj_t *)&wrap);
 		} else {
 			x_firstobj((x_obj_t *)write_args) = p_val;
 			x_token_write(p_base, (x_obj_t *)write_args);
@@ -85,16 +77,11 @@ static x_obj_t *x_prim_display(x_obj_t *p_base, x_obj_t *p_args)
 /* newline: (newline) -> output newline character */
 static x_obj_t *x_prim_newline(x_obj_t *p_base, x_obj_t *p_args)
 {
-	x_satom_t data = x_obj_set(x_type_atom_obj, X_OBJ_FLAG_NONE,
-		{ .s = "\n" }),
-		sz = x_obj_set(x_type_atom_obj, X_OBJ_FLAG_NONE, { .i = 1 });
-	x_spair_t args[2] = {
-		x_obj_set(NULL, X_OBJ_FLAG_NONE,
-			{ data }, { (x_obj_t *)(args + 1) }),
-		x_obj_set(NULL, X_OBJ_FLAG_NONE, { sz }, { NULL })
-	};
+	x_satom_t str = x_obj_set(x_type_atom_obj, X_OBJ_FLAG_NONE,
+		{ .s = "\n" });
+	x_spair_t wrap = x_obj_set(NULL, X_OBJ_FLAG_NONE, { str }, { NULL });
 
-	x_base_write(p_base, (x_obj_t *)args);
+	x_base_write_str(p_base, (x_obj_t *)&wrap);
 
 	return NULL;
 }
@@ -254,21 +241,32 @@ x_obj_t *x_prim_repl(x_obj_t *p_base, x_obj_t *p_args)
 
 x_obj_t *x_prim_io_register(x_obj_t *p_base, x_obj_t *p_args)
 {
-	x_prim_bind(p_base, "write", x_prim_write);
-	x_prim_bind(p_base, "display", x_prim_display);
-	x_prim_bind(p_base, "newline", x_prim_newline);
-	x_prim_bind(p_base, "read", x_prim_read_expr);
-	x_prim_bind(p_base, "read-char", x_prim_read_char);
-	x_prim_bind(p_base, "peek-char", x_prim_peek_char);
-	x_prim_bind(p_base, "write-to-string", x_prim_write_to_string);
+	static const x_prim_entry_t entries[] = {
+		{ "write", x_prim_write },
+		{ "display", x_prim_display },
+		{ "newline", x_prim_newline },
+		{ "read", x_prim_read_expr },
+		{ "read-char", x_prim_read_char },
+		{ "peek-char", x_prim_peek_char },
+		{ "write-to-string", x_prim_write_to_string },
+		{ "heap-mark", x_prim_heap_mark },
+		{ "heap-sweep", x_prim_heap_sweep },
+		{ "heap-collect", x_prim_heap_collect },
+		{ "heap-count", x_prim_heap_count },
+		{ "current-line", x_prim_current_line }
+	};
 #ifdef X_CLOCK
-	x_prim_bind(p_base, "clock", x_prim_clock);
+	static const x_prim_entry_t clock_entry[] = {
+		{ "clock", x_prim_clock }
+	};
 #endif /* X_CLOCK */
-	x_prim_bind(p_base, "heap-mark", x_prim_heap_mark);
-	x_prim_bind(p_base, "heap-sweep", x_prim_heap_sweep);
-	x_prim_bind(p_base, "heap-collect", x_prim_heap_collect);
-	x_prim_bind(p_base, "heap-count", x_prim_heap_count);
-	x_prim_bind(p_base, "current-line", x_prim_current_line);
+
+	x_prim_bind_table(p_base, entries,
+		sizeof(entries) / sizeof(entries[0]));
+#ifdef X_CLOCK
+	x_prim_bind_table(p_base, clock_entry,
+		sizeof(clock_entry) / sizeof(clock_entry[0]));
+#endif /* X_CLOCK */
 
 	return p_base;
 }

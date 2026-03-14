@@ -30,16 +30,12 @@
 x_obj_t *x_sexp_pair_write(x_obj_t *p_base, x_obj_t *p_args)
 {
 	x_obj_t *p_obj = x_firstobj(p_args);
-	x_satom_t data_obj = x_obj_set(NULL, X_OBJ_FLAG_NONE, { .s = NULL }),
-		size_obj = x_obj_set(NULL, X_OBJ_FLAG_NONE, { .i = 1 }),
+	x_satom_t str = x_obj_set(x_type_atom_obj, X_OBJ_FLAG_NONE, { .s = NULL }),
 		write_wrap = x_obj_set(NULL, X_OBJ_FLAG_NONE, { NULL });
-	x_spair_t args[2] = {
-		x_obj_set(NULL, X_OBJ_FLAG_NONE, { data_obj }, { (x_obj_t *)(args + 1) }),
-		x_obj_set(NULL, X_OBJ_FLAG_NONE, { size_obj }, { NULL })
-	};
+	x_spair_t wrap = x_obj_set(NULL, X_OBJ_FLAG_NONE, { str }, { NULL });
 
-	x_atomstr(data_obj) = "(";
-	x_base_write(p_base, (x_obj_t *)args);
+	x_atomstr(str) = "(";
+	x_base_write_str(p_base, (x_obj_t *)&wrap);
 
 	for (;;) {
 		if ( ! x_obj_isnil(p_base, x_firstobj(p_obj))) {
@@ -50,29 +46,27 @@ x_obj_t *x_sexp_pair_write(x_obj_t *p_base, x_obj_t *p_args)
 		p_obj = x_restobj(p_obj);
 
 		if (x_obj_isnil(p_base, p_obj)) {
-			x_atomstr(data_obj) = ")";
-			x_base_write(p_base, (x_obj_t *)args);
+			x_atomstr(str) = ")";
+			x_base_write_str(p_base, (x_obj_t *)&wrap);
 
 			break;
 		}
 
 		if ( ! x_obj_type_isspair(p_obj)) {
-			x_atomstr(data_obj) = " . ";
-			x_atomint(size_obj) = 3;
-			x_base_write(p_base, (x_obj_t *)args);
+			x_atomstr(str) = " . ";
+			x_base_write_str(p_base, (x_obj_t *)&wrap);
 
 			x_firstobj((x_obj_t *)write_wrap) = p_obj;
 			x_token_write(p_base, (x_obj_t *)write_wrap);
 
-			x_atomstr(data_obj) = ")";
-			x_atomint(size_obj) = 1;
-			x_base_write(p_base, (x_obj_t *)args);
+			x_atomstr(str) = ")";
+			x_base_write_str(p_base, (x_obj_t *)&wrap);
 
 			break;
 		}
 
-		x_atomstr(data_obj) = " ";
-		x_base_write(p_base, (x_obj_t *)args);
+		x_atomstr(str) = " ";
+		x_base_write_str(p_base, (x_obj_t *)&wrap);
 	}
 
 	return p_obj;

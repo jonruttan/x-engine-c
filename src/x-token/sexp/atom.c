@@ -30,33 +30,24 @@ x_obj_t *x_sexp_atom_write(x_obj_t *p_base, x_obj_t *p_args)
 {
 	x_char_t tmp[22];
 	x_char_t *type = x_obj_type_name(p_base, x_firstobj(p_args));
-	x_satom_t data_obj = x_obj_set(NULL, X_OBJ_FLAG_NONE, { .s = NULL }),
-		size_obj = x_obj_set(NULL, X_OBJ_FLAG_NONE, { .i = 0 });
-	x_spair_t args[2] = {
-		x_obj_set(NULL, X_OBJ_FLAG_NONE, { data_obj }, { (x_obj_t *)(args + 1) }),
-		x_obj_set(NULL, X_OBJ_FLAG_NONE, { size_obj }, { NULL })
-	};
+	x_satom_t str = x_obj_set(x_type_atom_obj, X_OBJ_FLAG_NONE, { .s = NULL });
+	x_spair_t wrap = x_obj_set(NULL, X_OBJ_FLAG_NONE, { str }, { NULL });
 
-	x_atomstr(data_obj) = "#<";
-	x_atomint(size_obj) = 2;
-	x_base_write(p_base, (x_obj_t *)args);
+	x_atomstr(str) = "#<";
+	x_base_write_str(p_base, (x_obj_t *)&wrap);
 
-	x_atomstr(data_obj) = type;
-	x_atomint(size_obj) = x_lib_strlen(type);
-	x_base_write(p_base, (x_obj_t *)args);
+	x_atomstr(str) = type;
+	x_base_write_str(p_base, (x_obj_t *)&wrap);
 
-	x_atomstr(data_obj) = ":0x";
-	x_atomint(size_obj) = 3;
-	x_base_write(p_base, (x_obj_t *)args);
+	x_atomstr(str) = ":0x";
+	x_base_write_str(p_base, (x_obj_t *)&wrap);
 
 	x_lib_inttostr(x_atomint(x_firstobj(p_args)), tmp, 16);
-	x_atomstr(data_obj) = tmp;
-	x_atomint(size_obj) = x_lib_strlen(tmp);
-	x_base_write(p_base, (x_obj_t *)args);
+	x_atomstr(str) = tmp;
+	x_base_write_str(p_base, (x_obj_t *)&wrap);
 
-	x_atomstr(data_obj) = ">";
-	x_atomint(size_obj) = 1;
-	x_base_write(p_base, (x_obj_t *)args);
+	x_atomstr(str) = ">";
+	x_base_write_str(p_base, (x_obj_t *)&wrap);
 
 	return p_args;
 }

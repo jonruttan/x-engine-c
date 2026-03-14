@@ -132,17 +132,12 @@ x_obj_t *x_sexp_int_write(x_obj_t *p_base, x_obj_t *p_args)
 {
 	x_char_t s[22];
 	x_obj_t *p_ret;
-	x_satom_t buffer = x_obj_set(x_type_atom_obj, X_OBJ_FLAG_NONE, { .s = s }),
-		size = x_obj_set(x_type_atom_obj, X_OBJ_FLAG_NONE, { .i = 0 });
-	x_spair_t args[2] = {
-		x_obj_set(NULL, X_OBJ_FLAG_NONE, { buffer }, { (x_obj_t *)(args + 1) }),
-		x_obj_set(NULL, X_OBJ_FLAG_NONE, { size }, { NULL })
-	};
+	x_satom_t str = x_obj_set(x_type_atom_obj, X_OBJ_FLAG_NONE, { .s = s });
+	x_spair_t wrap = x_obj_set(NULL, X_OBJ_FLAG_NONE, { str }, { NULL });
 
 	x_lib_inttostr(x_intval(x_firstobj(p_args)), s, 10);
-	x_atomint(size) = x_lib_strlen(s);
 
-	p_ret = x_base_write(p_base, (x_obj_t *)args);
+	p_ret = x_base_write_str(p_base, (x_obj_t *)&wrap);
 
 	if ( ! x_obj_isnil(p_base, p_ret)) {
 		return x_firstobj(p_args);

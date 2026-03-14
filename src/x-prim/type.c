@@ -19,6 +19,7 @@
 #include "x-prim.h"
 #include "x-alist.h"
 #include "x-base.h"
+#include <stddef.h>
 #include <setjmp.h>
 #include "x-token.h"
 #include "x-type/char.h"
@@ -50,67 +51,27 @@ static x_obj_t *x_prim_type_build_struct(x_obj_t *p_base,
 	type.p_units = (x_obj_t *)&x_type_units_pair_obj;
 
 	/* Look up handler closures from the alist. */
-	p_sym = x_mksymbol(p_base, (x_char_t *)"call");
-	x_firstobj((x_obj_t *)assoc_args) = p_sym;
-	p_entry = x_alist_assoc(p_base, (x_obj_t *)assoc_args);
-	if ( ! x_obj_isnil(p_base, p_entry)) {
-		type.p_call = x_restobj(p_entry);
-	}
+	{
+		static const struct { x_char_t *name; size_t offset; } fields[] = {
+			{ "call",    offsetof(struct x_type_t, p_call) },
+			{ "eval",    offsetof(struct x_type_t, p_eval) },
+			{ "write",   offsetof(struct x_type_t, p_write) },
+			{ "length",  offsetof(struct x_type_t, p_length) },
+			{ "analyse", offsetof(struct x_type_t, p_analyse) },
+			{ "delimit", offsetof(struct x_type_t, p_delimit) },
+			{ "error",   offsetof(struct x_type_t, p_error) },
+			{ "from",    offsetof(struct x_type_t, p_from) },
+			{ "to",      offsetof(struct x_type_t, p_to) }
+		};
+		int i;
 
-	p_sym = x_mksymbol(p_base, (x_char_t *)"eval");
-	x_firstobj((x_obj_t *)assoc_args) = p_sym;
-	p_entry = x_alist_assoc(p_base, (x_obj_t *)assoc_args);
-	if ( ! x_obj_isnil(p_base, p_entry)) {
-		type.p_eval = x_restobj(p_entry);
-	}
-
-	p_sym = x_mksymbol(p_base, (x_char_t *)"write");
-	x_firstobj((x_obj_t *)assoc_args) = p_sym;
-	p_entry = x_alist_assoc(p_base, (x_obj_t *)assoc_args);
-	if ( ! x_obj_isnil(p_base, p_entry)) {
-		type.p_write = x_restobj(p_entry);
-	}
-
-	p_sym = x_mksymbol(p_base, (x_char_t *)"length");
-	x_firstobj((x_obj_t *)assoc_args) = p_sym;
-	p_entry = x_alist_assoc(p_base, (x_obj_t *)assoc_args);
-	if ( ! x_obj_isnil(p_base, p_entry)) {
-		type.p_length = x_restobj(p_entry);
-	}
-
-	p_sym = x_mksymbol(p_base, (x_char_t *)"analyse");
-	x_firstobj((x_obj_t *)assoc_args) = p_sym;
-	p_entry = x_alist_assoc(p_base, (x_obj_t *)assoc_args);
-	if ( ! x_obj_isnil(p_base, p_entry)) {
-		type.p_analyse = x_restobj(p_entry);
-	}
-
-	p_sym = x_mksymbol(p_base, (x_char_t *)"delimit");
-	x_firstobj((x_obj_t *)assoc_args) = p_sym;
-	p_entry = x_alist_assoc(p_base, (x_obj_t *)assoc_args);
-	if ( ! x_obj_isnil(p_base, p_entry)) {
-		type.p_delimit = x_restobj(p_entry);
-	}
-
-	p_sym = x_mksymbol(p_base, (x_char_t *)"error");
-	x_firstobj((x_obj_t *)assoc_args) = p_sym;
-	p_entry = x_alist_assoc(p_base, (x_obj_t *)assoc_args);
-	if ( ! x_obj_isnil(p_base, p_entry)) {
-		type.p_error = x_restobj(p_entry);
-	}
-
-	p_sym = x_mksymbol(p_base, (x_char_t *)"from");
-	x_firstobj((x_obj_t *)assoc_args) = p_sym;
-	p_entry = x_alist_assoc(p_base, (x_obj_t *)assoc_args);
-	if ( ! x_obj_isnil(p_base, p_entry)) {
-		type.p_from = x_restobj(p_entry);
-	}
-
-	p_sym = x_mksymbol(p_base, (x_char_t *)"to");
-	x_firstobj((x_obj_t *)assoc_args) = p_sym;
-	p_entry = x_alist_assoc(p_base, (x_obj_t *)assoc_args);
-	if ( ! x_obj_isnil(p_base, p_entry)) {
-		type.p_to = x_restobj(p_entry);
+		for (i = 0; i < (int)(sizeof(fields) / sizeof(fields[0])); i++) {
+			p_sym = x_mksymbol(p_base, fields[i].name);
+			x_firstobj((x_obj_t *)assoc_args) = p_sym;
+			p_entry = x_alist_assoc(p_base, (x_obj_t *)assoc_args);
+			if ( ! x_obj_isnil(p_base, p_entry))
+				*(x_obj_t **)((char *)&type + fields[i].offset) = x_restobj(p_entry);
+		}
 	}
 
 	return x_type_struct_make(p_base, type);
@@ -511,20 +472,25 @@ static x_obj_t *x_prim_token_read_string(x_obj_t *p_base, x_obj_t *p_args)
 
 x_obj_t *x_prim_type_register(x_obj_t *p_base, x_obj_t *p_args)
 {
-	x_prim_bind(p_base, "make-type", x_prim_make_type);
-	x_prim_bind(p_base, "base-make-type", x_prim_base_make_type);
-	x_prim_bind(p_base, "make-instance", x_prim_make_instance);
-	x_prim_bind(p_base, "type?", x_prim_typep);
-	x_prim_bind(p_base, "type-of", x_prim_type_of);
-	x_prim_bind(p_base, "type-name", x_prim_type_name);
-	x_prim_bind(p_base, "convert", x_prim_convert);
-	x_prim_bind(p_base, "buffer-token", x_prim_buffer_token);
-	x_prim_bind(p_base, "make-token-base", x_prim_make_token_base);
-	x_prim_bind(p_base, "make-base", x_prim_make_base);
-	x_prim_bind(p_base, "base-eval", x_prim_base_eval);
-	x_prim_bind(p_base, "base-bind", x_prim_base_bind);
-	x_prim_bind(p_base, "token-read-string", x_prim_token_read_string);
-	x_prim_bind(p_base, "%token-discard", x_prim_token_discard);
+	static const x_prim_entry_t entries[] = {
+		{ "make-type", x_prim_make_type },
+		{ "base-make-type", x_prim_base_make_type },
+		{ "make-instance", x_prim_make_instance },
+		{ "type?", x_prim_typep },
+		{ "type-of", x_prim_type_of },
+		{ "type-name", x_prim_type_name },
+		{ "convert", x_prim_convert },
+		{ "buffer-token", x_prim_buffer_token },
+		{ "make-token-base", x_prim_make_token_base },
+		{ "make-base", x_prim_make_base },
+		{ "base-eval", x_prim_base_eval },
+		{ "base-bind", x_prim_base_bind },
+		{ "token-read-string", x_prim_token_read_string },
+		{ "%token-discard", x_prim_token_discard }
+	};
+
+	x_prim_bind_table(p_base, entries,
+		sizeof(entries) / sizeof(entries[0]));
 
 	return p_base;
 }

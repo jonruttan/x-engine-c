@@ -115,14 +115,11 @@ x_obj_t *x_type_prim_apply(x_obj_t *p_base, x_obj_t *p_args)
 
 x_obj_t *x_type_prim_write(x_obj_t *p_base, x_obj_t *p_args)
 {
-	x_satom_t buffer = x_obj_set(x_type_atom_obj, X_OBJ_FLAG_NONE, { .s = (x_char_t *)X_TYPE_PRIM_WRITE_STR }),
-		size = x_obj_set(x_type_atom_obj, X_OBJ_FLAG_NONE, { .i = X_TYPE_PRIM_WRITE_LEN });
-	x_spair_t args[2] = {
-		x_obj_set(NULL, X_OBJ_FLAG_NONE, { buffer }, { (x_obj_t *)(args + 1) }),
-		x_obj_set(NULL, X_OBJ_FLAG_NONE, { size }, { NULL })
-	};
+	x_satom_t str = x_obj_set(x_type_atom_obj, X_OBJ_FLAG_NONE,
+		{ .s = (x_char_t *)X_TYPE_PRIM_WRITE_STR });
+	x_spair_t wrap = x_obj_set(NULL, X_OBJ_FLAG_NONE, { str }, { NULL });
 
-	x_base_write(p_base, (x_obj_t *)args);
+	x_base_write_str(p_base, (x_obj_t *)&wrap);
 
 	return x_firstobj(p_args);
 }

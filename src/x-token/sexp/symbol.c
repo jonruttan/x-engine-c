@@ -57,16 +57,11 @@ x_obj_t *x_sexp_symbol_read(x_obj_t *p_base, x_obj_t *p_args)
 
 x_obj_t *x_sexp_symbol_write(x_obj_t *p_base, x_obj_t *p_args)
 {
-	x_char_t *s = x_firststr(x_firstobj(p_args));
-	x_satom_t data = x_obj_set(x_type_atom_obj, X_OBJ_FLAG_NONE, { .s = s }),
-		size = x_obj_set(x_type_atom_obj, X_OBJ_FLAG_NONE,
-			{ .i = x_lib_strlen(s) });
-	x_spair_t args[2] = {
-		x_obj_set(NULL, X_OBJ_FLAG_NONE, { data }, { (x_obj_t *)(args + 1) }),
-		x_obj_set(NULL, X_OBJ_FLAG_NONE, { size }, { NULL })
-	};
+	x_satom_t str = x_obj_set(x_type_atom_obj, X_OBJ_FLAG_NONE,
+		{ .s = x_firststr(x_firstobj(p_args)) });
+	x_spair_t wrap = x_obj_set(NULL, X_OBJ_FLAG_NONE, { str }, { NULL });
 
-	x_base_write(p_base, (x_obj_t *)args);
+	x_base_write_str(p_base, (x_obj_t *)&wrap);
 
 	return x_firstobj(p_args);
 }

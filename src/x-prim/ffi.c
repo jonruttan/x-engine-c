@@ -373,17 +373,22 @@ static x_obj_t *x_prim_ptr_to_string(x_obj_t *p_base, x_obj_t *p_args)
 
 x_obj_t *x_prim_ffi_register(x_obj_t *p_base, x_obj_t *p_args)
 {
-	x_prim_bind(p_base, "dlopen", x_prim_dlopen);
-	x_prim_bind(p_base, "dlsym", x_prim_dlsym);
-	x_prim_bind(p_base, "ffi-call", x_prim_ffi_call);
-	x_prim_bind(p_base, "ptr-call", x_prim_ptr_call);
-	x_prim_bind(p_base, "int->ptr", x_prim_int_to_ptr);
-	x_prim_bind(p_base, "ptr->int", x_prim_ptr_to_int);
-	x_prim_bind(p_base, "ptr-set!", x_prim_ptr_set);
-	x_prim_bind(p_base, "ptr-ref", x_prim_ptr_ref);
-	x_prim_bind(p_base, "ptr-set-word!", x_prim_ptr_set_word);
-	x_prim_bind(p_base, "string->ptr", x_prim_string_to_ptr);
-	x_prim_bind(p_base, "ptr->string", x_prim_ptr_to_string);
+	static const x_prim_entry_t entries[] = {
+		{ "dlopen", x_prim_dlopen },
+		{ "dlsym", x_prim_dlsym },
+		{ "ffi-call", x_prim_ffi_call },
+		{ "ptr-call", x_prim_ptr_call },
+		{ "int->ptr", x_prim_int_to_ptr },
+		{ "ptr->int", x_prim_ptr_to_int },
+		{ "ptr-set!", x_prim_ptr_set },
+		{ "ptr-ref", x_prim_ptr_ref },
+		{ "ptr-set-word!", x_prim_ptr_set_word },
+		{ "string->ptr", x_prim_string_to_ptr },
+		{ "ptr->string", x_prim_ptr_to_string }
+	};
+
+	x_prim_bind_table(p_base, entries,
+		sizeof(entries) / sizeof(entries[0]));
 
 	return p_base;
 }

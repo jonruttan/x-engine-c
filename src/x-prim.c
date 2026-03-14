@@ -168,6 +168,15 @@ void x_prim_bind(x_obj_t *p_base, x_char_t *name, x_prim_fn fn)
 	x_base_env_alist_extend(p_base, p_pair);
 }
 
+void x_prim_bind_table(x_obj_t *p_base, const x_prim_entry_t *table, int count)
+{
+	int i;
+
+	for (i = 0; i < count; i++) {
+		x_prim_bind(p_base, table[i].name, table[i].fn);
+	}
+}
+
 x_obj_t *x_prim_register(x_obj_t *p_base, x_obj_t *p_args)
 {
 	/* Bind t as a self-evaluating truth symbol and cache in base. */
