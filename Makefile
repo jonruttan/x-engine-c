@@ -198,6 +198,19 @@ test-langs: $(EXECUTABLE) ## Run all language personality tests
 tests: test test-x test-langs ## Run all tests
 .PHONY: tests
 
+test-tools: $(EXECUTABLE) ## Run tools tests
+	sh tools/tests/spec-runner.sh
+.PHONY: test-tools
+
+test-cov: x-cov ## Run coverage tool tests
+	sh tools/tests/cov-spec-runner.sh
+.PHONY: test-cov
+
+x-cov: $(OBJECTS) $(X_EXPR_OBJECTS) ## Build coverage binary
+	$(CC) -c $(CFLAGS) -DX_COV $(DEFS) -o $(SRCDIR)/x-eval-cov.o $(SRCDIR)/x-eval.c
+	$(CC) $(LDFLAGS) $(filter-out $(SRCDIR)/x-eval.o,$(OBJECTS)) $(SRCDIR)/x-eval-cov.o $(X_EXPR_OBJECTS) $(EXTRA_OBJS) $(EXTRA_LIBS) -o $@
+	rm -f $(SRCDIR)/x-eval-cov.o
+
 lint-x: $(EXECUTABLE) ## Lint all .x library files
 	sh tools/lint.sh
 .PHONY: lint-x
@@ -279,7 +292,7 @@ coverage-clean: ## Clean coverage artifacts
 .PHONY: coverage-clean
 
 clean: coverage-clean ## Clean compiled files
-	rm -f $(EXECUTABLE) $(EXECUTABLE)-debug *.out $(SRCDIR)/*.o $(SRCDIR)/**/*.o $(SRCDIR)/**/**/*.o $(X_EXPR_DIR)/src/*.o *.core core
+	rm -f $(EXECUTABLE) $(EXECUTABLE)-debug x-cov *.out $(SRCDIR)/*.o $(SRCDIR)/**/*.o $(SRCDIR)/**/**/*.o $(X_EXPR_DIR)/src/*.o *.core core
 	rm -Rf apidocs/
 .PHONY: clean
 

@@ -371,6 +371,33 @@ static x_obj_t *x_prim_ptr_to_string(x_obj_t *p_base, x_obj_t *p_args)
 	return x_mkstrown(p_base, x_lib_strndup(s, x_lib_strlen(s)));
 }
 
+/* obj->ptr: (obj->ptr obj) -> ptr
+ * Returns raw pointer to the object's base array. */
+static x_obj_t *x_prim_obj_to_ptr(x_obj_t *p_base, x_obj_t *p_args)
+{
+	x_obj_t *p_obj = x_prim_eval_arg(p_base, x_firstobj(p_args));
+
+	return x_mkptr(p_base, (void *)p_obj);
+}
+
+/* ptr-ref-word: (ptr-ref-word ptr offset) -> int
+ * Read sizeof(long) bytes from ptr+offset, return as int. */
+static x_obj_t *x_prim_ptr_ref_word(x_obj_t *p_base, x_obj_t *p_args)
+{
+	x_obj_t *p_ptr, *p_offset;
+	unsigned char *mem;
+	long val;
+
+	p_ptr = x_prim_eval_arg(p_base, x_firstobj(p_args));
+	p_offset = x_prim_eval_arg(p_base,
+		x_firstobj(x_restobj(p_args)));
+
+	mem = (unsigned char *)x_ptrval(p_ptr);
+	memcpy(&val, mem + x_intval(p_offset), sizeof(long));
+
+	return x_mkint(p_base, (x_int_t)val);
+}
+
 x_obj_t *x_prim_ffi_register(x_obj_t *p_base, x_obj_t *p_args)
 {
 	static const x_prim_entry_t entries[] = {
@@ -382,7 +409,9 @@ x_obj_t *x_prim_ffi_register(x_obj_t *p_base, x_obj_t *p_args)
 		{ "ptr->int", x_prim_ptr_to_int },
 		{ "ptr-set!", x_prim_ptr_set },
 		{ "ptr-ref", x_prim_ptr_ref },
+		{ "ptr-ref-word", x_prim_ptr_ref_word },
 		{ "ptr-set-word!", x_prim_ptr_set_word },
+		{ "obj->ptr", x_prim_obj_to_ptr },
 		{ "string->ptr", x_prim_string_to_ptr },
 		{ "ptr->string", x_prim_ptr_to_string }
 	};

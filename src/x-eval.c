@@ -34,6 +34,11 @@ eval_start:
 		x_atomint(x_base_field_profile_evals(p_base))++;
 	p_exp = x_firstobj(x_eval_arg_exp(p_args));
 
+#ifdef X_COV
+	if (p_exp != NULL)
+		x_obj_flags(p_exp) |= X_OBJ_FLAG_2;
+#endif
+
 	if (x_obj_isnil(p_base, p_exp)) {
 		return NULL;
 	}
