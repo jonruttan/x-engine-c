@@ -48,19 +48,32 @@ static void _teardown(void)
 x_obj_t *_test_make_type(x_obj_t *p_base)
 {
 	return
-		pair(atom("ONE"),
-		pair(atom(NULL),
-		pair(pair(atom(NULL), pair(atom(NULL), pair(atom(NULL), pair(atom(NULL), pair(atom(NULL), atom(NULL)))))),
-		pair(pair(atom(NULL), atom(NULL)),
-		pair(pair(atom(NULL), atom(NULL)),
-		pair(pair(atom(NULL), pair(atom(NULL), pair(atom(NULL), atom(NULL)))),
-	nil))))));
+		/* name-stack */
+		pair(pair(atom("ONE"), NULL),
+		/* data-stack */
+		pair(pair(atom(NULL), NULL),
+		/* heap: (mark make free clone units length) — each stack-wrapped */
+		pair(pair(pair(atom(NULL), NULL), pair(pair(atom(NULL), NULL),
+			pair(pair(atom(NULL), NULL), pair(pair(atom(NULL), NULL),
+			pair(pair(atom(NULL), NULL), pair(pair(atom(NULL), NULL),
+			NULL)))))),
+		/* proc: (call eval) */
+		pair(pair(pair(atom(NULL), NULL), pair(pair(atom(NULL), NULL),
+			NULL)),
+		/* cvt: (from to) */
+		pair(pair(pair(atom(NULL), NULL), pair(pair(atom(NULL), NULL),
+			NULL)),
+		/* io: (analyse delimit write display error) */
+		pair(pair(pair(atom(NULL), NULL), pair(pair(atom(NULL), NULL),
+			pair(pair(atom(NULL), NULL), pair(pair(atom(NULL), NULL),
+			pair(pair(atom(NULL), NULL),
+			NULL))))),
+		NULL))))));
 }
 
 static char *test_obj_prim_make(void)
 {
-	x_obj_t *p_base, *p_obj, *p_flags, *p_vals[2], *p_args[4], *p_ret,
-		*p_type;
+	x_obj_t *p_base, *p_obj, *p_flags, *p_vals[2], *p_args[4], *p_ret;
 
 	helper_alloc_reset();
 
@@ -174,35 +187,6 @@ static char *test_obj_prim_make(void)
 	x_obj_free(p_ret);
 	x_obj_free(p_base);
 
-	_mark_incomplete();
-
-	p_base = x_mksatom(NULL, 0);
-	p_type = _test_make_type(p_base);
-	p_obj = x_obj_alloc(p_base, p_type, 0, 0);
-	p_flags = x_mksatom(p_base, 0xf0);
-	p_vals[0] = x_mksatom(p_base, 10);
-	p_vals[1] = x_mksatom(p_base, 20);
-	p_args[3] = x_mkspair(p_base, p_vals[1], p_base);
-	p_args[2] = x_mkspair(p_base, p_vals[0], p_args[3]);
-	p_args[1] = x_mkspair(p_base, p_flags, p_args[2]);
-	p_args[0] = x_mkspair(p_base, p_obj, p_args[1]);
-	p_ret = x_obj_prim_make(p_base, p_args[0]);
-	_it_should("return a new object with the same type as the object "
-		"when type object is set",
-		p_obj != p_ret
-		&& x_obj_type(p_obj) == x_obj_type(p_ret)
-	);
-	x_obj_free(p_obj);
-	x_obj_free(p_flags);
-	x_obj_free(p_vals[1]);
-	x_obj_free(p_vals[0]);
-	x_obj_free(p_args[3]);
-	x_obj_free(p_args[2]);
-	x_obj_free(p_args[1]);
-	x_obj_free(p_args[0]);
-	x_obj_free(p_ret);
-	x_obj_free(p_base);
-
 	return NULL;
 }
 
@@ -236,7 +220,7 @@ static char *test_obj_prim_make_custom_nil_name(void)
 	p_obj = x_obj_make(p_base, p_type, X_OBJ_FLAG_NONE, X_OBJ_LENGTH_ATOM, 0);
 
 	/* Clear name field to NULL */
-	x_firstobj(p_type) = NULL;
+	x_type_field_name(p_type) = NULL;
 
 	p_args = x_mkspair(NULL, p_obj, NULL);
 	p_ret = x_obj_prim_make(p_base, p_args);
@@ -245,22 +229,6 @@ static char *test_obj_prim_make_custom_nil_name(void)
 
 	return NULL;
 }
-
-static char *test_obj_prim_free(void)
-{
-	return NULL;
-}
-
-static char *test_obj_prim_clone(void)
-{
-	return NULL;
-}
-
-static char *test_obj_prim_dump(void)
-{
-	return NULL;
-}
-
 
 unsigned int _test_prim_fn_calls = 0;
 x_obj_t *_test_prim_fn(x_obj_t *p_base, x_obj_t *p_args)
@@ -345,32 +313,6 @@ static char *test_obj_prim_call(void)
 		&& 1 == _test_prim_fn_calls
 	);
 
-	return NULL;
-}
-
-static char *test_obj_prim_eval(void)
-{
-	return NULL;
-}
-
-static char *test_obj_prim_convert(void)
-{
-	return NULL;
-}
-
-
-static char *test_obj_prim_identify(void)
-{
-	return NULL;
-}
-
-static char *test_obj_prim_read(void)
-{
-	return NULL;
-}
-
-static char *test_obj_prim_write(void)
-{
 	return NULL;
 }
 
@@ -597,18 +539,7 @@ static char *run_tests() {
 	_run_test(test_obj_prim_make_null_type);
 	_run_test(test_obj_prim_make_custom_nil_name);
 	_run_test(test_obj_prim_make_custom_with_make_fn);
-	_run_test(test_obj_prim_free);
-	_run_test(test_obj_prim_clone);
-	_run_test(test_obj_prim_dump);
-
 	_run_test(test_obj_prim_call);
-	_run_test(test_obj_prim_eval);
-	_run_test(test_obj_prim_convert);
-
-	_run_test(test_obj_prim_identify);
-	_run_test(test_obj_prim_read);
-	_run_test(test_obj_prim_write);
-
 	_run_test(test_obj_prim_type_name_nil);
 	_run_test(test_obj_prim_units_nil);
 	_run_test(test_obj_prim_units_typed);

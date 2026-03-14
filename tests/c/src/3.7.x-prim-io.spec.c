@@ -168,23 +168,6 @@ static char *test_io_heap_count(void)
 	return NULL;
 }
 
-static char *test_io_current_line(void)
-{
-	x_obj_t *p_base, *p_result;
-
-	p_base = x_base_make(NULL, NULL);
-	x_prim_register(p_base, NULL);
-
-	p_result = x_prim_current_line(p_base, NULL);
-	_it_should("current-line returns an integer",
-		p_result != NULL);
-	_it_should("initial line number is 1",
-		x_intval(p_result) == 1);
-
-	test_cleanup(p_base);
-	return NULL;
-}
-
 static char *test_io_read_char(void)
 {
 	x_obj_t *p_base, *p_result;
@@ -205,36 +188,6 @@ static char *test_io_read_char(void)
 		p_result != NULL);
 	_it_should("read-char reads 'A'",
 		x_charval(p_result) == 'A');
-
-	test_cleanup(p_base);
-	return NULL;
-}
-
-static char *test_io_peek_char(void)
-{
-	x_obj_t *p_base, *p_result;
-	x_char_t buffer[32];
-
-	p_base = x_base_make(NULL, NULL);
-	x_prim_register(p_base, NULL);
-
-	helper_file_buffer_ptr[TEST_HELPER_FILE_STDIN] = "B";
-	helper_file_reset();
-
-	x_base_buffer_push(p_base, x_mkbuffer(p_base, buffer));
-
-	p_result = x_prim_peek_char(p_base, NULL);
-	_it_should("peek-char returns a char",
-		p_result != NULL);
-	_it_should("peek-char reads 'B'",
-		x_charval(p_result) == 'B');
-
-	/* Peek shouldn't consume — read again should get same char */
-	helper_file_buffer_ptr[TEST_HELPER_FILE_STDIN] = "B";
-	helper_file_reset();
-	p_result = x_prim_peek_char(p_base, NULL);
-	_it_should("peek-char doesn't consume",
-		x_charval(p_result) == 'B');
 
 	test_cleanup(p_base);
 	return NULL;
@@ -329,28 +282,6 @@ static char *test_io_read_char_eof(void)
 	return NULL;
 }
 
-static char *test_io_peek_char_eof(void)
-{
-	x_obj_t *p_base, *p_result;
-	x_char_t buffer[32];
-
-	p_base = x_base_make(NULL, NULL);
-	x_prim_register(p_base, NULL);
-
-	/* Empty stdin — peek-char should return NULL (EOF) */
-	helper_file_buffer_ptr[TEST_HELPER_FILE_STDIN] = "";
-	helper_file_buffer_remaining[TEST_HELPER_FILE_STDIN] = 0;
-	helper_file_reset();
-	x_base_buffer_push(p_base, x_mkbuffer(p_base, buffer));
-
-	p_result = x_prim_peek_char(p_base, NULL);
-	_it_should("peek-char returns NULL on EOF", NULL == p_result);
-
-	helper_file_buffer_remaining[TEST_HELPER_FILE_STDIN] = TEST_HELPER_FILE_UNDEFINED;
-	test_cleanup(p_base);
-	return NULL;
-}
-
 static char *test_io_clock(void)
 {
 	x_obj_t *p_base, *p_result;
@@ -426,11 +357,8 @@ static char *run_tests() {
 	_run_test(test_io_display);
 	_run_test(test_io_write);
 	_run_test(test_io_heap_count);
-	_run_test(test_io_current_line);
 	_run_test(test_io_read_char);
 	_run_test(test_io_read_char_eof);
-	_run_test(test_io_peek_char);
-	_run_test(test_io_peek_char_eof);
 	_run_test(test_io_write_to_string);
 	_run_test(test_io_clock);
 	_run_test(test_io_heap_mark_sweep_collect);

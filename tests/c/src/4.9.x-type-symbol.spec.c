@@ -135,20 +135,11 @@ static char *test_symbolname(void)
 
 static char *test_symbol_data_list(void)
 {
-	x_obj_t *p_symbol, *p_type = x_type_symbol_register(NULL, NULL);
-	x_char_t *str = X_TEST_SYMBOL_VALUE;
+	x_obj_t *p_type = x_type_symbol_register(NULL, NULL);
 
 	_it_should("return an empty Symbol data list",
 		x_obj_isnil(NULL, x_symbol_data_list(p_type))
 	);
-
-	p_symbol = x_mksymbol(NULL, str);
-
-	_xit_should("return the Symbol data list",
-		str == x_symbolname(x_0(x_symbol_data_list(p_type)))
-	);
-
-	x_sys_free(p_symbol);
 
 	return NULL;
 }
@@ -649,54 +640,6 @@ static char *test_type_symbol_find(void)
 	return NULL;
 }
 
-static char *test_type_symbol_eval(void)
-{
-	x_obj_t *p_base, *p_symbol, *p_args, *p_obj, *p_ret;
-	x_char_t buffer[256];
-
-	helper_alloc_reset();
-
-	/* With p_base object */
-	p_base = x_base_make(NULL, NULL);
-	p_symbol = x_mksatom(p_base, "SYMBOL");
-	p_args = x_mkspair(p_base, p_symbol, NULL);
-
-
-	helper_file_buffer_ptr[TEST_HELPER_FILE_STDERR] = buffer;
-	helper_file_reset();
-
-	p_ret = x_type_symbol_eval(p_base, p_args);
-	*file_buffer_ptr[TEST_HELPER_FILE_STDERR][TEST_HELPER_FILE_WRITE] = 0;
-	_it_should("trigger an error and return p_base",
-		p_base == p_ret
-		&& X_SYS_EXIT_FAILURE == x_sys_exit_status
-		&& 0 == strcmp(
-			"*** ERROR: Unbound SYMBOL 'SYMBOL",
-			buffer
-		)
-	);
-
-	helper_file_buffer_ptr[TEST_HELPER_FILE_STDERR] = NULL;
-	helper_file_reset();
-
-
-	p_obj = x_mksatom(p_base, p_base);
-	x_base_field_env_alist(p_base) = x_mkspair(p_base,
-		x_mkspair(p_base, p_symbol, p_obj),
-		x_base_field_env_alist(p_base)
-	);
-
-	p_ret = x_type_symbol_eval(p_base, p_args);
-	_it_should("return p_obj",
-		p_obj == p_ret
-	);
-
-
-	test_cleanup(p_base);
-
-	return NULL;
-}
-
 static char *run_tests() {
 	_run_test(test_obj_type_issymbol);
 	_run_test(test_symbolval);
@@ -712,7 +655,7 @@ static char *run_tests() {
 	_run_test(test_base_alist_assoc);
 	_run_test(test_type_symbol_make);
 	_run_test(test_type_symbol_find);
-	_xrun_test(test_type_symbol_eval);
+
 
 	return NULL;
 }

@@ -82,27 +82,6 @@ static x_obj_t *x_prim_read_char(x_obj_t *p_base, x_obj_t *p_args)
 	return x_mkchar(p_base, x_bufferlastchar(p_buffer));
 }
 
-/* peek-char: (peek-char) -> peek at next character without consuming */
-static x_obj_t *x_prim_peek_char(x_obj_t *p_base, x_obj_t *p_args)
-{
-	x_obj_t *p_buffer = x_base_field_buffer(p_base);
-	x_char_t ch;
-	x_spair_t buf_args[1] = {
-		x_obj_set(NULL, X_OBJ_FLAG_NONE, { p_buffer }, { p_base })
-	};
-
-	p_buffer = x_type_buffer_read(p_base, (x_obj_t *)buf_args);
-
-	if (x_obj_isnil(p_base, p_buffer)) {
-		return NULL;
-	}
-
-	ch = x_bufferlastchar(p_buffer);
-	x_bufferread(p_buffer) -= 1;
-
-	return x_mkchar(p_base, ch);
-}
-
 /* to-string helper: capture output of dispatch function into a string */
 static x_obj_t *x_prim_to_string(x_obj_t *p_base, x_obj_t *p_args,
 	x_obj_t *(*dispatch)(x_obj_t *, x_obj_t *))
@@ -189,12 +168,6 @@ static x_obj_t *x_prim_heap_mark(x_obj_t *p_base, x_obj_t *p_args)
 		x_type_heap_mark);
 
 	return NULL;
-}
-
-/* current-line: (current-line) -> current input line number */
-static x_obj_t *x_prim_current_line(x_obj_t *p_base, x_obj_t *p_args)
-{
-	return x_mkint(p_base, x_atomint(x_base_field_line(p_base)));
 }
 
 /* repl: minimal read-eval loop until EOF (no output, no hooks) */

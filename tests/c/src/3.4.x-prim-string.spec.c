@@ -116,33 +116,6 @@ static char *test_string_append(void)
 	return NULL;
 }
 
-static char *test_string_eq(void)
-{
-	x_obj_t *p_base, *p_args, *p_result;
-
-	p_base = x_base_make(NULL, NULL);
-	x_prim_register(p_base, NULL);
-
-	/* (string=? "abc" "abc") -> t */
-	p_args = x_mkspair(p_base,
-		x_mkstr(p_base, "abc"),
-		x_mkspair(p_base, x_mkstr(p_base, "abc"), NULL));
-	p_result = x_prim_string_eq(p_base, p_args);
-	_it_should("(string=? \"abc\" \"abc\") returns t",
-		p_result == x_base_field_true(p_base));
-
-	/* (string=? "abc" "def") -> nil */
-	p_args = x_mkspair(p_base,
-		x_mkstr(p_base, "abc"),
-		x_mkspair(p_base, x_mkstr(p_base, "def"), NULL));
-	p_result = x_prim_string_eq(p_base, p_args);
-	_it_should("(string=? \"abc\" \"def\") returns nil",
-		p_result == NULL);
-
-	test_cleanup(p_base);
-	return NULL;
-}
-
 static char *test_string_symbol_convert(void)
 {
 	x_obj_t *p_base, *p_args, *p_result;
@@ -297,7 +270,6 @@ static char *test_str_call_negative_index(void)
 
 static char *run_tests() {
 	_run_test(test_string_append);
-	_run_test(test_string_eq);
 	_run_test(test_string_symbol_convert);
 	_run_test(test_number_string_convert);
 	_run_test(test_list_to_string);

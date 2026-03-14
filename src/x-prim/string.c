@@ -42,16 +42,6 @@ static x_obj_t *x_prim_string_append(x_obj_t *p_base, x_obj_t *p_args)
 	return x_mkstrown(p_base, s);
 }
 
-/* string=?: (string=? str1 str2) -> t if equal */
-static x_obj_t *x_prim_string_eq(x_obj_t *p_base, x_obj_t *p_args)
-{
-	x_obj_t *p_a = x_prim_eval_arg(p_base, x_firstobj(p_args)),
-		*p_b = x_prim_eval_arg(p_base, x_firstobj(x_restobj(p_args)));
-
-	return x_lib_strcmp(x_strval(p_a), x_strval(p_b)) == 0
-		? x_base_field_true(p_base) : NULL;
-}
-
 /* string->symbol: (string->symbol str) -> convert string to symbol */
 static x_obj_t *x_prim_string_to_symbol(x_obj_t *p_base, x_obj_t *p_args)
 {

@@ -26,8 +26,7 @@
 #define STUB_X_TYPE_PRIM
 #include "helper-stubs.c"
 
-/* x_base_env_alist_assoc is not yet implemented */
-x_obj_t *x_base_env_alist_assoc(x_obj_t *p_base, x_obj_t *p_args) { return NULL; }
+
 
 /*
  * Controllable stubs for x_token_read/write and x_eval.
@@ -358,75 +357,8 @@ static char *test_base_env_alist_extend(void)
 	return NULL;
 }
 
-static char *test_base_env_alist_assoc(void)
-{
-	x_obj_t *p_base, *p_obj[2], *p_args, *p_assoc[2];
-	x_char_t *s[3] = {
-		"item1",
-		"item2",
-		"item3"
-	};
-
-	p_args = x_mkspair(NULL,
-		x_mksatom(NULL, s[0]),
-		NULL
-	);
-
-	p_obj[0] = x_base_env_alist_assoc(NULL, p_args);
-	_it_should("return NULL when base is NULL",
-		NULL == p_obj[0]
-	);
-
-	p_base = x_mksatom(NULL, NULL);
-	p_obj[0] = x_base_env_alist_assoc(p_base, p_args);
-	_it_should("return nil when base is not set",
-		NULL == p_obj[0]
-	);
-
-	x_sys_free(p_base);
 
 
-	p_base = x_base_make(NULL, NULL);
-
-	p_args = x_mkspair(p_base, x_mksatom(p_base, s[0]), NULL);
-	p_obj[0] = x_base_env_alist_assoc(p_base, p_args);
-	_it_should("return nil when item is not found",
-		NULL == p_obj[0]
-	);
-
-
-	p_assoc[0] = x_mkspair(p_base, x_mksatom(p_base, s[0]), NULL);
-	p_assoc[1] = x_mkspair(p_base, x_mksatom(p_base, s[1]), NULL);
-	x_base_env_alist_extend(p_base, p_assoc[0]);
-	x_base_env_alist_extend(p_base, p_assoc[1]);
-
-	p_obj[0] = x_base_env_alist_assoc(p_base, p_args);
-	_it_should("return item when found",
-		x_firstobj(p_assoc[0]) == x_firstobj(p_obj[0])
-	);
-
-	p_obj[1] = x_base_env_alist_assoc(p_base, p_args);
-	_it_should("return same item when found",
-		p_obj[0] == p_obj[1]
-	);
-
-
-	p_args = x_mkspair(p_base, x_mksatom(p_base, s[1]), NULL);
-	p_obj[0] = x_base_env_alist_assoc(p_base, p_args);
-	_it_should("return second item when found",
-		x_firstobj(p_assoc[1]) == x_firstobj(p_obj[0])
-	);
-
-	p_args = x_mkspair(p_base, x_mksatom(p_base, s[2]), NULL);
-	p_obj[0] = x_base_env_alist_assoc(p_base, p_args);
-	_it_should("return nil when item is not found",
-		NULL == p_obj[0]
-	);
-
-	x_sys_free(p_base);
-
-	return NULL;
-}
 
 static char *test_base_read(void)
 {
@@ -702,7 +634,7 @@ static char *run_tests() {
 	_run_test(test_base_type_alist_extend);
 	_run_test(test_base_type_alist_assoc);
 	_run_test(test_base_env_alist_extend);
-	_xrun_test(test_base_env_alist_assoc);
+
 	_run_test(test_base_read);
 	_run_test(test_base_write);
 	_run_test(test_base_write_buf);
