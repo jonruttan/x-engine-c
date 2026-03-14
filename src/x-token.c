@@ -199,6 +199,8 @@ x_obj_t *x_token_analyse(x_obj_t *p_base, x_obj_t *p_args)
 x_obj_t *x_token_read(x_obj_t *p_base, x_obj_t *p_args)
 {
 	x_obj_t *p_buffer = x_firstobj(p_args), *p_entry, *p_read, *p_obj;
+	x_char_t *p_scan;
+	x_int_t line;
 	x_spair_t buffer_args[3] = {
 			x_obj_set(NULL, X_OBJ_FLAG_NONE, { p_buffer }, { (x_obj_t *)(buffer_args + 1) }),
 			x_obj_set(NULL, X_OBJ_FLAG_NONE, { NULL }, { NULL }),
@@ -214,6 +216,19 @@ x_obj_t *x_token_read(x_obj_t *p_base, x_obj_t *p_args)
 			return NULL;
 		}
 
+		/* Count newlines in consumed region for line tracking.
+		 * After x_token_analyse, bufferval..bufferread is the
+		 * consumed token text. Track independently of the base
+		 * line counter (which gets inflated by analysis rescans). */
+		if (x_obj_meta_extra > 0
+				&& (x_obj_flags(p_buffer) & X_OBJ_FLAG_EXT)) {
+			for (p_scan = x_bufferval(p_buffer);
+					p_scan < x_bufferread(p_buffer); p_scan++) {
+				if (*p_scan == '\n')
+					x_obj_meta_slot(p_buffer, 0).i++;
+			}
+		}
+
 		p_read = x_type_field_read(x_restobj(p_entry));
 
 		if (x_obj_isnil(p_base, p_read)) {
@@ -222,11 +237,26 @@ x_obj_t *x_token_read(x_obj_t *p_base, x_obj_t *p_args)
 			continue;
 		}
 
+		/* Save line before read (read may advance buffer via
+		 * recursive x_token_read calls for nested lists). */
+		line = 0;
+		if (x_obj_meta_extra > 0
+				&& (x_obj_flags(p_buffer) & X_OBJ_FLAG_EXT)) {
+			line = x_obj_meta_slot(p_buffer, 0).i;
+		}
+
 		prim_arg_prim = p_read;
 		p_obj = x_type_prim_apply(p_base, (x_obj_t *)prim_args);
 
 		if (x_obj_isnil(p_base, p_obj)) {
 			return NULL;
+		}
+
+		/* Stamp line number on created object. */
+		if (x_obj_meta_extra > 0
+				&& !x_obj_isnil(p_base, p_obj)
+				&& (x_obj_flags(p_obj) & X_OBJ_FLAG_EXT)) {
+			x_obj_meta_slot(p_obj, 0).i = line;
 		}
 
 		x_type_buffer_retain(p_base, (x_obj_t *)buffer_args);

@@ -480,6 +480,12 @@ static x_obj_t *x_prim_token_read_string(x_obj_t *p_base, x_obj_t *p_args)
 	p_buffer = x_mkfbufferown(p_token_base, X_OBJ_FLAG_RO, buf);
 	x_bufferwrite(p_buffer) = x_bufferval(p_buffer) + len;
 
+	/* Initialize line counter in buffer's extra metadata slot. */
+	if (x_obj_meta_extra > 0
+			&& (x_obj_flags(p_buffer) & X_OBJ_FLAG_EXT)) {
+		x_obj_meta_slot(p_buffer, 0).i = 1;
+	}
+
 	p_result = NULL;
 	p_tail = NULL;
 
