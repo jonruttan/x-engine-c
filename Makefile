@@ -221,7 +221,7 @@ test-coverage: coverage-clean ## Run C unit tests with coverage report
 
 test-coverage-x: coverage-clean ## Run x-lang tests with coverage report
 	$(MAKE) clean
-	CFLAGS="-O0 --coverage" $(MAKE) $(EXECUTABLE)
+	CFLAGS="-Og --coverage" $(MAKE) $(EXECUTABLE)
 	sh tests/x/spec-runner.sh
 	@for lang in $(LANGS); do \
 		sh lang/$$lang/tests/spec-runner.sh || exit 1; \
@@ -232,12 +232,12 @@ test-coverage-x: coverage-clean ## Run x-lang tests with coverage report
 
 test-coverage-all: coverage-clean ## Run all tests with combined coverage report
 	$(MAKE) clean
-	CFLAGS="-O0 --coverage" $(MAKE) $(EXECUTABLE)
+	CFLAGS="-Og --coverage" $(MAKE) $(EXECUTABLE)
 	sh tests/x/spec-runner.sh
 	@for lang in $(LANGS); do \
 		sh lang/$$lang/tests/spec-runner.sh || exit 1; \
 	done
-	CFLAGS="$(TEST_CFLAGS) -O0 --coverage" RUNNER=command sh $(PATH_TESTS_C)/test-runner/test-runner.sh $(TESTS)
+	CFLAGS="$(TEST_CFLAGS) -Og --coverage" RUNNER=command sh $(PATH_TESTS_C)/test-runner/test-runner.sh $(TESTS)
 	mkdir -p $(COVERAGE_DIR)
 	gcovr -r . --filter 'src/' --print-summary --html-details $(COVERAGE_DIR)/index.html
 .PHONY: test-coverage-all
