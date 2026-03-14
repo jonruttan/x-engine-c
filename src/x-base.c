@@ -75,7 +75,10 @@ x_obj_t *x_base_make(x_obj_t *p_base, x_obj_t *p_args)
 		pair(
 			/* save-stack */
 			nil,
-		nil))))))));
+		pair(
+			/* obj-meta-extra (stack-wrapped) */
+			pair(atom(0), nil),
+		nil)))))))));
 
 	/* Set x-obj hooks for the type system. */
 	x_obj_hook_type_name = x_type_prim_type_name;

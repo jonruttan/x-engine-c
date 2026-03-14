@@ -33,6 +33,8 @@
  *   line-stack
  *   (alloc-count-stack eval-count-stack tco-count-stack)
  *   (hook:type-name-stack hook:units-stack hook:length-stack hook:error-stack)
+ *   save-stack
+ *   obj-meta-extra-stack
  * )
  * ```
  *
@@ -107,6 +109,9 @@
 #define x_base_field_hook_error(X)			x_firstobj(x_base_field_hook_error_stack((X)))
 
 #define x_base_field_save_stack(X)			x_firstobj(x_restobj(x_restobj(x_restobj(x_restobj(x_restobj(x_restobj(x_restobj(x_firstobj(X)))))))))
+
+#define x_base_field_obj_meta_extra_stack(X)	x_firstobj(x_restobj(x_restobj(x_restobj(x_restobj(x_restobj(x_restobj(x_restobj(x_restobj(x_firstobj(X))))))))))
+#define x_base_field_obj_meta_extra(X)			x_firstobj(x_base_field_obj_meta_extra_stack((X)))
 
 #define x_base_isset(B)						((B) != NULL && x_base((B)) != NULL)
 

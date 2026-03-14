@@ -17,6 +17,7 @@
  * # Includes
  */
 #include "x-prim.h"
+#include "x-base.h"
 #include "x-type/int.h"
 #include "x-type/ptr.h"
 #include "x-type/str.h"
@@ -398,6 +399,67 @@ static x_obj_t *x_prim_ptr_ref_word(x_obj_t *p_base, x_obj_t *p_args)
 	return x_mkint(p_base, (x_int_t)val);
 }
 
+/* obj-meta-extra: (obj-meta-extra) -> int
+ * Get the current extra metadata slot count. */
+static x_obj_t *x_prim_obj_meta_extra(x_obj_t *p_base, x_obj_t *p_args)
+{
+	return x_mkint(p_base, (x_int_t)x_obj_meta_extra);
+}
+
+/* obj-meta-extra!: (obj-meta-extra! n) -> int
+ * Set extra metadata slot count, return old value. */
+static x_obj_t *x_prim_obj_meta_extra_set(x_obj_t *p_base, x_obj_t *p_args)
+{
+	x_obj_t *p_n;
+	x_int_t old;
+
+	old = (x_int_t)x_obj_meta_extra;
+	p_n = x_prim_eval_arg(p_base, x_firstobj(p_args));
+	x_obj_meta_extra = (size_t)x_intval(p_n);
+
+	if (x_base_isset(p_base)) {
+		x_atomint(x_base_field_obj_meta_extra(p_base)) = x_intval(p_n);
+	}
+
+	return x_mkint(p_base, old);
+}
+
+/* obj-meta-ref: (obj-meta-ref obj i) -> int
+ * Read extra metadata slot i. Returns 0 if object has no extra slots. */
+static x_obj_t *x_prim_obj_meta_ref(x_obj_t *p_base, x_obj_t *p_args)
+{
+	x_obj_t *p_obj, *p_i;
+
+	p_obj = x_prim_eval_arg(p_base, x_firstobj(p_args));
+	p_i = x_prim_eval_arg(p_base, x_firstobj(x_restobj(p_args)));
+
+	if (x_obj_isnil(p_base, p_obj)
+			|| !(x_obj_flags(p_obj) & X_OBJ_FLAG_EXT)) {
+		return x_mkint(p_base, 0);
+	}
+
+	return x_mkint(p_base, x_obj_meta_slot(p_obj, x_intval(p_i)).i);
+}
+
+/* obj-meta-set!: (obj-meta-set! obj i val) -> val
+ * Write extra metadata slot i. No-op if object has no extra slots. */
+static x_obj_t *x_prim_obj_meta_set(x_obj_t *p_base, x_obj_t *p_args)
+{
+	x_obj_t *p_obj, *p_i, *p_val;
+
+	p_obj = x_prim_eval_arg(p_base, x_firstobj(p_args));
+	p_i = x_prim_eval_arg(p_base, x_firstobj(x_restobj(p_args)));
+	p_val = x_prim_eval_arg(p_base,
+		x_firstobj(x_restobj(x_restobj(p_args))));
+
+	if (!x_obj_isnil(p_base, p_obj)
+			&& (x_obj_flags(p_obj) & X_OBJ_FLAG_EXT)) {
+		x_obj_meta_slot(p_obj, x_intval(p_i)).i = x_intval(p_val);
+	}
+
+	return p_val;
+}
+
 x_obj_t *x_prim_ffi_register(x_obj_t *p_base, x_obj_t *p_args)
 {
 	static const x_prim_entry_t entries[] = {
@@ -413,7 +475,11 @@ x_obj_t *x_prim_ffi_register(x_obj_t *p_base, x_obj_t *p_args)
 		{ "ptr-set-word!", x_prim_ptr_set_word },
 		{ "obj->ptr", x_prim_obj_to_ptr },
 		{ "string->ptr", x_prim_string_to_ptr },
-		{ "ptr->string", x_prim_ptr_to_string }
+		{ "ptr->string", x_prim_ptr_to_string },
+		{ "obj-meta-extra", x_prim_obj_meta_extra },
+		{ "obj-meta-extra!", x_prim_obj_meta_extra_set },
+		{ "obj-meta-ref", x_prim_obj_meta_ref },
+		{ "obj-meta-set!", x_prim_obj_meta_set }
 	};
 
 	x_prim_bind_table(p_base, entries,

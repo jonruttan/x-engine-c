@@ -20,3 +20,5 @@
 
 
 x_satom_t x_type_base_obj = x_obj_set(NULL, X_OBJ_FLAG_NONE, {.s = (x_char_t *)"BASE"});
+
+size_t x_obj_meta_extra = 0;
