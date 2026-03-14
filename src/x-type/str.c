@@ -88,9 +88,9 @@ x_obj_t *x_type_str_call(x_obj_t *p_base, x_obj_t *p_args)
 	x_obj_t *arg1, *arg2;
 	x_int_t n;
 
-	/* Evaluate first arg. */
+	/* No args: return length */
 	if (x_obj_isnil(p_base, vals)) {
-		return NULL;
+		return x_mkint(p_base, x_lib_strlen(x_strval(proc)));
 	}
 
 	arg1 = x_prim_eval_arg(p_base, x_firstobj(vals));

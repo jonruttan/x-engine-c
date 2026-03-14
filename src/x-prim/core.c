@@ -294,21 +294,6 @@ x_obj_t *x_prim_match(x_obj_t *p_base, x_obj_t *p_args)
 	return NULL;
 }
 
-/* %rewrite: (%rewrite pair new-first new-rest) -> mutate pair in-place */
-x_obj_t *x_prim_rewrite(x_obj_t *p_base, x_obj_t *p_args)
-{
-	x_obj_t *p_pair = x_prim_eval_arg(p_base, x_firstobj(p_args)),
-		*p_first = x_prim_eval_arg(p_base,
-			x_firstobj(x_restobj(p_args))),
-		*p_rest = x_prim_eval_arg(p_base,
-			x_firstobj(x_restobj(x_restobj(p_args))));
-
-	x_firstobj(p_pair) = p_first;
-	x_restobj(p_pair) = p_rest;
-
-	return p_pair;
-}
-
 /* first-int: (first-int x) -> car slot as integer atom */
 x_obj_t *x_prim_first_int(x_obj_t *p_base, x_obj_t *p_args)
 {
@@ -427,7 +412,6 @@ x_obj_t *x_prim_core_register(x_obj_t *p_base, x_obj_t *p_args)
 		{ "guard", x_prim_guard },
 		{ "error", x_prim_error },
 		{ "match", x_prim_match },
-		{ "%rewrite", x_prim_rewrite },
 		{ "first-int", x_prim_first_int },
 		{ "rest-int", x_prim_rest_int },
 		{ "set-first", x_prim_set_first },

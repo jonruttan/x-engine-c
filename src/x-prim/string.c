@@ -22,23 +22,6 @@
 #include "x-type/str.h"
 #include "x-type/symbol.h"
 
-/* string-length: (string-length str) -> integer length */
-static x_obj_t *x_prim_string_length(x_obj_t *p_base, x_obj_t *p_args)
-{
-	x_obj_t *p_str = x_prim_eval_arg(p_base, x_firstobj(p_args));
-
-	return x_mkint(p_base, x_lib_strlen(x_strval(p_str)));
-}
-
-/* string-ref: (string-ref str index) -> character */
-static x_obj_t *x_prim_string_ref(x_obj_t *p_base, x_obj_t *p_args)
-{
-	x_obj_t *p_str = x_prim_eval_arg(p_base, x_firstobj(p_args)),
-		*p_idx = x_prim_eval_arg(p_base, x_firstobj(x_restobj(p_args)));
-
-	return x_mkchar(p_base, *(x_strval(p_str) + x_intval(p_idx)));
-}
-
 /* string-append: (string-append str...) -> concatenated string */
 static x_obj_t *x_prim_string_append(x_obj_t *p_base, x_obj_t *p_args)
 {
@@ -57,19 +40,6 @@ static x_obj_t *x_prim_string_append(x_obj_t *p_base, x_obj_t *p_args)
 	x_lib_memcpy(s + la, sb, lb + 1);
 
 	return x_mkstrown(p_base, s);
-}
-
-/* substring: (substring str start end) -> sub-string */
-static x_obj_t *x_prim_substring(x_obj_t *p_base, x_obj_t *p_args)
-{
-	x_obj_t *p_str = x_prim_eval_arg(p_base, x_firstobj(p_args)),
-		*p_start = x_prim_eval_arg(p_base, x_firstobj(x_restobj(p_args))),
-		*p_end = x_prim_eval_arg(p_base,
-			x_firstobj(x_restobj(x_restobj(p_args))));
-	x_int_t start = x_intval(p_start), end = x_intval(p_end);
-
-	return x_mkstrown(p_base, x_lib_strndup(x_strval(p_str) + start,
-		end - start));
 }
 
 /* string=?: (string=? str1 str2) -> t if equal */
@@ -168,10 +138,7 @@ static x_obj_t *x_prim_make_string(x_obj_t *p_base, x_obj_t *p_args)
 x_obj_t *x_prim_string_register(x_obj_t *p_base, x_obj_t *p_args)
 {
 	static const x_prim_entry_t entries[] = {
-		{ "string-length", x_prim_string_length },
-		{ "string-ref", x_prim_string_ref },
 		{ "string-append", x_prim_string_append },
-		{ "substring", x_prim_substring },
 		{ "string=?", x_prim_string_eq },
 		{ "string->symbol", x_prim_string_to_symbol },
 		{ "symbol->string", x_prim_symbol_to_string },

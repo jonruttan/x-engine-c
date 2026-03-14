@@ -64,18 +64,6 @@ static x_obj_t *x_prim_display(x_obj_t *p_base, x_obj_t *p_args)
 	return NULL;
 }
 
-/* newline: (newline) -> output newline character */
-static x_obj_t *x_prim_newline(x_obj_t *p_base, x_obj_t *p_args)
-{
-	x_satom_t str = x_obj_set(x_type_atom_obj, X_OBJ_FLAG_NONE,
-		{ .s = "\n" });
-	x_spair_t wrap = x_obj_set(NULL, X_OBJ_FLAG_NONE, { str }, { NULL });
-
-	x_base_write_str(p_base, (x_obj_t *)&wrap);
-
-	return NULL;
-}
-
 /* read: (read) -> read one s-expression from stdin */
 static x_obj_t *x_prim_read_expr(x_obj_t *p_base, x_obj_t *p_args)
 {
@@ -211,16 +199,6 @@ static x_obj_t *x_prim_heap_mark(x_obj_t *p_base, x_obj_t *p_args)
 	return NULL;
 }
 
-/* heap-collect: (heap-collect) -> atomic mark+sweep */
-static x_obj_t *x_prim_heap_collect(x_obj_t *p_base, x_obj_t *p_args)
-{
-	x_prim_heap_mark(p_base, p_args);
-	x_heap_sweep(p_base, x_obj_heap(p_base), X_OBJ_FLAG_HEAP,
-		x_type_heap_free);
-
-	return NULL;
-}
-
 /* current-line: (current-line) -> current input line number */
 static x_obj_t *x_prim_current_line(x_obj_t *p_base, x_obj_t *p_args)
 {
@@ -247,7 +225,6 @@ x_obj_t *x_prim_io_register(x_obj_t *p_base, x_obj_t *p_args)
 	static const x_prim_entry_t entries[] = {
 		{ "write", x_prim_write },
 		{ "display", x_prim_display },
-		{ "newline", x_prim_newline },
 		{ "read", x_prim_read_expr },
 		{ "read-char", x_prim_read_char },
 		{ "peek-char", x_prim_peek_char },
@@ -255,7 +232,6 @@ x_obj_t *x_prim_io_register(x_obj_t *p_base, x_obj_t *p_args)
 		{ "display-to-string", x_prim_display_to_string },
 		{ "heap-mark", x_prim_heap_mark },
 		{ "heap-sweep", x_prim_heap_sweep },
-		{ "heap-collect", x_prim_heap_collect },
 		{ "heap-count", x_prim_heap_count },
 		{ "current-line", x_prim_current_line }
 	};
