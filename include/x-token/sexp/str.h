@@ -48,7 +48,8 @@ extern x_satom_t x_sexp_str_analyse1_prim,
 	x_sexp_str_analyse2_prim,
 	x_sexp_str_analyse3_prim,
 	x_sexp_str_read_prim,
-	x_sexp_str_write_prim;
+	x_sexp_str_write_prim,
+	x_sexp_str_display_prim;
 
 
 x_obj_t *x_sexp_str_analyse1(x_obj_t *p_base, x_obj_t *p_args);
@@ -56,5 +57,6 @@ x_obj_t *x_sexp_str_analyse2(x_obj_t *p_base, x_obj_t *p_args);
 x_obj_t *x_sexp_str_analyse3(x_obj_t *p_base, x_obj_t *p_args);
 x_obj_t *x_sexp_str_read(x_obj_t *p_base, x_obj_t *p_args);
 x_obj_t *x_sexp_str_write(x_obj_t *p_base, x_obj_t *p_args);
+x_obj_t *x_sexp_str_display(x_obj_t *p_base, x_obj_t *p_args);
 
 #endif /* X_SEXP_STR_H */

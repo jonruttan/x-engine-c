@@ -26,7 +26,7 @@
  #   (mark make free clone units length)
  #   (call eval)
  #   (from to)
- #   (analyse delimit write error)
+ #   (analyse delimit write display error)
  # )
  * ```
  */
@@ -67,7 +67,8 @@
 #define x_type_field_analyse(X)       x_firstobj(x_type_field_io((X)))
 #define x_type_field_delimit(X)       x_firstobj(x_restobj(x_type_field_io((X))))
 #define x_type_field_write(X)         x_firstobj(x_restobj(x_restobj(x_type_field_io((X)))))
-#define x_type_field_error(X)         x_firstobj(x_restobj(x_restobj(x_restobj(x_type_field_io((X))))))
+#define x_type_field_display(X)       x_firstobj(x_restobj(x_restobj(x_restobj(x_type_field_io((X))))))
+#define x_type_field_error(X)         x_firstobj(x_restobj(x_restobj(x_restobj(x_restobj(x_type_field_io((X)))))))
 
 #define x_type_arg_type(X)            x_firstobj((X))
 
@@ -91,6 +92,7 @@ struct x_type_t
 	x_obj_t *p_analyse;
 	x_obj_t *p_delimit;
 	x_obj_t *p_write;
+	x_obj_t *p_display;
 	x_obj_t *p_error;
 };
 
@@ -98,6 +100,7 @@ struct x_type_t
 x_obj_t *x_type_struct_make(x_obj_t *p_base, struct x_type_t type);
 x_obj_t *x_type_struct_get(x_obj_t *p_base, x_obj_t *p_args);
 x_obj_t *x_type_write(x_obj_t *p_base, x_obj_t *p_args);
+x_obj_t *x_type_display(x_obj_t *p_base, x_obj_t *p_args);
 x_obj_t *x_type_error(x_obj_t *p_base, x_obj_t *p_args);
 
 x_obj_t *x_type_prim_type_name(x_obj_t *p_base, x_obj_t *p_args);

@@ -46,28 +46,18 @@ static x_obj_t *x_prim_write(x_obj_t *p_base, x_obj_t *p_args)
 	return NULL;
 }
 
-/* display: (display obj ...) -> output human-readable (strings unquoted) */
+/* display: (display obj ...) -> output human-readable via type system */
 static x_obj_t *x_prim_display(x_obj_t *p_base, x_obj_t *p_args)
 {
 	x_obj_t *p_val;
-	x_spair_t write_args[1] = {
+	x_spair_t display_args[1] = {
 		x_obj_set(NULL, X_OBJ_FLAG_NONE, { NULL }, { NULL })
 	};
-	x_satom_t str = x_obj_set(x_type_atom_obj, X_OBJ_FLAG_NONE,
-		{ .s = NULL });
-	x_spair_t wrap = x_obj_set(NULL, X_OBJ_FLAG_NONE, { str }, { NULL });
 
 	while ( ! x_obj_isnil(p_base, p_args)) {
 		p_val = x_prim_eval_arg(p_base, x_firstobj(p_args));
-
-		if (x_obj_type_isstr(p_base, p_val)) {
-			x_atomstr(str) = x_strval(p_val);
-			x_base_write_str(p_base, (x_obj_t *)&wrap);
-		} else {
-			x_firstobj((x_obj_t *)write_args) = p_val;
-			x_token_write(p_base, (x_obj_t *)write_args);
-		}
-
+		x_firstobj((x_obj_t *)display_args) = p_val;
+		x_token_display(p_base, (x_obj_t *)display_args);
 		p_args = x_restobj(p_args);
 	}
 
@@ -135,8 +125,9 @@ static x_obj_t *x_prim_peek_char(x_obj_t *p_base, x_obj_t *p_args)
 	return x_mkchar(p_base, ch);
 }
 
-/* write-to-string: (write-to-string obj) -> string representation */
-x_obj_t *x_prim_write_to_string(x_obj_t *p_base, x_obj_t *p_args)
+/* to-string helper: capture output of dispatch function into a string */
+static x_obj_t *x_prim_to_string(x_obj_t *p_base, x_obj_t *p_args,
+	x_obj_t *(*dispatch)(x_obj_t *, x_obj_t *))
 {
 	x_obj_t *p_val, *p_saved_buf;
 	x_char_t buf[256];
@@ -145,7 +136,7 @@ x_obj_t *x_prim_write_to_string(x_obj_t *p_base, x_obj_t *p_args)
 		x_obj_set(NULL, X_OBJ_FLAG_NONE,
 			{ .v = buf }, { (x_obj_t *)&buf_pos })
 	};
-	x_spair_t write_args[1] = {
+	x_spair_t dispatch_args[1] = {
 		x_obj_set(NULL, X_OBJ_FLAG_NONE, { NULL }, { NULL })
 	};
 
@@ -159,13 +150,25 @@ x_obj_t *x_prim_write_to_string(x_obj_t *p_base, x_obj_t *p_args)
 	p_saved_buf = x_base_field_write_buf(p_base);
 	x_base_field_write_buf(p_base) = (x_obj_t *)buf_obj;
 
-	x_firstobj((x_obj_t *)write_args) = p_val;
-	x_token_write(p_base, (x_obj_t *)write_args);
+	x_firstobj((x_obj_t *)dispatch_args) = p_val;
+	dispatch(p_base, (x_obj_t *)dispatch_args);
 
 	x_base_field_write_buf(p_base) = p_saved_buf;
 	buf[x_atomint(buf_pos)] = '\0';
 
 	return x_mkstrown(p_base, x_lib_strndup(buf, x_atomint(buf_pos)));
+}
+
+/* write-to-string: (write-to-string obj) -> string representation */
+x_obj_t *x_prim_write_to_string(x_obj_t *p_base, x_obj_t *p_args)
+{
+	return x_prim_to_string(p_base, p_args, x_token_write);
+}
+
+/* display-to-string: (display-to-string obj) -> display representation */
+static x_obj_t *x_prim_display_to_string(x_obj_t *p_base, x_obj_t *p_args)
+{
+	return x_prim_to_string(p_base, p_args, x_token_display);
 }
 
 #ifdef X_CLOCK
@@ -249,6 +252,7 @@ x_obj_t *x_prim_io_register(x_obj_t *p_base, x_obj_t *p_args)
 		{ "read-char", x_prim_read_char },
 		{ "peek-char", x_prim_peek_char },
 		{ "write-to-string", x_prim_write_to_string },
+		{ "display-to-string", x_prim_display_to_string },
 		{ "heap-mark", x_prim_heap_mark },
 		{ "heap-sweep", x_prim_heap_sweep },
 		{ "heap-collect", x_prim_heap_collect },

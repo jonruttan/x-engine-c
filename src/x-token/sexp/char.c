@@ -30,7 +30,8 @@ x_satom_t x_sexp_char_analyse1_prim = x_obj_set(x_type_atom_obj, X_OBJ_FLAG_NONE
  	x_sexp_char_analyse2_prim = x_obj_set(x_type_atom_obj, X_OBJ_FLAG_NONE, { .fn = x_sexp_char_analyse2 }),
  	x_sexp_char_analyse3_prim = x_obj_set(x_type_atom_obj, X_OBJ_FLAG_NONE, { .fn = x_sexp_char_analyse3 }),
  	x_sexp_char_read_prim = x_obj_set(x_type_atom_obj, X_OBJ_FLAG_NONE, { .fn = x_sexp_char_read }),
- 	x_sexp_char_write_prim = x_obj_set(x_type_atom_obj, X_OBJ_FLAG_NONE, { .fn = x_sexp_char_write });
+ 	x_sexp_char_write_prim = x_obj_set(x_type_atom_obj, X_OBJ_FLAG_NONE, { .fn = x_sexp_char_write }),
+ 	x_sexp_char_display_prim = x_obj_set(x_type_atom_obj, X_OBJ_FLAG_NONE, { .fn = x_sexp_char_display });
 
 /* analyse4 prim: named-character state — reads lowercase letters */
 static x_satom_t x_sexp_char_analyse4_prim =
@@ -172,4 +173,20 @@ x_obj_t *x_sexp_char_write(x_obj_t *p_base, x_obj_t *p_args)
 	}
 
 	return NULL;
+}
+
+x_obj_t *x_sexp_char_display(x_obj_t *p_base, x_obj_t *p_args)
+{
+	x_satom_t str = x_obj_set(x_type_atom_obj, X_OBJ_FLAG_NONE,
+		{ .s = &x_atomchar(x_firstobj(p_args)) }),
+		sz = x_obj_set(x_type_atom_obj, X_OBJ_FLAG_NONE, { .i = 1 });
+	x_spair_t wrap[2] = {
+		x_obj_set(NULL, X_OBJ_FLAG_NONE,
+			{ str }, { (x_obj_t *)(wrap + 1) }),
+		x_obj_set(NULL, X_OBJ_FLAG_NONE, { sz }, { NULL })
+	};
+
+	x_base_write_str(p_base, (x_obj_t *)wrap);
+
+	return x_firstobj(p_args);
 }

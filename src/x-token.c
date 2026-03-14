@@ -243,3 +243,22 @@ x_obj_t *x_token_write(x_obj_t *p_base, x_obj_t *p_args)
 
 	return NULL;
 }
+
+x_obj_t *x_token_display(x_obj_t *p_base, x_obj_t *p_args)
+{
+	x_obj_t *p_obj = x_firstobj(p_args);
+
+	if (x_obj_type_issatom(p_obj)) {
+		return x_sexp_atom_write(p_base, p_args);
+	}
+
+	if (x_obj_type_isspair(p_obj)) {
+		return x_sexp_pair_write(p_base, p_args);
+	}
+
+	if ( ! x_obj_isnil(p_base, x_obj_type(p_obj))) {
+		return x_type_display(p_base, p_args);
+	}
+
+	return NULL;
+}

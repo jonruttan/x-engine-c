@@ -28,7 +28,8 @@ x_satom_t x_sexp_str_analyse1_prim = x_obj_set(x_type_atom_obj, X_OBJ_FLAG_NONE,
 	x_sexp_str_analyse2_prim = x_obj_set(x_type_atom_obj, X_OBJ_FLAG_NONE, { .fn = x_sexp_str_analyse2 }),
 	x_sexp_str_analyse3_prim = x_obj_set(x_type_atom_obj, X_OBJ_FLAG_NONE, { .fn = x_sexp_str_analyse3 }),
 	x_sexp_str_read_prim = x_obj_set(x_type_atom_obj, X_OBJ_FLAG_NONE, { .fn = x_sexp_str_read }),
-	x_sexp_str_write_prim = x_obj_set(x_type_atom_obj, X_OBJ_FLAG_NONE, { .fn = x_sexp_str_write });
+	x_sexp_str_write_prim = x_obj_set(x_type_atom_obj, X_OBJ_FLAG_NONE, { .fn = x_sexp_str_write }),
+	x_sexp_str_display_prim = x_obj_set(x_type_atom_obj, X_OBJ_FLAG_NONE, { .fn = x_sexp_str_display });
 
 /* analyse3 prim: escape state — consumes one char after backslash */
 
@@ -196,6 +197,17 @@ x_obj_t *x_sexp_str_write(x_obj_t *p_base, x_obj_t *p_args)
 	x_atomstr(data) = X_SEXP_STR_POST_STR;
 	x_atomint(sz) = X_SEXP_STR_POST_STR_LEN;
 	x_base_write_str(p_base, (x_obj_t *)args);
+
+	return x_firstobj(p_args);
+}
+
+x_obj_t *x_sexp_str_display(x_obj_t *p_base, x_obj_t *p_args)
+{
+	x_satom_t str = x_obj_set(x_type_atom_obj, X_OBJ_FLAG_NONE,
+		{ .s = x_firststr(x_firstobj(p_args)) });
+	x_spair_t wrap = x_obj_set(NULL, X_OBJ_FLAG_NONE, { str }, { NULL });
+
+	x_base_write_str(p_base, (x_obj_t *)&wrap);
 
 	return x_firstobj(p_args);
 }
