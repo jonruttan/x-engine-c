@@ -227,7 +227,7 @@ test-coverage-x: coverage-clean ## Run x-lang tests with coverage report
 		sh lang/$$lang/tests/spec-runner.sh || exit 1; \
 	done
 	mkdir -p $(COVERAGE_DIR)
-	gcovr -r . --filter 'src/' --gcov-ignore-parse-errors=suspicious_hits.warn_once_per_file --print-summary --html-details $(COVERAGE_DIR)/index.html
+	gcovr -r . --filter 'src/' --print-summary --html-details $(COVERAGE_DIR)/index.html
 .PHONY: test-coverage-x
 
 test-coverage-all: coverage-clean ## Run all tests with combined coverage report
@@ -239,7 +239,7 @@ test-coverage-all: coverage-clean ## Run all tests with combined coverage report
 	done
 	CFLAGS="$(TEST_CFLAGS) -O0 --coverage" RUNNER=command sh $(PATH_TESTS_C)/test-runner/test-runner.sh $(TESTS)
 	mkdir -p $(COVERAGE_DIR)
-	gcovr -r . --filter 'src/' --gcov-ignore-parse-errors=suspicious_hits.warn_once_per_file --print-summary --html-details $(COVERAGE_DIR)/index.html
+	gcovr -r . --filter 'src/' --print-summary --html-details $(COVERAGE_DIR)/index.html
 .PHONY: test-coverage-all
 
 coverage-clean: ## Clean coverage artifacts
