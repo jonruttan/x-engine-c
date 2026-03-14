@@ -28,38 +28,28 @@
 #include "x-type/prim.h"
 #include "x-type/str.h"
 
-/* write: (write obj ...) -> output s-expressions to stdout */
+/* write: (write obj) -> output s-expression to stdout */
 static x_obj_t *x_prim_write(x_obj_t *p_base, x_obj_t *p_args)
 {
-	x_obj_t *p_val;
+	x_obj_t *p_val = x_prim_eval_arg(p_base, x_firstobj(p_args));
 	x_spair_t write_args[1] = {
-		x_obj_set(NULL, X_OBJ_FLAG_NONE, { NULL }, { NULL })
+		x_obj_set(NULL, X_OBJ_FLAG_NONE, { p_val }, { NULL })
 	};
 
-	while ( ! x_obj_isnil(p_base, p_args)) {
-		p_val = x_prim_eval_arg(p_base, x_firstobj(p_args));
-		x_firstobj((x_obj_t *)write_args) = p_val;
-		x_token_write(p_base, (x_obj_t *)write_args);
-		p_args = x_restobj(p_args);
-	}
+	x_token_write(p_base, (x_obj_t *)write_args);
 
 	return NULL;
 }
 
-/* display: (display obj ...) -> output human-readable via type system */
+/* display: (display obj) -> output human-readable via type system */
 static x_obj_t *x_prim_display(x_obj_t *p_base, x_obj_t *p_args)
 {
-	x_obj_t *p_val;
+	x_obj_t *p_val = x_prim_eval_arg(p_base, x_firstobj(p_args));
 	x_spair_t display_args[1] = {
-		x_obj_set(NULL, X_OBJ_FLAG_NONE, { NULL }, { NULL })
+		x_obj_set(NULL, X_OBJ_FLAG_NONE, { p_val }, { NULL })
 	};
 
-	while ( ! x_obj_isnil(p_base, p_args)) {
-		p_val = x_prim_eval_arg(p_base, x_firstobj(p_args));
-		x_firstobj((x_obj_t *)display_args) = p_val;
-		x_token_display(p_base, (x_obj_t *)display_args);
-		p_args = x_restobj(p_args);
-	}
+	x_token_display(p_base, (x_obj_t *)display_args);
 
 	return NULL;
 }
