@@ -165,6 +165,10 @@ test-quick: ## Run C unit tests (no Valgrind)
 	CFLAGS="$(TEST_CFLAGS)" RUNNER=command sh $(PATH_TESTS_C)/test-runner/test-runner.sh $(TESTS)
 .PHONY: test
 
+test-unit-x: $(EXECUTABLE) ## Run fast x-lang unit tests only
+	UNIT_ONLY=1 sh tests/x/spec-runner.sh
+.PHONY: test-unit-x
+
 test-x: $(EXECUTABLE) ## Run x-lang tests
 	sh tests/x/spec-runner.sh
 .PHONY: test-x
@@ -177,6 +181,13 @@ test-lang: $(EXECUTABLE) ## Run a language test (LANG=name)
 	sh lang/$(LANG)/tests/spec-runner.sh
 .PHONY: test-lang
 
+test-unit-langs: $(EXECUTABLE) ## Run fast personality unit tests only
+	@for lang in $(LANGS); do \
+		echo "== $$lang =="; \
+		UNIT_ONLY=1 sh lang/$$lang/tests/spec-runner.sh || exit 1; \
+	done
+.PHONY: test-unit-langs
+
 test-langs: $(EXECUTABLE) ## Run all language personality tests
 	@for lang in $(LANGS); do \
 		echo "== $$lang =="; \
@@ -186,6 +197,26 @@ test-langs: $(EXECUTABLE) ## Run all language personality tests
 
 tests: test test-x test-langs ## Run all tests
 .PHONY: tests
+
+lint-x: $(EXECUTABLE) ## Lint all .x library files
+	sh tools/lint.sh
+.PHONY: lint-x
+
+fmt-x: $(EXECUTABLE) ## Format .x library files in place
+	@for f in lib/x-core.x lib/x/*.x; do \
+		sh tools/fmt.sh -i "$$f" && printf '  \033[1;32m.\033[0m %s\n' "$$f"; \
+	done
+.PHONY: fmt-x
+
+fmt-check-x: $(EXECUTABLE) ## Check .x files are formatted
+	@FAIL=0; for f in lib/x-core.x lib/x/*.x; do \
+		if sh tools/fmt.sh --check "$$f" 2>/dev/null; then \
+			printf '  \033[1;32m.\033[0m %s\n' "$$f"; \
+		else \
+			FAIL=1; printf '  \033[1;31mF\033[0m %s\n' "$$f"; \
+		fi; \
+	done; [ "$$FAIL" -eq 0 ]
+.PHONY: fmt-check-x
 
 watch: ## Watch source for changes
 	while true; do \

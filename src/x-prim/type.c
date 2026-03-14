@@ -19,6 +19,8 @@
 #include "x-prim.h"
 #include "x-alist.h"
 #include "x-base.h"
+#include "x-heap.h"
+#include "x-type.h"
 #include <stddef.h>
 #include <setjmp.h>
 #include "x-token.h"
@@ -98,7 +100,30 @@ static x_obj_t *x_prim_make_type(x_obj_t *p_base, x_obj_t *p_args)
 /* base-make-type: (base-make-type base name handlers) -> register type on target base
  *
  * Evaluates args on the calling base (where closures are valid),
- * builds the type struct, and registers it on the target base. */
+ * builds the type struct, and registers it on the target base.
+ *
+ * The type struct is allocated on the calling base's heap because:
+ *   1. Symbol lookups for handler names need the calling base's types.
+ *   2. make-token-base targets may lack symbol creation infrastructure.
+ *   3. GC safety: the type struct is reachable from the calling base
+ *      via: env -> target base binding -> type alist -> type struct.
+ * Constraint: the calling base must retain a reference to the target
+ * base for the lifetime of the registered types.
+ *
+ * Marks the target base tree with SHARED so the calling base's GC
+ * won't sweep handler closures referenced cross-base.
+ *
+ * Alist navigation from Scheme:
+ *   (first (first (first base)))  = type alist (list of entries)
+ *   Each entry = (handle . type-struct)
+ *   type-struct has 6 elements: name, data, heap, proc, cvt, io
+ *   io = (analyse-stack delimit-stack write-stack display-stack error-stack)
+ *   Each stack = (current-fn . saved)
+ *   Push new fn: (set-first (first analyse-stack) new-fn)
+ *
+ * type? limitation: pair?/symbol?/atom? use x_type_field_name on
+ * static type objects (UB), so they may return false for objects
+ * allocated on child bases. Use null?/not-null? checks instead. */
 static x_obj_t *x_prim_base_make_type(x_obj_t *p_base, x_obj_t *p_args)
 {
 	x_obj_t *p_target = x_prim_eval_arg(p_base, x_firstobj(p_args)),
@@ -111,9 +136,15 @@ static x_obj_t *x_prim_base_make_type(x_obj_t *p_base, x_obj_t *p_args)
 		X_OBJ_FLAG_OWN, X_OBJ_LENGTH_ATOM, name),
 		*p_type;
 
-	/* Build type using main base for symbol creation; register on target. */
+	/* Build type using calling base; register on target. */
 	p_type = x_prim_type_build_struct(p_base, p_name_atom, p_handlers);
 	x_base_type_alist_extend(p_target, p_type);
+
+	/* Mark target base and its tree (including handler closures on calling
+	 * base's heap) with INUSE so they survive the calling base's GC sweep. */
+	x_obj_flags(p_target) |= X_OBJ_FLAG_SHARED;
+	x_heap_mark(p_base, x_atomobj(p_target), X_OBJ_FLAG_SHARED,
+		x_type_heap_mark);
 
 	return p_name_atom;
 }
@@ -179,10 +210,19 @@ static x_obj_t *x_prim_type_name(x_obj_t *p_base, x_obj_t *p_args)
 	return x_mkstr(p_base, x_atomstr(p_name));
 }
 
-/* make-token-base: (make-token-base) -> bare base for tokenization (no sexp types) */
+/* make-token-base: (make-token-base) -> bare base for tokenization (no sexp types)
+ *
+ * Uses NULL parent so the base is off-heap, like make-base.
+ * Copies the true symbol from the calling base for correct
+ * boolean semantics in handler closures. */
 static x_obj_t *x_prim_make_token_base(x_obj_t *p_base, x_obj_t *p_args)
 {
-	return x_base_make(p_base, NULL);
+	x_obj_t *p_new = x_base_make(NULL, NULL);
+
+	/* Inherit true symbol from calling base. */
+	x_base_field_true(p_new) = x_base_field_true(p_base);
+
+	return p_new;
 }
 
 /* make-base: (make-base) -> create fresh sandboxed interpreter */

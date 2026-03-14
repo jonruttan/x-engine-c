@@ -35,7 +35,7 @@
 #include <sys/syscall.h>
 #endif
 
-#define X_CLI_BUFFER_SIZE 256
+#define X_CLI_BUFFER_SIZE 65536
 
 #ifndef TESTS
 
