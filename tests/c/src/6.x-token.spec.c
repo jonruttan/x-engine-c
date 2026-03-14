@@ -437,6 +437,10 @@ static char *test_token_read_eof(void)
 static char *test_token_write(void)
 {
 	x_obj_t *p_base = x_base_make(NULL, NULL), *p_obj, *p_args, *p_ret;
+	int fd_null = open("/dev/null", O_WRONLY);
+
+	/* Redirect output to /dev/null so writes don't pollute test output */
+	x_atomint(x_base_field_fileout(p_base)) = fd_null;
 
 	/* Write satom — exercises x_sexp_atom_write path */
 	p_obj = x_mksatom(p_base, 'Z');
@@ -458,6 +462,7 @@ static char *test_token_write(void)
 		x_obj_t *p_prim_obj = x_make_prim(p_base3, X_OBJ_FLAG_NONE,
 			test_token_read_read_catchall);
 
+		x_atomint(x_base_field_fileout(p_base3)) = fd_null;
 		p_args = x_mkspair(p_base3, p_prim_obj, NULL);
 		p_ret = x_token_write(p_base3, p_args);
 		_it_should("write typed obj returns non-NULL",
@@ -472,6 +477,7 @@ static char *test_token_write(void)
 	_it_should("write untyped obj returns NULL",
 		x_obj_isnil(p_base, p_ret));
 
+	close(fd_null);
 	test_cleanup(p_base);
 
 	return NULL;

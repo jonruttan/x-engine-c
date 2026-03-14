@@ -215,18 +215,41 @@ uninstall: ## Uninstall from PREFIX
 
 COVERAGE_DIR=.coverage
 
-coverage: ## Run tests with coverage report
+test-coverage: coverage-clean ## Run C unit tests with coverage report
 	COVERAGE_DIR=$(COVERAGE_DIR) CFLAGS="$(TEST_CFLAGS)" sh $(PATH_TESTS_C)/test-runner/test-runner-coverage.sh $(TESTS)
-.PHONY: coverage
+.PHONY: test-coverage
+
+test-coverage-x: coverage-clean ## Run x-lang tests with coverage report
+	$(MAKE) clean
+	CFLAGS="-O0 --coverage" $(MAKE) $(EXECUTABLE)
+	sh tests/x/spec-runner.sh
+	@for lang in $(LANGS); do \
+		sh lang/$$lang/tests/spec-runner.sh || exit 1; \
+	done
+	mkdir -p $(COVERAGE_DIR)
+	gcovr -r . --filter 'src/' --gcov-ignore-parse-errors=suspicious_hits.warn_once_per_file --print-summary --html-details $(COVERAGE_DIR)/index.html
+.PHONY: test-coverage-x
+
+test-coverage-all: coverage-clean ## Run all tests with combined coverage report
+	$(MAKE) clean
+	CFLAGS="-O0 --coverage" $(MAKE) $(EXECUTABLE)
+	sh tests/x/spec-runner.sh
+	@for lang in $(LANGS); do \
+		sh lang/$$lang/tests/spec-runner.sh || exit 1; \
+	done
+	CFLAGS="$(TEST_CFLAGS) -O0 --coverage" RUNNER=command sh $(PATH_TESTS_C)/test-runner/test-runner.sh $(TESTS)
+	mkdir -p $(COVERAGE_DIR)
+	gcovr -r . --filter 'src/' --gcov-ignore-parse-errors=suspicious_hits.warn_once_per_file --print-summary --html-details $(COVERAGE_DIR)/index.html
+.PHONY: test-coverage-all
 
 coverage-clean: ## Clean coverage artifacts
-	rm -rf $(COVERAGE_DIR) *.gcov *.gcda *.gcno
+	rm -rf $(COVERAGE_DIR)
+	find . -name '*.gcov' -o -name '*.gcda' -o -name '*.gcno' | xargs rm -f
 .PHONY: coverage-clean
 
-clean: ## Clean compiled files
+clean: coverage-clean ## Clean compiled files
 	rm -f $(EXECUTABLE) $(EXECUTABLE)-debug *.out $(SRCDIR)/*.o $(SRCDIR)/**/*.o $(SRCDIR)/**/**/*.o $(X_EXPR_DIR)/src/*.o *.core core
 	rm -Rf apidocs/
-	rm -rf $(COVERAGE_DIR) *.gcov *.gcda *.gcno
 .PHONY: clean
 
 help: ## Display this help section
