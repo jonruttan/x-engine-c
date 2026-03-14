@@ -129,13 +129,15 @@ x_obj_t *x_prim_apply(x_obj_t *p_base, x_obj_t *p_args)
 
 	/* Procedure: bind params, eval body with TCO for eval trampoline. */
 	if (x_obj_type_isprocedure(p_base, p_fn)) {
-		x_obj_t *p_saved_env = x_base_field_env_alist(p_base);
+		/* Push saved env onto base save-stack */
+		x_base_field_save_stack(p_base) = x_mkspair(p_base,
+			x_base_field_env_alist(p_base),
+			x_base_field_save_stack(p_base));
 
 		x_base_field_env_alist(p_base) = x_prim_multiple_extend(
 			p_base, x_procenv(p_fn), x_procparams(p_fn), p_vals);
 
-		return x_prim_body_eval_tco(p_base, x_procbody(p_fn),
-			p_saved_env);
+		return x_prim_body_eval_tco(p_base, x_procbody(p_fn));
 	}
 
 	/* Operative / C primitive: delegate to type dispatch. */
@@ -155,14 +157,24 @@ x_obj_t *x_prim_eval(x_obj_t *p_base, x_obj_t *p_args)
 		*p_env_arg = x_restobj(p_args);
 
 	if ( ! x_obj_isnil(p_base, p_env_arg)) {
-		/* eval with env: save/restore for correct non-tail semantics */
+		/* eval with env: save/restore via base save-stack */
 		x_obj_t *p_env = x_prim_eval_arg(p_base, x_firstobj(p_env_arg));
-		x_obj_t *p_saved = x_base_field_env_alist(p_base);
 		x_obj_t *p_result;
+
+		/* Push saved env onto base save-stack */
+		x_base_field_save_stack(p_base) = x_mkspair(p_base,
+			x_base_field_env_alist(p_base),
+			x_base_field_save_stack(p_base));
 
 		x_base_field_env_alist(p_base) = p_env;
 		p_result = x_prim_eval_arg(p_base, p_expr);
-		x_base_field_env_alist(p_base) = p_saved;
+
+		/* Pop save-stack and restore env */
+		x_base_field_env_alist(p_base)
+			= x_firstobj(x_base_field_save_stack(p_base));
+		x_base_field_save_stack(p_base)
+			= x_restobj(x_base_field_save_stack(p_base));
+
 		return p_result;
 	}
 

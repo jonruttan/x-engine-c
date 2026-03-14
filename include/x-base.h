@@ -28,6 +28,7 @@
  *   line-number
  *   (alloc-count eval-count tco-count)
  *   (hook:type-name hook:units hook:length hook:error)
+ *   save-stack
  * )
  * ```
  *
@@ -74,6 +75,7 @@
 #define x_base_field_profile_evals(X)	x_firstobj(x_restobj(x_base_field_profile(X)))
 #define x_base_field_profile_tco(X)		x_firstobj(x_restobj(x_restobj(x_base_field_profile(X))))
 
+#define x_base_field_save_stack(X)		x_firstobj(x_restobj(x_restobj(x_restobj(x_restobj(x_restobj(x_restobj(x_restobj(x_firstobj(X)))))))))
 #define x_base_field_hooks(X)			x_firstobj(x_restobj(x_restobj(x_restobj(x_restobj(x_restobj(x_restobj(x_firstobj(X))))))))
 #define x_base_field_hook_type_name(X)	x_firstobj(x_base_field_hooks(X))
 #define x_base_field_hook_units(X)		x_firstobj(x_restobj(x_base_field_hooks(X)))

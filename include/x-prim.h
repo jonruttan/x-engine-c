@@ -30,8 +30,7 @@ x_obj_t *x_prim_multiple_extend(x_obj_t *p_base, x_obj_t *p_env,
 	x_obj_t *p_params, x_obj_t *p_vals);
 
 x_obj_t *x_prim_body_eval(x_obj_t *p_base, x_obj_t *p_body);
-x_obj_t *x_prim_body_eval_tco(x_obj_t *p_base, x_obj_t *p_body,
-	x_obj_t *p_saved_env);
+x_obj_t *x_prim_body_eval_tco(x_obj_t *p_base, x_obj_t *p_body);
 x_obj_t *x_prim_body_eval_tco_simple(x_obj_t *p_base, x_obj_t *p_body);
 x_obj_t *x_prim_tco_trampoline(x_obj_t *p_base, x_obj_t *p_result);
 

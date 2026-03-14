@@ -72,7 +72,10 @@ x_obj_t *x_base_make(x_obj_t *p_base, x_obj_t *p_args)
 			pair(atom(x_type_prim_length),
 			pair(atom(x_base_error),
 			nil)))),
-		nil)))))));
+		pair(
+			/* save-stack */
+			nil,
+		nil))))))));
 
 	/* Set x-obj hooks for the type system. */
 	x_obj_hook_type_name = x_type_prim_type_name;

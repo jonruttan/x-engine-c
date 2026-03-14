@@ -100,14 +100,16 @@ x_obj_t *x_type_procedure_call(x_obj_t *p_base, x_obj_t *p_args)
 	}
 
 	{
-		x_obj_t *p_saved_env = x_base_field_env_alist(p_base);
+		/* Push saved env onto base save-stack */
+		x_base_field_save_stack(p_base) = x_mkspair(p_base,
+			x_base_field_env_alist(p_base),
+			x_base_field_save_stack(p_base));
 
 		x_base_field_env_alist(p_base) = x_prim_multiple_extend(
 			p_base, x_procenv(p_proc), x_procparams(p_proc),
 			p_evaled_args);
 
-		return x_prim_body_eval_tco(p_base, x_procbody(p_proc),
-			p_saved_env);
+		return x_prim_body_eval_tco(p_base, x_procbody(p_proc));
 	}
 }
 

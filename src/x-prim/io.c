@@ -217,13 +217,11 @@ x_obj_t *x_prim_io_register(x_obj_t *p_base, x_obj_t *p_args)
 		{ "display", x_prim_display },
 		{ "read", x_prim_read_expr },
 		{ "read-char", x_prim_read_char },
-		{ "peek-char", x_prim_peek_char },
 		{ "write-to-string", x_prim_write_to_string },
 		{ "display-to-string", x_prim_display_to_string },
 		{ "heap-mark", x_prim_heap_mark },
 		{ "heap-sweep", x_prim_heap_sweep },
-		{ "heap-count", x_prim_heap_count },
-		{ "current-line", x_prim_current_line }
+		{ "heap-count", x_prim_heap_count }
 	};
 #ifdef X_CLOCK
 	static const x_prim_entry_t clock_entry[] = {

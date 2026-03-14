@@ -81,8 +81,7 @@ x_obj_t *x_prim_body_eval(x_obj_t *p_base, x_obj_t *p_body)
 	return p_result;
 }
 
-x_obj_t *x_prim_body_eval_tco(x_obj_t *p_base, x_obj_t *p_body,
-	x_obj_t *p_saved_env)
+x_obj_t *x_prim_body_eval_tco(x_obj_t *p_base, x_obj_t *p_body)
 {
 	x_obj_t *p_result = NULL;
 
@@ -92,15 +91,23 @@ x_obj_t *x_prim_body_eval_tco(x_obj_t *p_base, x_obj_t *p_body,
 
 			if (x_obj_isnil(p_base,
 				x_base_field_tco_expr(p_base))) {
-				x_base_field_env_alist(p_base) =
-					p_saved_env;
+				/* Pop save-stack and restore env */
+				x_base_field_env_alist(p_base)
+					= x_firstobj(x_base_field_save_stack(p_base));
+				x_base_field_save_stack(p_base)
+					= x_restobj(x_base_field_save_stack(p_base));
 				return NULL;
 			}
 
 			if (x_obj_isnil(p_base,
 				x_base_field_tco_env(p_base))) {
-				x_base_field_tco_env(p_base) = p_saved_env;
+				x_base_field_tco_env(p_base)
+					= x_firstobj(x_base_field_save_stack(p_base));
 			}
+
+			/* Pop save-stack */
+			x_base_field_save_stack(p_base)
+				= x_restobj(x_base_field_save_stack(p_base));
 
 			return NULL;
 		}
@@ -109,7 +116,11 @@ x_obj_t *x_prim_body_eval_tco(x_obj_t *p_base, x_obj_t *p_body,
 		p_body = x_restobj(p_body);
 	}
 
-	x_base_field_env_alist(p_base) = p_saved_env;
+	/* Pop save-stack and restore env */
+	x_base_field_env_alist(p_base)
+		= x_firstobj(x_base_field_save_stack(p_base));
+	x_base_field_save_stack(p_base)
+		= x_restobj(x_base_field_save_stack(p_base));
 
 	return p_result;
 }

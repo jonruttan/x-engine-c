@@ -139,7 +139,6 @@ x_obj_t *x_prim_string_register(x_obj_t *p_base, x_obj_t *p_args)
 {
 	static const x_prim_entry_t entries[] = {
 		{ "string-append", x_prim_string_append },
-		{ "string=?", x_prim_string_eq },
 		{ "string->symbol", x_prim_string_to_symbol },
 		{ "symbol->string", x_prim_symbol_to_string },
 		{ "number->string", x_prim_number_to_string },
