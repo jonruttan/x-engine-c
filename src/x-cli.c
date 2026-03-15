@@ -163,6 +163,8 @@ int main(int argc, char *argv[])
 	x_obj_t *p_sym, *p_list = NULL, *p_pair;
 	int i;
 
+	x_callcc_init();
+
 	p_base = init(NULL, buffer);
 
 	if (p_base == NULL) {

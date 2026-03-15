@@ -52,6 +52,9 @@ x_obj_t *x_prim_write_to_string(x_obj_t *p_base, x_obj_t *p_args);
 x_obj_t *x_prim_type_register(x_obj_t *p_base, x_obj_t *p_args);
 x_obj_t *x_prim_ffi_register(x_obj_t *p_base, x_obj_t *p_args);
 
+x_obj_t *x_prim_callcc_register(x_obj_t *p_base, x_obj_t *p_args);
+void x_callcc_init(void);
+
 x_obj_t *x_prim_register(x_obj_t *p_base, x_obj_t *p_args);
 
 #endif /* X_PRIM_H */
