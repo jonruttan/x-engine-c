@@ -230,6 +230,7 @@ x_obj_t *x_prim_guard(x_obj_t *p_base, x_obj_t *p_args)
 		*p_handler_body = x_restobj(p_clause),
 		*p_body = x_restobj(p_args),
 		*p_prev_handler = x_base_field_error_handler(p_base),
+		*p_saved_save_stack = x_base_field_save_stack(p_base),
 		*p_handler, *p_result = NULL;
 
 	/* Build handler pair tree: (jmp-ptr saved-env error-value) */
@@ -244,10 +245,13 @@ x_obj_t *x_prim_guard(x_obj_t *p_base, x_obj_t *p_args)
 		/* Normal execution: evaluate body. */
 		p_result = x_prim_body_eval(p_base, p_body);
 	} else {
-		/* Error caught: bind error to var, run handler body. */
+		/* Error caught: restore save-stack to guard point so that
+		 * stale entries from eval-with-env (which skipped its
+		 * pop on longjmp) are discarded. */
 		x_obj_t *p_err = x_error_handler_error(p_handler);
 		x_obj_t *p_pair = x_mkspair(p_base, p_var, p_err);
 
+		x_base_field_save_stack(p_base) = p_saved_save_stack;
 		x_base_env_alist_extend(p_base, p_pair);
 		p_result = x_prim_body_eval(p_base, p_handler_body);
 		x_base_field_env_alist(p_base)
