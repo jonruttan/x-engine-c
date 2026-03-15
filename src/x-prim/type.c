@@ -150,6 +150,53 @@ static x_obj_t *x_prim_base_make_type(x_obj_t *p_base, x_obj_t *p_args)
 	return p_name_atom;
 }
 
+/* obj-make: (obj-make type-handle-or-name arg ...) -> call type's make handler
+ * General-purpose object constructor: accepts a type handle (atom from
+ * make-type/type-of) or a type name (string). Evaluates remaining args and
+ * passes them to the type's make handler. */
+static x_obj_t *x_prim_obj_make(x_obj_t *p_base, x_obj_t *p_args)
+{
+	x_obj_t *p_key = x_prim_eval_arg(p_base, x_firstobj(p_args)),
+		*p_rest = x_prim_evlis(p_base, x_restobj(p_args)),
+		*p_type, *p_make, *p_walk;
+	x_spair_t lookup_args[1] = {
+		x_obj_set(NULL, X_OBJ_FLAG_NONE, { p_key }, { NULL })
+	};
+
+	/* Try atom-identity lookup first (fast path for handles). */
+	p_type = x_base_type_alist_assoc(p_base, (x_obj_t *)lookup_args);
+
+	/* Fall back to string-name comparison. */
+	if (x_obj_isnil(p_base, p_type)
+			&& x_obj_is_type(p_base, p_key, "STRING")) {
+		for (p_walk = x_base_field_type_alist(p_base);
+				! x_obj_isnil(p_base, p_walk);
+				p_walk = x_restobj(p_walk)) {
+			if ( ! x_obj_isnil(p_base,
+						x_type_field_name(x_restobj(x_firstobj(p_walk))))
+					&& x_lib_strcmp(
+						x_atomstr(x_type_field_name(
+							x_restobj(x_firstobj(p_walk)))),
+						x_strval(p_key)) == 0) {
+				p_type = x_restobj(x_firstobj(p_walk));
+				break;
+			}
+		}
+	}
+
+	if (x_obj_isnil(p_base, p_type)) {
+		return NULL;
+	}
+
+	p_make = x_type_field_make(p_type);
+
+	if (x_obj_isnil(p_base, p_make) || x_obj_isnil(p_base, x_atomobj(p_make))) {
+		return NULL;
+	}
+
+	return (*x_atomfn(p_make))(p_base, p_rest);
+}
+
 /* make-instance: (make-instance type-handle data) -> create typed instance */
 static x_obj_t *x_prim_make_instance(x_obj_t *p_base, x_obj_t *p_args)
 {
@@ -524,6 +571,7 @@ x_obj_t *x_prim_type_register(x_obj_t *p_base, x_obj_t *p_args)
 		{ "make-type", x_prim_make_type },
 		{ "base-make-type", x_prim_base_make_type },
 		{ "make-instance", x_prim_make_instance },
+		{ "obj-make", x_prim_obj_make },
 		{ "type?", x_prim_typep },
 		{ "type-of", x_prim_type_of },
 		{ "type-name", x_prim_type_name },
