@@ -143,6 +143,15 @@ x_obj_t *x_sexp_char_write(x_obj_t *p_base, x_obj_t *p_args)
 		x_obj_set(NULL, X_OBJ_FLAG_NONE, { sz }, { NULL })
 	};
 
+	/* Write #\ prefix */
+	{
+		x_satom_t prefix_str = x_obj_set(x_type_atom_obj,
+			X_OBJ_FLAG_NONE, { .s = (x_char_t *)"#\\" });
+		x_spair_t prefix_wrap = x_obj_set(NULL,
+			X_OBJ_FLAG_NONE, { prefix_str }, { NULL });
+		x_base_write_str(p_base, (x_obj_t *)&prefix_wrap);
+	}
+
 	/* Named characters: reverse-lookup in type data alist */
 	if (x_base_isset(p_base)) {
 		p_type = x_type_char_register(p_base, p_base);

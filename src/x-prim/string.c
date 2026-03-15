@@ -74,17 +74,26 @@ static x_obj_t *x_prim_number_to_string(x_obj_t *p_base, x_obj_t *p_args)
 	return x_mkstrown(p_base, x_lib_strndup(buf, x_lib_strlen(buf)));
 }
 
-/* string->number: (string->number str [radix]) -> integer */
+/* string->number: (string->number str [radix]) -> integer or () on failure */
 static x_obj_t *x_prim_string_to_number(x_obj_t *p_base, x_obj_t *p_args)
 {
 	x_obj_t *p_str = x_prim_eval_arg(p_base, x_firstobj(p_args));
-	x_int_t radix = 0;
+	x_char_t *p_end = NULL;
+	const x_char_t *p_s = x_strval(p_str);
+	x_int_t radix = 0, result;
 
 	if ( ! x_obj_isnil(p_base, x_restobj(p_args))) {
 		radix = x_intval(x_prim_eval_arg(p_base, x_firstobj(x_restobj(p_args))));
 	}
 
-	return x_mkint(p_base, x_lib_strtoint(x_strval(p_str), NULL, radix));
+	result = x_lib_strtoint(p_s, &p_end, radix);
+
+	/* Return nil if empty string or conversion didn't consume entire string */
+	if (p_end == p_s || *p_end != '\0') {
+		return NULL;
+	}
+
+	return x_mkint(p_base, result);
 }
 
 /* list->string: (list->string list-of-chars) -> string */
