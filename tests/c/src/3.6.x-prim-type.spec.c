@@ -115,12 +115,12 @@ static char *test_type_typep(void)
 	_it_should("type? matches correct type",
 		p_result == x_base_field_true(p_base));
 
-	/* (type? nil inthandle) -> nil */
+	/* (type? nil inthandle) -> #f */
 	p_args = x_mkspair(p_base, NULL,
 		x_mkspair(p_base, x_mksymbol(p_base, "inthandle"), NULL));
 	p_result = x_prim_typep(p_base, p_args);
-	_it_should("type? nil returns nil",
-		p_result == NULL);
+	_it_should("type? nil returns #f",
+		p_result == x_base_field_false(p_base));
 
 	test_cleanup(p_base);
 	return NULL;
@@ -768,7 +768,7 @@ static char *test_type_convert_wildcard(void)
 	/* Build converter prim */
 	p_converter = x_mkprim(p_base, test_convert_handler);
 
-	/* Build from alist with wildcard key 't' */
+	/* Build from alist with wildcard key #t */
 	p_from_alist = x_mklist(p_base,
 		x_mkspair(p_base, x_base_field_true(p_base), p_converter),
 		NULL);
@@ -791,7 +791,7 @@ static char *test_type_convert_wildcard(void)
 	x_base_env_alist_extend(p_base,
 		x_mkspair(p_base, x_mksymbol(p_base, "h"), p_tgt_handle));
 
-	/* (convert v h) -> wildcard 't' match in from alist */
+	/* (convert v h) -> wildcard #t match in from alist */
 	p_args = x_mkspair(p_base,
 		x_mksymbol(p_base, "v"),
 		x_mkspair(p_base, x_mksymbol(p_base, "h"), NULL));

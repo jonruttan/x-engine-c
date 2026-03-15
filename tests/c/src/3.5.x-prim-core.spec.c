@@ -282,13 +282,13 @@ static char *test_core_match(void)
 	p_base = x_base_make(NULL, NULL);
 	x_prim_register(p_base, NULL);
 
-	/* (match (nil 1) (t 42)) -> tco_expr = 42 */
+	/* (match (nil 1) (#t 42)) -> tco_expr = 42 */
 	p_args = x_mkspair(p_base,
 		/* first clause: (nil 1) -- test is nil, skip */
 		x_mkspair(p_base, NULL,
 			x_mkspair(p_base, x_mksatom(p_base, (x_int_t)1), NULL)),
 		x_mkspair(p_base,
-			/* second clause: (t 42) -- test is t, match */
+			/* second clause: (#t 42) -- test is #t, match */
 			x_mkspair(p_base, x_base_field_true(p_base),
 				x_mkspair(p_base, x_mksatom(p_base, (x_int_t)42), NULL)),
 			NULL));

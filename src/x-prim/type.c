@@ -174,11 +174,11 @@ static x_obj_t *x_prim_typep(x_obj_t *p_base, x_obj_t *p_args)
 		*p_handle = x_prim_eval_arg(p_base, x_firstobj(x_restobj(p_args)));
 
 	if (x_obj_isnil(p_base, p_obj) || x_obj_isnil(p_base, x_obj_type(p_obj))) {
-		return NULL;
+		return x_base_field_false(p_base);
 	}
 
 	return x_type_field_name(x_obj_type(p_obj)) == p_handle
-		? x_base_field_true(p_base) : NULL;
+		? x_base_field_true(p_base) : x_base_field_false(p_base);
 }
 
 /* type-of: (type-of obj) -> type handle (name atom) for obj's type */
@@ -220,8 +220,9 @@ static x_obj_t *x_prim_make_token_base(x_obj_t *p_base, x_obj_t *p_args)
 {
 	x_obj_t *p_new = x_base_make(NULL, NULL);
 
-	/* Inherit true symbol from calling base. */
+	/* Inherit boolean singletons from calling base. */
 	x_base_field_true(p_new) = x_base_field_true(p_base);
+	x_base_field_false(p_new) = x_base_field_false(p_base);
 
 	return p_new;
 }

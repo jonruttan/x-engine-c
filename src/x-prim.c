@@ -190,12 +190,21 @@ void x_prim_bind_table(x_obj_t *p_base, const x_prim_entry_t *table, int count)
 
 x_obj_t *x_prim_register(x_obj_t *p_base, x_obj_t *p_args)
 {
-	/* Bind t as a self-evaluating truth symbol and cache in base. */
+	/* Bind #t and #f as boolean singletons, cache in base. */
 	{
-		x_obj_t *p_t = x_mksymbol(p_base, (x_char_t *)X_BASE_TRUE_STR),
-			*p_pair = x_mkspair(p_base, p_t, p_t);
+		x_obj_t *p_t = (x_obj_t *)&x_true_obj,
+			*p_f = (x_obj_t *)&x_false_obj,
+			*p_pair;
+
+		p_pair = x_mkspair(p_base,
+			x_mksymbol(p_base, x_atomstr(x_true_obj)), p_t);
 		x_base_env_alist_extend(p_base, p_pair);
 		x_base_field_true(p_base) = p_t;
+
+		p_pair = x_mkspair(p_base,
+			x_mksymbol(p_base, x_atomstr(x_false_obj)), p_f);
+		x_base_env_alist_extend(p_base, p_pair);
+		x_base_field_false(p_base) = p_f;
 	}
 
 	x_prim_core_register(p_base, p_args);

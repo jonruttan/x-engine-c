@@ -57,8 +57,11 @@ x_obj_t *x_base_make(x_obj_t *p_base, x_obj_t *p_args)
 			pair(pair(nil, nil),
 			nil))))))),
 		pair(
-			/* true symbol (stack-wrapped) */
+			/* true object (stack-wrapped) */
 			pair(p_parent ? x_base_field_true(p_parent) : nil, nil),
+		pair(
+			/* false object (stack-wrapped) */
+			pair(p_parent ? x_base_field_false(p_parent) : nil, nil),
 		pair(
 			/* line counter (stack-wrapped) */
 			pair(atom(1), nil),
@@ -78,7 +81,7 @@ x_obj_t *x_base_make(x_obj_t *p_base, x_obj_t *p_args)
 		pair(
 			/* obj-meta-extra (stack-wrapped) */
 			pair(atom(0), nil),
-		nil)))))))));
+		nil))))))))));
 
 	/* Set x-obj hooks for the type system. */
 	x_obj_hook_type_name = x_type_prim_type_name;

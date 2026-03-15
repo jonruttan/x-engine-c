@@ -442,14 +442,14 @@ static char *test_register(void)
 {
 	x_obj_t *p_base, *p_result;
 
-	/* register returns p_base and binds t */
+	/* register returns p_base and sets #t/#f */
 	p_base = x_base_make(NULL, NULL);
 	p_result = x_prim_register(p_base, NULL);
 	_it_should("register returns p_base", p_result == p_base);
-	_it_should("register binds t",
+	_it_should("register sets #t",
 		! x_obj_isnil(p_base, x_base_field_true(p_base)));
-	_it_should("t is a symbol",
-		x_obj_type_issymbol(p_base, x_base_field_true(p_base)));
+	_it_should("register sets #f",
+		! x_obj_isnil(p_base, x_base_field_false(p_base)));
 	test_cleanup(p_base);
 
 	return NULL;

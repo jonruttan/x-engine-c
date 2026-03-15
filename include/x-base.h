@@ -30,6 +30,7 @@
  *   (env-alist-stack eval-list-stack buffer-stack token-cache-stack
  *    error-handler-stack tco-expr-stack tco-env-stack)
  *   true-stack
+ *   false-stack
  *   line-stack
  *   (alloc-count-stack eval-count-stack tco-count-stack)
  *   (hook:type-name-stack hook:units-stack hook:length-stack hook:error-stack)
@@ -44,8 +45,6 @@
  * # Includes
  */
 #include "x-obj.h"
-
-#define X_BASE_TRUE_STR		"t"
 
 /*
  * # Error Handler (pair tree macros)
@@ -87,10 +86,12 @@
 
 #define x_base_field_true_stack(X)			x_firstobj(x_restobj(x_restobj(x_restobj(x_firstobj(X)))))
 #define x_base_field_true(X)				x_firstobj(x_base_field_true_stack((X)))
-#define x_base_field_line_stack(X)			x_firstobj(x_restobj(x_restobj(x_restobj(x_restobj(x_firstobj(X))))))
+#define x_base_field_false_stack(X)			x_firstobj(x_restobj(x_restobj(x_restobj(x_restobj(x_firstobj(X))))))
+#define x_base_field_false(X)				x_firstobj(x_base_field_false_stack((X)))
+#define x_base_field_line_stack(X)			x_firstobj(x_restobj(x_restobj(x_restobj(x_restobj(x_restobj(x_firstobj(X)))))))
 #define x_base_field_line(X)				x_firstobj(x_base_field_line_stack((X)))
 
-#define x_base_field_profile(X)				x_firstobj(x_restobj(x_restobj(x_restobj(x_restobj(x_restobj(x_firstobj(X)))))))
+#define x_base_field_profile(X)				x_firstobj(x_restobj(x_restobj(x_restobj(x_restobj(x_restobj(x_restobj(x_firstobj(X))))))))
 #define x_base_field_profile_allocs_stack(X)	x_firstobj(x_base_field_profile(X))
 #define x_base_field_profile_allocs(X)		x_firstobj(x_base_field_profile_allocs_stack((X)))
 #define x_base_field_profile_evals_stack(X)	x_firstobj(x_restobj(x_base_field_profile(X)))
@@ -98,7 +99,7 @@
 #define x_base_field_profile_tco_stack(X)	x_firstobj(x_restobj(x_restobj(x_base_field_profile(X))))
 #define x_base_field_profile_tco(X)			x_firstobj(x_base_field_profile_tco_stack((X)))
 
-#define x_base_field_hooks(X)				x_firstobj(x_restobj(x_restobj(x_restobj(x_restobj(x_restobj(x_restobj(x_firstobj(X))))))))
+#define x_base_field_hooks(X)				x_firstobj(x_restobj(x_restobj(x_restobj(x_restobj(x_restobj(x_restobj(x_restobj(x_firstobj(X)))))))))
 #define x_base_field_hook_type_name_stack(X)	x_firstobj(x_base_field_hooks(X))
 #define x_base_field_hook_type_name(X)		x_firstobj(x_base_field_hook_type_name_stack((X)))
 #define x_base_field_hook_units_stack(X)	x_firstobj(x_restobj(x_base_field_hooks(X)))
@@ -108,9 +109,9 @@
 #define x_base_field_hook_error_stack(X)	x_firstobj(x_restobj(x_restobj(x_restobj(x_base_field_hooks(X)))))
 #define x_base_field_hook_error(X)			x_firstobj(x_base_field_hook_error_stack((X)))
 
-#define x_base_field_save_stack(X)			x_firstobj(x_restobj(x_restobj(x_restobj(x_restobj(x_restobj(x_restobj(x_restobj(x_firstobj(X)))))))))
+#define x_base_field_save_stack(X)			x_firstobj(x_restobj(x_restobj(x_restobj(x_restobj(x_restobj(x_restobj(x_restobj(x_restobj(x_firstobj(X))))))))))
 
-#define x_base_field_obj_meta_extra_stack(X)	x_firstobj(x_restobj(x_restobj(x_restobj(x_restobj(x_restobj(x_restobj(x_restobj(x_restobj(x_firstobj(X))))))))))
+#define x_base_field_obj_meta_extra_stack(X)	x_firstobj(x_restobj(x_restobj(x_restobj(x_restobj(x_restobj(x_restobj(x_restobj(x_restobj(x_restobj(x_firstobj(X)))))))))))
 #define x_base_field_obj_meta_extra(X)			x_firstobj(x_base_field_obj_meta_extra_stack((X)))
 
 #define x_base_isset(B)						((B) != NULL && x_base((B)) != NULL)

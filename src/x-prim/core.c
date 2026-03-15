@@ -297,7 +297,8 @@ x_obj_t *x_prim_match(x_obj_t *p_base, x_obj_t *p_args)
 		p_clause = x_firstobj(p_args);
 		p_test = x_prim_eval_arg(p_base, x_firstobj(p_clause));
 
-		if ( ! x_obj_isnil(p_base, p_test)) {
+		if ( ! x_obj_isnil(p_base, p_test)
+				&& p_test != x_base_field_false(p_base)) {
 			x_base_field_tco_expr(p_base) =
 				x_firstobj(x_restobj(p_clause));
 

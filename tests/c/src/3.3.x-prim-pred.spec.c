@@ -104,13 +104,13 @@ static char *test_pred_eq(void)
 	_it_should("eq? same object returns t",
 		p_result == x_base_field_true(p_base));
 
-	/* Different objects -> nil */
+	/* Different objects -> #f */
 	p_args = x_mkspair(p_base,
 		x_mksatom(p_base, (x_int_t)1),
 		x_mkspair(p_base, x_mksatom(p_base, (x_int_t)2), NULL));
 	p_result = x_prim_eq(p_base, p_args);
-	_it_should("eq? different objects returns nil",
-		p_result == NULL);
+	_it_should("eq? different objects returns #f",
+		p_result == x_base_field_false(p_base));
 
 	/* nil == nil -> t */
 	p_args = x_mkspair(p_base, NULL,
@@ -138,13 +138,13 @@ static char *test_pred_numeq(void)
 	_it_should("(= 5 5) returns t",
 		p_result == x_base_field_true(p_base));
 
-	/* (= 5 3) -> nil */
+	/* (= 5 3) -> #f */
 	p_args = x_mkspair(p_base,
 		x_mksatom(p_base, (x_int_t)5),
 		x_mkspair(p_base, x_mksatom(p_base, (x_int_t)3), NULL));
 	p_result = x_prim_numeq(p_base, p_args);
-	_it_should("(= 5 3) returns nil",
-		p_result == NULL);
+	_it_should("(= 5 3) returns #f",
+		p_result == x_base_field_false(p_base));
 
 	test_cleanup(p_base);
 	return NULL;
@@ -165,21 +165,21 @@ static char *test_pred_lt(void)
 	_it_should("(< 3 5) returns t",
 		p_result == x_base_field_true(p_base));
 
-	/* (< 5 3) -> nil */
+	/* (< 5 3) -> #f */
 	p_args = x_mkspair(p_base,
 		x_mksatom(p_base, (x_int_t)5),
 		x_mkspair(p_base, x_mksatom(p_base, (x_int_t)3), NULL));
 	p_result = x_prim_lt(p_base, p_args);
-	_it_should("(< 5 3) returns nil",
-		p_result == NULL);
+	_it_should("(< 5 3) returns #f",
+		p_result == x_base_field_false(p_base));
 
-	/* (< 5 5) -> nil */
+	/* (< 5 5) -> #f */
 	p_args = x_mkspair(p_base,
 		x_mksatom(p_base, (x_int_t)5),
 		x_mkspair(p_base, x_mksatom(p_base, (x_int_t)5), NULL));
 	p_result = x_prim_lt(p_base, p_args);
-	_it_should("(< 5 5) returns nil",
-		p_result == NULL);
+	_it_should("(< 5 5) returns #f",
+		p_result == x_base_field_false(p_base));
 
 	test_cleanup(p_base);
 	return NULL;

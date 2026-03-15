@@ -165,7 +165,7 @@ static x_obj_t *x_prim_ffi_call(x_obj_t *p_base, x_obj_t *p_args)
 		memcpy(&b, &x_intval(p_b), sizeof(double));
 		return a < b
 			? x_base_field_true(p_base)
-			: NULL;
+			: x_base_field_false(p_base);
 	}
 
 	if (x_lib_strcmp(conv, "d>d") == 0) {
@@ -176,7 +176,7 @@ static x_obj_t *x_prim_ffi_call(x_obj_t *p_base, x_obj_t *p_args)
 		memcpy(&b, &x_intval(p_b), sizeof(double));
 		return a > b
 			? x_base_field_true(p_base)
-			: NULL;
+			: x_base_field_false(p_base);
 	}
 
 	if (x_lib_strcmp(conv, "d=d") == 0) {
@@ -187,7 +187,7 @@ static x_obj_t *x_prim_ffi_call(x_obj_t *p_base, x_obj_t *p_args)
 		memcpy(&b, &x_intval(p_b), sizeof(double));
 		return a == b
 			? x_base_field_true(p_base)
-			: NULL;
+			: x_base_field_false(p_base);
 	}
 
 	if (x_lib_strcmp(conv, "d<=d") == 0) {
@@ -198,7 +198,7 @@ static x_obj_t *x_prim_ffi_call(x_obj_t *p_base, x_obj_t *p_args)
 		memcpy(&b, &x_intval(p_b), sizeof(double));
 		return a <= b
 			? x_base_field_true(p_base)
-			: NULL;
+			: x_base_field_false(p_base);
 	}
 
 	if (x_lib_strcmp(conv, "d>=d") == 0) {
@@ -209,7 +209,7 @@ static x_obj_t *x_prim_ffi_call(x_obj_t *p_base, x_obj_t *p_args)
 		memcpy(&b, &x_intval(p_b), sizeof(double));
 		return a >= b
 			? x_base_field_true(p_base)
-			: NULL;
+			: x_base_field_false(p_base);
 	}
 
 	/* Cast conventions (no function pointer needed) */
