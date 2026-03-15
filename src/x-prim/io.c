@@ -86,12 +86,12 @@ static x_obj_t *x_prim_read_char(x_obj_t *p_base, x_obj_t *p_args)
 static x_obj_t *x_prim_to_string(x_obj_t *p_base, x_obj_t *p_args,
 	x_obj_t *(*dispatch)(x_obj_t *, x_obj_t *))
 {
-	x_obj_t *p_val;
-	x_char_t buf[256];
+	x_obj_t *p_val, *p_result;
+	x_char_t *buf;
 	x_satom_t buf_pos = x_obj_set(NULL, X_OBJ_FLAG_NONE, { .i = 0 });
 	x_spair_t buf_obj[1] = {
 		x_obj_set(NULL, X_OBJ_FLAG_NONE,
-			{ .v = buf }, { (x_obj_t *)&buf_pos })
+			{ .v = NULL }, { (x_obj_t *)&buf_pos })
 	};
 	x_spair_t dispatch_args[1] = {
 		x_obj_set(NULL, X_OBJ_FLAG_NONE, { NULL }, { NULL })
@@ -100,8 +100,12 @@ static x_obj_t *x_prim_to_string(x_obj_t *p_base, x_obj_t *p_args,
 	p_val = x_prim_eval_arg(p_base, x_firstobj(p_args));
 
 	if (x_obj_isnil(p_base, p_val)) {
-		return x_mkstrown(p_base, x_lib_strndup((x_char_t *)"", 0));
+		return x_mkstrown(p_base, x_lib_strndup((x_char_t *)"()", 2));
 	}
+
+	buf = (x_char_t *)x_sys_malloc(65536);
+	if (buf == NULL) return NULL;
+	x_first((x_obj_t *)buf_obj).v = buf;
 
 	/* Push write-buffer onto write_buf_stack */
 	x_base_field_write_buf_stack(p_base) = x_mkspair(p_base,
@@ -115,7 +119,10 @@ static x_obj_t *x_prim_to_string(x_obj_t *p_base, x_obj_t *p_args,
 		= x_restobj(x_base_field_write_buf_stack(p_base));
 	buf[x_atomint(buf_pos)] = '\0';
 
-	return x_mkstrown(p_base, x_lib_strndup(buf, x_atomint(buf_pos)));
+	p_result = x_mkstrown(p_base,
+		x_lib_strndup(buf, x_atomint(buf_pos)));
+	x_sys_free(buf);
+	return p_result;
 }
 
 /* write-to-string: (write-to-string obj) -> string representation */

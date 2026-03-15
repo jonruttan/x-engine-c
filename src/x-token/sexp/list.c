@@ -119,7 +119,10 @@ x_obj_t *x_sexp_list_write(x_obj_t *p_base, x_obj_t *p_args)
 	x_base_write_str(p_base, (x_obj_t *)&wrap);
 
 	for (;;) {
-		if ( ! x_obj_isnil(p_base, x_firstobj(p_obj))) {
+		if (x_obj_isnil(p_base, x_firstobj(p_obj))) {
+			x_atomstr(str) = "()";
+			x_base_write_str(p_base, (x_obj_t *)&wrap);
+		} else {
 			x_firstobj((x_obj_t *)write_wrap) = x_firstobj(p_obj);
 			x_token_write(p_base, (x_obj_t *)write_wrap);
 		}
