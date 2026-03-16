@@ -296,40 +296,50 @@ static x_obj_t *x_prim_ptr_to_int(x_obj_t *p_base, x_obj_t *p_args)
 	return x_mkint(p_base, (x_int_t)x_ptrval(p_p));
 }
 
-/* ptr-set!: (ptr-set! ptr offset byte) -> writes byte at ptr+offset */
+/* ptr-set!: (ptr-set! ptr offset value nbytes) -> ptr
+ * Write nbytes (1-8) of value at ptr+offset. */
 static x_obj_t *x_prim_ptr_set(x_obj_t *p_base, x_obj_t *p_args)
 {
-	x_obj_t *p_ptr, *p_offset, *p_byte;
+	x_obj_t *p_ptr, *p_offset, *p_val, *p_size;
 	unsigned char *mem;
+	x_int_t val, nbytes;
 
 	p_ptr = x_prim_eval_arg(p_base, x_firstobj(p_args));
 	p_offset = x_prim_eval_arg(p_base,
 		x_firstobj(x_restobj(p_args)));
-	p_byte = x_prim_eval_arg(p_base,
+	p_val = x_prim_eval_arg(p_base,
 		x_firstobj(x_restobj(x_restobj(p_args))));
+	p_size = x_prim_eval_arg(p_base,
+		x_firstobj(x_restobj(x_restobj(x_restobj(p_args)))));
 
+	val = x_intval(p_val);
+	nbytes = x_intval(p_size);
 	mem = (unsigned char *)x_ptrval(p_ptr);
-	mem[x_intval(p_offset)] = (unsigned char)x_intval(p_byte);
+	memcpy(mem + x_intval(p_offset), &val, nbytes);
 
 	return p_ptr;
 }
 
-/* ptr-ref: (ptr-ref ptr offset) -> int
- * Read sizeof(int) bytes from ptr+offset, return as int. */
+/* ptr-ref: (ptr-ref ptr offset nbytes) -> int
+ * Read nbytes (1-8) from ptr+offset, return as int. */
 static x_obj_t *x_prim_ptr_ref(x_obj_t *p_base, x_obj_t *p_args)
 {
-	x_obj_t *p_ptr, *p_offset;
+	x_obj_t *p_ptr, *p_offset, *p_size;
 	unsigned char *mem;
-	int val;
+	x_int_t val = 0;
+	x_int_t nbytes;
 
 	p_ptr = x_prim_eval_arg(p_base, x_firstobj(p_args));
 	p_offset = x_prim_eval_arg(p_base,
 		x_firstobj(x_restobj(p_args)));
+	p_size = x_prim_eval_arg(p_base,
+		x_firstobj(x_restobj(x_restobj(p_args))));
 
+	nbytes = x_intval(p_size);
 	mem = (unsigned char *)x_ptrval(p_ptr);
-	memcpy(&val, mem + x_intval(p_offset), sizeof(int));
+	memcpy(&val, mem + x_intval(p_offset), nbytes);
 
-	return x_mkint(p_base, (x_int_t)val);
+	return x_mkint(p_base, val);
 }
 
 /* ptr-set-word!: (ptr-set-word! ptr offset value) -> ptr

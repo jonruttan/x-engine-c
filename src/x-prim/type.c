@@ -65,7 +65,10 @@ static x_obj_t *x_prim_type_build_struct(x_obj_t *p_base,
 			{ "read",    offsetof(struct x_type_t, p_read) },
 			{ "error",   offsetof(struct x_type_t, p_error) },
 			{ "from",    offsetof(struct x_type_t, p_from) },
-			{ "to",      offsetof(struct x_type_t, p_to) }
+			{ "to",      offsetof(struct x_type_t, p_to) },
+			{ "units",   offsetof(struct x_type_t, p_units) },
+			{ "free",    offsetof(struct x_type_t, p_free) },
+			{ "mark",    offsetof(struct x_type_t, p_mark) }
 		};
 		int i;
 
@@ -565,12 +568,63 @@ static x_obj_t *x_prim_token_read_string(x_obj_t *p_base, x_obj_t *p_args)
 	return p_result;
 }
 
+/* make-obj: (make-obj type-handle n) -> allocate typed object with n slots */
+static x_obj_t *x_prim_make_obj(x_obj_t *p_base, x_obj_t *p_args)
+{
+	x_obj_t *p_handle = x_prim_eval_arg(p_base, x_firstobj(p_args)),
+		*p_n = x_prim_eval_arg(p_base, x_firstobj(x_restobj(p_args)));
+	x_spair_t lookup_args[1] = {
+		x_obj_set(NULL, X_OBJ_FLAG_NONE, { p_handle }, { NULL })
+	};
+	x_obj_t *p_type = x_base_type_alist_assoc(p_base, (x_obj_t *)lookup_args);
+	x_int_t n, i;
+	x_obj_t *p_obj;
+
+	if (x_obj_isnil(p_base, p_type)) {
+		return NULL;
+	}
+
+	n = x_intval(p_n);
+	p_obj = x_obj_alloc(p_base, p_type, 0, (size_t)n);
+
+	for (i = 0; i < n; i++) {
+		(&x_firstobj(p_obj))[i] = NULL;
+	}
+
+	return p_obj;
+}
+
+/* obj-ref: (obj-ref obj i) -> value at slot i */
+static x_obj_t *x_prim_obj_ref(x_obj_t *p_base, x_obj_t *p_args)
+{
+	x_obj_t *p_obj = x_prim_eval_arg(p_base, x_firstobj(p_args)),
+		*p_i = x_prim_eval_arg(p_base, x_firstobj(x_restobj(p_args)));
+
+	return (&x_firstobj(p_obj))[x_intval(p_i)];
+}
+
+/* obj-set!: (obj-set! obj i val) -> val */
+static x_obj_t *x_prim_obj_set(x_obj_t *p_base, x_obj_t *p_args)
+{
+	x_obj_t *p_obj = x_prim_eval_arg(p_base, x_firstobj(p_args)),
+		*p_i = x_prim_eval_arg(p_base, x_firstobj(x_restobj(p_args))),
+		*p_val = x_prim_eval_arg(p_base,
+			x_firstobj(x_restobj(x_restobj(p_args))));
+
+	(&x_firstobj(p_obj))[x_intval(p_i)] = p_val;
+
+	return p_val;
+}
+
 x_obj_t *x_prim_type_register(x_obj_t *p_base, x_obj_t *p_args)
 {
 	static const x_prim_entry_t entries[] = {
 		{ "make-type", x_prim_make_type },
 		{ "base-make-type", x_prim_base_make_type },
 		{ "make-instance", x_prim_make_instance },
+		{ "make-obj", x_prim_make_obj },
+		{ "obj-ref", x_prim_obj_ref },
+		{ "obj-set!", x_prim_obj_set },
 		{ "obj-make", x_prim_obj_make },
 		{ "type?", x_prim_typep },
 		{ "type-of", x_prim_type_of },

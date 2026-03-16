@@ -345,23 +345,25 @@ static char *test_ffi_ptr_set_ref(void)
 
 	p_ptr = x_mkptr(p_base, mem);
 
-	/* ptr-set!: write byte 0xAB at offset 0 */
+	/* ptr-set!: write byte 0xAB at offset 0 (nbytes=1) */
 	p_args = x_mkspair(p_base, p_ptr,
 		x_mkspair(p_base, x_mkint(p_base, (x_int_t)0),
 		x_mkspair(p_base, x_mkint(p_base, (x_int_t)0xAB),
-		NULL)));
+		x_mkspair(p_base, x_mkint(p_base, (x_int_t)1),
+		NULL))));
 	x_prim_ptr_set(p_base, p_args);
 	_it_should("ptr-set! writes byte at offset",
 		mem[0] == 0xAB);
 
-	/* ptr-ref: read back (reads sizeof(int) bytes) */
+	/* ptr-ref: read back 1 byte */
 	memset(mem, 0, 16);
 	mem[0] = 42;
 	p_args = x_mkspair(p_base, p_ptr,
 		x_mkspair(p_base, x_mkint(p_base, (x_int_t)0),
-		NULL));
+		x_mkspair(p_base, x_mkint(p_base, (x_int_t)1),
+		NULL)));
 	p_result = x_prim_ptr_ref(p_base, p_args);
-	_it_should("ptr-ref reads int from offset",
+	_it_should("ptr-ref reads byte from offset",
 		x_intval(p_result) == 42);
 
 	test_cleanup(p_base);
