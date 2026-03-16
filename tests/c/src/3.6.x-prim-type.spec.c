@@ -226,16 +226,29 @@ static char *test_type_make_token_base(void)
 	return NULL;
 }
 
-static char *test_type_token_discard(void)
+
+static char *test_type_null_read_discard(void)
 {
-	x_obj_t *p_base, *p_args, *p_result;
+	x_obj_t *p_base, *p_type;
+	struct x_type_t desc;
 
 	p_base = x_base_make(NULL, NULL);
+	x_prim_register(p_base, NULL);
 
-	p_args = x_mksatom(p_base, (x_int_t)42);
-	p_result = x_prim_token_discard(p_base, p_args);
-	_it_should("token-discard returns p_args",
-		p_result == p_args);
+	/* A type with NULL p_read is a discard type.
+	 * Verify it registers without crash and p_read is NULL. */
+	memset(&desc, 0, sizeof(desc));
+	desc.p_name = x_mksatom(p_base, "DISCARD");
+	desc.p_units = (x_obj_t *)&x_type_units_pair_obj;
+	desc.p_analyse = x_mkatom(p_base, test_type_dummy_handler);
+	/* p_read intentionally left NULL */
+	p_type = x_type_struct_make(p_base, desc);
+	x_base_type_alist_extend(p_base, p_type);
+
+	_it_should("null-read type registered successfully",
+		p_type != NULL);
+	_it_should("null-read type has NULL p_read",
+		x_obj_isnil(p_base, x_type_field_read(p_type)));
 
 	test_cleanup(p_base);
 	return NULL;
@@ -1033,7 +1046,7 @@ static char *run_tests() {
 	_run_test(test_type_type_name);
 	_run_test(test_type_make_instance);
 	_run_test(test_type_make_token_base);
-	_run_test(test_type_token_discard);
+	_run_test(test_type_null_read_discard);
 	_run_test(test_type_register);
 	_run_test(test_type_make_type);
 	_run_test(test_type_make_type_with_handlers);

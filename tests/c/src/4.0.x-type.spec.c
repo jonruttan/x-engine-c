@@ -52,8 +52,9 @@
 #define TEST_TYPE_STRUCT_TO		TEST_TYPE_MK_ENTRY(0xB)
 #define TEST_TYPE_STRUCT_ANALYSE	TEST_TYPE_MK_ENTRY(0xC)
 #define TEST_TYPE_STRUCT_DELIMIT	TEST_TYPE_MK_ENTRY(0xD)
-#define TEST_TYPE_STRUCT_WRITE		TEST_TYPE_MK_ENTRY(0xE)
-#define TEST_TYPE_STRUCT_DISPLAY	TEST_TYPE_MK_ENTRY(0xF)
+#define TEST_TYPE_STRUCT_READ		TEST_TYPE_MK_ENTRY(0xE)
+#define TEST_TYPE_STRUCT_WRITE		TEST_TYPE_MK_ENTRY(0xF)
+#define TEST_TYPE_STRUCT_DISPLAY	TEST_TYPE_MK_ENTRY(0x10)
 
 
 /*
@@ -170,6 +171,7 @@ static char *test_type_struct_make(void)
 		TEST_TYPE_STRUCT_TO,
 		TEST_TYPE_STRUCT_ANALYSE,
 		TEST_TYPE_STRUCT_DELIMIT,
+		TEST_TYPE_STRUCT_READ,
 		TEST_TYPE_STRUCT_WRITE,
 		TEST_TYPE_STRUCT_DISPLAY,
 		NULL	/* p_error */
@@ -233,6 +235,10 @@ static char *test_type_struct_make(void)
 
 	_it_should("set the Delimit primitive",
 		TEST_TYPE_STRUCT_DELIMIT == x_type_field_delimit(p_type)
+	);
+
+	_it_should("set the Read primitive",
+		TEST_TYPE_STRUCT_READ == x_type_field_read(p_type)
 	);
 
 	_it_should("set the Write primitive",

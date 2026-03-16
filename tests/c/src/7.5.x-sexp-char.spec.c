@@ -391,10 +391,12 @@ static char *test_sexp_char_write(void)
 	p_obj = x_mkchar(NULL, c);
 	p_args = x_mkspair(NULL, p_obj, NULL);
 	p_ret = x_sexp_char_write(NULL, p_args);
-	_it_should("write the value of the Character object",
+	_it_should("write #\\char for the Character object",
 		! x_obj_isnil(NULL, p_ret)
 		&& p_obj == p_ret
-		&& buffer[0] == c
+		&& buffer[0] == '#'
+		&& buffer[1] == '\\'
+		&& buffer[2] == c
 	);
 
 	x_sys_free(p_args);
@@ -421,8 +423,8 @@ static char *test_sexp_char_write_named(void)
 	_it_should("return the char object for named write",
 		p_obj == p_ret
 	);
-	_it_should("write 'newline' for \\n",
-		0 == x_lib_strncmp(out_buffer, "newline", 7)
+	_it_should("write '#\\newline' for \\n",
+		0 == x_lib_strncmp(out_buffer, "#\\newline", 9)
 	);
 
 	test_cleanup(p_base);
@@ -441,8 +443,10 @@ static char *test_sexp_char_write_named(void)
 	_it_should("return the char object for non-named write",
 		p_obj == p_ret
 	);
-	_it_should("write 'Z' for non-named char",
-		out_buffer[0] == 'Z'
+	_it_should("write '#\\Z' for non-named char",
+		out_buffer[0] == '#'
+		&& out_buffer[1] == '\\'
+		&& out_buffer[2] == 'Z'
 	);
 
 	/* Write failure: limit stdout to 0 bytes */

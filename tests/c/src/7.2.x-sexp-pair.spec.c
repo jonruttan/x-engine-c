@@ -71,9 +71,9 @@ static char *test_sexp_pair_write(void)
 	helper_file_reset();
 	x_firstobj(p_args) = p_pairs[0];
 	x_sexp_pair_write(NULL, p_args);
-	expected = "()";
+	expected = "(())";
 	s = helper_file_str(TEST_HELPER_FILE_STDOUT);
-	_it_should("write empty pair s-exp to stdout",
+	_it_should("write nil-pair s-exp to stdout",
 		0 == strncmp(expected, s, strlen(expected))
 		&& 0 == x_token_write_call_count
 	);

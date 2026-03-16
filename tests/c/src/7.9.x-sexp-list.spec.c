@@ -140,7 +140,6 @@ static char *test_sexp_list_analyse(void)
 		p_obj = x_sexp_list_analyse(p_base, p_args);
 		_it_should("return score for '('", p_score == p_obj);
 		_it_should("set score to buffer len", 1 == x_firstint(p_score));
-		_it_should("set read prim", x_sexp_list_read_prim == x_restobj(p_score));
 	}
 	test_cleanup(p_base);
 

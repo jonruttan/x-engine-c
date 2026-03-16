@@ -130,12 +130,18 @@ static char *test_string_symbol_convert(void)
 	_it_should("(string->symbol \"foo\") is a symbol",
 		x_lib_strcmp(x_symbolval(p_result), "foo") == 0);
 
-	/* (symbol->string 't) -> "t" (t is already bound in env) */
-	p_args = x_mkspair(p_base,
-		x_base_field_true(p_base), NULL);
-	p_result = x_prim_symbol_to_string(p_base, p_args);
-	_it_should("(symbol->string t) = \"t\"",
-		x_lib_strcmp(x_strval(p_result), "t") == 0);
+	/* (symbol->string 'mysym) -> "mysym" (bind symbol to itself) */
+	{
+		x_obj_t *p_sym;
+		p_sym = x_mksymbol(p_base, "mysym");
+		x_base_env_alist_extend(p_base,
+			x_mkspair(p_base, x_mksymbol(p_base, "mysym"), p_sym));
+		p_args = x_mkspair(p_base,
+			x_mksymbol(p_base, "mysym"), NULL);
+		p_result = x_prim_symbol_to_string(p_base, p_args);
+		_it_should("(symbol->string mysym) = \"mysym\"",
+			x_lib_strcmp(x_strval(p_result), "mysym") == 0);
+	}
 
 	test_cleanup(p_base);
 	return NULL;

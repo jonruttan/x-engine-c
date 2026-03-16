@@ -335,13 +335,16 @@ static char *test_token_read(void)
 		.p_delimit = x_mkatom(p_base, test_token_read_delimit_whitespace)
 	}, type_catchall = {
 		.p_name = x_mkatom(p_base, (void *)"CATCHALL"),
-		.p_analyse = x_mkatom(p_base, test_token_read_analyse_catchall)
+		.p_analyse = x_mkatom(p_base, test_token_read_analyse_catchall),
+		.p_read = x_mkatom(p_base, test_token_read_read_catchall)
 	}, type1 = {
 		.p_name = x_mkatom(p_base, (void *)"TYPE1"),
-		.p_analyse = x_mkatom(p_base, test_token_read_analyse1)
+		.p_analyse = x_mkatom(p_base, test_token_read_analyse1),
+		.p_read = x_mkatom(p_base, test_token_read_read1)
 	}, type2 = {
 		.p_name = x_mkatom(p_base, (void *)"TYPE2"),
-		.p_analyse = x_mkatom(p_base, test_token_read_analyse2_1)
+		.p_analyse = x_mkatom(p_base, test_token_read_analyse2_1),
+		.p_read = x_mkatom(p_base, test_token_read_read2)
 	};
 
 	s = "@AAB  @AA ";
@@ -394,7 +397,8 @@ static char *test_token_read_eof(void)
 	x_char_t buffer[32];
 	struct x_type_t type_catchall = {
 		.p_name = x_mkatom(p_base, (void *)"CATCHALL"),
-		.p_analyse = x_mkatom(p_base, test_token_read_analyse_catchall)
+		.p_analyse = x_mkatom(p_base, test_token_read_analyse_catchall),
+		.p_read = x_mkatom(p_base, test_token_read_read_catchall)
 	};
 
 	p_type = x_type_struct_make(p_base, type_catchall);
@@ -491,7 +495,8 @@ static char *test_token_read_null_reader(void)
 	x_char_t buffer[32];
 	struct x_type_t type_null = {
 		.p_name = x_mkatom(p_base, (void *)"NULL_READER"),
-		.p_analyse = x_mkatom(p_base, test_token_read_analyse_null)
+		.p_analyse = x_mkatom(p_base, test_token_read_analyse_null),
+		.p_read = x_mkatom(p_base, test_token_read_read_null)
 	};
 
 	p_type = x_type_struct_make(p_base, type_null);
@@ -525,7 +530,8 @@ static char *test_token_read_ro_eof(void)
 	x_obj_t *p_ro_buffer;
 	struct x_type_t type_autoscore = {
 		.p_name = x_mkatom(p_base, (void *)"AUTOSCORE"),
-		.p_analyse = x_mkatom(p_base, test_token_read_analyse_autoscore)
+		.p_analyse = x_mkatom(p_base, test_token_read_analyse_autoscore),
+		.p_read = x_mkatom(p_base, test_token_read_read_catchall)
 	};
 
 	/* AutoScore type: sets reader via side-effect, returns continue.

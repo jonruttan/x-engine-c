@@ -193,23 +193,22 @@ static char *test_sexp_comment_delimit(void)
 	return NULL;
 }
 
-static char *test_sexp_comment_read(void)
+static char *test_sexp_comment_null_read(void)
 {
-	x_obj_t *p_base, *p_args, *p_buffer, *p_obj;
-	x_char_t *s, buffer[32];
+	x_obj_t *p_base, *p_type;
 
-
-	s = "@" X_SEXP_COMMENT_POST_STR;
-	helper_file_buffer_ptr[TEST_HELPER_FILE_STDIN] = s;
-	helper_file_reset();
-
+	/* Comment type now uses NULL p_read (discard mechanism).
+	 * Verify it registers with NULL p_read. */
 	p_base = x_base_make(NULL, NULL);
-	p_buffer = x_mkbuffer(p_base, buffer);
-	p_args = x_mkspair(p_base, p_buffer, p_base);
-	p_obj = x_type_buffer_read(p_base, p_args);
-	p_obj = x_sexp_comment_read(p_base, p_args);
-	_it_should("return the arguments", p_args == p_obj);
+	x_type_comment_register(p_base, p_base);
 
+	/* Find comment type on type alist */
+	p_type = x_base_field_type_alist(p_base);
+	_it_should("comment type is registered",
+		! x_obj_isnil(p_base, p_type));
+	_it_should("comment type has NULL p_read (discard)",
+		x_obj_isnil(p_base,
+			x_type_field_read(x_restobj(x_firstobj(p_type)))));
 
 	test_cleanup(p_base);
 
@@ -292,6 +291,7 @@ static char *test_sexp_comment_read_token(void)
 	struct x_type_t type_catchall = {
 		.p_name = x_mkstr(p_base, "CATCHALL"),
 		.p_analyse = test_token_read_analyse_catchall_prim,
+		.p_read = test_token_read_read_catchall_prim,
 	};
 
 
@@ -324,7 +324,7 @@ static char *run_tests() {
 	_run_test(test_sexp_comment_analyse1);
 	_run_test(test_sexp_comment_analyse2);
 	_run_test(test_sexp_comment_delimit);
-	_run_test(test_sexp_comment_read);
+	_run_test(test_sexp_comment_null_read);
 	_run_test(test_sexp_comment_read_token);
 
 	return NULL;

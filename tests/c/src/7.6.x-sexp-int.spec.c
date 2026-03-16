@@ -126,7 +126,6 @@ static char *test_sexp_int_analyse_digits(void)
 		p_obj = x_sexp_int_analyse_digits(p_base, p_args);
 		_it_should("return the score", p_score == p_obj);
 		_it_should("set the score to 1", 1 == x_firstint(p_score));
-		_it_should("set the read prim", x_sexp_int_read_prim == x_restobj(p_score));
 	}
 
 	test_cleanup(p_base);
@@ -181,7 +180,6 @@ static char *test_sexp_int_analyse_xdigits(void)
 		p_obj = x_sexp_int_analyse_xdigits(p_base, p_args);
 		_it_should("return the score", p_score == p_obj);
 		_it_should("set the score to 3", 3 == x_firstint(p_score));
-		_it_should("set the read prim", x_sexp_int_read_prim == x_restobj(p_score));
 	}
 
 	test_cleanup(p_base);

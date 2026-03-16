@@ -197,6 +197,7 @@ static char *test_io_write_to_string(void)
 {
 	x_obj_t *p_base, *p_args, *p_result;
 
+	helper_set_alloc(MEM_SYSTEM);
 	p_base = x_base_make(NULL, NULL);
 	x_prim_register(p_base, NULL);
 
@@ -227,6 +228,7 @@ static char *test_io_write_to_string(void)
 		x_obj_isnil(p_base, x_base_field_write_buf(p_base)));
 
 	test_cleanup(p_base);
+	helper_set_alloc(MEM_GUARANTEED);
 	return NULL;
 }
 
