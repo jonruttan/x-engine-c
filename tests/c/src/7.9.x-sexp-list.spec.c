@@ -280,8 +280,8 @@ static char *test_sexp_list_write(void)
 	p_args = x_mkspair(p_base, p_list, NULL);
 	x_sexp_list_write(p_base, p_args);
 
-	_it_should("write () for empty list",
-		s[0] == '(' && s[1] == ')');
+	_it_should("write (()) for empty list (nil first written as ())",
+		s[0] == '(' && s[1] == '(' && s[2] == ')' && s[3] == ')');
 
 	/* Write single-element list: (42) */
 	p_list = x_mklist(p_base,

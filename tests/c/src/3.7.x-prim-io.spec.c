@@ -220,8 +220,8 @@ static char *test_io_write_to_string(void)
 	/* (write-to-string ()) -> "" */
 	p_args = x_mkspair(p_base, NULL, NULL);
 	p_result = x_prim_write_to_string(p_base, p_args);
-	_it_should("write-to-string of nil is empty string",
-		x_lib_strcmp(x_strval(p_result), "") == 0);
+	_it_should("write-to-string of nil is \"()\"",
+		x_lib_strcmp(x_strval(p_result), "()") == 0);
 
 	/* write-buf is restored after write-to-string */
 	_it_should("write-buf restored to nil after write-to-string",

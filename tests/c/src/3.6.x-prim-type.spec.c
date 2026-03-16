@@ -240,7 +240,7 @@ static char *test_type_null_read_discard(void)
 	memset(&desc, 0, sizeof(desc));
 	desc.p_name = x_mksatom(p_base, "DISCARD");
 	desc.p_units = (x_obj_t *)&x_type_units_pair_obj;
-	desc.p_analyse = x_mkatom(p_base, test_type_dummy_handler);
+	desc.p_analyse = x_mksatom(p_base, 1);
 	/* p_read intentionally left NULL */
 	p_type = x_type_struct_make(p_base, desc);
 	x_base_type_alist_extend(p_base, p_type);

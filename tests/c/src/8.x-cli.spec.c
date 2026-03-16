@@ -68,7 +68,7 @@
 static void _setup(void)
 {
 	_buffer_index = -1;
-	helper_set_alloc(MEM_GUARANTEED);
+	helper_set_alloc(MEM_SYSTEM);
 }
 
 static void _teardown(void)
