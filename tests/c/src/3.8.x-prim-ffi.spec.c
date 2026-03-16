@@ -56,6 +56,7 @@ x_obj_t *x_prim_string_register(x_obj_t *p_base, x_obj_t *p_args) { return p_bas
 x_obj_t *x_prim_io_register(x_obj_t *p_base, x_obj_t *p_args) { return p_base; }
 x_obj_t *x_prim_type_register(x_obj_t *p_base, x_obj_t *p_args) { return p_base; }
 
+
 #include "ext/x-expr/tests/src/helper-system-functions.c"
 
 /* Test helper functions for ffi-call d->d and dd->d conventions */
@@ -89,19 +90,17 @@ void test_cleanup(x_obj_t *p_base)
 	}
 }
 
-/* Helper: encode a C double as an x_int_t (IEEE 754 bits) */
-static x_int_t double_to_bits(double d)
+/* Helper: create double-bits object (int on 64-bit, pair on 32-bit) */
+static x_obj_t *test_mk_double(x_obj_t *p_base, double d)
 {
-	x_int_t bits;
-	memcpy(&bits, &d, sizeof(double));
-	return bits;
+	return x_ffi_from_double(p_base, &d);
 }
 
-/* Helper: decode x_int_t bits back to double */
-static double bits_to_double(x_int_t bits)
+/* Helper: extract C double from double-bits object */
+static double test_get_double(x_obj_t *p_base, x_obj_t *p_obj)
 {
 	double d;
-	memcpy(&d, &bits, sizeof(double));
+	x_ffi_to_double(p_base, p_obj, &d);
 	return d;
 }
 
@@ -121,11 +120,11 @@ static char *test_ffi_arith_add(void)
 	/* (ffi-call "d+d" () 3.0 4.0) -> 7.0 */
 	p_args = x_mkspair(p_base, x_mkstr(p_base, "d+d"),
 		x_mkspair(p_base, NULL,
-		x_mkspair(p_base, x_mkint(p_base, double_to_bits(3.0)),
-		x_mkspair(p_base, x_mkint(p_base, double_to_bits(4.0)),
+		x_mkspair(p_base, test_mk_double(p_base, 3.0),
+		x_mkspair(p_base, test_mk_double(p_base, 4.0),
 		NULL))));
 	p_result = x_prim_ffi_call(p_base, p_args);
-	r = bits_to_double(x_intval(p_result));
+	r = test_get_double(p_base, p_result);
 	_it_should("d+d: 3.0 + 4.0 = 7.0", r == 7.0);
 
 	test_cleanup(p_base);
@@ -143,11 +142,11 @@ static char *test_ffi_arith_sub(void)
 	/* (ffi-call "d-d" () 10.0 3.0) -> 7.0 */
 	p_args = x_mkspair(p_base, x_mkstr(p_base, "d-d"),
 		x_mkspair(p_base, NULL,
-		x_mkspair(p_base, x_mkint(p_base, double_to_bits(10.0)),
-		x_mkspair(p_base, x_mkint(p_base, double_to_bits(3.0)),
+		x_mkspair(p_base, test_mk_double(p_base, 10.0),
+		x_mkspair(p_base, test_mk_double(p_base, 3.0),
 		NULL))));
 	p_result = x_prim_ffi_call(p_base, p_args);
-	r = bits_to_double(x_intval(p_result));
+	r = test_get_double(p_base, p_result);
 	_it_should("d-d: 10.0 - 3.0 = 7.0", r == 7.0);
 
 	test_cleanup(p_base);
@@ -165,11 +164,11 @@ static char *test_ffi_arith_mul(void)
 	/* (ffi-call "d*d" () 3.0 5.0) -> 15.0 */
 	p_args = x_mkspair(p_base, x_mkstr(p_base, "d*d"),
 		x_mkspair(p_base, NULL,
-		x_mkspair(p_base, x_mkint(p_base, double_to_bits(3.0)),
-		x_mkspair(p_base, x_mkint(p_base, double_to_bits(5.0)),
+		x_mkspair(p_base, test_mk_double(p_base, 3.0),
+		x_mkspair(p_base, test_mk_double(p_base, 5.0),
 		NULL))));
 	p_result = x_prim_ffi_call(p_base, p_args);
-	r = bits_to_double(x_intval(p_result));
+	r = test_get_double(p_base, p_result);
 	_it_should("d*d: 3.0 * 5.0 = 15.0", r == 15.0);
 
 	test_cleanup(p_base);
@@ -187,11 +186,11 @@ static char *test_ffi_arith_div(void)
 	/* (ffi-call "d/d" () 15.0 3.0) -> 5.0 */
 	p_args = x_mkspair(p_base, x_mkstr(p_base, "d/d"),
 		x_mkspair(p_base, NULL,
-		x_mkspair(p_base, x_mkint(p_base, double_to_bits(15.0)),
-		x_mkspair(p_base, x_mkint(p_base, double_to_bits(3.0)),
+		x_mkspair(p_base, test_mk_double(p_base, 15.0),
+		x_mkspair(p_base, test_mk_double(p_base, 3.0),
 		NULL))));
 	p_result = x_prim_ffi_call(p_base, p_args);
-	r = bits_to_double(x_intval(p_result));
+	r = test_get_double(p_base, p_result);
 	_it_should("d/d: 15.0 / 3.0 = 5.0", r == 5.0);
 
 	test_cleanup(p_base);
@@ -208,28 +207,28 @@ static char *test_ffi_compare(void)
 	/* d<d: 1.0 < 2.0 -> t */
 	p_args = x_mkspair(p_base, x_mkstr(p_base, "d<d"),
 		x_mkspair(p_base, NULL,
-		x_mkspair(p_base, x_mkint(p_base, double_to_bits(1.0)),
-		x_mkspair(p_base, x_mkint(p_base, double_to_bits(2.0)),
+		x_mkspair(p_base, test_mk_double(p_base, 1.0),
+		x_mkspair(p_base, test_mk_double(p_base, 2.0),
 		NULL))));
 	p_result = x_prim_ffi_call(p_base, p_args);
 	_it_should("d<d: 1.0 < 2.0 is true",
 		p_result == x_base_field_true(p_base));
 
-	/* d<d: 2.0 < 1.0 -> nil */
+	/* d<d: 2.0 < 1.0 -> #f */
 	p_args = x_mkspair(p_base, x_mkstr(p_base, "d<d"),
 		x_mkspair(p_base, NULL,
-		x_mkspair(p_base, x_mkint(p_base, double_to_bits(2.0)),
-		x_mkspair(p_base, x_mkint(p_base, double_to_bits(1.0)),
+		x_mkspair(p_base, test_mk_double(p_base, 2.0),
+		x_mkspair(p_base, test_mk_double(p_base, 1.0),
 		NULL))));
 	p_result = x_prim_ffi_call(p_base, p_args);
 	_it_should("d<d: 2.0 < 1.0 is false",
-		p_result == NULL);
+		p_result == x_base_field_false(p_base));
 
 	/* d=d: 5.0 = 5.0 -> t */
 	p_args = x_mkspair(p_base, x_mkstr(p_base, "d=d"),
 		x_mkspair(p_base, NULL,
-		x_mkspair(p_base, x_mkint(p_base, double_to_bits(5.0)),
-		x_mkspair(p_base, x_mkint(p_base, double_to_bits(5.0)),
+		x_mkspair(p_base, test_mk_double(p_base, 5.0),
+		x_mkspair(p_base, test_mk_double(p_base, 5.0),
 		NULL))));
 	p_result = x_prim_ffi_call(p_base, p_args);
 	_it_should("d=d: 5.0 = 5.0 is true",
@@ -238,8 +237,8 @@ static char *test_ffi_compare(void)
 	/* d>=d: 3.0 >= 3.0 -> t */
 	p_args = x_mkspair(p_base, x_mkstr(p_base, "d>=d"),
 		x_mkspair(p_base, NULL,
-		x_mkspair(p_base, x_mkint(p_base, double_to_bits(3.0)),
-		x_mkspair(p_base, x_mkint(p_base, double_to_bits(3.0)),
+		x_mkspair(p_base, test_mk_double(p_base, 3.0),
+		x_mkspair(p_base, test_mk_double(p_base, 3.0),
 		NULL))));
 	p_result = x_prim_ffi_call(p_base, p_args);
 	_it_should("d>=d: 3.0 >= 3.0 is true",
@@ -263,7 +262,7 @@ static char *test_ffi_cast_i_to_d(void)
 		x_mkspair(p_base, x_mkint(p_base, (x_int_t)42),
 		NULL)));
 	p_result = x_prim_ffi_call(p_base, p_args);
-	r = bits_to_double(x_intval(p_result));
+	r = test_get_double(p_base, p_result);
 	_it_should("i->d: 42 -> 42.0", r == 42.0);
 
 	test_cleanup(p_base);
@@ -280,7 +279,7 @@ static char *test_ffi_cast_d_to_i(void)
 	/* (ffi-call "d->i" () 42.7-as-bits) -> 42 (truncated) */
 	p_args = x_mkspair(p_base, x_mkstr(p_base, "d->i"),
 		x_mkspair(p_base, NULL,
-		x_mkspair(p_base, x_mkint(p_base, double_to_bits(42.7)),
+		x_mkspair(p_base, test_mk_double(p_base, 42.7),
 		NULL)));
 	p_result = x_prim_ffi_call(p_base, p_args);
 	_it_should("d->i: 42.7 -> 42", x_intval(p_result) == 42);
@@ -299,7 +298,7 @@ static char *test_ffi_d_to_s(void)
 	/* (ffi-call "d->s" () 3.14-as-bits) -> "3.14" */
 	p_args = x_mkspair(p_base, x_mkstr(p_base, "d->s"),
 		x_mkspair(p_base, NULL,
-		x_mkspair(p_base, x_mkint(p_base, double_to_bits(3.14)),
+		x_mkspair(p_base, test_mk_double(p_base, 3.14),
 		NULL)));
 	p_result = x_prim_ffi_call(p_base, p_args);
 	_it_should("d->s returns a string",
@@ -464,10 +463,10 @@ static char *test_ffi_call_d_to_d(void)
 	/* (ffi-call "d->d" fptr 5.0) -> -5.0 */
 	p_args = x_mkspair(p_base, x_mkstr(p_base, "d->d"),
 		x_mkspair(p_base, x_mkptr(p_base, (void *)test_ffi_double_negate),
-		x_mkspair(p_base, x_mkint(p_base, double_to_bits(5.0)),
+		x_mkspair(p_base, test_mk_double(p_base, 5.0),
 		NULL)));
 	p_result = x_prim_ffi_call(p_base, p_args);
-	r = bits_to_double(x_intval(p_result));
+	r = test_get_double(p_base, p_result);
 	_it_should("d->d: negate(5.0) = -5.0", r == -5.0);
 
 	test_cleanup(p_base);
@@ -485,11 +484,11 @@ static char *test_ffi_call_dd_to_d(void)
 	/* (ffi-call "dd->d" fptr 3.0 7.0) -> 10.0 */
 	p_args = x_mkspair(p_base, x_mkstr(p_base, "dd->d"),
 		x_mkspair(p_base, x_mkptr(p_base, (void *)test_ffi_double_add),
-		x_mkspair(p_base, x_mkint(p_base, double_to_bits(3.0)),
-		x_mkspair(p_base, x_mkint(p_base, double_to_bits(7.0)),
+		x_mkspair(p_base, test_mk_double(p_base, 3.0),
+		x_mkspair(p_base, test_mk_double(p_base, 7.0),
 		NULL))));
 	p_result = x_prim_ffi_call(p_base, p_args);
-	r = bits_to_double(x_intval(p_result));
+	r = test_get_double(p_base, p_result);
 	_it_should("dd->d: add(3.0, 7.0) = 10.0", r == 10.0);
 
 	test_cleanup(p_base);
@@ -506,42 +505,42 @@ static char *test_ffi_compare_gt_le(void)
 	/* d>d: 5.0 > 3.0 -> t */
 	p_args = x_mkspair(p_base, x_mkstr(p_base, "d>d"),
 		x_mkspair(p_base, NULL,
-		x_mkspair(p_base, x_mkint(p_base, double_to_bits(5.0)),
-		x_mkspair(p_base, x_mkint(p_base, double_to_bits(3.0)),
+		x_mkspair(p_base, test_mk_double(p_base, 5.0),
+		x_mkspair(p_base, test_mk_double(p_base, 3.0),
 		NULL))));
 	p_result = x_prim_ffi_call(p_base, p_args);
 	_it_should("d>d: 5.0 > 3.0 is true",
 		p_result == x_base_field_true(p_base));
 
-	/* d>d: 1.0 > 2.0 -> nil */
+	/* d>d: 1.0 > 2.0 -> #f */
 	p_args = x_mkspair(p_base, x_mkstr(p_base, "d>d"),
 		x_mkspair(p_base, NULL,
-		x_mkspair(p_base, x_mkint(p_base, double_to_bits(1.0)),
-		x_mkspair(p_base, x_mkint(p_base, double_to_bits(2.0)),
+		x_mkspair(p_base, test_mk_double(p_base, 1.0),
+		x_mkspair(p_base, test_mk_double(p_base, 2.0),
 		NULL))));
 	p_result = x_prim_ffi_call(p_base, p_args);
 	_it_should("d>d: 1.0 > 2.0 is false",
-		p_result == NULL);
+		p_result == x_base_field_false(p_base));
 
 	/* d<=d: 3.0 <= 3.0 -> t */
 	p_args = x_mkspair(p_base, x_mkstr(p_base, "d<=d"),
 		x_mkspair(p_base, NULL,
-		x_mkspair(p_base, x_mkint(p_base, double_to_bits(3.0)),
-		x_mkspair(p_base, x_mkint(p_base, double_to_bits(3.0)),
+		x_mkspair(p_base, test_mk_double(p_base, 3.0),
+		x_mkspair(p_base, test_mk_double(p_base, 3.0),
 		NULL))));
 	p_result = x_prim_ffi_call(p_base, p_args);
 	_it_should("d<=d: 3.0 <= 3.0 is true",
 		p_result == x_base_field_true(p_base));
 
-	/* d<=d: 5.0 <= 3.0 -> nil */
+	/* d<=d: 5.0 <= 3.0 -> #f */
 	p_args = x_mkspair(p_base, x_mkstr(p_base, "d<=d"),
 		x_mkspair(p_base, NULL,
-		x_mkspair(p_base, x_mkint(p_base, double_to_bits(5.0)),
-		x_mkspair(p_base, x_mkint(p_base, double_to_bits(3.0)),
+		x_mkspair(p_base, test_mk_double(p_base, 5.0),
+		x_mkspair(p_base, test_mk_double(p_base, 3.0),
 		NULL))));
 	p_result = x_prim_ffi_call(p_base, p_args);
 	_it_should("d<=d: 5.0 <= 3.0 is false",
-		p_result == NULL);
+		p_result == x_base_field_false(p_base));
 
 	test_cleanup(p_base);
 	return NULL;
@@ -561,7 +560,7 @@ static char *test_ffi_call_s0_to_d(void)
 		x_mkspair(p_base, x_mkstr(p_base, "5"),
 		NULL)));
 	p_result = x_prim_ffi_call(p_base, p_args);
-	r = bits_to_double(x_intval(p_result));
+	r = test_get_double(p_base, p_result);
 	_it_should("s0->d: strtod(\"5\") = 5.0", r == 5.0);
 
 	test_cleanup(p_base);

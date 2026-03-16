@@ -68,7 +68,8 @@ static x_obj_t *x_prim_type_build_struct(x_obj_t *p_base,
 			{ "to",      offsetof(struct x_type_t, p_to) },
 			{ "units",   offsetof(struct x_type_t, p_units) },
 			{ "free",    offsetof(struct x_type_t, p_free) },
-			{ "mark",    offsetof(struct x_type_t, p_mark) }
+			{ "mark",    offsetof(struct x_type_t, p_mark) },
+			{ "first-chars", offsetof(struct x_type_t, p_data) }
 		};
 		int i;
 

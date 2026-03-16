@@ -218,3 +218,12 @@ x_obj_t *x_prim_register(x_obj_t *p_base, x_obj_t *p_args)
 
 	return p_base;
 }
+
+#ifdef TESTS
+/* Stub for test binaries that don't include src/x-prim/callcc.c */
+x_obj_t *x_prim_callcc_register(x_obj_t *p_base, x_obj_t *p_args)
+{
+	(void)p_args;
+	return p_base;
+}
+#endif

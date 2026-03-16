@@ -27,6 +27,55 @@
 #include <stdio.h>   /* sprintf */
 #include <dlfcn.h>   /* dlopen, dlsym */
 
+/*
+ * # Double Bit-Pattern Helpers
+ *
+ * On 64-bit (sizeof(long) >= 8), a double's IEEE 754 bits fit in one x_int_t.
+ * On 32-bit (sizeof(long) == 4), the 8-byte double is split across a pair of
+ * two integer objects: (lo-bits . hi-bits).
+ *
+ * x_ffi_to_double:   extract double from its stored representation
+ * x_ffi_from_double: create stored representation from a double
+ */
+#if defined(__LP64__) || defined(_LP64) || defined(_WIN64)
+
+/* 64-bit: double fits in a single x_int_t / integer object */
+static void x_ffi_to_double(x_obj_t *p_base, x_obj_t *p_bits, double *out)
+{
+	(void)p_base;
+	memcpy(out, &x_intval(p_bits), sizeof(double));
+}
+
+static x_obj_t *x_ffi_from_double(x_obj_t *p_base, double *in)
+{
+	x_int_t bits;
+	memcpy(&bits, in, sizeof(double));
+	return x_mkint(p_base, bits);
+}
+
+#else /* 32-bit */
+
+/* 32-bit: double stored as pair (lo-int . hi-int) */
+static void x_ffi_to_double(x_obj_t *p_base, x_obj_t *p_bits, double *out)
+{
+	x_int_t parts[2];
+	(void)p_base;
+	parts[0] = x_intval(x_firstobj(p_bits));
+	parts[1] = x_intval(x_restobj(p_bits));
+	memcpy(out, parts, sizeof(double));
+}
+
+static x_obj_t *x_ffi_from_double(x_obj_t *p_base, double *in)
+{
+	x_int_t parts[2];
+	memcpy(parts, in, sizeof(double));
+	return x_mkspair(p_base,
+		x_mkint(p_base, parts[0]),
+		x_mkint(p_base, parts[1]));
+}
+
+#endif /* 64-bit vs 32-bit */
+
 /* dlopen: (dlopen path flags) -> ptr
  * Pass () for path to get handle to current process (dlopen(NULL, ...)) */
 static x_obj_t *x_prim_dlopen(x_obj_t *p_base, x_obj_t *p_args)
@@ -81,7 +130,6 @@ static x_obj_t *x_prim_ffi_call(x_obj_t *p_base, x_obj_t *p_args)
 	x_char_t *conv;
 	void *fptr;
 	double a, b, r;
-	x_int_t bits;
 
 	p_conv = x_prim_eval_arg(p_base, x_firstobj(p_args));
 	p_fptr = x_prim_eval_arg(p_base, x_firstobj(x_restobj(p_args)));
@@ -93,10 +141,9 @@ static x_obj_t *x_prim_ffi_call(x_obj_t *p_base, x_obj_t *p_args)
 	if (x_lib_strcmp(conv, "d->d") == 0) {
 		fptr = x_ptrval(p_fptr);
 		p_a = x_prim_eval_arg(p_base, x_firstobj(p_rest));
-		memcpy(&a, &x_intval(p_a), sizeof(double));
+		x_ffi_to_double(p_base, p_a, &a);
 		r = ((double (*)(double))fptr)(a);
-		memcpy(&bits, &r, sizeof(double));
-		return x_mkint(p_base, bits);
+		return x_ffi_from_double(p_base, &r);
 	}
 
 	if (x_lib_strcmp(conv, "dd->d") == 0) {
@@ -104,11 +151,10 @@ static x_obj_t *x_prim_ffi_call(x_obj_t *p_base, x_obj_t *p_args)
 		p_a = x_prim_eval_arg(p_base, x_firstobj(p_rest));
 		p_b = x_prim_eval_arg(p_base,
 			x_firstobj(x_restobj(p_rest)));
-		memcpy(&a, &x_intval(p_a), sizeof(double));
-		memcpy(&b, &x_intval(p_b), sizeof(double));
+		x_ffi_to_double(p_base, p_a, &a);
+		x_ffi_to_double(p_base, p_b, &b);
 		r = ((double (*)(double, double))fptr)(a, b);
-		memcpy(&bits, &r, sizeof(double));
-		return x_mkint(p_base, bits);
+		return x_ffi_from_double(p_base, &r);
 	}
 
 	/* Arithmetic conventions (no function pointer needed) */
@@ -116,44 +162,40 @@ static x_obj_t *x_prim_ffi_call(x_obj_t *p_base, x_obj_t *p_args)
 		p_a = x_prim_eval_arg(p_base, x_firstobj(p_rest));
 		p_b = x_prim_eval_arg(p_base,
 			x_firstobj(x_restobj(p_rest)));
-		memcpy(&a, &x_intval(p_a), sizeof(double));
-		memcpy(&b, &x_intval(p_b), sizeof(double));
+		x_ffi_to_double(p_base, p_a, &a);
+		x_ffi_to_double(p_base, p_b, &b);
 		r = a + b;
-		memcpy(&bits, &r, sizeof(double));
-		return x_mkint(p_base, bits);
+		return x_ffi_from_double(p_base, &r);
 	}
 
 	if (x_lib_strcmp(conv, "d-d") == 0) {
 		p_a = x_prim_eval_arg(p_base, x_firstobj(p_rest));
 		p_b = x_prim_eval_arg(p_base,
 			x_firstobj(x_restobj(p_rest)));
-		memcpy(&a, &x_intval(p_a), sizeof(double));
-		memcpy(&b, &x_intval(p_b), sizeof(double));
+		x_ffi_to_double(p_base, p_a, &a);
+		x_ffi_to_double(p_base, p_b, &b);
 		r = a - b;
-		memcpy(&bits, &r, sizeof(double));
-		return x_mkint(p_base, bits);
+		return x_ffi_from_double(p_base, &r);
 	}
 
 	if (x_lib_strcmp(conv, "d*d") == 0) {
 		p_a = x_prim_eval_arg(p_base, x_firstobj(p_rest));
 		p_b = x_prim_eval_arg(p_base,
 			x_firstobj(x_restobj(p_rest)));
-		memcpy(&a, &x_intval(p_a), sizeof(double));
-		memcpy(&b, &x_intval(p_b), sizeof(double));
+		x_ffi_to_double(p_base, p_a, &a);
+		x_ffi_to_double(p_base, p_b, &b);
 		r = a * b;
-		memcpy(&bits, &r, sizeof(double));
-		return x_mkint(p_base, bits);
+		return x_ffi_from_double(p_base, &r);
 	}
 
 	if (x_lib_strcmp(conv, "d/d") == 0) {
 		p_a = x_prim_eval_arg(p_base, x_firstobj(p_rest));
 		p_b = x_prim_eval_arg(p_base,
 			x_firstobj(x_restobj(p_rest)));
-		memcpy(&a, &x_intval(p_a), sizeof(double));
-		memcpy(&b, &x_intval(p_b), sizeof(double));
+		x_ffi_to_double(p_base, p_a, &a);
+		x_ffi_to_double(p_base, p_b, &b);
 		r = a / b;
-		memcpy(&bits, &r, sizeof(double));
-		return x_mkint(p_base, bits);
+		return x_ffi_from_double(p_base, &r);
 	}
 
 	/* Comparison conventions */
@@ -161,8 +203,8 @@ static x_obj_t *x_prim_ffi_call(x_obj_t *p_base, x_obj_t *p_args)
 		p_a = x_prim_eval_arg(p_base, x_firstobj(p_rest));
 		p_b = x_prim_eval_arg(p_base,
 			x_firstobj(x_restobj(p_rest)));
-		memcpy(&a, &x_intval(p_a), sizeof(double));
-		memcpy(&b, &x_intval(p_b), sizeof(double));
+		x_ffi_to_double(p_base, p_a, &a);
+		x_ffi_to_double(p_base, p_b, &b);
 		return a < b
 			? x_base_field_true(p_base)
 			: x_base_field_false(p_base);
@@ -172,8 +214,8 @@ static x_obj_t *x_prim_ffi_call(x_obj_t *p_base, x_obj_t *p_args)
 		p_a = x_prim_eval_arg(p_base, x_firstobj(p_rest));
 		p_b = x_prim_eval_arg(p_base,
 			x_firstobj(x_restobj(p_rest)));
-		memcpy(&a, &x_intval(p_a), sizeof(double));
-		memcpy(&b, &x_intval(p_b), sizeof(double));
+		x_ffi_to_double(p_base, p_a, &a);
+		x_ffi_to_double(p_base, p_b, &b);
 		return a > b
 			? x_base_field_true(p_base)
 			: x_base_field_false(p_base);
@@ -183,8 +225,8 @@ static x_obj_t *x_prim_ffi_call(x_obj_t *p_base, x_obj_t *p_args)
 		p_a = x_prim_eval_arg(p_base, x_firstobj(p_rest));
 		p_b = x_prim_eval_arg(p_base,
 			x_firstobj(x_restobj(p_rest)));
-		memcpy(&a, &x_intval(p_a), sizeof(double));
-		memcpy(&b, &x_intval(p_b), sizeof(double));
+		x_ffi_to_double(p_base, p_a, &a);
+		x_ffi_to_double(p_base, p_b, &b);
 		return a == b
 			? x_base_field_true(p_base)
 			: x_base_field_false(p_base);
@@ -194,8 +236,8 @@ static x_obj_t *x_prim_ffi_call(x_obj_t *p_base, x_obj_t *p_args)
 		p_a = x_prim_eval_arg(p_base, x_firstobj(p_rest));
 		p_b = x_prim_eval_arg(p_base,
 			x_firstobj(x_restobj(p_rest)));
-		memcpy(&a, &x_intval(p_a), sizeof(double));
-		memcpy(&b, &x_intval(p_b), sizeof(double));
+		x_ffi_to_double(p_base, p_a, &a);
+		x_ffi_to_double(p_base, p_b, &b);
 		return a <= b
 			? x_base_field_true(p_base)
 			: x_base_field_false(p_base);
@@ -205,8 +247,8 @@ static x_obj_t *x_prim_ffi_call(x_obj_t *p_base, x_obj_t *p_args)
 		p_a = x_prim_eval_arg(p_base, x_firstobj(p_rest));
 		p_b = x_prim_eval_arg(p_base,
 			x_firstobj(x_restobj(p_rest)));
-		memcpy(&a, &x_intval(p_a), sizeof(double));
-		memcpy(&b, &x_intval(p_b), sizeof(double));
+		x_ffi_to_double(p_base, p_a, &a);
+		x_ffi_to_double(p_base, p_b, &b);
 		return a >= b
 			? x_base_field_true(p_base)
 			: x_base_field_false(p_base);
@@ -216,13 +258,12 @@ static x_obj_t *x_prim_ffi_call(x_obj_t *p_base, x_obj_t *p_args)
 	if (x_lib_strcmp(conv, "i->d") == 0) {
 		p_a = x_prim_eval_arg(p_base, x_firstobj(p_rest));
 		a = (double)x_intval(p_a);
-		memcpy(&bits, &a, sizeof(double));
-		return x_mkint(p_base, bits);
+		return x_ffi_from_double(p_base, &a);
 	}
 
 	if (x_lib_strcmp(conv, "d->i") == 0) {
 		p_a = x_prim_eval_arg(p_base, x_firstobj(p_rest));
-		memcpy(&a, &x_intval(p_a), sizeof(double));
+		x_ffi_to_double(p_base, p_a, &a);
 		return x_mkint(p_base, (x_int_t)a);
 	}
 
@@ -232,15 +273,14 @@ static x_obj_t *x_prim_ffi_call(x_obj_t *p_base, x_obj_t *p_args)
 		p_a = x_prim_eval_arg(p_base, x_firstobj(p_rest));
 		r = ((double (*)(const char *, void *))fptr)(
 			x_firststr(p_a), NULL);
-		memcpy(&bits, &r, sizeof(double));
-		return x_mkint(p_base, bits);
+		return x_ffi_from_double(p_base, &r);
 	}
 
 	if (x_lib_strcmp(conv, "d->s") == 0) {
 		x_char_t buf[32];
 		int len;
 		p_a = x_prim_eval_arg(p_base, x_firstobj(p_rest));
-		memcpy(&a, &x_intval(p_a), sizeof(double));
+		x_ffi_to_double(p_base, p_a, &a);
 		len = sprintf((char *)buf, "%.15g", a);
 		return x_mkstrown(p_base, x_lib_strndup(buf, len));
 	}

@@ -57,6 +57,13 @@ x_satom_t x_type_base_obj = x_obj_set(NULL, X_OBJ_FLAG_NONE,
 	{.s = (x_char_t *)"BASE"});
 #endif
 
+/* x_obj_meta_extra needed by ext/x-expr/src/x-obj.c alloc/free;
+   skip if src/x-obj/obj.c already provides it */
+#ifndef X_OBJ_META_EXTRA_DEFINED
+#define X_OBJ_META_EXTRA_DEFINED
+size_t x_obj_meta_extra = 0;
+#endif
+
 #ifdef STUB_X_STR
 x_obj_t *x_make_str(x_obj_t *p_base, x_obj_flag_t flags,
 	x_char_t *str) { return NULL; }
@@ -80,6 +87,7 @@ x_obj_t *x_prim_string_register(x_obj_t *p_base, x_obj_t *p_args) { return p_bas
 x_obj_t *x_prim_io_register(x_obj_t *p_base, x_obj_t *p_args) { return p_base; }
 x_obj_t *x_prim_type_register(x_obj_t *p_base, x_obj_t *p_args) { return p_base; }
 x_obj_t *x_prim_ffi_register(x_obj_t *p_base, x_obj_t *p_args) { return p_base; }
+x_obj_t *x_prim_callcc_register(x_obj_t *p_base, x_obj_t *p_args) { return p_base; }
 #endif
 
 #ifdef STUB_X_TYPE_PRIM
