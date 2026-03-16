@@ -190,7 +190,7 @@ static char *test_sexp_symbol_read_token(void)
 	};
 
 
-	s = "@ABC @ABC DEF";
+	s = "@ABC @ABC DEF\n";
 	helper_file_buffer_ptr[TEST_HELPER_FILE_STDIN] = s;
 	helper_file_buffer_remaining[TEST_HELPER_FILE_STDIN] = strlen(s);
 	helper_file_reset();
