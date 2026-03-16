@@ -161,7 +161,7 @@ static char *test_mkfprim(void)
 	_it_should("make a Primitive object and set its value",
 		! x_obj_isnil(NULL, p_obj)
 		&& x_obj_type_isprim(NULL, p_obj)
-		&& flags == x_obj_flags(p_obj)
+		&& flags == (x_obj_flag_t)x_obj_flags(p_obj)
 		&& test_prim_fn == x_primval(p_obj)
 	);
 
@@ -173,7 +173,7 @@ static char *test_mkfprim(void)
 	_it_should("make a Primitive object, attach it to the Base object, and set its value",
 		! x_obj_isnil(p_base, p_obj)
 		&& x_obj_type_isprim(p_base, p_obj)
-		&& flags == x_obj_flags(p_obj)
+		&& flags == (x_obj_flag_t)x_obj_flags(p_obj)
 		&& p_obj == x_obj_heap(p_base)
 		&& test_prim_fn == x_primval(p_obj)
 	);
@@ -193,7 +193,7 @@ static char *test_make_prim(void)
 	_it_should("make a Primitive object and set its value",
 		! x_obj_isnil(NULL, p_obj)
 		&& x_obj_type_isprim(NULL, p_obj)
-		&& flags == x_obj_flags(p_obj)
+		&& flags == (x_obj_flag_t)x_obj_flags(p_obj)
 		&& test_prim_fn == x_primval(p_obj)
 	);
 
@@ -205,7 +205,7 @@ static char *test_make_prim(void)
 	_it_should("make a Primitive object, attach it to the Base object, and set its value",
 		! x_obj_isnil(p_base, p_obj)
 		&& x_obj_type_isprim(p_base, p_obj)
-		&& flags == x_obj_flags(p_obj)
+		&& flags == (x_obj_flag_t)x_obj_flags(p_obj)
 		&& p_obj == x_obj_heap(p_base)
 		&& test_prim_fn == x_primval(p_obj)
 	);

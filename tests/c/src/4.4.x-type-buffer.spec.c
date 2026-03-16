@@ -241,7 +241,7 @@ static char *test_mkfbuffer(void)
 	_it_should("make a Buffer object and set its values",
 		! x_obj_isnil(NULL, p_obj)
 		&& x_obj_type_isbuffer(NULL, p_obj)
-		&& flags == x_obj_flags(p_obj)
+		&& flags == (x_obj_flag_t)x_obj_flags(p_obj)
 		&& X_TEST_BUFFER_VALUE == x_bufferval(p_obj)
 		&& X_TEST_BUFFER_VALUE == x_bufferread(p_obj)
 		&& X_TEST_BUFFER_VALUE == x_bufferwrite(p_obj)
@@ -256,7 +256,7 @@ static char *test_mkfbuffer(void)
 	_it_should("make a Buffer object, attach it to the Base object, and set its values",
 		! x_obj_isnil(p_base, p_obj)
 		&& x_obj_type_isbuffer(p_base, p_obj)
-		&& flags == x_obj_flags(p_obj)
+		&& flags == (x_obj_flag_t)x_obj_flags(p_obj)
 		&& p_obj == x_obj_heap(p_base)
 		&& X_TEST_BUFFER_VALUE == x_bufferval(p_obj)
 		&& X_TEST_BUFFER_VALUE == x_bufferread(p_obj)
@@ -314,7 +314,7 @@ static char *test_mkfbufferown(void)
 	_it_should("make an owned Buffer object",
 		! x_obj_isnil(NULL, p_obj)
 		&& x_obj_type_isbuffer(NULL, p_obj)
-		&& (X_OBJ_FLAG_OWN | flags) == x_obj_flags(p_obj)
+		&& (x_obj_flag_t)(X_OBJ_FLAG_OWN | flags) == (x_obj_flag_t)x_obj_flags(p_obj)
 		&& X_TEST_BUFFER_VALUE == x_bufferval(p_obj)
 	);
 
@@ -328,7 +328,7 @@ static char *test_mkfbufferown(void)
 		! x_obj_isnil(p_base, p_obj)
 		&& p_obj == x_obj_heap(p_base)
 		&& x_obj_type_isbuffer(p_base, p_obj)
-		&& (X_OBJ_FLAG_OWN | flags) == x_obj_flags(p_obj)
+		&& (x_obj_flag_t)(X_OBJ_FLAG_OWN | flags) == (x_obj_flag_t)x_obj_flags(p_obj)
 		&& X_TEST_BUFFER_VALUE == x_bufferval(p_obj)
 	);
 

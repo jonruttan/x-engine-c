@@ -154,7 +154,7 @@ static char *test_mkfatom(void)
 	_it_should("make an Atom object and set its value",
 		! x_obj_isnil(NULL, p_obj)
 		&& x_obj_type_isatom(NULL, p_obj)
-		&& flags == x_obj_flags(p_obj)
+		&& flags == (x_obj_flag_t)x_obj_flags(p_obj)
 		&& i == x_atomint(p_obj)
 	);
 
@@ -166,7 +166,7 @@ static char *test_mkfatom(void)
 	_it_should("make an Atom object, attach it to the Base object, and set its value",
 		! x_obj_isnil(p_base, p_obj)
 		&& x_obj_type_isatom(p_base, p_obj)
-		&& flags == x_obj_flags(p_obj)
+		&& flags == (x_obj_flag_t)x_obj_flags(p_obj)
 		&& p_obj == x_obj_heap(p_base)
 		&& i == x_atomint(p_obj)
 	);
@@ -187,7 +187,7 @@ static char *test_make_atom(void)
 	_it_should("make an Atom object and set its value",
 		! x_obj_isnil(NULL, p_obj)
 		&& x_obj_type_isatom(NULL, p_obj)
-		&& flags == x_obj_flags(p_obj)
+		&& flags == (x_obj_flag_t)x_obj_flags(p_obj)
 		&& i == x_atomint(p_obj)
 	);
 
@@ -199,7 +199,7 @@ static char *test_make_atom(void)
 	_it_should("make an Atom object, attach it to the Base object, and set its value",
 		! x_obj_isnil(p_base, p_obj)
 		&& x_obj_type_isatom(p_base, p_obj)
-		&& flags == x_obj_flags(p_obj)
+		&& flags == (x_obj_flag_t)x_obj_flags(p_obj)
 		&& p_obj == x_obj_heap(p_base)
 		&& i == x_atomint(p_obj)
 	);

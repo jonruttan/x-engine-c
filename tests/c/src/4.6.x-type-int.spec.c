@@ -156,7 +156,7 @@ static char *test_mkfint(void)
 	_it_should("make an Integer object and set its value",
 		! x_obj_isnil(NULL, p_obj)
 		&& x_obj_type_isint(NULL, p_obj)
-		&& flags == x_obj_flags(p_obj)
+		&& flags == (x_obj_flag_t)x_obj_flags(p_obj)
 		&& i == x_intval(p_obj)
 	);
 
@@ -168,7 +168,7 @@ static char *test_mkfint(void)
 	_it_should("make an Integer object, attach it to the Base object, and set its value",
 		! x_obj_isnil(p_base, p_obj)
 		&& x_obj_type_isint(p_base, p_obj)
-		&& flags == x_obj_flags(p_obj)
+		&& flags == (x_obj_flag_t)x_obj_flags(p_obj)
 		&& p_obj == x_obj_heap(p_base)
 		&& i == x_intval(p_obj)
 	);
@@ -190,7 +190,7 @@ static char *test_make_int(void)
 	_it_should("make an Integer object and set its value",
 		! x_obj_isnil(NULL, p_obj)
 		&& x_obj_type_isint(NULL, p_obj)
-		&& flags == x_obj_flags(p_obj)
+		&& flags == (x_obj_flag_t)x_obj_flags(p_obj)
 		&& i == x_intval(p_obj)
 	);
 
@@ -202,7 +202,7 @@ static char *test_make_int(void)
 	_it_should("make an Integer object, attach it to the Base object, and set its value",
 		! x_obj_isnil(p_base, p_obj)
 		&& x_obj_type_isint(p_base, p_obj)
-		&& flags == x_obj_flags(p_obj)
+		&& flags == (x_obj_flag_t)x_obj_flags(p_obj)
 		&& p_obj == x_obj_heap(p_base)
 		&& i == x_intval(p_obj)
 	);

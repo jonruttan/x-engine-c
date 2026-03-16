@@ -148,7 +148,7 @@ static char *test_mkfptr(void)
 	_it_should("make a Pointer object and set its value",
 		! x_obj_isnil(NULL, p_obj)
 		&& x_obj_type_isptr(NULL, p_obj)
-		&& flags == x_obj_flags(p_obj)
+		&& flags == (x_obj_flag_t)x_obj_flags(p_obj)
 		&& (void *)i == x_ptrval(p_obj)
 	);
 
@@ -160,7 +160,7 @@ static char *test_mkfptr(void)
 	_it_should("make a Pointer object, attach it to the Base object, and set its value",
 		! x_obj_isnil(p_base, p_obj)
 		&& x_obj_type_isptr(p_base, p_obj)
-		&& flags == x_obj_flags(p_obj)
+		&& flags == (x_obj_flag_t)x_obj_flags(p_obj)
 		&& (void *)i == x_ptrval(p_obj)
 	);
 
@@ -210,7 +210,7 @@ static char *test_mkfptrown(void)
 	_it_should("make a Pointer object and set its value",
 		! x_obj_isnil(NULL, p_obj)
 		&& x_obj_type_isptr(NULL, p_obj)
-		&& (X_OBJ_FLAG_OWN | flags) == x_obj_flags(p_obj)
+		&& (x_obj_flag_t)(X_OBJ_FLAG_OWN | flags) == (x_obj_flag_t)x_obj_flags(p_obj)
 		&& (void *)i == x_ptrval(p_obj)
 	);
 
@@ -222,7 +222,7 @@ static char *test_mkfptrown(void)
 	_it_should("make a Pointer object, attach it to the Base object, and set its value",
 		! x_obj_isnil(p_base, p_obj)
 		&& x_obj_type_isptr(p_base, p_obj)
-		&& (X_OBJ_FLAG_OWN | flags) == x_obj_flags(p_obj)
+		&& (x_obj_flag_t)(X_OBJ_FLAG_OWN | flags) == (x_obj_flag_t)x_obj_flags(p_obj)
 		&& (void *)i == x_ptrval(p_obj)
 	);
 
@@ -241,7 +241,7 @@ static char *test_make_ptr(void)
 	_it_should("make a Pointer object and set its value",
 		! x_obj_isnil(NULL, p_obj)
 		&& x_obj_type_isptr(NULL, p_obj)
-		&& flags == x_obj_flags(p_obj)
+		&& flags == (x_obj_flag_t)x_obj_flags(p_obj)
 		&& (void *)i == x_ptrval(p_obj)
 	);
 
@@ -253,7 +253,7 @@ static char *test_make_ptr(void)
 	_it_should("make a Pointer object, attach it to the Base object, and set its value",
 		! x_obj_isnil(p_base, p_obj)
 		&& x_obj_type_isptr(p_base, p_obj)
-		&& flags == x_obj_flags(p_obj)
+		&& flags == (x_obj_flag_t)x_obj_flags(p_obj)
 		&& (void *)i == x_ptrval(p_obj)
 	);
 

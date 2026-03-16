@@ -152,7 +152,7 @@ static char *test_mkfstr(void)
 	_it_should("make a String object and set its value",
 		! x_obj_isnil(NULL, p_obj)
 		&& x_obj_type_isstr(NULL, p_obj)
-		&& flags == x_obj_flags(p_obj)
+		&& flags == (x_obj_flag_t)x_obj_flags(p_obj)
 		&& 0 == strcmp(X_TEST_STR_VALUE, x_strval(p_obj))
 	);
 
@@ -164,7 +164,7 @@ static char *test_mkfstr(void)
 	_it_should("make an String object, attach it to the Base object, and set its value",
 		! x_obj_isnil(p_base, p_obj)
 		&& x_obj_type_isstr(NULL, p_obj)
-		&& flags == x_obj_flags(p_obj)
+		&& flags == (x_obj_flag_t)x_obj_flags(p_obj)
 		&& p_obj == x_obj_heap(p_base)
 		&& 0 == strcmp(X_TEST_STR_VALUE, x_strval(p_obj))
 	);
@@ -215,7 +215,7 @@ static char *test_mkfstrown(void)
 	_it_should("make an Owned String object and set its value",
 		! x_obj_isnil(NULL, p_obj)
 		&& x_obj_type_isstr(NULL, p_obj)
-		&& (X_OBJ_FLAG_OWN | flags) == x_obj_flags(p_obj)
+		&& (x_obj_flag_t)(X_OBJ_FLAG_OWN | flags) == (x_obj_flag_t)x_obj_flags(p_obj)
 		&& 0 == strcmp(X_TEST_STR_VALUE, x_strval(p_obj))
 	);
 
@@ -227,7 +227,7 @@ static char *test_mkfstrown(void)
 	_it_should("make an Owned String object, attach it to the Base object, and set its value",
 		! x_obj_isnil(p_base, p_obj)
 		&& x_obj_type_isstr(p_base, p_obj)
-		&& flags == x_obj_flags(p_obj)
+		&& flags == (x_obj_flag_t)x_obj_flags(p_obj)
 		&& p_obj == x_obj_heap(p_base)
 		&& 0 == strcmp(X_TEST_STR_VALUE, x_strval(p_obj))
 	);
@@ -247,7 +247,7 @@ static char *test_make_str(void)
 	_it_should("make an Owned String object and set its value",
 		! x_obj_isnil(NULL, p_obj)
 		&& x_obj_type_isstr(NULL, p_obj)
-		&& flags == x_obj_flags(p_obj)
+		&& flags == (x_obj_flag_t)x_obj_flags(p_obj)
 		&& 0 == strcmp(X_TEST_STR_VALUE, x_strval(p_obj))
 	);
 
@@ -259,7 +259,7 @@ static char *test_make_str(void)
 	_it_should("make an Owned String object, attach it to the Base object, and set its value",
 		! x_obj_isnil(p_base, p_obj)
 		&& x_obj_type_isstr(p_base, p_obj)
-		&& flags == x_obj_flags(p_obj)
+		&& flags == (x_obj_flag_t)x_obj_flags(p_obj)
 		&& p_obj == x_obj_heap(p_base)
 		&& 0 == strcmp(X_TEST_STR_VALUE, x_strval(p_obj))
 	);
