@@ -26,6 +26,7 @@
 #include <string.h>  /* memcpy */
 #include <stdio.h>   /* sprintf */
 #include <dlfcn.h>   /* dlopen, dlsym */
+#include <fcntl.h>   /* O_RDONLY, O_WRONLY, O_CREAT, O_TRUNC, O_APPEND */
 
 /*
  * # Double Bit-Pattern Helpers
@@ -534,6 +535,27 @@ x_obj_t *x_prim_ffi_register(x_obj_t *p_base, x_obj_t *p_args)
 
 	x_prim_bind_table(p_base, entries,
 		sizeof(entries) / sizeof(entries[0]));
+
+	/* Bind platform constants */
+	{
+		static const struct { x_char_t *name; x_int_t val; } consts[] = {
+			{ "%word-size", (x_int_t)sizeof(void *) },
+			{ "%O_RDONLY",  O_RDONLY },
+			{ "%O_WRONLY",  O_WRONLY },
+			{ "%O_CREAT",   O_CREAT },
+			{ "%O_TRUNC",   O_TRUNC },
+			{ "%O_APPEND",  O_APPEND }
+		};
+		int i;
+
+		for (i = 0; i < (int)(sizeof(consts) / sizeof(consts[0])); i++) {
+			x_obj_t *p_sym = x_make_symbol(p_base,
+					X_OBJ_FLAG_NONE, consts[i].name),
+				*p_val = x_mkint(p_base, consts[i].val),
+				*p_pair = x_mkspair(p_base, p_sym, p_val);
+			x_base_env_alist_extend(p_base, p_pair);
+		}
+	}
 
 	return p_base;
 }
