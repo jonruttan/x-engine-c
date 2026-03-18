@@ -33,12 +33,13 @@
 #define x_procparams(X)				x_firstobj((X))
 #define x_procbody(X)				x_secondobj((X))
 #define x_procenv(X)				x_obj(x_obj_data_i((X),2))
+#define x_procbst(X)				(x_obj_data_i((X),3).p)
 
 #define X_OBJ_FLAG_WRAP				X_OBJ_FLAG_1
 
-#define x_mkproc(B,P,BD,E)			x_make_procedure((B), X_OBJ_FLAG_NONE, (P), (BD), (E))
-#define x_mkfproc(B,F,P,BD,E)		x_make_procedure((B), (F), (P), (BD), (E))
-#define x_mkwrap(B,C)				x_make_procedure((B), X_OBJ_FLAG_WRAP, (B), (B), (C))
+#define x_mkproc(B,P,BD,E,T)		x_make_procedure((B), X_OBJ_FLAG_NONE, (P), (BD), (E), (T))
+#define x_mkfproc(B,F,P,BD,E,T)	x_make_procedure((B), (F), (P), (BD), (E), (T))
+#define x_mkwrap(B,C)				x_make_procedure((B), X_OBJ_FLAG_WRAP, (B), (B), (C), NULL)
 
 /*
  * # Data Structures
@@ -50,7 +51,7 @@ extern x_satom_t x_type_procedure_name,
 	x_type_procedure_struct_prim;
 
 x_obj_t *x_make_procedure(x_obj_t *p_base, x_obj_flag_t flags,
-	x_obj_t *p_params, x_obj_t *p_body, x_obj_t *p_env);
+	x_obj_t *p_params, x_obj_t *p_body, x_obj_t *p_env, x_obj_t *p_bst);
 
 x_obj_t *x_type_procedure_register(x_obj_t *p_base, x_obj_t *p_args);
 x_obj_t *x_type_procedure_struct(x_obj_t *p_base, x_obj_t *p_args);

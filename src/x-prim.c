@@ -108,13 +108,16 @@ x_obj_t *x_prim_body_eval_tco(x_obj_t *p_base, x_obj_t *p_body)
 
 			if (x_obj_isnil(p_base,
 				x_base_field_tco_expr(p_base))) {
-				/* Pop compound (env . boundary) and restore */
-				x_base_field_env_alist(p_base)
-					= x_firstobj(x_firstobj(x_base_field_save_stack(p_base)));
-				x_base_field_env_local_boundary(p_base)
-					= x_restobj(x_firstobj(x_base_field_save_stack(p_base)));
-				x_base_field_save_stack(p_base)
-					= x_restobj(x_base_field_save_stack(p_base));
+				/* Pop compound ((env . boundary) . bst) and restore */
+				{
+					x_obj_t *p_saved = x_firstobj(x_base_field_save_stack(p_base));
+					x_base_field_env_alist(p_base) = x_firstobj(x_firstobj(p_saved));
+					x_base_field_env_local_boundary(p_base)
+						= x_restobj(x_firstobj(p_saved));
+					x_base_field_env_global_tree(p_base) = x_restobj(p_saved);
+					x_base_field_save_stack(p_base)
+						= x_restobj(x_base_field_save_stack(p_base));
+				}
 				return NULL;
 			}
 
@@ -136,13 +139,15 @@ x_obj_t *x_prim_body_eval_tco(x_obj_t *p_base, x_obj_t *p_body)
 		p_body = x_restobj(p_body);
 	}
 
-	/* Pop compound (env . boundary) and restore */
-	x_base_field_env_alist(p_base)
-		= x_firstobj(x_firstobj(x_base_field_save_stack(p_base)));
-	x_base_field_env_local_boundary(p_base)
-		= x_restobj(x_firstobj(x_base_field_save_stack(p_base)));
-	x_base_field_save_stack(p_base)
-		= x_restobj(x_base_field_save_stack(p_base));
+	/* Pop compound ((env . boundary) . bst) and restore */
+	{
+		x_obj_t *p_saved = x_firstobj(x_base_field_save_stack(p_base));
+		x_base_field_env_alist(p_base) = x_firstobj(x_firstobj(p_saved));
+		x_base_field_env_local_boundary(p_base) = x_restobj(x_firstobj(p_saved));
+		x_base_field_env_global_tree(p_base) = x_restobj(p_saved);
+		x_base_field_save_stack(p_base)
+			= x_restobj(x_base_field_save_stack(p_base));
+	}
 
 	return p_result;
 }
@@ -182,10 +187,11 @@ x_obj_t *x_prim_tco_trampoline(x_obj_t *p_base, x_obj_t *p_result)
 		p_result = x_prim_eval_arg(p_base, p_tco);
 	}
 
-	/* Restore env + boundary from compound (env . boundary) */
+	/* Restore env + boundary + bst from compound ((env . boundary) . bst) */
 	if (p_tco_env != NULL && ! x_obj_isnil(p_base, p_tco_env)) {
-		x_base_field_env_alist(p_base) = x_firstobj(p_tco_env);
-		x_base_field_env_local_boundary(p_base) = x_restobj(p_tco_env);
+		x_base_field_env_alist(p_base) = x_firstobj(x_firstobj(p_tco_env));
+		x_base_field_env_local_boundary(p_base) = x_restobj(x_firstobj(p_tco_env));
+		x_base_field_env_global_tree(p_base) = x_restobj(p_tco_env);
 	}
 
 	return p_result;

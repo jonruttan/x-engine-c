@@ -95,53 +95,52 @@ x_obj_t *x_alist_bst_lookup(x_obj_t *p_base, x_obj_t *p_tree,
 }
 
 /*
- * BST insert: add or update an alist entry in the tree.
- * Returns the (possibly new) root.
+ * BST insert: persistent (path-copying) insert.
+ * Returns a NEW root without mutating the old tree.
+ * On duplicate: new root has updated entry; old root unchanged.
+ * Shared subtrees are referenced, not copied.
  */
 x_obj_t *x_alist_bst_insert(x_obj_t *p_base, x_obj_t *p_tree,
 	x_obj_t *p_entry)
 {
-	x_obj_t *p_walk, *p_node, *p_children;
+	x_obj_t *p_node, *p_children, *p_left, *p_right;
 	int cmp;
 
+	/* Empty tree: create leaf node */
 	if (x_obj_isnil(p_base, p_tree)) {
 		return x_mkspair(p_base, p_entry,
 			x_mkspair(p_base, NULL, NULL));
 	}
 
-	p_walk = p_tree;
-	for (;;) {
-		p_node = x_firstobj(p_walk);
-		if (x_firstobj(p_node) == x_firstobj(p_entry)) {
-			/* Re-def: flag symbol as multi-bound. BST can't
-			 * serve re-defined symbols (different closures need
-			 * different versions). Skip BST on future lookups. */
-			x_obj_flags(x_firstobj(p_entry)) |= X_OBJ_FLAG_1;
-			return p_tree;
-		}
-		cmp = x_lib_strcmp(x_symbolval(x_firstobj(p_entry)),
-			x_symbolval(x_firstobj(p_node)));
-		if (cmp == 0) {
-			x_obj_flags(x_firstobj(p_entry)) |= X_OBJ_FLAG_1;
-			return p_tree;
-		}
-		p_children = x_restobj(p_walk);
-		if (cmp < 0) {
-			if (x_obj_isnil(p_base, x_firstobj(p_children))) {
-				x_firstobj(p_children) = x_mkspair(p_base,
-					p_entry,
-					x_mkspair(p_base, NULL, NULL));
-				return p_tree;
-			}
-			p_walk = x_firstobj(p_children);
-		} else {
-			if (x_obj_isnil(p_base, x_restobj(p_children))) {
-				x_restobj(p_children) = x_mkspair(p_base,
-					p_entry,
-					x_mkspair(p_base, NULL, NULL));
-				return p_tree;
-			}
-			p_walk = x_restobj(p_children);
-		}
+	p_node = x_firstobj(p_tree);
+	p_children = x_restobj(p_tree);
+	p_left = x_firstobj(p_children);
+	p_right = x_restobj(p_children);
+
+	/* Pointer equality (fast path) */
+	if (x_firstobj(p_node) == x_firstobj(p_entry)) {
+		/* Re-def: copy this node with new entry, share children */
+		return x_mkspair(p_base, p_entry,
+			x_mkspair(p_base, p_left, p_right));
+	}
+
+	cmp = x_lib_strcmp(x_symbolval(x_firstobj(p_entry)),
+		x_symbolval(x_firstobj(p_node)));
+
+	if (cmp == 0) {
+		return x_mkspair(p_base, p_entry,
+			x_mkspair(p_base, p_left, p_right));
+	}
+
+	/* Recurse into subtree, copy this node with new child */
+	if (cmp < 0) {
+		return x_mkspair(p_base, p_node,
+			x_mkspair(p_base,
+				x_alist_bst_insert(p_base, p_left, p_entry),
+				p_right));
+	} else {
+		return x_mkspair(p_base, p_node,
+			x_mkspair(p_base, p_left,
+				x_alist_bst_insert(p_base, p_right, p_entry)));
 	}
 }

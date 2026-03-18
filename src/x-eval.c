@@ -89,11 +89,14 @@ eval_start:
 	if (trampolining && x_base_isset(p_base)) {
 		x_base_field_tco_env(p_base) = NULL;
 
-		/* Restore from compound (env . boundary) */
+		/* Restore from compound ((env . boundary) . bst) */
 		if (p_tco_env_save != NULL
 			&& ! x_obj_isnil(p_base, p_tco_env_save)) {
-			x_base_field_env_alist(p_base) = x_firstobj(p_tco_env_save);
+			x_base_field_env_alist(p_base)
+				= x_firstobj(x_firstobj(p_tco_env_save));
 			x_base_field_env_local_boundary(p_base)
+				= x_restobj(x_firstobj(p_tco_env_save));
+			x_base_field_env_global_tree(p_base)
 				= x_restobj(p_tco_env_save);
 		}
 	}
