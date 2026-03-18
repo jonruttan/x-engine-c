@@ -17,6 +17,7 @@
  * # Includes
  */
 #include "x-alist.h"
+#include "x-base.h"
 #include "x-type/symbol.h"
 
 x_obj_t *x_alist_extend(x_obj_t *p_base, x_obj_t *p_args)
@@ -31,7 +32,16 @@ x_obj_t *x_alist_assoc(x_obj_t *p_base, x_obj_t *p_args)
 	x_obj_t *p_obj = x_firstobj(p_args),
 		*p_alist = x_firstobj(x_restobj(p_args));
 
+#ifdef X_PROFILE
+	if (x_base_isset(p_base))
+		x_atomint(x_base_field_profile_assoc_calls(p_base))++;
+#endif
+
 	while ( ! x_obj_isnil(p_base, p_alist)) {
+#ifdef X_PROFILE
+		if (x_base_isset(p_base))
+			x_atomint(x_base_field_profile_assoc_steps(p_base))++;
+#endif
 		if (x_firstobj(x_firstobj(x_firstobj(p_alist))) == x_firstobj(p_obj)) {
 			return x_firstobj(p_alist);
 		}
@@ -56,11 +66,19 @@ x_obj_t *x_alist_bst_lookup(x_obj_t *p_base, x_obj_t *p_tree,
 	while ( ! x_obj_isnil(p_base, p_tree)) {
 		p_entry = x_firstobj(p_tree);
 		if (x_firstobj(p_entry) == p_sym) {
+#ifdef X_PROFILE
+			if (x_base_isset(p_base))
+				x_atomint(x_base_field_profile_bst_hits(p_base))++;
+#endif
 			return p_entry;
 		}
 		cmp = x_lib_strcmp(x_symbolval(p_sym),
 			x_symbolval(x_firstobj(p_entry)));
 		if (cmp == 0) {
+#ifdef X_PROFILE
+			if (x_base_isset(p_base))
+				x_atomint(x_base_field_profile_bst_hits(p_base))++;
+#endif
 			return p_entry;
 		}
 		p_children = x_restobj(p_tree);
@@ -69,6 +87,10 @@ x_obj_t *x_alist_bst_lookup(x_obj_t *p_base, x_obj_t *p_tree,
 			: x_restobj(p_children);
 	}
 
+#ifdef X_PROFILE
+	if (x_base_isset(p_base))
+		x_atomint(x_base_field_profile_bst_misses(p_base))++;
+#endif
 	return NULL;
 }
 

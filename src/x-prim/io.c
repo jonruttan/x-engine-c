@@ -148,6 +148,10 @@ static x_obj_t *x_prim_clock(x_obj_t *p_base, x_obj_t *p_args)
 /* heap-sweep: (heap-sweep) -> sweep unmarked objects from heap */
 static x_obj_t *x_prim_heap_sweep(x_obj_t *p_base, x_obj_t *p_args)
 {
+#ifdef X_PROFILE
+	if (x_base_isset(p_base))
+		x_atomint(x_base_field_profile_gc_runs(p_base))++;
+#endif
 	x_heap_sweep(p_base, x_obj_heap(p_base), X_OBJ_FLAG_HEAP,
 		x_type_heap_free);
 

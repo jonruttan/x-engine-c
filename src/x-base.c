@@ -66,8 +66,12 @@ x_obj_t *x_base_make(x_obj_t *p_base, x_obj_t *p_args)
 			/* line counter (stack-wrapped) */
 			pair(atom(1), nil),
 		pair(
-			/* profile: all stack-wrapped */
-			pair(pair(atom(0), nil), pair(pair(atom(0), nil), pair(pair(atom(0), nil), nil))),
+			/* profile: all stack-wrapped (allocs evals tco assoc-calls assoc-steps
+			   sym-find-calls sym-find-steps gc-runs bst-hits bst-misses) */
+			pair(pair(atom(0), nil), pair(pair(atom(0), nil), pair(pair(atom(0), nil),
+			pair(pair(atom(0), nil), pair(pair(atom(0), nil), pair(pair(atom(0), nil),
+			pair(pair(atom(0), nil), pair(pair(atom(0), nil), pair(pair(atom(0), nil),
+			pair(pair(atom(0), nil), nil)))))))))),
 		pair(
 			/* hooks: all stack-wrapped */
 			pair(pair(atom(x_type_prim_type_name), nil),

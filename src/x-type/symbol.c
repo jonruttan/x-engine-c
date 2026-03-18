@@ -54,6 +54,71 @@ x_obj_t *x_type_symbol_struct(x_obj_t *p_base, x_obj_t *p_obj)
 	return x_type_struct_make(p_base, type);
 }
 
+/*
+ * Symbol intern BST: index for O(log n) symbol lookup by name.
+ * Node: (symbol . (left . right)), keyed by x_symbolval.
+ * Stored in x_restobj(x_symbol_data(p_type)).
+ */
+#define x_symbol_bst(T) x_restobj(x_symbol_data((T)))
+
+static x_obj_t *sym_bst_lookup(x_obj_t *p_base, x_obj_t *p_tree,
+	x_char_t *name)
+{
+	x_obj_t *p_sym, *p_children;
+	int cmp;
+
+	while ( ! x_obj_isnil(p_base, p_tree)) {
+		p_sym = x_firstobj(p_tree);
+		cmp = x_lib_strcmp(name, x_symbolval(p_sym));
+		if (cmp == 0) {
+			return p_tree;
+		}
+		p_children = x_restobj(p_tree);
+		p_tree = (cmp < 0)
+			? x_firstobj(p_children)
+			: x_restobj(p_children);
+	}
+
+	return NULL;
+}
+
+static x_obj_t *sym_bst_insert(x_obj_t *p_base, x_obj_t *p_tree,
+	x_obj_t *p_sym)
+{
+	x_obj_t *p_walk, *p_children;
+	int cmp;
+
+	if (x_obj_isnil(p_base, p_tree)) {
+		return x_mkspair(p_base, p_sym,
+			x_mkspair(p_base, NULL, NULL));
+	}
+
+	p_walk = p_tree;
+	for (;;) {
+		cmp = x_lib_strcmp(x_symbolval(p_sym),
+			x_symbolval(x_firstobj(p_walk)));
+		if (cmp == 0) {
+			return p_tree;
+		}
+		p_children = x_restobj(p_walk);
+		if (cmp < 0) {
+			if (x_obj_isnil(p_base, x_firstobj(p_children))) {
+				x_firstobj(p_children) = x_mkspair(p_base,
+					p_sym, x_mkspair(p_base, NULL, NULL));
+				return p_tree;
+			}
+			p_walk = x_firstobj(p_children);
+		} else {
+			if (x_obj_isnil(p_base, x_restobj(p_children))) {
+				x_restobj(p_children) = x_mkspair(p_base,
+					p_sym, x_mkspair(p_base, NULL, NULL));
+				return p_tree;
+			}
+			p_walk = x_restobj(p_children);
+		}
+	}
+}
+
 x_obj_t *x_type_symbol_register(x_obj_t *p_base, x_obj_t *p_args)
 {
 	x_spair_t args[2] = {
@@ -91,6 +156,8 @@ x_obj_t *x_type_symbol_make(x_obj_t *p_base, x_obj_t *p_args)
 		x_symbolval(p_symbol));
 	x_symbol_data_list(p_type) = x_mkspair(p_base, p_obj,
 		x_symbol_data_list(p_type));
+	x_symbol_bst(p_type) = sym_bst_insert(p_base,
+		x_symbol_bst(p_type), p_obj);
 
 	return p_obj;
 }
@@ -98,28 +165,18 @@ x_obj_t *x_type_symbol_make(x_obj_t *p_base, x_obj_t *p_args)
 x_obj_t *x_type_symbol_find(x_obj_t *p_base, x_obj_t *p_args)
 {
 	x_obj_t *p_type = x_type_symbol_register(p_base, p_base),
-		*p_list = x_symbol_data_list(p_type);
+		*p_result;
 	x_char_t *name = x_firststr(x_firstobj(p_args));
-#ifdef SYMBOL_FIND_REORDER
-	x_obj_t *p_prev = NULL;
+
+#ifdef X_PROFILE
+	if (x_base_isset(p_base))
+		x_atomint(x_base_field_profile_sym_find_calls(p_base))++;
 #endif
 
-	while ( ! x_obj_isnil(p_base, p_list)) {
-		if ( 0 == x_lib_strcmp(name, x_symbolval(x_firstobj(p_list)))) {
-#ifdef SYMBOL_FIND_REORDER
-			/* Move to front: splice out and prepend. */
-			if ( ! x_obj_isnil(p_base, p_prev)) {
-				x_restobj(p_prev) = x_restobj(p_list);
-				x_restobj(p_list) = x_symbol_data_list(p_type);
-				x_symbol_data_list(p_type) = p_list;
-			}
-#endif
-			return p_list;
-		}
-#ifdef SYMBOL_FIND_REORDER
-		p_prev = p_list;
-#endif
-		p_list = x_restobj(p_list);
+	/* BST lookup: O(log n) */
+	p_result = sym_bst_lookup(p_base, x_symbol_bst(p_type), name);
+	if ( ! x_obj_isnil(p_base, p_result)) {
+		return p_result;
 	}
 
 	return NULL;

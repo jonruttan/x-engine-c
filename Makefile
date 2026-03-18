@@ -27,7 +27,7 @@ PREFIX?=/usr/local
 CC?=gcc
 CFLAGS?=-O2
 CFLAGS+=-Wall -Wextra -Wno-unused-parameter
-CFLAGS+=-DX_HEAP -DX_TYPE -DX_CLOCK
+CFLAGS+=-DX_HEAP -DX_TYPE -DX_CLOCK -DX_PROFILE
 
 # Dead code elimination: each function/data in its own section, stripped at link
 CFLAGS+=-ffunction-sections -fdata-sections

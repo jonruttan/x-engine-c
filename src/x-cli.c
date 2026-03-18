@@ -71,6 +71,11 @@ static x_obj_t *x_prim_include(x_obj_t *p_base, x_obj_t *p_args)
 	int fd = x_sys_open(x_strval(p_path), 0 /* O_RDONLY */);
 	x_obj_t *p_buffer, *p_result;
 	x_char_t *buf;
+#ifdef X_PROFILE
+	x_int_t t0, t1;
+	int err_fd;
+	x_char_t tbuf[24];
+#endif
 
 	if (fd < 0) {
 		x_obj_error(p_base, "include: cannot open", p_path);
@@ -91,7 +96,21 @@ static x_obj_t *x_prim_include(x_obj_t *p_base, x_obj_t *p_args)
 		p_buffer, x_base_field_buffer_stack(p_base));
 
 	/* Load all expressions. */
+#ifdef X_PROFILE
+	t0 = x_sys_clock();
+#endif
 	p_result = x_base_load(p_base, p_base);
+#ifdef X_PROFILE
+	t1 = x_sys_clock();
+	err_fd = x_atomint(x_base_field_fileerr(p_base));
+	x_sys_write(err_fd, "[include] ", 10);
+	x_sys_write(err_fd, x_strval(p_path),
+		x_lib_strlen(x_strval(p_path)));
+	x_sys_write(err_fd, ": ", 2);
+	x_lib_inttostr(t1 - t0, tbuf, 10);
+	x_sys_write(err_fd, tbuf, x_lib_strlen(tbuf));
+	x_sys_write(err_fd, "us\n", 3);
+#endif
 
 	/* Pop and close, restore line counter. */
 	x_base_field_filein_stack(p_base)
