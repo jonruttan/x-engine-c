@@ -52,6 +52,7 @@ typedef struct {
 	x_obj_t    *p_error_handler;
 	x_obj_t    *p_local_boundary;
 	x_obj_t    *p_global_tree;
+	x_obj_t    *p_eval_list_stack;
 } x_callcc_cont_t;
 
 /*
@@ -115,6 +116,7 @@ static x_obj_t *x_prim_cc_invoke(x_obj_t *p_base, x_obj_t *p_args)
 	cont->p_error_handler = x_firstobj(x_restobj(x_restobj(p_state)));
 	cont->p_local_boundary = x_firstobj(x_restobj(x_restobj(x_restobj(p_state))));
 	cont->p_global_tree = x_firstobj(x_restobj(x_restobj(x_restobj(x_restobj(p_state)))));
+	cont->p_eval_list_stack = x_firstobj(x_restobj(x_restobj(x_restobj(x_restobj(x_restobj(p_state))))));
 
 	/* Grow stack and restore. Does not return. */
 	x_callcc_restore(cont);
@@ -153,6 +155,7 @@ static x_obj_t *x_prim_callcc(x_obj_t *p_base, x_obj_t *p_args)
 		x_base_field_env_global_tree(p_base) = cont->p_global_tree;
 		x_base_field_save_stack(p_base) = cont->p_save_stack;
 		x_base_field_error_handler(p_base) = cont->p_error_handler;
+		x_base_field_eval_list_stack(p_base) = cont->p_eval_list_stack;
 		x_base_field_tco_expr(p_base) = NULL;
 		x_base_field_tco_env(p_base) = NULL;
 
@@ -176,7 +179,9 @@ static x_obj_t *x_prim_callcc(x_obj_t *p_base, x_obj_t *p_args)
 					x_base_field_env_local_boundary(p_base),
 					x_mklist(p_base,
 						x_base_field_env_global_tree(p_base),
-						NULL)))));
+						x_mklist(p_base,
+							x_base_field_eval_list_stack(p_base),
+							NULL))))));
 
 	/* Wrap continuation struct as POINTER with OWN flag.
 	 * GC will free the struct (and embedded stack copy). */
