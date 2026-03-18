@@ -26,7 +26,10 @@
 #include "x-type/char.h"
 #include "x-type/int.h"
 #include "x-type/prim.h"
+#include "x-type/procedure.h"
 #include "x-type/str.h"
+#include "x-type/symbol.h"
+#include "x-obj/prim.h"
 
 /* write: (write obj) -> output s-expression to stdout */
 static x_obj_t *x_prim_write(x_obj_t *p_base, x_obj_t *p_args)
@@ -181,6 +184,26 @@ static x_obj_t *x_prim_heap_mark(x_obj_t *p_base, x_obj_t *p_args)
 	return NULL;
 }
 
+/* atomic: (atomic f1 f2 ...) -> call each zero-arg fn with no allocations between.
+ * Registered as a wrapped combiner so args are pre-evaluated. */
+static x_obj_t *x_prim_atomic(x_obj_t *p_base, x_obj_t *p_args)
+{
+	x_obj_t *p_result = NULL;
+	x_spair_t call_args[1];
+
+	call_args[0][X_OBJ_META_TYPE].p = NULL;
+	call_args[0][X_OBJ_META_FLAGS].i = X_OBJ_FLAG_NONE;
+
+	while ( ! x_obj_isnil(p_base, p_args)) {
+		x_firstobj((x_obj_t *)call_args) = x_firstobj(p_args);
+		x_restobj((x_obj_t *)call_args) = NULL;
+		p_result = x_obj_prim_call(p_base, (x_obj_t *)call_args);
+		p_args = x_restobj(p_args);
+	}
+
+	return p_result;
+}
+
 /* repl: minimal read-eval loop until EOF (no output, no hooks) */
 x_obj_t *x_prim_repl(x_obj_t *p_base, x_obj_t *p_args)
 {
@@ -221,6 +244,16 @@ x_obj_t *x_prim_io_register(x_obj_t *p_base, x_obj_t *p_args)
 	x_prim_bind_table(p_base, clock_entry,
 		sizeof(clock_entry) / sizeof(clock_entry[0]));
 #endif /* X_CLOCK */
+
+	/* atomic: wrapped (applicative) so args are pre-evaluated */
+	{
+		x_obj_t *p_sym = x_make_symbol(p_base, X_OBJ_FLAG_NONE,
+			"atomic"),
+			*p_prim = x_mkprim(p_base, x_prim_atomic),
+			*p_wrapped = x_mkwrap(p_base, p_prim),
+			*p_pair = x_mkspair(p_base, p_sym, p_wrapped);
+		x_base_env_alist_extend(p_base, p_pair);
+	}
 
 	return p_base;
 }
