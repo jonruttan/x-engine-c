@@ -17,6 +17,7 @@
  * # Includes
  */
 #include "x-prim.h"
+#include "x-alist.h"
 #include "x-base.h"
 #include "x-eval.h"
 #include "x-type/list.h"
@@ -91,9 +92,11 @@ x_obj_t *x_prim_body_eval_tco(x_obj_t *p_base, x_obj_t *p_body)
 
 			if (x_obj_isnil(p_base,
 				x_base_field_tco_expr(p_base))) {
-				/* Pop save-stack and restore env */
+				/* Pop compound (env . boundary) and restore */
 				x_base_field_env_alist(p_base)
-					= x_firstobj(x_base_field_save_stack(p_base));
+					= x_firstobj(x_firstobj(x_base_field_save_stack(p_base)));
+				x_base_field_env_local_boundary(p_base)
+					= x_restobj(x_firstobj(x_base_field_save_stack(p_base)));
 				x_base_field_save_stack(p_base)
 					= x_restobj(x_base_field_save_stack(p_base));
 				return NULL;
@@ -101,6 +104,7 @@ x_obj_t *x_prim_body_eval_tco(x_obj_t *p_base, x_obj_t *p_body)
 
 			if (x_obj_isnil(p_base,
 				x_base_field_tco_env(p_base))) {
+				/* Save compound (env . boundary) for TCO restore */
 				x_base_field_tco_env(p_base)
 					= x_firstobj(x_base_field_save_stack(p_base));
 			}
@@ -116,9 +120,11 @@ x_obj_t *x_prim_body_eval_tco(x_obj_t *p_base, x_obj_t *p_body)
 		p_body = x_restobj(p_body);
 	}
 
-	/* Pop save-stack and restore env */
+	/* Pop compound (env . boundary) and restore */
 	x_base_field_env_alist(p_base)
-		= x_firstobj(x_base_field_save_stack(p_base));
+		= x_firstobj(x_firstobj(x_base_field_save_stack(p_base)));
+	x_base_field_env_local_boundary(p_base)
+		= x_restobj(x_firstobj(x_base_field_save_stack(p_base)));
 	x_base_field_save_stack(p_base)
 		= x_restobj(x_base_field_save_stack(p_base));
 
@@ -160,8 +166,10 @@ x_obj_t *x_prim_tco_trampoline(x_obj_t *p_base, x_obj_t *p_result)
 		p_result = x_prim_eval_arg(p_base, p_tco);
 	}
 
+	/* Restore env + boundary from compound (env . boundary) */
 	if (p_tco_env != NULL && ! x_obj_isnil(p_base, p_tco_env)) {
-		x_base_field_env_alist(p_base) = p_tco_env;
+		x_base_field_env_alist(p_base) = x_firstobj(p_tco_env);
+		x_base_field_env_local_boundary(p_base) = x_restobj(p_tco_env);
 	}
 
 	return p_result;
@@ -177,6 +185,12 @@ void x_prim_bind(x_obj_t *p_base, x_char_t *name, x_prim_fn fn)
 		*p_pair = x_mkspair(p_base, p_sym, p_prim);
 
 	x_base_env_alist_extend(p_base, p_pair);
+
+	/* Insert into global BST and update boundary */
+	x_base_field_env_global_tree(p_base) = x_alist_bst_insert(
+		p_base, x_base_field_env_global_tree(p_base), p_pair);
+	x_base_field_env_local_boundary(p_base)
+		= x_base_field_env_alist(p_base);
 }
 
 void x_prim_bind_table(x_obj_t *p_base, const x_prim_entry_t *table, int count)
@@ -199,11 +213,19 @@ x_obj_t *x_prim_register(x_obj_t *p_base, x_obj_t *p_args)
 		p_pair = x_mkspair(p_base,
 			x_mksymbol(p_base, x_atomstr(x_true_obj)), p_t);
 		x_base_env_alist_extend(p_base, p_pair);
+		x_base_field_env_global_tree(p_base) = x_alist_bst_insert(
+			p_base, x_base_field_env_global_tree(p_base), p_pair);
+		x_base_field_env_local_boundary(p_base)
+			= x_base_field_env_alist(p_base);
 		x_base_field_true(p_base) = p_t;
 
 		p_pair = x_mkspair(p_base,
 			x_mksymbol(p_base, x_atomstr(x_false_obj)), p_f);
 		x_base_env_alist_extend(p_base, p_pair);
+		x_base_field_env_global_tree(p_base) = x_alist_bst_insert(
+			p_base, x_base_field_env_global_tree(p_base), p_pair);
+		x_base_field_env_local_boundary(p_base)
+			= x_base_field_env_alist(p_base);
 		x_base_field_false(p_base) = p_f;
 	}
 

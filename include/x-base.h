@@ -49,9 +49,10 @@
 /*
  * # Error Handler (pair tree macros)
  */
-#define x_error_handler_jmp(H)			x_ptrval(x_firstobj(H))
-#define x_error_handler_saved_env(H)	x_firstobj(x_restobj(H))
-#define x_error_handler_error(H)		x_firstobj(x_restobj(x_restobj(H)))
+#define x_error_handler_jmp(H)				x_ptrval(x_firstobj(H))
+#define x_error_handler_saved_env(H)		x_firstobj(x_firstobj(x_restobj(H)))
+#define x_error_handler_saved_boundary(H)	x_restobj(x_firstobj(x_restobj(H)))
+#define x_error_handler_error(H)			x_firstobj(x_restobj(x_restobj(H)))
 
 /* TODO: Add name and version fields. */
 #define x_base(X)							x_firstobj(X)
@@ -113,6 +114,9 @@
 
 #define x_base_field_obj_meta_extra_stack(X)	x_firstobj(x_restobj(x_restobj(x_restobj(x_restobj(x_restobj(x_restobj(x_restobj(x_restobj(x_restobj(x_firstobj(X)))))))))))
 #define x_base_field_obj_meta_extra(X)			x_firstobj(x_base_field_obj_meta_extra_stack((X)))
+
+#define x_base_field_env_global_tree(X)			x_firstobj(x_restobj(x_restobj(x_restobj(x_restobj(x_restobj(x_restobj(x_restobj(x_restobj(x_restobj(x_restobj(x_firstobj(X))))))))))))
+#define x_base_field_env_local_boundary(X)		x_firstobj(x_restobj(x_restobj(x_restobj(x_restobj(x_restobj(x_restobj(x_restobj(x_restobj(x_restobj(x_restobj(x_restobj(x_firstobj(X)))))))))))))
 
 #define x_base_isset(B)						((B) != NULL && x_base((B)) != NULL)
 

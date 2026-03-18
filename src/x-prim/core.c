@@ -72,35 +72,68 @@ x_obj_t *x_prim_define(x_obj_t *p_base, x_obj_t *p_args)
 	p_val = x_prim_eval_arg(p_base, x_firstobj(x_restobj(p_args)));
 	x_restobj(p_pair) = p_val;
 
+	/* If at top level, insert into global BST and update boundary */
+	if (x_base_isset(p_base)
+		&& x_obj_isnil(p_base, x_base_field_save_stack(p_base))) {
+		x_base_field_env_global_tree(p_base) = x_alist_bst_insert(
+			p_base, x_base_field_env_global_tree(p_base), p_pair);
+		x_base_field_env_local_boundary(p_base)
+			= x_base_field_env_alist(p_base);
+	}
+
 	return p_val;
 }
 
-/* set: (set name value) -> mutate existing binding */
+/* set: (set name value) -> mutate existing binding (3-step BST-aware) */
 x_obj_t *x_prim_set(x_obj_t *p_base, x_obj_t *p_args)
 {
 	x_obj_t *p_name = x_firstobj(p_args),
 		*p_val = x_prim_eval_arg(p_base, x_firstobj(x_restobj(p_args)));
-	x_spair_t assoc_args[2] = {
-		x_obj_set(NULL, X_OBJ_FLAG_NONE, { p_name }, { (x_obj_t *)(assoc_args + 1) }),
-		x_obj_set(NULL, X_OBJ_FLAG_NONE, { NULL }, { NULL })
-	};
-	x_obj_t *p_pair;
+	x_obj_t *p_alist, *p_boundary, *p_entry;
 
-	x_firstobj((x_obj_t *)assoc_args[1]) = x_base_field_env_alist(p_base);
-	p_pair = x_alist_assoc(p_base, (x_obj_t *)assoc_args);
+	p_alist = x_base_field_env_alist(p_base);
+	p_boundary = x_base_field_env_local_boundary(p_base);
 
-	if (x_obj_isnil(p_base, p_pair)) {
+	/* Step 1: walk locals (up to AND INCLUDING boundary) */
+	while ( ! x_obj_isnil(p_base, p_alist)) {
+		if (x_firstobj(x_firstobj(p_alist)) == p_name) {
+			x_restobj(x_firstobj(p_alist)) = p_val;
+			return p_val;
+		}
+		if (p_alist == p_boundary) {
+			p_alist = x_restobj(p_alist);
+			break;
+		}
+		p_alist = x_restobj(p_alist);
+	}
+
+	/* Step 2: BST lookup (skip re-defined symbols) */
+	if ( ! (x_obj_flags(p_name) & X_OBJ_FLAG_1)) {
+		p_entry = x_alist_bst_lookup(p_base,
+			x_base_field_env_global_tree(p_base), p_name);
+		if ( ! x_obj_isnil(p_base, p_entry)) {
+			x_restobj(p_entry) = p_val;
+			return p_val;
+		}
+	}
+
+	/* Step 3: continue alist walk from boundary */
+	while ( ! x_obj_isnil(p_base, p_alist)) {
+		if (x_firstobj(x_firstobj(p_alist)) == p_name) {
+			x_restobj(x_firstobj(p_alist)) = p_val;
+			return p_val;
+		}
+		p_alist = x_restobj(p_alist);
+	}
+
+	{
 		x_satom_t sym_name = x_obj_set(x_type_atom_obj, X_OBJ_FLAG_NONE,
 			{ .s = x_symbolval(p_name) });
 		x_obj_error(p_base, "Unbound "X_TYPE_SYMBOL_NAME,
 			(x_obj_t *)&sym_name);
-
-		return NULL;
 	}
 
-	x_restobj(p_pair) = p_val;
-
-	return p_val;
+	return NULL;
 }
 
 /* apply: (apply f arg1 ... args) -> call callable with prefix + tail arg list */
@@ -129,10 +162,14 @@ x_obj_t *x_prim_apply(x_obj_t *p_base, x_obj_t *p_args)
 
 	/* Procedure: bind params, eval body with TCO for eval trampoline. */
 	if (x_obj_type_isprocedure(p_base, p_fn)) {
-		/* Push saved env onto base save-stack */
+		/* Push (env . boundary) onto save-stack */
 		x_base_field_save_stack(p_base) = x_mkspair(p_base,
-			x_base_field_env_alist(p_base),
+			x_mkspair(p_base, x_base_field_env_alist(p_base),
+			                   x_base_field_env_local_boundary(p_base)),
 			x_base_field_save_stack(p_base));
+
+		/* Set boundary to closure env */
+		x_base_field_env_local_boundary(p_base) = x_procenv(p_fn);
 
 		x_base_field_env_alist(p_base) = x_prim_multiple_extend(
 			p_base, x_procenv(p_fn), x_procparams(p_fn), p_vals);
@@ -161,17 +198,21 @@ x_obj_t *x_prim_eval(x_obj_t *p_base, x_obj_t *p_args)
 		x_obj_t *p_env = x_prim_eval_arg(p_base, x_firstobj(p_env_arg));
 		x_obj_t *p_result;
 
-		/* Push saved env onto base save-stack */
+		/* Push (env . boundary) onto save-stack */
 		x_base_field_save_stack(p_base) = x_mkspair(p_base,
-			x_base_field_env_alist(p_base),
+			x_mkspair(p_base, x_base_field_env_alist(p_base),
+			                   x_base_field_env_local_boundary(p_base)),
 			x_base_field_save_stack(p_base));
 
 		x_base_field_env_alist(p_base) = p_env;
+		/* Don't change boundary — let the enclosing procedure's boundary stay */
 		p_result = x_prim_eval_arg(p_base, p_expr);
 
-		/* Pop save-stack and restore env */
+		/* Pop save-stack and restore env + boundary */
 		x_base_field_env_alist(p_base)
-			= x_firstobj(x_base_field_save_stack(p_base));
+			= x_firstobj(x_firstobj(x_base_field_save_stack(p_base)));
+		x_base_field_env_local_boundary(p_base)
+			= x_restobj(x_firstobj(x_base_field_save_stack(p_base)));
 		x_base_field_save_stack(p_base)
 			= x_restobj(x_base_field_save_stack(p_base));
 
@@ -233,11 +274,12 @@ x_obj_t *x_prim_guard(x_obj_t *p_base, x_obj_t *p_args)
 		*p_saved_save_stack = x_base_field_save_stack(p_base),
 		*p_handler, *p_result = NULL;
 
-	/* Build handler pair tree: (jmp-ptr saved-env error-value) */
+	/* Build handler: (jmp-ptr (saved-env . saved-boundary) error-value) */
 	p_handler = x_mkspair(p_base,
 		x_mkptr(p_base, &jmp),
 		x_mkspair(p_base,
-			x_base_field_env_alist(p_base),
+			x_mkspair(p_base, x_base_field_env_alist(p_base),
+			                   x_base_field_env_local_boundary(p_base)),
 			x_mkspair(p_base, NULL, NULL)));
 	x_base_field_error_handler(p_base) = p_handler;
 
@@ -245,9 +287,7 @@ x_obj_t *x_prim_guard(x_obj_t *p_base, x_obj_t *p_args)
 		/* Normal execution: evaluate body. */
 		p_result = x_prim_body_eval(p_base, p_body);
 	} else {
-		/* Error caught: restore save-stack to guard point so that
-		 * stale entries from eval-with-env (which skipped its
-		 * pop on longjmp) are discarded. */
+		/* Error caught: restore save-stack and boundary to guard point. */
 		x_obj_t *p_err = x_error_handler_error(p_handler);
 		x_obj_t *p_pair = x_mkspair(p_base, p_var, p_err);
 
@@ -256,6 +296,8 @@ x_obj_t *x_prim_guard(x_obj_t *p_base, x_obj_t *p_args)
 		p_result = x_prim_body_eval(p_base, p_handler_body);
 		x_base_field_env_alist(p_base)
 			= x_error_handler_saved_env(p_handler);
+		x_base_field_env_local_boundary(p_base)
+			= x_error_handler_saved_boundary(p_handler);
 	}
 
 	/* Pop handler. */
@@ -292,7 +334,6 @@ x_obj_t *x_prim_error(x_obj_t *p_base, x_obj_t *p_args)
 x_obj_t *x_prim_match(x_obj_t *p_base, x_obj_t *p_args)
 {
 	x_obj_t *p_clause, *p_test;
-
 	while ( ! x_obj_isnil(p_base, p_args)) {
 		p_clause = x_firstobj(p_args);
 		p_test = x_prim_eval_arg(p_base, x_firstobj(p_clause));
@@ -391,6 +432,8 @@ x_obj_t *x_prim_tail_eval(x_obj_t *p_base, x_obj_t *p_args)
 		*p_env = x_prim_eval_arg(p_base, x_firstobj(x_restobj(p_args)));
 
 	x_base_field_env_alist(p_base) = p_env;
+	/* Do NOT change local_boundary — the boundary from the enclosing
+	 * procedure call is still valid for the env being restored. */
 	x_base_field_tco_expr(p_base) = p_expr;
 
 	return NULL;

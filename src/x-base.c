@@ -81,7 +81,13 @@ x_obj_t *x_base_make(x_obj_t *p_base, x_obj_t *p_args)
 		pair(
 			/* obj-meta-extra (stack-wrapped) */
 			pair(atom(0), nil),
-		nil))))))))));
+		pair(
+			/* env-global-tree (BST root) */
+			nil,
+		pair(
+			/* env-local-boundary */
+			nil,
+		nil))))))))))));
 
 	/* Set x-obj hooks for the type system. */
 	x_obj_hook_type_name = x_type_prim_type_name;
@@ -136,6 +142,8 @@ void x_base_error(x_obj_t *p_base, x_char_t *message, x_obj_t *p_obj)
 		x_error_handler_error(p_handler) = x_mkstrown(p_base, combined);
 		x_base_field_env_alist(p_base)
 			= x_error_handler_saved_env(p_handler);
+		x_base_field_env_local_boundary(p_base)
+			= x_error_handler_saved_boundary(p_handler);
 		longjmp(*(jmp_buf *)x_error_handler_jmp(p_handler), 1);
 	}
 

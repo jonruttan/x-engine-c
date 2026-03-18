@@ -100,10 +100,14 @@ x_obj_t *x_type_procedure_call(x_obj_t *p_base, x_obj_t *p_args)
 	}
 
 	{
-		/* Push saved env onto base save-stack */
+		/* Push (env . boundary) onto save-stack */
 		x_base_field_save_stack(p_base) = x_mkspair(p_base,
-			x_base_field_env_alist(p_base),
+			x_mkspair(p_base, x_base_field_env_alist(p_base),
+			                   x_base_field_env_local_boundary(p_base)),
 			x_base_field_save_stack(p_base));
+
+		/* Set boundary to closure env */
+		x_base_field_env_local_boundary(p_base) = x_procenv(p_proc);
 
 		x_base_field_env_alist(p_base) = x_prim_multiple_extend(
 			p_base, x_procenv(p_proc), x_procparams(p_proc),

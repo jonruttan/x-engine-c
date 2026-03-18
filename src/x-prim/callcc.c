@@ -50,6 +50,7 @@ typedef struct {
 	x_obj_t    *p_env_alist;      /* interpreter state at invocation time */
 	x_obj_t    *p_save_stack;
 	x_obj_t    *p_error_handler;
+	x_obj_t    *p_local_boundary;
 } x_callcc_cont_t;
 
 /*
@@ -111,6 +112,7 @@ static x_obj_t *x_prim_cc_invoke(x_obj_t *p_base, x_obj_t *p_args)
 	cont->p_env_alist = x_firstobj(p_state);
 	cont->p_save_stack = x_firstobj(x_restobj(p_state));
 	cont->p_error_handler = x_firstobj(x_restobj(x_restobj(p_state)));
+	cont->p_local_boundary = x_firstobj(x_restobj(x_restobj(x_restobj(p_state))));
 
 	/* Grow stack and restore. Does not return. */
 	x_callcc_restore(cont);
@@ -145,6 +147,7 @@ static x_obj_t *x_prim_callcc(x_obj_t *p_base, x_obj_t *p_args)
 		/* Continuation was invoked. Restore interpreter state and
 		 * return the value passed to the continuation. */
 		x_base_field_env_alist(p_base) = cont->p_env_alist;
+		x_base_field_env_local_boundary(p_base) = cont->p_local_boundary;
 		x_base_field_save_stack(p_base) = cont->p_save_stack;
 		x_base_field_error_handler(p_base) = cont->p_error_handler;
 		x_base_field_tco_expr(p_base) = NULL;
@@ -159,14 +162,16 @@ static x_obj_t *x_prim_callcc(x_obj_t *p_base, x_obj_t *p_args)
 	cont->stack_lo = stack_lo;
 
 	/* Build GC-visible interpreter state list:
-	 * (env-alist save-stack error-handler) */
+	 * (env-alist save-stack error-handler local-boundary) */
 	p_state = x_mklist(p_base,
 		x_base_field_env_alist(p_base),
 		x_mklist(p_base,
 			x_base_field_save_stack(p_base),
 			x_mklist(p_base,
 				x_base_field_error_handler(p_base),
-				NULL)));
+				x_mklist(p_base,
+					x_base_field_env_local_boundary(p_base),
+					NULL))));
 
 	/* Wrap continuation struct as POINTER with OWN flag.
 	 * GC will free the struct (and embedded stack copy). */

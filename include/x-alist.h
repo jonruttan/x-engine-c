@@ -29,4 +29,7 @@
 x_obj_t *x_alist_extend(x_obj_t *p_base, x_obj_t *p_args);
 x_obj_t *x_alist_assoc(x_obj_t *p_base, x_obj_t *p_args);
 
+x_obj_t *x_alist_bst_lookup(x_obj_t *p_base, x_obj_t *p_tree, x_obj_t *p_sym);
+x_obj_t *x_alist_bst_insert(x_obj_t *p_base, x_obj_t *p_tree, x_obj_t *p_entry);
+
 #endif /* X_ALIST_H */
