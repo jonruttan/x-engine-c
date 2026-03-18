@@ -37,61 +37,63 @@ x_obj_t *x_base_make(x_obj_t *p_base, x_obj_t *p_args)
 	p_base = x_obj_make(p_base, x_type_base_obj, X_OBJ_FLAG_NONE,
 		X_OBJ_LENGTH_ATOM, NULL);
 	x_atomobj(p_base) = pair(
-		/* type-alist (stack-wrapped) */
-		pair(nil, nil),
+		/* === HOT: env + ctrl === */
 		pair(
-			/* files: '(filein-stack fileout-stack fileerr-stack write-buf-stack) */
-			pair(pair(atom(STDIN_FILENO), nil),
-			pair(pair(atom(STDOUT_FILENO), nil),
-			pair(pair(atom(STDERR_FILENO), nil),
-			pair(pair(nil, nil),
-			nil)))),
+			/* env-group */
+			pair(
+				/* env-alist-stack */
+				pair(nil, nil),
+				/* env-aux: (local-boundary . (global-tree . ())) */
+				pair(nil, pair(nil, nil))),
+			/* ctrl-group */
+			pair(
+				/* ctrl-head: (save-stack . error-handler-stack) */
+				pair(nil, pair(nil, nil)),
+				/* tco: (tco-expr-stack . tco-env-stack) */
+				pair(pair(nil, nil), pair(nil, nil)))),
+		/* === COLD: io + meta === */
 		pair(
-			/* env-state: all stack-wrapped */
-			pair(pair(nil, nil),
-			pair(pair(nil, nil),
-			pair(pair(nil, nil),
-			pair(pair(nil, nil),
-			pair(pair(nil, nil),
-			pair(pair(nil, nil),
-			pair(pair(nil, nil),
-			nil))))))),
-		pair(
-			/* true object (stack-wrapped) */
-			pair(p_parent ? x_base_field_true(p_parent) : nil, nil),
-		pair(
-			/* false object (stack-wrapped) */
-			pair(p_parent ? x_base_field_false(p_parent) : nil, nil),
-		pair(
-			/* line counter (stack-wrapped) */
-			pair(atom(1), nil),
-		pair(
-			/* profile: all stack-wrapped (allocs evals tco assoc-calls assoc-steps
-			   sym-find-calls sym-find-steps gc-runs bst-hits bst-misses) */
-			pair(pair(atom(0), nil), pair(pair(atom(0), nil), pair(pair(atom(0), nil),
-			pair(pair(atom(0), nil), pair(pair(atom(0), nil), pair(pair(atom(0), nil),
-			pair(pair(atom(0), nil), pair(pair(atom(0), nil), pair(pair(atom(0), nil),
-			pair(pair(atom(0), nil), nil)))))))))),
-		pair(
-			/* hooks: all stack-wrapped */
-			pair(pair(atom(x_type_prim_type_name), nil),
-			pair(pair(atom(x_type_prim_units), nil),
-			pair(pair(atom(x_type_prim_length), nil),
-			pair(pair(atom(x_base_error), nil),
-			nil)))),
-		pair(
-			/* save-stack */
-			nil,
-		pair(
-			/* obj-meta-extra (stack-wrapped) */
-			pair(atom(0), nil),
-		pair(
-			/* env-global-tree (BST root) */
-			nil,
-		pair(
-			/* env-local-boundary */
-			nil,
-		nil))))))))))));
+			/* io-group */
+			pair(
+				/* io-head: (type-alist-stack . files) */
+				pair(
+					pair(nil, nil),
+					pair(pair(atom(STDIN_FILENO), nil),
+					pair(pair(atom(STDOUT_FILENO), nil),
+					pair(pair(atom(STDERR_FILENO), nil),
+					pair(pair(nil, nil),
+					nil))))),
+				/* io-state: (line-stack . (true-stack . false-stack)) */
+				pair(
+					pair(atom(1), nil),
+					pair(
+						pair(p_parent ? x_base_field_true(p_parent) : nil, nil),
+						pair(p_parent ? x_base_field_false(p_parent) : nil, nil)))),
+			/* meta-group */
+			pair(
+				/* meta-head: (profile . hooks) */
+				pair(
+					/* profile: 10 stack-wrapped counters */
+					pair(pair(atom(0), nil), pair(pair(atom(0), nil),
+					pair(pair(atom(0), nil), pair(pair(atom(0), nil),
+					pair(pair(atom(0), nil), pair(pair(atom(0), nil),
+					pair(pair(atom(0), nil), pair(pair(atom(0), nil),
+					pair(pair(atom(0), nil), pair(pair(atom(0), nil),
+					nil)))))))))),
+					/* hooks: 4 stack-wrapped entries */
+					pair(pair(atom(x_type_prim_type_name), nil),
+					pair(pair(atom(x_type_prim_units), nil),
+					pair(pair(atom(x_type_prim_length), nil),
+					pair(pair(atom(x_base_error), nil),
+					nil))))),
+				/* meta-rest: (eval-list . (buffer . (token-cache . obj-meta-extra))) */
+				pair(
+					pair(nil, nil),
+					pair(
+						pair(nil, nil),
+						pair(
+							pair(nil, nil),
+							pair(atom(0), nil)))))));
 
 	/* Set x-obj hooks for the type system. */
 	x_obj_hook_type_name = x_type_prim_type_name;
