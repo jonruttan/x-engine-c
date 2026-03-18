@@ -95,10 +95,22 @@ x_obj_t *x_alist_bst_lookup(x_obj_t *p_base, x_obj_t *p_tree,
 }
 
 /*
+ * Create a SHARED pair (never freed by GC).
+ * BST nodes are structural and shared between persistent tree versions.
+ */
+static x_obj_t *bst_pair(x_obj_t *p_base, x_obj_t *a, x_obj_t *b)
+{
+	x_obj_t *p = x_mkspair(p_base, a, b);
+	x_obj_flags(p) |= X_OBJ_FLAG_SHARED;
+	return p;
+}
+
+/*
  * BST insert: persistent (path-copying) insert.
  * Returns a NEW root without mutating the old tree.
  * On duplicate: new root has updated entry; old root unchanged.
  * Shared subtrees are referenced, not copied.
+ * All BST nodes are SHARED (immune to GC sweep).
  */
 x_obj_t *x_alist_bst_insert(x_obj_t *p_base, x_obj_t *p_tree,
 	x_obj_t *p_entry)
@@ -108,8 +120,8 @@ x_obj_t *x_alist_bst_insert(x_obj_t *p_base, x_obj_t *p_tree,
 
 	/* Empty tree: create leaf node */
 	if (x_obj_isnil(p_base, p_tree)) {
-		return x_mkspair(p_base, p_entry,
-			x_mkspair(p_base, NULL, NULL));
+		return bst_pair(p_base, p_entry,
+			bst_pair(p_base, NULL, NULL));
 	}
 
 	p_node = x_firstobj(p_tree);
@@ -120,27 +132,27 @@ x_obj_t *x_alist_bst_insert(x_obj_t *p_base, x_obj_t *p_tree,
 	/* Pointer equality (fast path) */
 	if (x_firstobj(p_node) == x_firstobj(p_entry)) {
 		/* Re-def: copy this node with new entry, share children */
-		return x_mkspair(p_base, p_entry,
-			x_mkspair(p_base, p_left, p_right));
+		return bst_pair(p_base, p_entry,
+			bst_pair(p_base, p_left, p_right));
 	}
 
 	cmp = x_lib_strcmp(x_symbolval(x_firstobj(p_entry)),
 		x_symbolval(x_firstobj(p_node)));
 
 	if (cmp == 0) {
-		return x_mkspair(p_base, p_entry,
-			x_mkspair(p_base, p_left, p_right));
+		return bst_pair(p_base, p_entry,
+			bst_pair(p_base, p_left, p_right));
 	}
 
 	/* Recurse into subtree, copy this node with new child */
 	if (cmp < 0) {
-		return x_mkspair(p_base, p_node,
-			x_mkspair(p_base,
+		return bst_pair(p_base, p_node,
+			bst_pair(p_base,
 				x_alist_bst_insert(p_base, p_left, p_entry),
 				p_right));
 	} else {
-		return x_mkspair(p_base, p_node,
-			x_mkspair(p_base, p_left,
+		return bst_pair(p_base, p_node,
+			bst_pair(p_base, p_left,
 				x_alist_bst_insert(p_base, p_right, p_entry)));
 	}
 }
