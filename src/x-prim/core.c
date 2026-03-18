@@ -79,6 +79,13 @@ x_obj_t *x_prim_define(x_obj_t *p_base, x_obj_t *p_args)
 			p_base, x_base_field_env_global_tree(p_base), p_pair);
 		x_base_field_env_local_boundary(p_base)
 			= x_base_field_env_alist(p_base);
+	} else if (x_base_isset(p_base)) {
+		/* Local def: if symbol is in BST, flag it as shadowed so
+		 * lookups skip BST and use alist walk (finds the local). */
+		if (x_alist_bst_lookup(p_base,
+			x_base_field_env_global_tree(p_base), p_name) != NULL) {
+			x_obj_flags(p_name) |= X_OBJ_FLAG_1;
+		}
 	}
 
 	return p_val;

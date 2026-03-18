@@ -52,6 +52,13 @@ x_obj_t *x_prim_multiple_extend(x_obj_t *p_base, x_obj_t *p_env,
 	/* Variadic: single symbol binds to entire remaining arg list. */
 	if ( ! x_obj_isnil(p_base, p_params)
 		&& x_obj_type_issymbol(p_base, p_params)) {
+		/* Flag if param shadows a BST global */
+		if (x_base_isset(p_base)
+			&& x_alist_bst_lookup(p_base,
+				x_base_field_env_global_tree(p_base),
+				p_params) != NULL) {
+			x_obj_flags(p_params) |= X_OBJ_FLAG_1;
+		}
 		return x_mkspair(p_base,
 			x_mkspair(p_base, p_params, p_vals), p_env);
 	}
@@ -59,6 +66,15 @@ x_obj_t *x_prim_multiple_extend(x_obj_t *p_base, x_obj_t *p_env,
 	/* Base case: no more params. */
 	if (x_obj_isnil(p_base, p_params)) {
 		return p_env;
+	}
+
+	/* Flag if param shadows a BST global */
+	if (x_base_isset(p_base)
+		&& x_obj_type_issymbol(p_base, x_firstobj(p_params))
+		&& x_alist_bst_lookup(p_base,
+			x_base_field_env_global_tree(p_base),
+			x_firstobj(p_params)) != NULL) {
+		x_obj_flags(x_firstobj(p_params)) |= X_OBJ_FLAG_1;
 	}
 
 	/* Recursive case: bind first param to first val, continue. */
