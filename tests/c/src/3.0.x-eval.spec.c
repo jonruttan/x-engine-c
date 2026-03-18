@@ -215,9 +215,12 @@ x_obj_t *test_type_tco_eval_two_bounce(x_obj_t *p_base, x_obj_t *p_args)
 	}
 
 	if (tco_eval_calls == 2) {
-		/* Second bounce: set tco_env for env restore */
+		/* Second bounce: set tco_env for env restore.
+		 * tco_env holds compound ((env . boundary) . bst). */
 		if (test_tco_env_to_set != NULL) {
-			x_base_field_tco_env(p_base) = test_tco_env_to_set;
+			x_base_field_tco_env(p_base) = x_mkspair(p_base,
+				x_mkspair(p_base, test_tco_env_to_set, NULL),
+				NULL);
 		}
 		x_base_field_tco_expr(p_base) = p_obj;
 		return p_obj;
@@ -280,7 +283,9 @@ static char *test_eval_tco(void)
 				x_mksatom(p_base, "val")),
 			NULL);
 
-		x_base_field_tco_env(p_base) = p_saved_env;
+		x_base_field_tco_env(p_base) = x_mkspair(p_base,
+			x_mkspair(p_base, p_saved_env, NULL),
+			NULL);
 
 		/* Modify env to something else */
 		x_base_field_env_alist(p_base) = x_mkspair(p_base,

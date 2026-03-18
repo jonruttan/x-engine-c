@@ -125,11 +125,15 @@ static char *test_body_eval_tco(void)
 {
 	x_obj_t *p_base, *p_body, *p_saved_env, *p_result;
 
-	/* nil body pops save-stack, restores env, returns NULL */
+	/* nil body pops save-stack, restores env, returns NULL.
+	 * Save-stack entries are ((env . boundary) . bst). */
 	p_base = x_base_make(NULL, NULL);
 	p_saved_env = x_mkspair(p_base, x_mksatom(p_base, 99), NULL);
 	x_base_field_save_stack(p_base) = x_mkspair(p_base,
-		p_saved_env, x_base_field_save_stack(p_base));
+		x_mkspair(p_base,
+			x_mkspair(p_base, p_saved_env, NULL),
+			NULL),
+		x_base_field_save_stack(p_base));
 	x_base_field_env_alist(p_base) = NULL;
 	p_result = x_prim_body_eval_tco(p_base, NULL);
 	_it_should("restore env for nil body",
@@ -141,15 +145,18 @@ static char *test_body_eval_tco(void)
 	p_base = x_base_make(NULL, NULL);
 	p_saved_env = x_mkspair(p_base, x_mksatom(p_base, 88), NULL);
 	x_base_field_save_stack(p_base) = x_mkspair(p_base,
-		p_saved_env, x_base_field_save_stack(p_base));
+		x_mkspair(p_base,
+			x_mkspair(p_base, p_saved_env, NULL),
+			NULL),
+		x_base_field_save_stack(p_base));
 	p_body = x_mkspair(p_base, x_mksatom(p_base, 42), NULL);
 	x_base_field_tco_env(p_base) = NULL;
 	p_result = x_prim_body_eval_tco(p_base, p_body);
 	_it_should("set tco_expr for single form",
 		x_base_field_tco_expr(p_base) != NULL
 		&& x_atomint(x_base_field_tco_expr(p_base)) == 42);
-	_it_should("set tco_env to saved_env",
-		x_base_field_tco_env(p_base) == p_saved_env);
+	_it_should("set tco_env compound with saved_env",
+		x_firstobj(x_firstobj(x_base_field_tco_env(p_base))) == p_saved_env);
 	_it_should("return NULL when setting tco_expr", p_result == NULL);
 	x_base_field_tco_expr(p_base) = NULL;
 	x_base_field_tco_env(p_base) = NULL;
@@ -159,7 +166,10 @@ static char *test_body_eval_tco(void)
 	p_base = x_base_make(NULL, NULL);
 	p_saved_env = x_mkspair(p_base, x_mksatom(p_base, 77), NULL);
 	x_base_field_save_stack(p_base) = x_mkspair(p_base,
-		p_saved_env, x_base_field_save_stack(p_base));
+		x_mkspair(p_base,
+			x_mkspair(p_base, p_saved_env, NULL),
+			NULL),
+		x_base_field_save_stack(p_base));
 	p_body = x_mkspair(p_base, NULL, NULL);
 	p_result = x_prim_body_eval_tco(p_base, p_body);
 	_it_should("restore env for nil last form",
@@ -173,7 +183,10 @@ static char *test_body_eval_tco(void)
 	p_base = x_base_make(NULL, NULL);
 	p_saved_env = x_mkspair(p_base, x_mksatom(p_base, 44), NULL);
 	x_base_field_save_stack(p_base) = x_mkspair(p_base,
-		p_saved_env, x_base_field_save_stack(p_base));
+		x_mkspair(p_base,
+			x_mkspair(p_base, p_saved_env, NULL),
+			NULL),
+		x_base_field_save_stack(p_base));
 	p_body = x_mkspair(p_base, x_mksatom(p_base, 10),
 		x_mkspair(p_base, x_mksatom(p_base, 20),
 		x_mkspair(p_base, x_mksatom(p_base, 30), NULL)));
@@ -195,7 +208,10 @@ static char *test_body_eval_tco(void)
 			x_mksatom(p_base, 66), NULL);
 		p_saved_env = x_mkspair(p_base, x_mksatom(p_base, 55), NULL);
 		x_base_field_save_stack(p_base) = x_mkspair(p_base,
-			p_saved_env, x_base_field_save_stack(p_base));
+			x_mkspair(p_base,
+				x_mkspair(p_base, p_saved_env, NULL),
+				NULL),
+			x_base_field_save_stack(p_base));
 		p_body = x_mkspair(p_base, x_mksatom(p_base, 42), NULL);
 		x_base_field_tco_env(p_base) = p_existing_tco_env;
 		p_result = x_prim_body_eval_tco(p_base, p_body);
@@ -279,17 +295,20 @@ static char *test_tco_trampoline(void)
 		p_result != NULL && x_atomint(p_result) == 99);
 	test_cleanup(p_base);
 
-	/* tco_env restore */
+	/* tco_env restore: tco_env holds compound ((env . boundary) . bst) */
 	p_base = x_base_make(NULL, NULL);
 	{
-		x_obj_t *p_tco_env = x_mkspair(p_base,
+		x_obj_t *p_env = x_mkspair(p_base,
 			x_mksatom(p_base, 77), NULL);
+		x_obj_t *p_tco_env = x_mkspair(p_base,
+			x_mkspair(p_base, p_env, NULL),
+			NULL);
 		x_base_field_tco_expr(p_base) = x_mksatom(p_base, 55);
 		x_base_field_tco_env(p_base) = p_tco_env;
 		x_base_field_env_alist(p_base) = NULL;
 		p_result = x_prim_tco_trampoline(p_base, NULL);
 		_it_should("restore env from tco_env",
-			x_base_field_env_alist(p_base) == p_tco_env);
+			x_base_field_env_alist(p_base) == p_env);
 	}
 	test_cleanup(p_base);
 
@@ -499,7 +518,8 @@ static char *test_prim_call_procedure(void)
 	/* Create a procedure: (fn () 42) — no params, body returns 42 */
 	p_body = x_mkspair(p_base, x_mksatom(p_base, 42), NULL);
 	p_proc = x_make_procedure(p_base, 0, NULL, p_body,
-		x_base_field_env_alist(p_base));
+		x_base_field_env_alist(p_base),
+		x_base_field_env_global_tree(p_base));
 
 	/* Create a custom type whose call field is the procedure */
 	x_lib_memset(&type_desc, 0, sizeof(type_desc));

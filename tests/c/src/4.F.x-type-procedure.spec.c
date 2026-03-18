@@ -140,7 +140,8 @@ static char *test_procedure_make(void)
 	p_proc = x_make_procedure(p_base, X_OBJ_FLAG_NONE,
 		x_mksatom(p_base, "params"),
 		x_mksatom(p_base, "body"),
-		x_mksatom(p_base, "env"));
+		x_mksatom(p_base, "env"),
+		NULL);
 
 	_it_should("create a procedure",
 		p_proc != NULL);
@@ -171,7 +172,8 @@ static char *test_procedure_call(void)
 	p_env = x_base_field_env_alist(p_base);
 
 	p_proc = x_make_procedure(p_base, X_OBJ_FLAG_NONE,
-		p_params, p_body, p_env);
+		p_params, p_body, p_env,
+		x_base_field_env_global_tree(p_base));
 
 	/* Call: (proc 42) — procedure evaluates args then binds. */
 	p_args = x_mkspair(p_base, p_proc,
@@ -203,7 +205,7 @@ static char *test_procedure_call_wrapped(void)
 
 	/* Wrap the operative in a procedure (applicative wrapper). */
 	p_proc = x_make_procedure(p_base, X_OBJ_FLAG_WRAP,
-		NULL, NULL, p_op);
+		NULL, NULL, p_op, NULL);
 
 	/* Call: (proc) — wrapped combiner dispatches to underlying */
 	p_args = x_mkspair(p_base, p_proc, NULL);
@@ -229,7 +231,7 @@ static char *test_procedure_write(void)
 	p_base = x_base_make(NULL, NULL);
 
 	p_proc = x_make_procedure(p_base, X_OBJ_FLAG_NONE,
-		NULL, NULL, NULL);
+		NULL, NULL, NULL, NULL);
 
 	helper_file_buffer_ptr[TEST_HELPER_FILE_STDOUT] = s;
 	helper_file_buffer_length[TEST_HELPER_FILE_STDOUT] = 64;

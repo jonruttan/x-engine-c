@@ -37,12 +37,22 @@ x_obj_t *x_prim_eval_arg(x_obj_t *p_base, x_obj_t *p_arg)
 
 x_obj_t *x_prim_evlis(x_obj_t *p_base, x_obj_t *p_args)
 {
+	x_obj_t *p_val;
+
 	if (x_obj_isnil(p_base, p_args)) {
 		return NULL;
 	}
 
-	return x_mklist(p_base,
-		x_prim_eval_arg(p_base, x_firstobj(p_args)),
+	/* Root p_args so GC doesn't free rest while evaluating first */
+	x_base_field_eval_list_stack(p_base) = x_mkspair(p_base,
+		p_args, x_base_field_eval_list_stack(p_base));
+
+	p_val = x_prim_eval_arg(p_base, x_firstobj(p_args));
+
+	x_base_field_eval_list_stack(p_base)
+		= x_restobj(x_base_field_eval_list_stack(p_base));
+
+	return x_mklist(p_base, p_val,
 		x_prim_evlis(p_base, x_restobj(p_args)));
 }
 
@@ -91,7 +101,15 @@ x_obj_t *x_prim_body_eval(x_obj_t *p_base, x_obj_t *p_body)
 	x_obj_t *p_result = NULL;
 
 	while ( ! x_obj_isnil(p_base, p_body)) {
+		/* Root body so GC doesn't free remaining exprs */
+		x_base_field_eval_list_stack(p_base) = x_mkspair(p_base,
+			p_body, x_base_field_eval_list_stack(p_base));
+
 		p_result = x_prim_eval_arg(p_base, x_firstobj(p_body));
+
+		x_base_field_eval_list_stack(p_base)
+			= x_restobj(x_base_field_eval_list_stack(p_base));
+
 		p_body = x_restobj(p_body);
 	}
 
@@ -135,7 +153,15 @@ x_obj_t *x_prim_body_eval_tco(x_obj_t *p_base, x_obj_t *p_body)
 			return NULL;
 		}
 
+		/* Root body so GC doesn't free remaining exprs */
+		x_base_field_eval_list_stack(p_base) = x_mkspair(p_base,
+			p_body, x_base_field_eval_list_stack(p_base));
+
 		p_result = x_prim_eval_arg(p_base, x_firstobj(p_body));
+
+		x_base_field_eval_list_stack(p_base)
+			= x_restobj(x_base_field_eval_list_stack(p_base));
+
 		p_body = x_restobj(p_body);
 	}
 

@@ -455,11 +455,41 @@ x_obj_t *x_prim_tail_eval(x_obj_t *p_base, x_obj_t *p_args)
 	return NULL;
 }
 
+/* atomic: (atomic expr...) -> eval each expr in C with no x-lang
+ * allocations between. Useful for (atomic (heap-mark) (heap-sweep)). */
+x_obj_t *x_prim_atomic(x_obj_t *p_base, x_obj_t *p_args)
+{
+	x_obj_t *p_result = NULL;
+
+	while ( ! x_obj_isnil(p_base, p_args)) {
+		/* Root remaining args so GC doesn't free them */
+		x_base_field_eval_list_stack(p_base) = x_mkspair(p_base,
+			p_args, x_base_field_eval_list_stack(p_base));
+
+		p_result = x_prim_eval_arg(p_base, x_firstobj(p_args));
+
+		x_base_field_eval_list_stack(p_base)
+			= x_restobj(x_base_field_eval_list_stack(p_base));
+
+		p_args = x_restobj(p_args);
+	}
+
+	return p_result;
+}
+
 /* %seq: (%seq a b) -> eval a (blocking), tco-eval b */
 x_obj_t *x_prim_seq(x_obj_t *p_base, x_obj_t *p_args)
 {
+	/* Root p_args so GC doesn't free it during eval of first arg */
+	x_base_field_eval_list_stack(p_base) = x_mkspair(p_base,
+		p_args, x_base_field_eval_list_stack(p_base));
+
 	x_prim_eval_arg(p_base, x_firstobj(p_args));
 	x_base_field_tco_expr(p_base) = x_firstobj(x_restobj(p_args));
+
+	/* Unroot */
+	x_base_field_eval_list_stack(p_base)
+		= x_restobj(x_base_field_eval_list_stack(p_base));
 
 	return NULL;
 }
@@ -496,6 +526,7 @@ x_obj_t *x_prim_core_register(x_obj_t *p_base, x_obj_t *p_args)
 		{ "set-rest-int", x_prim_set_rest_int },
 		{ "tail-eval", x_prim_tail_eval },
 		{ "%seq", x_prim_seq },
+		{ "atomic", x_prim_atomic },
 		{ "%base", x_prim_base }
 	};
 
