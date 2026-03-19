@@ -27,6 +27,28 @@
 /*
  * # Helpers
  */
+void x_prim_clear_flag1(x_obj_t *p_base)
+{
+	x_obj_t *p_list = x_base_field_flag1_list(p_base);
+
+	while ( ! x_obj_isnil(p_base, p_list)) {
+		x_obj_flags(x_firstobj(p_list)) &= ~X_OBJ_FLAG_1;
+		p_list = x_restobj(p_list);
+	}
+	x_base_field_flag1_list(p_base) = NULL;
+}
+
+void x_prim_clear_flag1_to(x_obj_t *p_base, x_obj_t *p_old)
+{
+	x_obj_t *p_list = x_base_field_flag1_list(p_base);
+
+	while (p_list != p_old && ! x_obj_isnil(p_base, p_list)) {
+		x_obj_flags(x_firstobj(p_list)) &= ~X_OBJ_FLAG_1;
+		p_list = x_restobj(p_list);
+	}
+	x_base_field_flag1_list(p_base) = p_old;
+}
+
 x_obj_t *x_prim_eval_arg(x_obj_t *p_base, x_obj_t *p_arg)
 {
 	x_satom_t wrap = x_obj_set(NULL, X_OBJ_FLAG_NONE, { p_arg });
@@ -62,15 +84,21 @@ x_obj_t *x_prim_multiple_extend(x_obj_t *p_base, x_obj_t *p_env,
 	/* Variadic: single symbol binds to entire remaining arg list. */
 	if ( ! x_obj_isnil(p_base, p_params)
 		&& x_obj_type_issymbol(p_base, p_params)) {
-		/* Flag if param shadows a BST global */
+		x_obj_t *p_pair = x_mkspair(p_base, p_params, p_vals);
+
+		/* Flag if param shadows a BST global; track for clearing */
 		if (x_base_isset(p_base)
 			&& x_alist_bst_lookup(p_base,
 				x_base_field_env_global_tree(p_base),
 				p_params) != NULL) {
-			x_obj_flags(p_params) |= X_OBJ_FLAG_1;
+			if ( ! (x_obj_flags(p_params) & X_OBJ_FLAG_1)) {
+				x_obj_flags(p_params) |= X_OBJ_FLAG_1;
+				x_base_field_flag1_list(p_base) = x_mkspair(p_base,
+					p_params, x_base_field_flag1_list(p_base));
+			}
 		}
-		return x_mkspair(p_base,
-			x_mkspair(p_base, p_params, p_vals), p_env);
+
+		return x_mkspair(p_base, p_pair, p_env);
 	}
 
 	/* Base case: no more params. */
@@ -78,22 +106,30 @@ x_obj_t *x_prim_multiple_extend(x_obj_t *p_base, x_obj_t *p_env,
 		return p_env;
 	}
 
-	/* Flag if param shadows a BST global */
-	if (x_base_isset(p_base)
-		&& x_obj_type_issymbol(p_base, x_firstobj(p_params))
-		&& x_alist_bst_lookup(p_base,
-			x_base_field_env_global_tree(p_base),
-			x_firstobj(p_params)) != NULL) {
-		x_obj_flags(x_firstobj(p_params)) |= X_OBJ_FLAG_1;
-	}
-
 	/* Recursive case: bind first param to first val, continue. */
-	return x_prim_multiple_extend(p_base,
-		x_mkspair(p_base,
-			x_mkspair(p_base, x_firstobj(p_params), x_firstobj(p_vals)),
-			p_env),
-		x_restobj(p_params),
-		x_restobj(p_vals));
+	{
+		x_obj_t *p_pair = x_mkspair(p_base,
+			x_firstobj(p_params), x_firstobj(p_vals));
+
+		/* Flag if param shadows a BST global; track for clearing */
+		if (x_base_isset(p_base)
+			&& x_obj_type_issymbol(p_base, x_firstobj(p_params))
+			&& x_alist_bst_lookup(p_base,
+				x_base_field_env_global_tree(p_base),
+				x_firstobj(p_params)) != NULL) {
+			if ( ! (x_obj_flags(x_firstobj(p_params)) & X_OBJ_FLAG_1)) {
+				x_obj_flags(x_firstobj(p_params)) |= X_OBJ_FLAG_1;
+				x_base_field_flag1_list(p_base) = x_mkspair(p_base,
+					x_firstobj(p_params),
+					x_base_field_flag1_list(p_base));
+			}
+		}
+
+		return x_prim_multiple_extend(p_base,
+			x_mkspair(p_base, p_pair, p_env),
+			x_restobj(p_params),
+			x_restobj(p_vals));
+	}
 }
 
 x_obj_t *x_prim_body_eval(x_obj_t *p_base, x_obj_t *p_body)
@@ -132,13 +168,16 @@ x_obj_t *x_prim_body_eval_tco(x_obj_t *p_base, x_obj_t *p_body)
 
 			if (x_obj_isnil(p_base,
 				x_base_field_tco_expr(p_base))) {
-				/* Pop compound ((env . boundary) . bst) and restore */
+				/* Pop compound ((env . boundary) . (bst . flag1)) and restore */
 				{
 					x_obj_t *p_saved = x_firstobj(x_base_field_save_stack(p_base));
 					x_base_field_env_alist(p_base) = x_firstobj(x_firstobj(p_saved));
 					x_base_field_env_local_boundary(p_base)
 						= x_restobj(x_firstobj(p_saved));
-					x_base_field_env_global_tree(p_base) = x_restobj(p_saved);
+					x_base_field_env_global_tree(p_base)
+						= x_firstobj(x_restobj(p_saved));
+					x_prim_clear_flag1_to(p_base,
+						x_restobj(x_restobj(p_saved)));
 					x_base_field_save_stack(p_base)
 						= x_restobj(x_base_field_save_stack(p_base));
 				}
@@ -171,12 +210,14 @@ x_obj_t *x_prim_body_eval_tco(x_obj_t *p_base, x_obj_t *p_body)
 		p_body = x_restobj(p_body);
 	}
 
-	/* Pop compound ((env . boundary) . bst) and restore */
+	/* Pop compound ((env . boundary) . (bst . flag1)) and restore */
 	{
 		x_obj_t *p_saved = x_firstobj(x_base_field_save_stack(p_base));
 		x_base_field_env_alist(p_base) = x_firstobj(x_firstobj(p_saved));
 		x_base_field_env_local_boundary(p_base) = x_restobj(x_firstobj(p_saved));
-		x_base_field_env_global_tree(p_base) = x_restobj(p_saved);
+		x_base_field_env_global_tree(p_base)
+			= x_firstobj(x_restobj(p_saved));
+		x_prim_clear_flag1_to(p_base, x_restobj(x_restobj(p_saved)));
 		x_base_field_save_stack(p_base)
 			= x_restobj(x_base_field_save_stack(p_base));
 	}
@@ -222,11 +263,14 @@ x_obj_t *x_prim_tco_trampoline(x_obj_t *p_base, x_obj_t *p_result)
 		p_result = x_prim_eval_arg(p_base, p_tco);
 	}
 
-	/* Restore env + boundary + bst from compound ((env . boundary) . bst) */
+	/* Restore env + boundary + bst + flag1 from compound
+	 * ((env . boundary) . (bst . flag1_head)) */
 	if (p_tco_env != NULL && ! x_obj_isnil(p_base, p_tco_env)) {
 		x_base_field_env_alist(p_base) = x_firstobj(x_firstobj(p_tco_env));
 		x_base_field_env_local_boundary(p_base) = x_restobj(x_firstobj(p_tco_env));
-		x_base_field_env_global_tree(p_base) = x_restobj(p_tco_env);
+		x_base_field_env_global_tree(p_base)
+			= x_firstobj(x_restobj(p_tco_env));
+		x_prim_clear_flag1_to(p_base, x_restobj(x_restobj(p_tco_env)));
 	}
 
 	return p_result;

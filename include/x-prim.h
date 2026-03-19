@@ -55,6 +55,9 @@ x_obj_t *x_prim_ffi_register(x_obj_t *p_base, x_obj_t *p_args);
 x_obj_t *x_prim_callcc_register(x_obj_t *p_base, x_obj_t *p_args);
 void x_callcc_init(void);
 
+void x_prim_clear_flag1(x_obj_t *p_base);
+void x_prim_clear_flag1_to(x_obj_t *p_base, x_obj_t *p_old);
+
 x_obj_t *x_prim_register(x_obj_t *p_base, x_obj_t *p_args);
 
 #endif /* X_PRIM_H */

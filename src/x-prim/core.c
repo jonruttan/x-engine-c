@@ -72,7 +72,8 @@ x_obj_t *x_prim_define(x_obj_t *p_base, x_obj_t *p_args)
 	p_val = x_prim_eval_arg(p_base, x_firstobj(x_restobj(p_args)));
 	x_restobj(p_pair) = p_val;
 
-	/* If at top level, insert into global BST and update boundary */
+	/* Top-level: insert into BST and advance boundary.
+	 * Inside closure: flag symbol if it shadows a BST global. */
 	if (x_base_isset(p_base)
 		&& x_obj_isnil(p_base, x_base_field_save_stack(p_base))) {
 		x_base_field_env_global_tree(p_base) = x_alist_bst_insert(
@@ -80,11 +81,13 @@ x_obj_t *x_prim_define(x_obj_t *p_base, x_obj_t *p_args)
 		x_base_field_env_local_boundary(p_base)
 			= x_base_field_env_alist(p_base);
 	} else if (x_base_isset(p_base)) {
-		/* Local def: if symbol is in BST, flag it as shadowed so
-		 * lookups skip BST and use alist walk (finds the local). */
 		if (x_alist_bst_lookup(p_base,
 			x_base_field_env_global_tree(p_base), p_name) != NULL) {
-			x_obj_flags(p_name) |= X_OBJ_FLAG_1;
+			if ( ! (x_obj_flags(p_name) & X_OBJ_FLAG_1)) {
+				x_obj_flags(p_name) |= X_OBJ_FLAG_1;
+				x_base_field_flag1_list(p_base) = x_mkspair(p_base,
+					p_name, x_base_field_flag1_list(p_base));
+			}
 		}
 	}
 
@@ -174,12 +177,13 @@ x_obj_t *x_prim_apply(x_obj_t *p_base, x_obj_t *p_args)
 
 	/* Procedure: bind params, eval body with TCO for eval trampoline. */
 	if (x_obj_type_isprocedure(p_base, p_fn)) {
-		/* Push ((env . boundary) . bst) onto save-stack */
+		/* Push ((env . boundary) . (bst . flag1_head)) onto save-stack */
 		x_base_field_save_stack(p_base) = x_mkspair(p_base,
 			x_mkspair(p_base,
 				x_mkspair(p_base, x_base_field_env_alist(p_base),
 				                   x_base_field_env_local_boundary(p_base)),
-				x_base_field_env_global_tree(p_base)),
+				x_mkspair(p_base, x_base_field_env_global_tree(p_base),
+				                   x_base_field_flag1_list(p_base))),
 			x_base_field_save_stack(p_base));
 
 		/* Set boundary and BST to closure's captured values */
@@ -222,25 +226,28 @@ x_obj_t *x_prim_eval(x_obj_t *p_base, x_obj_t *p_args)
 		x_obj_t *p_env = x_prim_eval_arg(p_base, x_firstobj(p_env_arg));
 		x_obj_t *p_result;
 
-		/* Push ((env . boundary) . bst) onto save-stack */
+		/* Push ((env . boundary) . (bst . flag1_head)) onto save-stack */
 		x_base_field_save_stack(p_base) = x_mkspair(p_base,
 			x_mkspair(p_base,
 				x_mkspair(p_base, x_base_field_env_alist(p_base),
 				                   x_base_field_env_local_boundary(p_base)),
-				x_base_field_env_global_tree(p_base)),
+				x_mkspair(p_base, x_base_field_env_global_tree(p_base),
+				                   x_base_field_flag1_list(p_base))),
 			x_base_field_save_stack(p_base));
 
 		x_base_field_env_alist(p_base) = p_env;
 		/* Don't change boundary or BST — eval-with-env preserves scope context */
 		p_result = x_prim_eval_arg(p_base, p_expr);
 
-		/* Pop save-stack and restore env + boundary + bst */
+		/* Pop save-stack and restore env + boundary + bst + flag1 */
 		{
 			x_obj_t *p_saved = x_firstobj(x_base_field_save_stack(p_base));
 			x_base_field_env_alist(p_base) = x_firstobj(x_firstobj(p_saved));
 			x_base_field_env_local_boundary(p_base)
 				= x_restobj(x_firstobj(p_saved));
-			x_base_field_env_global_tree(p_base) = x_restobj(p_saved);
+			x_base_field_env_global_tree(p_base)
+				= x_firstobj(x_restobj(p_saved));
+			x_prim_clear_flag1_to(p_base, x_restobj(x_restobj(p_saved)));
 			x_base_field_save_stack(p_base)
 				= x_restobj(x_base_field_save_stack(p_base));
 		}

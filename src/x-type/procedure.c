@@ -104,12 +104,13 @@ x_obj_t *x_type_procedure_call(x_obj_t *p_base, x_obj_t *p_args)
 	}
 
 	{
-		/* Push ((env . boundary) . bst) onto save-stack */
+		/* Push ((env . boundary) . (bst . flag1_head)) onto save-stack */
 		x_base_field_save_stack(p_base) = x_mkspair(p_base,
 			x_mkspair(p_base,
 				x_mkspair(p_base, x_base_field_env_alist(p_base),
 				                   x_base_field_env_local_boundary(p_base)),
-				x_base_field_env_global_tree(p_base)),
+				x_mkspair(p_base, x_base_field_env_global_tree(p_base),
+				                   x_base_field_flag1_list(p_base))),
 			x_base_field_save_stack(p_base));
 
 		/* Set boundary to closure env and BST to closure's captured BST */

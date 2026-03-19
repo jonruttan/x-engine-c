@@ -70,6 +70,7 @@
 #define x_base_field_env_local_boundary(X)	x_firstobj(x_base_env_aux(X))
 #define x_base_env_bst(X)					x_restobj(x_base_env_aux(X))
 #define x_base_field_env_global_tree(X)		x_firstobj(x_base_env_bst(X))
+#define x_base_field_flag1_list(X)			x_restobj(x_base_env_bst(X))
 
 /* -- ctrl group (rest of hot) -- */
 #define x_base_ctrl_group(X)				x_restobj(x_base_hot(X))
