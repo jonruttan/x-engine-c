@@ -140,6 +140,10 @@ $(EXECUTABLE)-debug: CFLAGS += -g -Og -DDEBUG
 $(EXECUTABLE)-debug: LDFLAGS += -g
 $(EXECUTABLE)-debug: $(EXECUTABLE)
 
+x-profile: ## Build profiling binary
+	$(MAKE) CFLAGS="$(CFLAGS) -DX_PROFILE" $(EXECUTABLE)
+	mv $(EXECUTABLE) $@
+
 x-cov: $(OBJECTS) $(X_EXPR_OBJECTS)
 	$(CC) -c $(CFLAGS) -DX_COV $(DEFS) -o $(SRCDIR)/x-eval-cov.o $(SRCDIR)/x-eval.c
 	$(CC) $(LDFLAGS) $(filter-out $(SRCDIR)/x-eval.o,$(OBJECTS)) $(SRCDIR)/x-eval-cov.o $(X_EXPR_OBJECTS) $(EXTRA_OBJS) $(EXTRA_LIBS) -o $@
@@ -221,8 +225,7 @@ cov-clean: ## Clean coverage artifacts
 # Performance
 # ============================================================================
 
-bench: ## Run benchmarks
-	CFLAGS="$(CFLAGS) -DX_PROFILE" $(MAKE) clean $(EXECUTABLE)
+bench: x-profile ## Run benchmarks
 	sh tools/bench.sh --no-build
 .PHONY: bench
 
@@ -290,7 +293,7 @@ uninstall: ## Uninstall from PREFIX
 .PHONY: uninstall
 
 clean: cov-clean ## Clean build artifacts
-	rm -f $(EXECUTABLE) $(EXECUTABLE)-debug x-cov *.out $(SRCDIR)/*.o $(SRCDIR)/**/*.o $(SRCDIR)/**/**/*.o $(X_EXPR_DIR)/src/*.o *.core core
+	rm -f $(EXECUTABLE) $(EXECUTABLE)-debug x-profile x-cov *.out $(SRCDIR)/*.o $(SRCDIR)/**/*.o $(SRCDIR)/**/**/*.o $(X_EXPR_DIR)/src/*.o *.core core
 	rm -Rf apidocs/
 .PHONY: clean
 
