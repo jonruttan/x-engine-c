@@ -140,14 +140,9 @@ $(EXECUTABLE)-debug: CFLAGS += -g -Og -DDEBUG
 $(EXECUTABLE)-debug: LDFLAGS += -g
 $(EXECUTABLE)-debug: $(EXECUTABLE)
 
-x-profile: ## Build profiling binary
-	$(MAKE) CFLAGS="$(CFLAGS) -DX_PROFILE" $(EXECUTABLE)
+x-profile: ## Build profiling binary (includes coverage)
+	$(MAKE) CFLAGS="$(CFLAGS) -DX_PROFILE -DX_COV" $(EXECUTABLE)
 	mv $(EXECUTABLE) $@
-
-x-cov: $(OBJECTS) $(X_EXPR_OBJECTS)
-	$(CC) -c $(CFLAGS) -DX_COV $(DEFS) -o $(SRCDIR)/x-eval-cov.o $(SRCDIR)/x-eval.c
-	$(CC) $(LDFLAGS) $(filter-out $(SRCDIR)/x-eval.o,$(OBJECTS)) $(SRCDIR)/x-eval-cov.o $(X_EXPR_OBJECTS) $(EXTRA_OBJS) $(EXTRA_LIBS) -o $@
-	rm -f $(SRCDIR)/x-eval-cov.o
 
 .c.o:
 	$(CC) -c $(CFLAGS) $(DEFS) -o $@ $<
@@ -293,7 +288,7 @@ uninstall: ## Uninstall from PREFIX
 .PHONY: uninstall
 
 clean: cov-clean ## Clean build artifacts
-	rm -f $(EXECUTABLE) $(EXECUTABLE)-debug x-profile x-cov *.out $(SRCDIR)/*.o $(SRCDIR)/**/*.o $(SRCDIR)/**/**/*.o $(X_EXPR_DIR)/src/*.o *.core core
+	rm -f $(EXECUTABLE) $(EXECUTABLE)-debug x-profile *.out $(SRCDIR)/*.o $(SRCDIR)/**/*.o $(SRCDIR)/**/**/*.o $(X_EXPR_DIR)/src/*.o *.core core
 	rm -Rf apidocs/
 .PHONY: clean
 
