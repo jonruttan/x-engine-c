@@ -101,6 +101,9 @@ x_obj_t *x_prim_body_eval(x_obj_t *p_base, x_obj_t *p_body)
 	x_obj_t *p_result = NULL;
 
 	while ( ! x_obj_isnil(p_base, p_body)) {
+#ifdef X_COV
+		x_obj_flags(p_body) |= X_OBJ_FLAG_2;
+#endif
 		/* Root body so GC doesn't free remaining exprs */
 		x_base_field_eval_list_stack(p_base) = x_mkspair(p_base,
 			p_body, x_base_field_eval_list_stack(p_base));
@@ -121,6 +124,9 @@ x_obj_t *x_prim_body_eval_tco(x_obj_t *p_base, x_obj_t *p_body)
 	x_obj_t *p_result = NULL;
 
 	while ( ! x_obj_isnil(p_base, p_body)) {
+#ifdef X_COV
+		x_obj_flags(p_body) |= X_OBJ_FLAG_2;
+#endif
 		if (x_obj_isnil(p_base, x_restobj(p_body))) {
 			x_base_field_tco_expr(p_base) = x_firstobj(p_body);
 
@@ -183,6 +189,9 @@ x_obj_t *x_prim_body_eval_tco_simple(x_obj_t *p_base, x_obj_t *p_body)
 	x_obj_t *p_result = NULL;
 
 	while ( ! x_obj_isnil(p_base, p_body)) {
+#ifdef X_COV
+		x_obj_flags(p_body) |= X_OBJ_FLAG_2;
+#endif
 		if (x_obj_isnil(p_base, x_restobj(p_body))) {
 			x_base_field_tco_expr(p_base) = x_firstobj(p_body);
 			return NULL;
