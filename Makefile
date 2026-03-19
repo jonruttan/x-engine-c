@@ -222,6 +222,9 @@ cov-clean: ## Clean coverage artifacts
 
 bench: x-profile ## Run benchmarks
 	sh tools/bench.sh --no-build
+
+cov-x: x-profile ## x-lang library coverage report
+	sh tools/cov-lib.sh
 .PHONY: bench
 
 # ============================================================================
