@@ -17,6 +17,7 @@
  * # Includes
  */
 #include "x-base.h"
+#include "x-heap.h"
 #include "x-prim.h"
 #include "x-type/buffer.h"
 #include "x-type/char.h"
@@ -181,6 +182,9 @@ int main(int argc, char *argv[])
 	x_char_t buffer[X_CLI_BUFFER_SIZE];
 	x_obj_t *p_sym, *p_list = NULL, *p_pair;
 	int i;
+
+	/* Record stack base for conservative GC stack scanning */
+	x_heap_stack_base = (void *)&p_base;
 
 	x_callcc_init();
 

@@ -178,8 +178,12 @@ static x_obj_t *x_prim_heap_count(x_obj_t *p_base, x_obj_t *p_args)
 /* heap-mark: (heap-mark) -> mark reachable objects on heap */
 static x_obj_t *x_prim_heap_mark(x_obj_t *p_base, x_obj_t *p_args)
 {
+	/* Normal mark: trace from base data tree */
 	x_heap_mark(p_base, x_atomobj(p_base), X_OBJ_FLAG_HEAP,
 		x_type_heap_mark);
+
+	/* Conservative stack scan: mark objects referenced from C stack */
+	x_heap_mark_stack(p_base, X_OBJ_FLAG_HEAP, x_type_heap_mark);
 
 	return NULL;
 }
