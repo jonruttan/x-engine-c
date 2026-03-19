@@ -69,7 +69,8 @@ static x_obj_t *x_prim_type_build_struct(x_obj_t *p_base,
 			{ "units",   offsetof(struct x_type_t, p_units) },
 			{ "free",    offsetof(struct x_type_t, p_free) },
 			{ "mark",    offsetof(struct x_type_t, p_mark) },
-			{ "first-chars", offsetof(struct x_type_t, p_data) }
+			{ "first-chars", offsetof(struct x_type_t, p_data) },
+			{ "iter",    offsetof(struct x_type_t, p_iter) }
 		};
 		int i;
 
@@ -617,6 +618,33 @@ static x_obj_t *x_prim_obj_set(x_obj_t *p_base, x_obj_t *p_args)
 	return p_val;
 }
 
+/* iter: (iter obj) -> call type's iter handler to get an iterator */
+static x_obj_t *x_prim_iter(x_obj_t *p_base, x_obj_t *p_args)
+{
+	x_obj_t *p_obj = x_prim_eval_arg(p_base, x_firstobj(p_args));
+	x_obj_t *p_type = x_obj_type(p_obj);
+	x_obj_t *p_iter_fn;
+	x_spair_t call_args[1];
+
+	if (x_obj_isnil(p_base, p_type) || ! x_obj_type_isspair(p_type)) {
+		return NULL;
+	}
+
+	p_iter_fn = x_type_field_iter(p_type);
+	if (x_obj_isnil(p_base, p_iter_fn)) {
+		return NULL;
+	}
+
+	/* Call the iter handler as (iter-fn obj) */
+	{
+		x_spair_t iter_call[1] = {
+			x_obj_set(NULL, X_OBJ_FLAG_NONE, { p_iter_fn }, { NULL })
+		};
+		x_restobj((x_obj_t *)iter_call) = x_mkspair(p_base, p_obj, NULL);
+		return x_type_prim_call(p_base, (x_obj_t *)iter_call);
+	}
+}
+
 x_obj_t *x_prim_type_register(x_obj_t *p_base, x_obj_t *p_args)
 {
 	static const x_prim_entry_t entries[] = {
@@ -636,7 +664,8 @@ x_obj_t *x_prim_type_register(x_obj_t *p_base, x_obj_t *p_args)
 		{ "make-base", x_prim_make_base },
 		{ "base-eval", x_prim_base_eval },
 		{ "base-bind", x_prim_base_bind },
-		{ "token-read-string", x_prim_token_read_string }
+		{ "token-read-string", x_prim_token_read_string },
+		{ "iter", x_prim_iter }
 	};
 
 	x_prim_bind_table(p_base, entries,

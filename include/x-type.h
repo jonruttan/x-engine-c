@@ -89,6 +89,10 @@
 #define x_type_field_error_stack(X)   x_firstobj(x_restobj(x_restobj(x_restobj(x_restobj(x_restobj(x_type_field_io((X))))))))
 #define x_type_field_error(X)         x_firstobj(x_type_field_error_stack((X)))
 
+#define x_type_field_iter_group(X)    x_firstobj(x_restobj(x_restobj(x_restobj(x_restobj(x_restobj(x_restobj(X)))))))
+#define x_type_field_iter_stack(X)    x_firstobj(x_type_field_iter_group((X)))
+#define x_type_field_iter(X)          x_firstobj(x_type_field_iter_stack((X)))
+
 #define x_type_arg_type(X)            x_firstobj((X))
 
 /*
@@ -114,6 +118,7 @@ struct x_type_t
 	x_obj_t *p_write;
 	x_obj_t *p_display;
 	x_obj_t *p_error;
+	x_obj_t *p_iter;
 };
 
 

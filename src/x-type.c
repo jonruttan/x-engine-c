@@ -57,7 +57,10 @@ x_obj_t *x_type_struct_make(x_obj_t *p_base, struct x_type_t type)
 			pair(pair(type.p_display, nil),
 			pair(pair(type.p_error, nil),
 			nil)))))),
-		nil))))));
+		/* Iter: '(iter-stack) */
+		pair(pair(pair(type.p_iter, nil),
+			nil),
+		nil)))))));
 
 	return p_type;
 }
