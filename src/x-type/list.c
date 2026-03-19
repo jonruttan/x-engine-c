@@ -173,10 +173,16 @@ x_obj_t *x_type_list_eval(x_obj_t *p_base, x_obj_t *p_args)
 	proc_exp = x_obj_set(NULL, X_OBJ_FLAG_NONE, { NULL }, { x_restobj(p_exp) }),
 	prim_args = x_obj_set(NULL, X_OBJ_FLAG_NONE, { NULL }, { (x_obj_t *)proc_exp });
 
+	/* Root p_exp so GC doesn't free the arg list during eval/call */
+	x_base_field_eval_list_stack(p_base) = x_mkspair(p_base,
+		p_exp, x_base_field_eval_list_stack(p_base));
+
 	/* Eval first to resolve operator (e.g. symbol -> prim). */
 	p_proc = x_eval(p_base, (x_obj_t *)eval_args);
 
 	if (x_obj_isnil(p_base, p_proc)) {
+		x_base_field_eval_list_stack(p_base)
+			= x_restobj(x_base_field_eval_list_stack(p_base));
 		return p_exp;
 	}
 
@@ -184,10 +190,17 @@ x_obj_t *x_type_list_eval(x_obj_t *p_base, x_obj_t *p_args)
 	x_firstobj((x_obj_t *)prim_args) = x_type_field_call(x_obj_type(p_proc));
 
 	if (x_obj_isnil(p_base, x_firstobj((x_obj_t *)prim_args))) {
+		x_base_field_eval_list_stack(p_base)
+			= x_restobj(x_base_field_eval_list_stack(p_base));
 		return p_exp;
 	}
 
-	return x_type_prim_call(p_base, (x_obj_t *)prim_args);
+	{
+		x_obj_t *p_result = x_type_prim_call(p_base, (x_obj_t *)prim_args);
+		x_base_field_eval_list_stack(p_base)
+			= x_restobj(x_base_field_eval_list_stack(p_base));
+		return p_result;
+	}
 }
 
 x_obj_t *x_type_list_iter(x_obj_t *p_base, x_obj_t *p_args)

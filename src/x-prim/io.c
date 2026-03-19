@@ -184,6 +184,19 @@ static x_obj_t *x_prim_heap_mark(x_obj_t *p_base, x_obj_t *p_args)
 	return NULL;
 }
 
+/* system!: (system! obj) -> recursively mark object and all reachable
+ * objects as SYSTEM (immune to GC sweep). Uses the same traversal
+ * pattern as x_heap_mark. */
+static x_obj_t *x_prim_system_mark(x_obj_t *p_base, x_obj_t *p_args)
+{
+	x_obj_t *p_obj = x_prim_eval_arg(p_base, x_firstobj(p_args));
+
+	/* Reuse the mark traversal with SYSTEM flag */
+	x_heap_mark(p_base, p_obj, X_OBJ_FLAG_SYSTEM, x_type_heap_mark);
+
+	return p_obj;
+}
+
 /* atomic: (atomic f1 f2 ...) -> call each zero-arg fn with no allocations between.
  * Registered as a wrapped combiner so args are pre-evaluated. */
 static x_obj_t *x_prim_atomic(x_obj_t *p_base, x_obj_t *p_args)
@@ -194,12 +207,19 @@ static x_obj_t *x_prim_atomic(x_obj_t *p_base, x_obj_t *p_args)
 	call_args[0][X_OBJ_META_TYPE].p = NULL;
 	call_args[0][X_OBJ_META_FLAGS].i = X_OBJ_FLAG_NONE;
 
+	/* Root p_args so mark+sweep inside the loop doesn't free them */
+	x_base_field_eval_list_stack(p_base) = x_mkspair(p_base,
+		p_args, x_base_field_eval_list_stack(p_base));
+
 	while ( ! x_obj_isnil(p_base, p_args)) {
 		x_firstobj((x_obj_t *)call_args) = x_firstobj(p_args);
 		x_restobj((x_obj_t *)call_args) = NULL;
 		p_result = x_obj_prim_call(p_base, (x_obj_t *)call_args);
 		p_args = x_restobj(p_args);
 	}
+
+	x_base_field_eval_list_stack(p_base)
+		= x_restobj(x_base_field_eval_list_stack(p_base));
 
 	return p_result;
 }
@@ -230,7 +250,8 @@ x_obj_t *x_prim_io_register(x_obj_t *p_base, x_obj_t *p_args)
 		{ "display-to-string", x_prim_display_to_string },
 		{ "heap-mark", x_prim_heap_mark },
 		{ "heap-sweep", x_prim_heap_sweep },
-		{ "heap-count", x_prim_heap_count }
+		{ "heap-count", x_prim_heap_count },
+		{ "system!", x_prim_system_mark }
 	};
 #ifdef X_CLOCK
 	static const x_prim_entry_t clock_entry[] = {

@@ -167,6 +167,11 @@ x_obj_t *x_prim_apply(x_obj_t *p_base, x_obj_t *p_args)
 		p_vals = p_evaled;
 	}
 
+	/* Root p_fn and p_vals so GC doesn't free them during procedure setup */
+	x_base_field_eval_list_stack(p_base) = x_mkspair(p_base,
+		p_fn, x_mkspair(p_base,
+			p_vals, x_base_field_eval_list_stack(p_base)));
+
 	/* Procedure: bind params, eval body with TCO for eval trampoline. */
 	if (x_obj_type_isprocedure(p_base, p_fn)) {
 		/* Push ((env . boundary) . bst) onto save-stack */
@@ -184,6 +189,10 @@ x_obj_t *x_prim_apply(x_obj_t *p_base, x_obj_t *p_args)
 		x_base_field_env_alist(p_base) = x_prim_multiple_extend(
 			p_base, x_procenv(p_fn), x_procparams(p_fn), p_vals);
 
+		/* Unroot */
+		x_base_field_eval_list_stack(p_base)
+			= x_restobj(x_restobj(x_base_field_eval_list_stack(p_base)));
+
 		return x_prim_body_eval_tco(p_base, x_procbody(p_fn));
 	}
 
@@ -192,8 +201,13 @@ x_obj_t *x_prim_apply(x_obj_t *p_base, x_obj_t *p_args)
 		x_spair_t apply_args[1] = {
 			x_obj_set(NULL, X_OBJ_FLAG_NONE, { p_fn }, { p_vals })
 		};
+		x_obj_t *p_result = x_type_prim_apply(p_base, (x_obj_t *)apply_args);
 
-		return x_type_prim_apply(p_base, (x_obj_t *)apply_args);
+		/* Unroot */
+		x_base_field_eval_list_stack(p_base)
+			= x_restobj(x_restobj(x_base_field_eval_list_stack(p_base)));
+
+		return p_result;
 	}
 }
 
@@ -526,7 +540,6 @@ x_obj_t *x_prim_core_register(x_obj_t *p_base, x_obj_t *p_args)
 		{ "set-rest-int", x_prim_set_rest_int },
 		{ "tail-eval", x_prim_tail_eval },
 		{ "%seq", x_prim_seq },
-		{ "atomic", x_prim_atomic },
 		{ "%base", x_prim_base }
 	};
 
