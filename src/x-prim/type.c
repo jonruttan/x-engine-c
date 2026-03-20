@@ -456,7 +456,6 @@ static x_obj_t *x_prim_iter(x_obj_t *p_base, x_obj_t *p_args)
 	x_obj_t *p_obj = x_prim_eval_arg(p_base, x_firstobj(p_args));
 	x_obj_t *p_type = x_obj_type(p_obj);
 	x_obj_t *p_iter_fn;
-	x_spair_t call_args[1];
 
 	if (x_obj_isnil(p_base, p_type) || ! x_obj_type_isspair(p_type)) {
 		return NULL;

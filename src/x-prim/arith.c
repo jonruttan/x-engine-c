@@ -59,6 +59,15 @@ static x_obj_t *x_prim_div(x_obj_t *p_base, x_obj_t *p_args)
 	return x_mkint(p_base, x_intval(a) / x_intval(b));
 }
 
+/* %: (% a b) -> binary integer modulo */
+static x_obj_t *x_prim_mod(x_obj_t *p_base, x_obj_t *p_args)
+{
+	x_obj_t *a = x_prim_eval_arg(p_base, x_firstobj(p_args)),
+		*b = x_prim_eval_arg(p_base, x_firstobj(x_restobj(p_args)));
+
+	return x_mkint(p_base, x_intval(a) % x_intval(b));
+}
+
 /* ~: (~ n) -> bitwise NOT */
 static x_obj_t *x_prim_bitnot(x_obj_t *p_base, x_obj_t *p_args)
 {
@@ -119,6 +128,7 @@ x_obj_t *x_prim_arith_register(x_obj_t *p_base, x_obj_t *p_args)
 		{ "-", x_prim_sub },
 		{ "*", x_prim_prod },
 		{ "/", x_prim_div },
+		{ "%", x_prim_mod },
 		{ "~", x_prim_bitnot },
 		{ "&", x_prim_bitand },
 		{ "|", x_prim_bitor },
