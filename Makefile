@@ -92,6 +92,7 @@ HEADERS=$(wildcard $(INCDIR)/*.h $(INCDIR)/**/*.h $(INCDIR)/**/**/*.h $(X_EXPR_D
 SOURCES=$(wildcard $(SRCDIR)/*.c $(SRCDIR)/**/*.c $(SRCDIR)/**/**/*.c)
 OBJECTS=$(SOURCES:.c=.o)
 EXECUTABLE=x
+OUTPUT=$(EXECUTABLE)
 
 # Options to be added to $(DEFS)
 DEFS?=$(OSDEF) -DX_MACHINE="$(X_MACHINE)" -DX_SYSCALL -DX_INCLUDE -DSYMBOL_FIND_REORDER
@@ -128,21 +129,22 @@ default: all strip ## Build and strip
 
 all: $(SOURCES) $(EXECUTABLE) ## Build all
 
-debug: $(EXECUTABLE)-debug ## Build debug target
-
 strip: $(EXECUTABLE) ## Strip symbols
 	strip $(EXECUTABLE)
 
 $(EXECUTABLE): $(OBJECTS) $(X_EXPR_OBJECTS) $(EXTRA_OBJS)
-	$(CC) $(LDFLAGS) $(OBJECTS) $(X_EXPR_OBJECTS) $(EXTRA_OBJS) $(EXTRA_LIBS) -o $@
+	$(CC) $(LDFLAGS) $(OBJECTS) $(X_EXPR_OBJECTS) $(EXTRA_OBJS) $(EXTRA_LIBS) -o $(OUTPUT)
 
-$(EXECUTABLE)-debug: CFLAGS += -g -Og -DDEBUG
-$(EXECUTABLE)-debug: LDFLAGS += -g
-$(EXECUTABLE)-debug: $(EXECUTABLE)
+x-debug: ## Build debug target
+	$(MAKE) clean-obj
+	$(MAKE) OUTPUT=$@ CFLAGS="$(CFLAGS) -g -Og -DDEBUG" $(EXECUTABLE)
 
 x-profile: ## Build profiling binary (includes coverage)
-	$(MAKE) CFLAGS="$(CFLAGS) -DX_PROFILE -DX_COV" $(EXECUTABLE)
-	mv $(EXECUTABLE) $@
+	$(MAKE) clean-obj
+	$(MAKE) OUTPUT=$@ CFLAGS="$(CFLAGS) -DX_PROFILE -DX_COV" $(EXECUTABLE)
+
+clean-obj:
+	rm -f $(SRCDIR)/*.o $(SRCDIR)/**/*.o $(SRCDIR)/**/**/*.o $(X_EXPR_DIR)/src/*.o
 
 .c.o:
 	$(CC) -c $(CFLAGS) $(DEFS) -o $@ $<
@@ -287,7 +289,7 @@ uninstall: ## Uninstall from PREFIX
 .PHONY: uninstall
 
 clean: cov-clean ## Clean build artifacts
-	rm -f $(EXECUTABLE) $(EXECUTABLE)-debug x-profile *.out $(SRCDIR)/*.o $(SRCDIR)/**/*.o $(SRCDIR)/**/**/*.o $(X_EXPR_DIR)/src/*.o *.core core
+	rm -f $(EXECUTABLE) x-debug x-profile *.out $(SRCDIR)/*.o $(SRCDIR)/**/*.o $(SRCDIR)/**/**/*.o $(X_EXPR_DIR)/src/*.o *.core core
 	rm -Rf apidocs/
 .PHONY: clean
 
