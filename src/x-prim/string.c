@@ -18,7 +18,6 @@
  */
 #include "x-prim.h"
 #include "x-type/char.h"
-#include "x-type/int.h"
 #include "x-type/str.h"
 #include "x-type/symbol.h"
 
@@ -58,44 +57,6 @@ static x_obj_t *x_prim_symbol_to_string(x_obj_t *p_base, x_obj_t *p_args)
 	return x_mkstr(p_base, x_symbolval(p_sym));
 }
 
-/* number->string: (number->string n [radix]) -> string representation */
-static x_obj_t *x_prim_number_to_string(x_obj_t *p_base, x_obj_t *p_args)
-{
-	x_obj_t *p_n = x_prim_eval_arg(p_base, x_firstobj(p_args));
-	x_int_t radix = 10;
-	x_char_t buf[66];
-
-	if ( ! x_obj_isnil(p_base, x_restobj(p_args))) {
-		radix = x_intval(x_prim_eval_arg(p_base, x_firstobj(x_restobj(p_args))));
-	}
-
-	x_lib_inttostr(x_intval(p_n), buf, radix);
-
-	return x_mkstrown(p_base, x_lib_strndup(buf, x_lib_strlen(buf)));
-}
-
-/* string->number: (string->number str [radix]) -> integer or () on failure */
-static x_obj_t *x_prim_string_to_number(x_obj_t *p_base, x_obj_t *p_args)
-{
-	x_obj_t *p_str = x_prim_eval_arg(p_base, x_firstobj(p_args));
-	x_char_t *p_end = NULL;
-	const x_char_t *p_s = x_strval(p_str);
-	x_int_t radix = 0, result;
-
-	if ( ! x_obj_isnil(p_base, x_restobj(p_args))) {
-		radix = x_intval(x_prim_eval_arg(p_base, x_firstobj(x_restobj(p_args))));
-	}
-
-	result = x_lib_strtoint(p_s, &p_end, radix);
-
-	/* Return nil if empty string or conversion didn't consume entire string */
-	if (p_end == p_s || *p_end != '\0') {
-		return NULL;
-	}
-
-	return x_mkint(p_base, result);
-}
-
 /* list->string: (list->string list-of-chars) -> string */
 static x_obj_t *x_prim_list_to_string(x_obj_t *p_base, x_obj_t *p_args)
 {
@@ -115,35 +76,13 @@ static x_obj_t *x_prim_list_to_string(x_obj_t *p_base, x_obj_t *p_args)
 	return x_mkstrown(p_base, s);
 }
 
-/* make-string: (make-string k [char]) -> string of k copies of char */
-static x_obj_t *x_prim_make_string(x_obj_t *p_base, x_obj_t *p_args)
-{
-	x_obj_t *p_k = x_prim_eval_arg(p_base, x_firstobj(p_args)),
-		*p_rest = x_restobj(p_args);
-	x_int_t k = x_intval(p_k);
-	x_char_t fill = ' ', *s;
-	x_int_t i;
-
-	if (!x_obj_isnil(p_base, p_rest))
-		fill = x_charval(x_prim_eval_arg(p_base, x_firstobj(p_rest)));
-	s = (x_char_t *)x_sys_malloc(k + 1);
-	for (i = 0; i < k; i++)
-		s[i] = fill;
-	s[k] = '\0';
-
-	return x_mkstrown(p_base, s);
-}
-
 x_obj_t *x_prim_string_register(x_obj_t *p_base, x_obj_t *p_args)
 {
 	static const x_prim_entry_t entries[] = {
 		{ "string-append", x_prim_string_append },
 		{ "string->symbol", x_prim_string_to_symbol },
 		{ "symbol->string", x_prim_symbol_to_string },
-		{ "number->string", x_prim_number_to_string },
-		{ "string->number", x_prim_string_to_number },
-		{ "list->string", x_prim_list_to_string },
-		{ "make-string", x_prim_make_string }
+		{ "list->string", x_prim_list_to_string }
 	};
 
 	x_prim_bind_table(p_base, entries,

@@ -55,6 +55,7 @@ x_obj_t *x_prim_pred_register(x_obj_t *p_base, x_obj_t *p_args) { return p_base;
 x_obj_t *x_prim_io_register(x_obj_t *p_base, x_obj_t *p_args) { return p_base; }
 x_obj_t *x_prim_type_register(x_obj_t *p_base, x_obj_t *p_args) { return p_base; }
 x_obj_t *x_prim_ffi_register(x_obj_t *p_base, x_obj_t *p_args) { return p_base; }
+x_obj_t *x_prim_callcc_register(x_obj_t *p_base, x_obj_t *p_args) { return p_base; }
 
 #include "ext/x-expr/tests/src/helper-system-functions.c"
 
@@ -147,47 +148,6 @@ static char *test_string_symbol_convert(void)
 	return NULL;
 }
 
-static char *test_number_string_convert(void)
-{
-	x_obj_t *p_base, *p_args, *p_result;
-
-	p_base = x_base_make(NULL, NULL);
-	x_prim_register(p_base, NULL);
-
-	/* (number->string 42) -> "42" */
-	p_args = x_mkspair(p_base,
-		x_mksatom(p_base, (x_int_t)42), NULL);
-	p_result = x_prim_number_to_string(p_base, p_args);
-	_it_should("(number->string 42) = \"42\"",
-		x_lib_strcmp(x_strval(p_result), "42") == 0);
-
-	/* (number->string 255 16) -> "ff" */
-	p_args = x_mkspair(p_base,
-		x_mksatom(p_base, (x_int_t)255),
-		x_mkspair(p_base, x_mksatom(p_base, (x_int_t)16), NULL));
-	p_result = x_prim_number_to_string(p_base, p_args);
-	_it_should("(number->string 255 16) = \"ff\"",
-		x_lib_strcmp(x_strval(p_result), "ff") == 0);
-
-	/* (string->number "42") -> 42 */
-	p_args = x_mkspair(p_base,
-		x_mkstr(p_base, "42"), NULL);
-	p_result = x_prim_string_to_number(p_base, p_args);
-	_it_should("(string->number \"42\") = 42",
-		x_intval(p_result) == 42);
-
-	/* (string->number "ff" 16) -> 255 */
-	p_args = x_mkspair(p_base,
-		x_mkstr(p_base, "ff"),
-		x_mkspair(p_base, x_mksatom(p_base, (x_int_t)16), NULL));
-	p_result = x_prim_string_to_number(p_base, p_args);
-	_it_should("(string->number \"ff\" 16) = 255",
-		x_intval(p_result) == 255);
-
-	test_cleanup(p_base);
-	return NULL;
-}
-
 static char *test_list_to_string(void)
 {
 	x_obj_t *p_base, *p_args, *p_result, *p_list;
@@ -208,39 +168,6 @@ static char *test_list_to_string(void)
 	p_args = x_mkspair(p_base, NULL, NULL);
 	p_result = x_prim_list_to_string(p_base, p_args);
 	_it_should("(list->string '()) = \"\"",
-		x_lib_strcmp(x_strval(p_result), "") == 0);
-
-	test_cleanup(p_base);
-	return NULL;
-}
-
-static char *test_make_string(void)
-{
-	x_obj_t *p_base, *p_args, *p_result;
-
-	p_base = x_base_make(NULL, NULL);
-	x_prim_register(p_base, NULL);
-
-	/* (make-string 3) -> "   " (3 spaces) */
-	p_args = x_mkspair(p_base,
-		x_mksatom(p_base, (x_int_t)3), NULL);
-	p_result = x_prim_make_string(p_base, p_args);
-	_it_should("(make-string 3) = \"   \"",
-		x_lib_strcmp(x_strval(p_result), "   ") == 0);
-
-	/* (make-string 3 #\x) -> "xxx" */
-	p_args = x_mkspair(p_base,
-		x_mksatom(p_base, (x_int_t)3),
-		x_mkspair(p_base, x_mkchar(p_base, 'x'), NULL));
-	p_result = x_prim_make_string(p_base, p_args);
-	_it_should("(make-string 3 x) = \"xxx\"",
-		x_lib_strcmp(x_strval(p_result), "xxx") == 0);
-
-	/* (make-string 0) -> "" */
-	p_args = x_mkspair(p_base,
-		x_mksatom(p_base, (x_int_t)0), NULL);
-	p_result = x_prim_make_string(p_base, p_args);
-	_it_should("(make-string 0) = \"\"",
 		x_lib_strcmp(x_strval(p_result), "") == 0);
 
 	test_cleanup(p_base);
@@ -277,9 +204,7 @@ static char *test_str_call_negative_index(void)
 static char *run_tests() {
 	_run_test(test_string_append);
 	_run_test(test_string_symbol_convert);
-	_run_test(test_number_string_convert);
 	_run_test(test_list_to_string);
-	_run_test(test_make_string);
 	_run_test(test_str_call_negative_index);
 
 	return NULL;

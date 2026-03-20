@@ -155,53 +155,6 @@ static x_obj_t *x_prim_base_make_type(x_obj_t *p_base, x_obj_t *p_args)
 	return p_name_atom;
 }
 
-/* obj-make: (obj-make type-handle-or-name arg ...) -> call type's make handler
- * General-purpose object constructor: accepts a type handle (atom from
- * make-type/type-of) or a type name (string). Evaluates remaining args and
- * passes them to the type's make handler. */
-static x_obj_t *x_prim_obj_make(x_obj_t *p_base, x_obj_t *p_args)
-{
-	x_obj_t *p_key = x_prim_eval_arg(p_base, x_firstobj(p_args)),
-		*p_rest = x_prim_evlis(p_base, x_restobj(p_args)),
-		*p_type, *p_make, *p_walk;
-	x_spair_t lookup_args[1] = {
-		x_obj_set(NULL, X_OBJ_FLAG_NONE, { p_key }, { NULL })
-	};
-
-	/* Try atom-identity lookup first (fast path for handles). */
-	p_type = x_base_type_alist_assoc(p_base, (x_obj_t *)lookup_args);
-
-	/* Fall back to string-name comparison. */
-	if (x_obj_isnil(p_base, p_type)
-			&& x_obj_is_type(p_base, p_key, "STRING")) {
-		for (p_walk = x_base_field_type_alist(p_base);
-				! x_obj_isnil(p_base, p_walk);
-				p_walk = x_restobj(p_walk)) {
-			if ( ! x_obj_isnil(p_base,
-						x_type_field_name(x_restobj(x_firstobj(p_walk))))
-					&& x_lib_strcmp(
-						x_atomstr(x_type_field_name(
-							x_restobj(x_firstobj(p_walk)))),
-						x_strval(p_key)) == 0) {
-				p_type = x_restobj(x_firstobj(p_walk));
-				break;
-			}
-		}
-	}
-
-	if (x_obj_isnil(p_base, p_type)) {
-		return NULL;
-	}
-
-	p_make = x_type_field_make(p_type);
-
-	if (x_obj_isnil(p_base, p_make) || x_obj_isnil(p_base, x_atomobj(p_make))) {
-		return NULL;
-	}
-
-	return (*x_atomfn(p_make))(p_base, p_rest);
-}
-
 /* make-instance: (make-instance type-handle data) -> create typed instance */
 static x_obj_t *x_prim_make_instance(x_obj_t *p_base, x_obj_t *p_args)
 {
@@ -377,152 +330,6 @@ static x_obj_t *x_prim_base_bind(x_obj_t *p_base, x_obj_t *p_args)
 	return p_val;
 }
 
-/* convert_alist_find: walk alist for matching key (pointer equality) */
-static x_obj_t *x_convert_alist_find(x_obj_t *p_base,
-	x_obj_t *p_alist, x_obj_t *p_key)
-{
-	while ( ! x_obj_isnil(p_base, p_alist)) {
-		if (x_firstobj(x_firstobj(p_alist)) == p_key) {
-			return x_firstobj(p_alist);
-		}
-		p_alist = x_restobj(p_alist);
-	}
-
-	return NULL;
-}
-
-/* convert: (convert value target-type-handle . extra-args) -> converted value
- *
- * Lookup order:
- * 1. Short-circuit: value already target type
- * 2. Exact match: source handle in target's 'from' alist
- * 3. Wildcard: 't' symbol key in target's 'from' alist
- * 4. Outbound: target handle in source's 'to' alist
- *
- * Calls: (converter-fn value . extra-args) */
-static x_obj_t *x_prim_convert(x_obj_t *p_base, x_obj_t *p_args)
-{
-	x_obj_t *p_val, *p_handle, *p_type, *p_from_alist,
-		*p_source_handle, *p_entry, *p_converter,
-		*p_extra;
-	x_spair_t lookup_args[1] = {
-		x_obj_set(NULL, X_OBJ_FLAG_NONE, { NULL }, { NULL })
-	};
-	x_spair_t call_args[2] = {
-		x_obj_set(NULL, X_OBJ_FLAG_NONE, { NULL },
-			{ (x_obj_t *)(call_args + 1) }),
-		x_obj_set(NULL, X_OBJ_FLAG_NONE, { NULL }, { NULL })
-	};
-
-	p_val = x_prim_eval_arg(p_base, x_firstobj(p_args));
-
-	if (x_obj_isnil(p_base, p_val)) {
-		return NULL;
-	}
-
-	p_handle = x_prim_eval_arg(p_base,
-		x_firstobj(x_restobj(p_args)));
-
-	/* Collect extra args (evaluated) after value and type. */
-	p_extra = NULL;
-	{
-		x_obj_t *p_rest = x_restobj(x_restobj(p_args));
-		x_obj_t *p_tail = NULL;
-
-		while ( ! x_obj_isnil(p_base, p_rest)) {
-			x_obj_t *p_arg = x_prim_eval_arg(p_base,
-				x_firstobj(p_rest));
-			x_obj_t *p_new = x_mkspair(p_base, p_arg, NULL);
-
-			if (x_obj_isnil(p_base, p_extra)) {
-				p_extra = p_new;
-			} else {
-				x_restobj(p_tail) = p_new;
-			}
-			p_tail = p_new;
-			p_rest = x_restobj(p_rest);
-		}
-	}
-
-	/* 1. Short-circuit: already the target type. */
-	if ( ! x_obj_isnil(p_base, x_obj_type(p_val))
-		&& ! x_obj_isnil(p_base, x_obj_type(p_val))
-		&& x_type_field_name(x_obj_type(p_val)) == p_handle) {
-		return p_val;
-	}
-
-	/* Get source type handle. */
-	{
-		x_spair_t name_args[1] = {
-			x_obj_set(NULL, X_OBJ_FLAG_NONE,
-				{ p_val }, { p_base })
-		};
-		p_source_handle = x_type_prim_type_name(p_base,
-			(x_obj_t *)name_args);
-	}
-
-	/* Look up target type struct. */
-	x_firstobj((x_obj_t *)lookup_args) = p_handle;
-	p_type = x_base_type_alist_assoc(p_base,
-		(x_obj_t *)lookup_args);
-
-	if ( ! x_obj_isnil(p_base, p_type)) {
-		p_from_alist = x_type_field_from(p_type);
-
-		if ( ! x_obj_isnil(p_base, p_from_alist)) {
-			/* 2. Exact match: source handle in target's from alist. */
-			p_entry = NULL;
-			if ( ! x_obj_isnil(p_base, p_source_handle)) {
-				p_entry = x_convert_alist_find(p_base,
-					p_from_alist, p_source_handle);
-			}
-
-			/* 3. Wildcard: 't' symbol key. */
-			if (x_obj_isnil(p_base, p_entry)) {
-				p_entry = x_convert_alist_find(p_base,
-					p_from_alist, x_base_field_true(p_base));
-			}
-
-			if ( ! x_obj_isnil(p_base, p_entry)) {
-				goto call_converter;
-			}
-		}
-	}
-
-	/* 4. Outbound: target handle in source's 'to' alist. */
-	if ( ! x_obj_isnil(p_base, p_source_handle)) {
-		x_obj_t *p_source_type, *p_to_alist;
-
-		x_firstobj((x_obj_t *)lookup_args) = p_source_handle;
-		p_source_type = x_base_type_alist_assoc(p_base,
-			(x_obj_t *)lookup_args);
-
-		if ( ! x_obj_isnil(p_base, p_source_type)) {
-			p_to_alist = x_type_field_to(p_source_type);
-
-			if ( ! x_obj_isnil(p_base, p_to_alist)) {
-				p_entry = x_convert_alist_find(p_base,
-					p_to_alist, p_handle);
-
-				if ( ! x_obj_isnil(p_base, p_entry)) {
-					goto call_converter;
-				}
-			}
-		}
-	}
-
-	return NULL;
-
-call_converter:
-	/* Call: (converter-fn value . extra-args) */
-	p_converter = x_restobj(p_entry);
-	x_firstobj((x_obj_t *)call_args) = p_converter;
-	x_firstobj((x_obj_t *)(call_args + 1)) = p_val;
-	x_restobj((x_obj_t *)(call_args + 1)) = p_extra;
-
-	return x_type_prim_apply(p_base, (x_obj_t *)call_args);
-}
-
 /* buffer-token: (buffer-token buffer) -> extract consumed portion as string */
 static x_obj_t *x_prim_buffer_token(x_obj_t *p_base, x_obj_t *p_args)
 {
@@ -679,11 +486,9 @@ x_obj_t *x_prim_type_register(x_obj_t *p_base, x_obj_t *p_args)
 		{ "make-obj", x_prim_make_obj },
 		{ "obj-ref", x_prim_obj_ref },
 		{ "obj-set!", x_prim_obj_set },
-		{ "obj-make", x_prim_obj_make },
 		{ "type?", x_prim_typep },
 		{ "type-of", x_prim_type_of },
 		{ "type-name", x_prim_type_name },
-		{ "convert", x_prim_convert },
 		{ "buffer-token", x_prim_buffer_token },
 		{ "make-token-base", x_prim_make_token_base },
 		{ "make-base", x_prim_make_base },

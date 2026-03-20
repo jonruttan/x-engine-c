@@ -54,6 +54,7 @@
 #include "src/x-prim/io.c"
 #include "src/x-prim/type.c"
 #include "src/x-prim/ffi.c"
+x_obj_t *x_prim_callcc_register(x_obj_t *p_base, x_obj_t *p_args) { return p_base; }
 #include "src/x-exp/quote.c"
 
 #include "src/x-cli.c"
