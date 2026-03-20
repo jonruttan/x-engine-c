@@ -86,14 +86,21 @@ x_obj_t *x_base_make(x_obj_t *p_base, x_obj_t *p_args)
 					pair(pair(atom(x_type_prim_length), nil),
 					pair(pair(atom(x_base_error), nil),
 					nil))))),
-				/* meta-rest: (eval-list . (buffer . (token-cache . obj-meta-extra))) */
+				/* meta-rest: (eval-list . (buffer . (token-cache .
+			   (obj-meta-extra . (mark-hooks . (free-hooks . mark-roots)))))) */
 				pair(
 					pair(nil, nil),
 					pair(
 						pair(nil, nil),
 						pair(
 							pair(nil, nil),
-							pair(atom(0), nil)))))));
+							pair(
+								pair(atom(0), nil),
+								pair(
+									pair(nil, nil),
+									pair(
+										pair(nil, nil),
+										pair(nil, nil))))))))));
 
 	/* Set x-obj hooks for the type system. */
 	x_obj_hook_type_name = x_type_prim_type_name;

@@ -155,6 +155,23 @@ static x_obj_t *x_prim_heap_sweep(x_obj_t *p_base, x_obj_t *p_args)
 	if (x_base_isset(p_base))
 		x_atomint(x_base_field_profile_gc_runs(p_base))++;
 #endif
+
+	/* Call free hooks before sweep */
+	if (x_base_isset(p_base)) {
+		x_obj_t *p_hooks = x_base_field_heap_free_hooks(p_base);
+		x_spair_t hook_args[1];
+
+		hook_args[0][X_OBJ_META_TYPE].p = NULL;
+		hook_args[0][X_OBJ_META_FLAGS].i = X_OBJ_FLAG_NONE;
+
+		while ( ! x_obj_isnil(p_base, p_hooks)) {
+			x_firstobj((x_obj_t *)hook_args) = x_firstobj(p_hooks);
+			x_restobj((x_obj_t *)hook_args) = NULL;
+			x_obj_prim_call(p_base, (x_obj_t *)hook_args);
+			p_hooks = x_restobj(p_hooks);
+		}
+	}
+
 	x_heap_sweep(p_base, x_obj_heap(p_base), X_OBJ_FLAG_HEAP,
 		x_type_heap_free);
 
@@ -184,6 +201,33 @@ static x_obj_t *x_prim_heap_mark(x_obj_t *p_base, x_obj_t *p_args)
 
 	/* Conservative stack scan: mark objects referenced from C stack */
 	x_heap_mark_stack(p_base, X_OBJ_FLAG_HEAP, x_type_heap_mark);
+
+	/* Mark all registered GC roots */
+	if (x_base_isset(p_base)) {
+		x_obj_t *p_roots = x_base_field_heap_mark_roots(p_base);
+
+		while ( ! x_obj_isnil(p_base, p_roots)) {
+			x_heap_mark(p_base, x_firstobj(p_roots),
+				X_OBJ_FLAG_HEAP, x_type_heap_mark);
+			p_roots = x_restobj(p_roots);
+		}
+	}
+
+	/* Call mark hooks (each is a callable) */
+	if (x_base_isset(p_base)) {
+		x_obj_t *p_hooks = x_base_field_heap_mark_hooks(p_base);
+		x_spair_t hook_args[1];
+
+		hook_args[0][X_OBJ_META_TYPE].p = NULL;
+		hook_args[0][X_OBJ_META_FLAGS].i = X_OBJ_FLAG_NONE;
+
+		while ( ! x_obj_isnil(p_base, p_hooks)) {
+			x_firstobj((x_obj_t *)hook_args) = x_firstobj(p_hooks);
+			x_restobj((x_obj_t *)hook_args) = NULL;
+			x_obj_prim_call(p_base, (x_obj_t *)hook_args);
+			p_hooks = x_restobj(p_hooks);
+		}
+	}
 
 	return NULL;
 }

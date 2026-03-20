@@ -38,7 +38,9 @@
  *     +-- rest: meta-group
  *         +-- first: (profile-list . hooks-list)
  *         +-- rest: (eval-list-stack . (buffer-stack .
- *                     (token-cache-stack . obj-meta-extra-stack)))
+ *                     (token-cache-stack . (obj-meta-extra-stack .
+ *                       (heap-mark-hooks-stack . (heap-free-hooks-stack .
+ *                         heap-mark-roots-stack))))))
  * ```
  *
  * Error handler is a pair tree: `(jmp-ptr (saved-env . saved-boundary) error-value)`
@@ -155,8 +157,17 @@
 #define x_base_meta_last(X)					x_restobj(x_base_meta_more(X))
 #define x_base_field_token_cache_stack(X)	x_firstobj(x_base_meta_last(X))
 #define x_base_field_token_cache(X)			x_firstobj(x_base_field_token_cache_stack(X))
-#define x_base_field_obj_meta_extra_stack(X)	x_restobj(x_base_meta_last(X))
+#define x_base_meta_tail(X)						x_restobj(x_base_meta_last(X))
+#define x_base_field_obj_meta_extra_stack(X)	x_firstobj(x_base_meta_tail(X))
 #define x_base_field_obj_meta_extra(X)			x_firstobj(x_base_field_obj_meta_extra_stack(X))
+#define x_base_gc_hooks(X)						x_restobj(x_base_meta_tail(X))
+#define x_base_field_heap_mark_hooks_stack(X)	x_firstobj(x_base_gc_hooks(X))
+#define x_base_field_heap_mark_hooks(X)			x_firstobj(x_base_field_heap_mark_hooks_stack(X))
+#define x_base_gc_hooks_rest(X)					x_restobj(x_base_gc_hooks(X))
+#define x_base_field_heap_free_hooks_stack(X)	x_firstobj(x_base_gc_hooks_rest(X))
+#define x_base_field_heap_free_hooks(X)			x_firstobj(x_base_field_heap_free_hooks_stack(X))
+#define x_base_field_heap_mark_roots_stack(X)	x_restobj(x_base_gc_hooks_rest(X))
+#define x_base_field_heap_mark_roots(X)			x_firstobj(x_base_field_heap_mark_roots_stack(X))
 
 #define x_base_isset(B)						((B) != NULL && x_base((B)) != NULL)
 
