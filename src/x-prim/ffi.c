@@ -527,8 +527,8 @@ x_obj_t *x_prim_ffi_register(x_obj_t *p_base, x_obj_t *p_args)
 		{ "obj->ptr", x_prim_obj_to_ptr },
 		{ "string->ptr", x_prim_string_to_ptr },
 		{ "ptr->string", x_prim_ptr_to_string },
-		{ "obj-meta-extra", x_prim_obj_meta_extra },
-		{ "obj-meta-extra!", x_prim_obj_meta_extra_set },
+		{ "obj-meta-count", x_prim_obj_meta_extra },
+		{ "obj-meta-count!", x_prim_obj_meta_extra_set },
 		{ "obj-meta-ref", x_prim_obj_meta_ref },
 		{ "obj-meta-set!", x_prim_obj_meta_set }
 	};

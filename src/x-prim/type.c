@@ -391,17 +391,20 @@ static x_obj_t *x_convert_alist_find(x_obj_t *p_base,
 	return NULL;
 }
 
-/* convert: (convert value target-type-handle) -> converted value or ()
+/* convert: (convert value target-type-handle . extra-args) -> converted value
  *
  * Lookup order:
  * 1. Short-circuit: value already target type
  * 2. Exact match: source handle in target's 'from' alist
  * 3. Wildcard: 't' symbol key in target's 'from' alist
- * 4. Outbound: target handle in source's 'to' alist */
+ * 4. Outbound: target handle in source's 'to' alist
+ *
+ * Calls: (converter-fn value . extra-args) */
 static x_obj_t *x_prim_convert(x_obj_t *p_base, x_obj_t *p_args)
 {
 	x_obj_t *p_val, *p_handle, *p_type, *p_from_alist,
-		*p_source_handle, *p_entry, *p_converter;
+		*p_source_handle, *p_entry, *p_converter,
+		*p_extra;
 	x_spair_t lookup_args[1] = {
 		x_obj_set(NULL, X_OBJ_FLAG_NONE, { NULL }, { NULL })
 	};
@@ -419,6 +422,27 @@ static x_obj_t *x_prim_convert(x_obj_t *p_base, x_obj_t *p_args)
 
 	p_handle = x_prim_eval_arg(p_base,
 		x_firstobj(x_restobj(p_args)));
+
+	/* Collect extra args (evaluated) after value and type. */
+	p_extra = NULL;
+	{
+		x_obj_t *p_rest = x_restobj(x_restobj(p_args));
+		x_obj_t *p_tail = NULL;
+
+		while ( ! x_obj_isnil(p_base, p_rest)) {
+			x_obj_t *p_arg = x_prim_eval_arg(p_base,
+				x_firstobj(p_rest));
+			x_obj_t *p_new = x_mkspair(p_base, p_arg, NULL);
+
+			if (x_obj_isnil(p_base, p_extra)) {
+				p_extra = p_new;
+			} else {
+				x_restobj(p_tail) = p_new;
+			}
+			p_tail = p_new;
+			p_rest = x_restobj(p_rest);
+		}
+	}
 
 	/* 1. Short-circuit: already the target type. */
 	if ( ! x_obj_isnil(p_base, x_obj_type(p_val))
@@ -490,10 +514,11 @@ static x_obj_t *x_prim_convert(x_obj_t *p_base, x_obj_t *p_args)
 	return NULL;
 
 call_converter:
-	/* Call: (converter-fn value) */
+	/* Call: (converter-fn value . extra-args) */
 	p_converter = x_restobj(p_entry);
 	x_firstobj((x_obj_t *)call_args) = p_converter;
 	x_firstobj((x_obj_t *)(call_args + 1)) = p_val;
+	x_restobj((x_obj_t *)(call_args + 1)) = p_extra;
 
 	return x_type_prim_apply(p_base, (x_obj_t *)call_args);
 }

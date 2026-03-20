@@ -300,7 +300,7 @@ x_obj_t *x_prim_io_register(x_obj_t *p_base, x_obj_t *p_args)
 		{ "heap-mark", x_prim_heap_mark },
 		{ "heap-sweep", x_prim_heap_sweep },
 		{ "heap-count", x_prim_heap_count },
-		{ "system!", x_prim_system_mark }
+		{ "gc-pin!", x_prim_system_mark }
 	};
 #ifdef X_CLOCK
 	static const x_prim_entry_t clock_entry[] = {
@@ -315,10 +315,10 @@ x_obj_t *x_prim_io_register(x_obj_t *p_base, x_obj_t *p_args)
 		sizeof(clock_entry) / sizeof(clock_entry[0]));
 #endif /* X_CLOCK */
 
-	/* atomic: wrapped (applicative) so args are pre-evaluated */
+	/* applicative: wrapped so args are pre-evaluated */
 	{
 		x_obj_t *p_sym = x_make_symbol(p_base, X_OBJ_FLAG_NONE,
-			"atomic"),
+			"applicative"),
 			*p_prim = x_mkprim(p_base, x_prim_atomic),
 			*p_wrapped = x_mkwrap(p_base, p_prim),
 			*p_pair = x_mkspair(p_base, p_sym, p_wrapped);
