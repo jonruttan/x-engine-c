@@ -205,6 +205,19 @@ int main(int argc, char *argv[])
 	p_pair = x_mkspair(p_base, p_sym, p_list);
 	x_base_env_alist_extend(p_base, p_pair);
 
+	/* Bind platform constants. */
+	p_sym = x_make_symbol(p_base, X_OBJ_FLAG_NONE,
+		(x_char_t *)"x-machine");
+	p_pair = x_mkspair(p_base, p_sym,
+		x_mkstr(p_base, (x_char_t *)X_MACHINE));
+	x_base_env_alist_extend(p_base, p_pair);
+
+	p_sym = x_make_symbol(p_base, X_OBJ_FLAG_NONE,
+		(x_char_t *)"x-version");
+	p_pair = x_mkspair(p_base, p_sym,
+		x_mkstr(p_base, (x_char_t *)X_VERSION));
+	x_base_env_alist_extend(p_base, p_pair);
+
 	/* REPL. */
 	x_prim_repl(p_base, NULL);
 

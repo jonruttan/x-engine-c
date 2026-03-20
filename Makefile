@@ -95,7 +95,7 @@ EXECUTABLE=x
 
 # Options to be added to $(DEFS)
 DEFS?=$(OSDEF) -DX_MACHINE="$(X_MACHINE)" -DX_SYSCALL -DX_INCLUDE -DSYMBOL_FIND_REORDER
-EXTRA_LIBS+=-ldl -lm
+EXTRA_LIBS+=-ldl
 
 # Where to install the stuff
 BINDIR?=$(PREFIX)/bin
@@ -233,10 +233,6 @@ cov-x: x-profile ## x-lang library coverage report
 
 defs: ## Generate ctags definitions
 	ctags -f - src/**/*.c | awk 'BEGIN {FS = "\t"} /\/.*\$\/;"/ { printf("%s;\n", substr($$3,3,length($$3)-6)) }' | sort -u > defs
-
-apidocs: README.md $(SOURCES) ## Generate API docs
-	grock --glob='*.{h,c,md}' --index=README.md --style=thin --out=apidocs
-	LD_LIBRARY_PATH=/usr/lib/llvm-12/lib/ cldoc generate -I./include -- --report --language=c --output apidocs src/*.c
 
 lint: ## Lint C sources
 	$(CC) -fsyntax-only $(CFLAGS) -g -Wall -pedantic $(SOURCES)
