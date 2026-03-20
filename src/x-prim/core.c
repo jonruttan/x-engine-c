@@ -25,6 +25,7 @@
 #include "x-type/list.h"
 #include "x-type/operative.h"
 #include "x-type/prim.h"
+
 #include "x-type/procedure.h"
 #include "x-type/ptr.h"
 #include "x-type/str.h"
@@ -83,10 +84,10 @@ x_obj_t *x_prim_define(x_obj_t *p_base, x_obj_t *p_args)
 	} else if (x_base_isset(p_base)) {
 		if (x_alist_bst_lookup(p_base,
 			x_base_field_env_global_tree(p_base), p_name) != NULL) {
-			if ( ! (x_obj_flags(p_name) & X_OBJ_FLAG_1)) {
-				x_obj_flags(p_name) |= X_OBJ_FLAG_1;
-				x_base_field_flag1_list(p_base) = x_mkspair(p_base,
-					p_name, x_base_field_flag1_list(p_base));
+			if ( ! (x_obj_flags(p_name) & X_BST_SHADOW_FLAG)) {
+				x_obj_flags(p_name) |= X_BST_SHADOW_FLAG;
+				x_bst_shadow_list(p_base) = x_mkspair(p_base,
+					p_name, x_bst_shadow_list(p_base));
 			}
 		}
 	}
@@ -118,7 +119,7 @@ x_obj_t *x_prim_set(x_obj_t *p_base, x_obj_t *p_args)
 	}
 
 	/* Step 2: BST lookup (skip re-defined symbols) */
-	if ( ! (x_obj_flags(p_name) & X_OBJ_FLAG_1)) {
+	if ( ! (x_obj_flags(p_name) & X_BST_SHADOW_FLAG)) {
 		p_entry = x_alist_bst_lookup(p_base,
 			x_base_field_env_global_tree(p_base), p_name);
 		if ( ! x_obj_isnil(p_base, p_entry)) {
@@ -177,27 +178,20 @@ x_obj_t *x_prim_apply(x_obj_t *p_base, x_obj_t *p_args)
 
 	/* Procedure: bind params, eval body with TCO for eval trampoline. */
 	if (x_obj_type_isprocedure(p_base, p_fn)) {
-		/* Push ((env . boundary) . (bst . flag1_head)) onto save-stack */
-		x_base_field_save_stack(p_base) = x_mkspair(p_base,
-			x_mkspair(p_base,
-				x_mkspair(p_base, x_base_field_env_alist(p_base),
-				                   x_base_field_env_local_boundary(p_base)),
-				x_mkspair(p_base, x_base_field_env_global_tree(p_base),
-				                   x_base_field_flag1_list(p_base))),
-			x_base_field_save_stack(p_base));
+		x_env_save_push(p_base);
 
 		/* Set boundary and BST to closure's captured values */
 		x_base_field_env_local_boundary(p_base) = x_procenv(p_fn);
 		x_base_field_env_global_tree(p_base) = x_procbst(p_fn);
 
-		x_base_field_env_alist(p_base) = x_prim_multiple_extend(
+		x_base_field_env_alist(p_base) = x_interp_extend_env(
 			p_base, x_procenv(p_fn), x_procparams(p_fn), p_vals);
 
 		/* Unroot */
 		x_base_field_eval_list_stack(p_base)
 			= x_restobj(x_restobj(x_base_field_eval_list_stack(p_base)));
 
-		return x_prim_body_eval_tco(p_base, x_procbody(p_fn));
+		return x_interp_body_eval_tco(p_base, x_procbody(p_fn));
 	}
 
 	/* Operative / C primitive: delegate to type dispatch. */
@@ -226,31 +220,14 @@ x_obj_t *x_prim_eval(x_obj_t *p_base, x_obj_t *p_args)
 		x_obj_t *p_env = x_prim_eval_arg(p_base, x_firstobj(p_env_arg));
 		x_obj_t *p_result;
 
-		/* Push ((env . boundary) . (bst . flag1_head)) onto save-stack */
-		x_base_field_save_stack(p_base) = x_mkspair(p_base,
-			x_mkspair(p_base,
-				x_mkspair(p_base, x_base_field_env_alist(p_base),
-				                   x_base_field_env_local_boundary(p_base)),
-				x_mkspair(p_base, x_base_field_env_global_tree(p_base),
-				                   x_base_field_flag1_list(p_base))),
-			x_base_field_save_stack(p_base));
+		x_env_save_push(p_base);
 
 		x_base_field_env_alist(p_base) = p_env;
 		/* Don't change boundary or BST — eval-with-env preserves scope context */
-		p_result = x_prim_eval_arg(p_base, p_expr);
+		p_result = x_interp_eval_arg(p_base, p_expr);
 
-		/* Pop save-stack and restore env + boundary + bst + flag1 */
-		{
-			x_obj_t *p_saved = x_firstobj(x_base_field_save_stack(p_base));
-			x_base_field_env_alist(p_base) = x_firstobj(x_firstobj(p_saved));
-			x_base_field_env_local_boundary(p_base)
-				= x_restobj(x_firstobj(p_saved));
-			x_base_field_env_global_tree(p_base)
-				= x_firstobj(x_restobj(p_saved));
-			x_prim_clear_flag1_to(p_base, x_restobj(x_restobj(p_saved)));
-			x_base_field_save_stack(p_base)
-				= x_restobj(x_base_field_save_stack(p_base));
-		}
+		/* Pop save-stack and restore env + boundary + bst + shadow-head */
+		x_env_restore_pop(p_base);
 
 		return p_result;
 	}
