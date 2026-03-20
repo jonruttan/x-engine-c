@@ -4,7 +4,7 @@
 /*
  * # Computational Expressions in C
  *
- * ## x-prim.h -- Header - Primitive Registration
+ * ## x-prim.h -- Header - Primitives
  *
  * @description Computational Expressions in C
  * @author [Jon Ruttan](jonruttan@gmail.com)
@@ -20,11 +20,20 @@
  * # Includes
  */
 #include "x-obj.h"
-#include "x-interp.h"
 
 /*
  * # Data Structures
  */
+x_obj_t *x_prim_eval_arg(x_obj_t *p_base, x_obj_t *p_arg);
+x_obj_t *x_prim_evlis(x_obj_t *p_base, x_obj_t *p_args);
+x_obj_t *x_prim_multiple_extend(x_obj_t *p_base, x_obj_t *p_env,
+	x_obj_t *p_params, x_obj_t *p_vals);
+
+x_obj_t *x_prim_body_eval(x_obj_t *p_base, x_obj_t *p_body);
+x_obj_t *x_prim_body_eval_tco(x_obj_t *p_base, x_obj_t *p_body);
+x_obj_t *x_prim_body_eval_tco_simple(x_obj_t *p_base, x_obj_t *p_body);
+x_obj_t *x_prim_tco_trampoline(x_obj_t *p_base, x_obj_t *p_result);
+
 typedef struct {
 	x_char_t *name;
 	x_prim_fn fn;
@@ -43,24 +52,12 @@ x_obj_t *x_prim_write_to_string(x_obj_t *p_base, x_obj_t *p_args);
 x_obj_t *x_prim_type_register(x_obj_t *p_base, x_obj_t *p_args);
 x_obj_t *x_prim_ffi_register(x_obj_t *p_base, x_obj_t *p_args);
 
-x_obj_t *x_prim_gc_register(x_obj_t *p_base, x_obj_t *p_args);
 x_obj_t *x_prim_callcc_register(x_obj_t *p_base, x_obj_t *p_args);
 void x_callcc_init(void);
 
-x_obj_t *x_prim_register(x_obj_t *p_base, x_obj_t *p_args);
+void x_prim_clear_flag1(x_obj_t *p_base);
+void x_prim_clear_flag1_to(x_obj_t *p_base, x_obj_t *p_old);
 
-/*
- * # Backward Compatibility
- *
- * These aliases map old x_prim_* names to their new x_interp_* homes.
- * Callers should migrate to x_interp_* names directly.
- */
-#define x_prim_eval_arg              x_interp_eval_arg
-#define x_prim_evlis                 x_interp_evlis
-#define x_prim_multiple_extend       x_interp_extend_env
-#define x_prim_body_eval             x_interp_body_eval
-#define x_prim_body_eval_tco         x_interp_body_eval_tco
-#define x_prim_body_eval_tco_simple  x_interp_body_eval_tco_simple
-#define x_prim_tco_trampoline        x_interp_tco_trampoline
+x_obj_t *x_prim_register(x_obj_t *p_base, x_obj_t *p_args);
 
 #endif /* X_PRIM_H */

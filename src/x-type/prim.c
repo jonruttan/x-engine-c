@@ -95,7 +95,7 @@ x_obj_t *x_type_prim_apply(x_obj_t *p_base, x_obj_t *p_args)
 		x_obj_t *p_result,
 			*p_saved_boundary = x_base_field_env_local_boundary(p_base),
 			*p_saved_bst = x_base_field_env_global_tree(p_base),
-			*p_saved_shadows = x_bst_shadow_list(p_base);
+			*p_saved_flag1 = x_base_field_flag1_list(p_base);
 
 		/* Set boundary and BST from closure */
 		x_base_field_env_local_boundary(p_base) = x_procenv(p_fn);
@@ -103,24 +103,24 @@ x_obj_t *x_type_prim_apply(x_obj_t *p_base, x_obj_t *p_args)
 
 		/* Push new env onto env_alist_stack */
 		x_base_field_env_alist_stack(p_base) = x_mkspair(p_base,
-			x_interp_extend_env(p_base, x_procenv(p_fn),
+			x_prim_multiple_extend(p_base, x_procenv(p_fn),
 				x_procparams(p_fn), x_restobj(p_args)),
 			x_base_field_env_alist_stack(p_base));
 
-		p_result = x_interp_body_eval(p_base, x_procbody(p_fn));
+		p_result = x_prim_body_eval(p_base, x_procbody(p_fn));
 
-		/* Pop env_alist_stack, restore boundary, BST, and shadow flags */
+		/* Pop env_alist_stack, restore boundary, BST, and flag1 */
 		x_base_field_env_alist_stack(p_base)
 			= x_restobj(x_base_field_env_alist_stack(p_base));
 		x_base_field_env_local_boundary(p_base) = p_saved_boundary;
 		x_base_field_env_global_tree(p_base) = p_saved_bst;
-		x_clear_bst_shadows_to(p_base, p_saved_shadows);
+		x_prim_clear_flag1_to(p_base, p_saved_flag1);
 
 		return p_result;
 	}
 
 	if (x_obj_type_isoperative(p_base, p_fn)) {
-		return x_interp_tco_trampoline(p_base,
+		return x_prim_tco_trampoline(p_base,
 			x_type_operative_call(p_base, p_args));
 	}
 

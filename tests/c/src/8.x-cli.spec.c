@@ -46,7 +46,6 @@
 #include "src/x-type/iter.c"
 #include "ext/x-expr/src/x-heap.c"
 #include "src/x-token.c"
-#include "src/x-interp.c"
 #include "src/x-prim.c"
 #include "src/x-prim/core.c"
 #include "src/x-prim/arith.c"
@@ -55,8 +54,6 @@
 #include "src/x-prim/io.c"
 #include "src/x-prim/type.c"
 #include "src/x-prim/ffi.c"
-x_obj_t *x_prim_callcc_register(x_obj_t *p_base, x_obj_t *p_args) { return p_base; }
-x_obj_t *x_prim_gc_register(x_obj_t *p_base, x_obj_t *p_args) { return p_base; }
 #include "src/x-exp/quote.c"
 
 #include "src/x-cli.c"
