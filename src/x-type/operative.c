@@ -20,7 +20,7 @@
 #include "x-base.h"
 #include "x-prim.h"
 
-static x_satom_t x_type_operative_units_obj = x_obj_set(NULL, X_OBJ_FLAG_NONE, { .i = 4 });
+static x_satom_t x_type_operative_units_obj = x_obj_set(NULL, X_OBJ_FLAG_NONE, { .i = 2 });
 
 x_satom_t x_type_operative_name = x_obj_set(x_type_atom_obj, X_OBJ_FLAG_NONE, { .s = (x_char_t *)X_TYPE_OPERATIVE_NAME }),
 	x_type_operative_make_prim = x_obj_set(x_type_atom_obj, X_OBJ_FLAG_NONE, { (x_obj_t *)&x_type_operative_make }),
@@ -31,20 +31,15 @@ x_satom_t x_type_operative_name = x_obj_set(x_type_atom_obj, X_OBJ_FLAG_NONE, { 
 x_obj_t *x_make_operative(x_obj_t *p_base, x_obj_flag_t flags,
 	x_obj_t *p_params, x_obj_t *p_envparam, x_obj_t *p_body, x_obj_t *p_env)
 {
-	x_satom_t o_params = x_obj_set(NULL, X_OBJ_FLAG_NONE, { p_params }),
-		o_envparam = x_obj_set(NULL, X_OBJ_FLAG_NONE, { p_envparam }),
-		o_body = x_obj_set(NULL, X_OBJ_FLAG_NONE, { p_body }),
-		o_env = x_obj_set(NULL, X_OBJ_FLAG_NONE, { p_env }),
-		o_flags = x_obj_set(NULL, X_OBJ_FLAG_NONE, { .i = flags });
-	x_spair_t args[5] = {
-		x_obj_set(NULL, X_OBJ_FLAG_NONE, { o_params }, { (x_obj_t *)(args + 1) }),
-		x_obj_set(NULL, X_OBJ_FLAG_NONE, { o_envparam }, { (x_obj_t *)(args + 2) }),
-		x_obj_set(NULL, X_OBJ_FLAG_NONE, { o_body }, { (x_obj_t *)(args + 3) }),
-		x_obj_set(NULL, X_OBJ_FLAG_NONE, { o_env }, { (x_obj_t *)(args + 4) }),
-		x_obj_set(NULL, X_OBJ_FLAG_NONE, { o_flags }, { NULL })
-	};
+	/* Build state list: (params . (envparam . (body . env)))
+	 * GC marks via p_units=2 fallback which walks slot 1 (state). */
+	x_obj_t *p_type = x_type_operative_register(p_base, p_base),
+		*p_s3 = x_mkspair(p_base, p_body, p_env),
+		*p_s2 = x_mkspair(p_base, p_envparam, p_s3),
+		*p_state = x_mkspair(p_base, p_params, p_s2);
 
-	return x_type_operative_make(p_base, (x_obj_t *)args);
+	return x_obj_make(p_base, p_type, flags, X_OBJ_LENGTH_PAIR,
+		(x_prim_fn)NULL, p_state);
 }
 
 x_obj_t *x_type_operative_struct(x_obj_t *p_base, x_obj_t *p_args)
@@ -80,7 +75,7 @@ x_obj_t *x_type_operative_make(x_obj_t *p_base, x_obj_t *p_args)
 	x_obj_flag_t flags = x_obj_isnil(p_base, x_1111(p_args))
 		? 0 : x_firstint(x_0(x_1111(p_args)));
 
-	return x_obj_make(p_base, p_type, flags, 4,
+	return x_make_operative(p_base, flags,
 		x_firstobj(p_params), x_firstobj(p_envparam),
 		x_firstobj(p_body), x_firstobj(p_env));
 }

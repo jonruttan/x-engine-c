@@ -20,6 +20,7 @@
  * # Includes
  */
 #include "x-type.h"
+#include "x-type/prim.h"
 
 #define X_TYPE_OPERATIVE_NAME		"OPERATIVE"
 #define X_TYPE_OPERATIVE_WRITE_STR	"#<op>"
@@ -30,10 +31,14 @@
  */
 #define x_obj_type_isoperative(B,X)	x_obj_is_type((B), (X), X_TYPE_OPERATIVE_NAME)
 
-#define x_opparams(X)				x_firstobj((X))
-#define x_openvparam(X)				x_secondobj((X))
-#define x_opbody(X)					x_obj(x_obj_data_i((X),2))
-#define x_openv(X)					x_obj(x_obj_data_i((X),3))
+/* Operative state list: (params . (envparam . (body . env)))
+ * Stored in x_callable_state (slot 1) of [fn-ptr][state] layout.
+ * GC traverses via the p_units=2 fallback in x_type_heap_mark. */
+#define x_opstate(X)				x_callable_state((X))
+#define x_opparams(X)				x_firstobj(x_opstate((X)))
+#define x_openvparam(X)				x_firstobj(x_restobj(x_opstate((X))))
+#define x_opbody(X)					x_firstobj(x_restobj(x_restobj(x_opstate((X)))))
+#define x_openv(X)					x_restobj(x_restobj(x_restobj(x_opstate((X)))))
 
 #define x_mkop(B,P,EP,BD,E)		x_make_operative((B), X_OBJ_FLAG_NONE, (P), (EP), (BD), (E))
 

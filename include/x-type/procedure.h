@@ -20,6 +20,7 @@
  * # Includes
  */
 #include "x-type.h"
+#include "x-type/prim.h"
 
 #define X_TYPE_PROCEDURE_NAME		"PROCEDURE"
 #define X_TYPE_PROCEDURE_WRITE_STR	"#<fn>"
@@ -30,16 +31,20 @@
  */
 #define x_obj_type_isprocedure(B,X)	x_obj_is_type((B), (X), X_TYPE_PROCEDURE_NAME)
 
-#define x_procparams(X)				x_firstobj((X))
-#define x_procbody(X)				x_secondobj((X))
-#define x_procenv(X)				x_obj(x_obj_data_i((X),2))
-#define x_procbst(X)				(x_obj_data_i((X),3).p)
+/* Procedure state list: (params . (body . (env . bst)))
+ * Stored in x_callable_state (slot 1) of [fn-ptr][state] layout.
+ * GC traverses via the p_units=2 fallback in x_type_heap_mark. */
+#define x_procstate(X)				x_callable_state((X))
+#define x_procparams(X)				x_firstobj(x_procstate((X)))
+#define x_procbody(X)				x_firstobj(x_restobj(x_procstate((X))))
+#define x_procenv(X)				x_firstobj(x_restobj(x_restobj(x_procstate((X)))))
+#define x_procbst(X)				x_restobj(x_restobj(x_restobj(x_procstate((X)))))
 
 #define X_OBJ_FLAG_WRAP				X_OBJ_FLAG_1
 
 #define x_mkproc(B,P,BD,E,T)		x_make_procedure((B), X_OBJ_FLAG_NONE, (P), (BD), (E), (T))
 #define x_mkfproc(B,F,P,BD,E,T)	x_make_procedure((B), (F), (P), (BD), (E), (T))
-#define x_mkwrap(B,C)				x_make_procedure((B), X_OBJ_FLAG_WRAP, (B), (B), (C), NULL)
+#define x_mkwrap(B,C)				x_make_procedure((B), X_OBJ_FLAG_WRAP, NULL, NULL, (C), NULL)
 
 /*
  * # Data Structures
