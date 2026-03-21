@@ -108,10 +108,16 @@ x_obj_t *x_type_prim_apply(x_obj_t *p_base, x_obj_t *p_args)
 		x_base_field_env_global_tree(p_base) = x_procbst(p_fn);
 
 		/* Push new env onto env_alist_stack */
+		{
+		x_obj_t *p_apply_args = x_restobj(p_args);
+		if (x_obj_flags(p_fn) & X_OBJ_FLAG_SELF) {
+			p_apply_args = x_mkspair(p_base, p_fn, p_apply_args);
+		}
 		x_base_field_env_alist_stack(p_base) = x_mkspair(p_base,
 			x_prim_multiple_extend(p_base, x_procenv(p_fn),
-				x_procparams(p_fn), x_restobj(p_args)),
+				x_procparams(p_fn), p_apply_args),
 			x_base_field_env_alist_stack(p_base));
+		}
 
 		p_result = x_prim_body_eval(p_base, x_procbody(p_fn));
 

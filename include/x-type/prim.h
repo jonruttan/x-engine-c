@@ -32,6 +32,7 @@
 
 #define x_primval(X)			x_firstfn((X))
 #define x_callable_state(X)		x_secondobj((X))
+#define X_OBJ_FLAG_SELF			X_OBJ_FLAG_2
 
 #define x_mkprim(B,FN)			x_make_prim((B), X_OBJ_FLAG_NONE, (FN))
 #define x_mkfprim(B,F,FN)		x_make_prim((B), (F), (FN))
