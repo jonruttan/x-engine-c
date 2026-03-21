@@ -201,6 +201,7 @@ x_obj_t *x_prim_apply(x_obj_t *p_base, x_obj_t *p_args)
 		x_base_field_env_local_boundary(p_base) = x_procenv(p_fn);
 		x_base_field_env_global_tree(p_base) = x_procbst(p_fn);
 
+		p_vals = x_mkspair(p_base, p_fn, p_vals);
 		x_base_field_env_alist(p_base) = x_prim_multiple_extend(
 			p_base, x_procenv(p_fn), x_procparams(p_fn), p_vals);
 

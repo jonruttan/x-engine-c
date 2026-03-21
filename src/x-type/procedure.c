@@ -112,10 +112,8 @@ x_obj_t *x_type_procedure_call(x_obj_t *p_base, x_obj_t *p_args)
 		x_base_field_env_local_boundary(p_base) = x_procenv(p_proc);
 		x_base_field_env_global_tree(p_base) = x_procbst(p_proc);
 
-		/* Self-passing: prepend callable to args if FLAG_SELF */
-		if (x_obj_flags(p_proc) & X_OBJ_FLAG_SELF) {
-			p_evaled_args = x_mkspair(p_base, p_proc, p_evaled_args);
-		}
+		/* Self-passing: always prepend callable to args */
+		p_evaled_args = x_mkspair(p_base, p_proc, p_evaled_args);
 
 		x_base_field_env_alist(p_base) = x_prim_multiple_extend(
 			p_base, x_procenv(p_proc), x_procparams(p_proc),
