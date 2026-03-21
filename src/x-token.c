@@ -91,10 +91,11 @@ x_obj_t *x_token_analyse(x_obj_t *p_base, x_obj_t *p_args)
 			x_obj_set(NULL, X_OBJ_FLAG_NONE, { type_iter }, { (x_obj_t *)(iter_args + 1) }),
 			x_obj_set(NULL, X_OBJ_FLAG_NONE, { NULL }, { NULL }),
 		},
-		buffer_args[3] = {
+		buffer_args[4] = {
 			x_obj_set(NULL, X_OBJ_FLAG_NONE, { p_buffer }, { (x_obj_t *)(buffer_args + 1) }),
 			x_obj_set(NULL, X_OBJ_FLAG_NONE, { score }, { (x_obj_t *)(buffer_args + 2) }),
-			x_obj_set(NULL, X_OBJ_FLAG_NONE, { arg_chr }, { NULL }),
+			x_obj_set(NULL, X_OBJ_FLAG_NONE, { arg_chr }, { (x_obj_t *)(buffer_args + 3) }),
+			x_obj_set(NULL, X_OBJ_FLAG_NONE, { NULL }, { NULL }),
 		},
 		prim_args[1] = {
 			x_obj_set(NULL, X_OBJ_FLAG_NONE, { NULL }, { (x_obj_t *)(buffer_args) }),
@@ -162,6 +163,7 @@ x_obj_t *x_token_analyse(x_obj_t *p_base, x_obj_t *p_args)
 				}
 
 				x_atomint(arg_chr) = (x_int_t)x_bufferlastchar(p_buffer);
+				x_firstobj((x_obj_t *)(buffer_args + 3)) = p_analyse;
 				prim_arg_prim = p_analyse;
 				p_obj = x_type_prim_apply(p_base, (x_obj_t *)prim_args);
 

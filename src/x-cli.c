@@ -23,6 +23,7 @@
 #include "x-type/char.h"
 #include "x-type/comment.h"
 #include "x-type/int.h"
+#include "x-token/sexp/int.h"
 #include "x-type/list.h"
 #include "x-type/operative.h"
 #include "x-type/prim.h"
@@ -170,6 +171,12 @@ x_obj_t * init(x_obj_t *p_base, x_char_t *buffer)
 	/* Register include primitive. */
 	x_prim_bind(p_base, "include", x_prim_include);
 #endif
+
+	/* Expose C analyzer state functions for composable tokenizers. */
+	x_prim_bind(p_base, "int-analyse-sign", x_sexp_int_analyse_sign);
+	x_prim_bind(p_base, "int-analyse-prefix", x_sexp_int_analyse_prefix);
+	x_prim_bind(p_base, "int-analyse-digits", x_sexp_int_analyse_digits);
+	x_prim_bind(p_base, "int-analyse-xdigits", x_sexp_int_analyse_xdigits);
 
 	return p_base;
 }

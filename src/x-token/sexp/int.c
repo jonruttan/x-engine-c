@@ -35,10 +35,14 @@ x_satom_t x_sexp_int_analyse_sign_prim = x_obj_set(x_type_atom_obj, X_OBJ_FLAG_N
 x_obj_t *x_sexp_int_analyse_digits(x_obj_t *p_base, x_obj_t *p_args)
 {
 	x_obj_t *p_buffer = x_token_read_arg_buffer(p_args),
-		*p_score = x_token_read_arg_score(p_args);
+		*p_score = x_token_read_arg_score(p_args),
+		*p_self = x_token_read_arg_self(p_args),
+		*p_next;
 
 	if (isdigit(x_bufferlastchar(p_buffer))) {
-		return x_sexp_int_analyse_digits_prim;
+		p_next = x_state_slot(p_self, X_STATE_LOOP);
+		return x_obj_isnil(p_base, p_next)
+			? (x_obj_t *)&x_sexp_int_analyse_digits_prim : p_next;
 	}
 
 	/* Reposition the read pointer to before the non-digit character. */
@@ -48,6 +52,11 @@ x_obj_t *x_sexp_int_analyse_digits(x_obj_t *p_base, x_obj_t *p_args)
 		return NULL;
 	}
 
+	p_next = x_state_slot(p_self, X_STATE_DONE);
+	if ( ! x_obj_isnil(p_base, p_next)) {
+		return p_next;
+	}
+
 	x_firstint(p_score) = x_bufferlen(p_buffer);
 	return p_score;
 }
@@ -55,10 +64,14 @@ x_obj_t *x_sexp_int_analyse_digits(x_obj_t *p_base, x_obj_t *p_args)
 x_obj_t *x_sexp_int_analyse_xdigits(x_obj_t *p_base, x_obj_t *p_args)
 {
 	x_obj_t *p_buffer = x_token_read_arg_buffer(p_args),
-		*p_score = x_token_read_arg_score(p_args);
+		*p_score = x_token_read_arg_score(p_args),
+		*p_self = x_token_read_arg_self(p_args),
+		*p_next;
 
 	if (isxdigit(x_bufferlastchar(p_buffer))) {
-		return x_sexp_int_analyse_xdigits_prim;
+		p_next = x_state_slot(p_self, X_STATE_LOOP);
+		return x_obj_isnil(p_base, p_next)
+			? (x_obj_t *)&x_sexp_int_analyse_xdigits_prim : p_next;
 	}
 
 	/* Reposition the read pointer to before the non-xdigit character. */
@@ -68,27 +81,43 @@ x_obj_t *x_sexp_int_analyse_xdigits(x_obj_t *p_base, x_obj_t *p_args)
 		return NULL;
 	}
 
+	p_next = x_state_slot(p_self, X_STATE_DONE);
+	if ( ! x_obj_isnil(p_base, p_next)) {
+		return p_next;
+	}
+
 	x_firstint(p_score) = x_bufferlen(p_buffer);
 	return p_score;
 }
 
 x_obj_t *x_sexp_int_analyse_base(x_obj_t *p_base, x_obj_t *p_args)
 {
-	x_obj_t *p_buffer = x_token_read_arg_buffer(p_args);
+	x_obj_t *p_buffer = x_token_read_arg_buffer(p_args),
+		*p_self = x_token_read_arg_self(p_args),
+		*p_next;
 
 	if (x_lib_strchr("Xx", x_bufferlastchar(p_buffer))) {
-		return x_sexp_int_analyse_xdigits_prim;
+		/* On 'x'/'X': transition to xdigits (slot DONE) or default */
+		p_next = x_state_slot(p_self, X_STATE_DONE);
+		return x_obj_isnil(p_base, p_next)
+			? (x_obj_t *)&x_sexp_int_analyse_xdigits_prim : p_next;
 	}
 
+	/* Otherwise delegate to digits */
 	return x_sexp_int_analyse_digits(p_base, p_args);
 }
 
 x_obj_t *x_sexp_int_analyse_prefix(x_obj_t *p_base, x_obj_t *p_args)
 {
-	x_obj_t *p_buffer = x_token_read_arg_buffer(p_args);
+	x_obj_t *p_buffer = x_token_read_arg_buffer(p_args),
+		*p_self = x_token_read_arg_self(p_args),
+		*p_next;
 
 	if ('0' == x_bufferlastchar(p_buffer)) {
-		return x_sexp_int_analyse_base_prim;
+		/* On '0': transition to base (slot DONE) or default */
+		p_next = x_state_slot(p_self, X_STATE_DONE);
+		return x_obj_isnil(p_base, p_next)
+			? (x_obj_t *)&x_sexp_int_analyse_base_prim : p_next;
 	}
 
 	if ( ! isdigit(x_bufferlastchar(p_buffer))) {
@@ -101,10 +130,15 @@ x_obj_t *x_sexp_int_analyse_prefix(x_obj_t *p_base, x_obj_t *p_args)
 
 x_obj_t *x_sexp_int_analyse_sign(x_obj_t *p_base, x_obj_t *p_args)
 {
-	x_obj_t *p_buffer = x_token_read_arg_buffer(p_args);
+	x_obj_t *p_buffer = x_token_read_arg_buffer(p_args),
+		*p_self = x_token_read_arg_self(p_args),
+		*p_next;
 
 	if (x_lib_strchr("+-", x_bufferlastchar(p_buffer)) != NULL) {
-		return x_sexp_int_analyse_prefix_prim;
+		/* On sign: transition to prefix (slot DONE) or default */
+		p_next = x_state_slot(p_self, X_STATE_DONE);
+		return x_obj_isnil(p_base, p_next)
+			? (x_obj_t *)&x_sexp_int_analyse_prefix_prim : p_next;
 	}
 
 	return x_sexp_int_analyse_prefix(p_base, p_args);

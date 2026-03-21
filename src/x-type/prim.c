@@ -69,7 +69,8 @@ x_obj_t *x_type_prim_make(x_obj_t *p_base, x_obj_t *p_args)
 	x_obj_flag_t flags = x_obj_isnil(p_base, x_1(p_args))
 		? 0 : x_firstint(x_01(p_args));
 
-	return x_obj_make(p_base, p_type, flags, X_OBJ_LENGTH_ATOM, x_atomfn(p_prim));
+	return x_obj_make(p_base, p_type, flags, X_OBJ_LENGTH_PAIR,
+		x_atomfn(p_prim), NULL);
 }
 
 x_obj_t *x_type_prim_call(x_obj_t *p_base, x_obj_t *p_args)
