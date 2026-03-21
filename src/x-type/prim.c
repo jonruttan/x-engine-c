@@ -90,7 +90,7 @@ x_obj_t *x_type_prim_call(x_obj_t *p_base, x_obj_t *p_args)
 	}
 
 	return (*x_primval(p_fn))(p_base,
-		x_mkspair(p_base, x_callable_state(p_fn), x_restobj(p_args)));
+		x_mkspair(p_base, p_fn, x_restobj(p_args)));
 }
 
 x_obj_t *x_type_prim_apply(x_obj_t *p_base, x_obj_t *p_args)
@@ -135,7 +135,7 @@ x_obj_t *x_type_prim_apply(x_obj_t *p_base, x_obj_t *p_args)
 	}
 
 	return (*x_primval(p_fn))(p_base,
-		x_mkspair(p_base, x_callable_state(p_fn), x_restobj(p_args)));
+		x_mkspair(p_base, p_fn, x_restobj(p_args)));
 }
 
 x_obj_t *x_type_prim_write(x_obj_t *p_base, x_obj_t *p_args)
