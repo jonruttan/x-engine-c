@@ -98,10 +98,12 @@ static void x_callcc_restore(x_callcc_cont_t *cont)
  * args-list is from the variadic k: () for 0 args, (val) for 1 arg. */
 static x_obj_t *x_prim_cc_invoke(x_obj_t *p_base, x_obj_t *p_args)
 {
-	x_obj_t *p_ptr = x_prim_eval_arg(p_base, x_firstobj(p_args));
-	x_obj_t *p_state = x_prim_eval_arg(p_base,
+	x_obj_t *p_ptr, *p_state, *p_args_list;
+	p_args = x_restobj(p_args);
+	p_ptr = x_prim_eval_arg(p_base, x_firstobj(p_args));
+	p_state = x_prim_eval_arg(p_base,
 		x_firstobj(x_restobj(p_args)));
-	x_obj_t *p_args_list = x_prim_eval_arg(p_base,
+	p_args_list = x_prim_eval_arg(p_base,
 		x_firstobj(x_restobj(x_restobj(p_args))));
 	x_obj_t *p_val = x_obj_isnil(p_base, p_args_list)
 		? NULL : x_firstobj(p_args_list);
@@ -133,6 +135,7 @@ static x_obj_t *x_prim_callcc(x_obj_t *p_base, x_obj_t *p_args)
 	x_callcc_cont_t *cont;
 	char *stack_lo;
 	size_t stack_size, total;
+	p_args = x_restobj(p_args);
 
 	/* Evaluate the procedure argument. */
 	p_proc = x_prim_eval_arg(p_base, x_firstobj(p_args));

@@ -23,8 +23,10 @@
 /* eq?: (eq? a b) -> pointer equality */
 static x_obj_t *x_prim_eq(x_obj_t *p_base, x_obj_t *p_args)
 {
-	x_obj_t *a = x_prim_eval_arg(p_base, x_firstobj(p_args)),
-		*b = x_prim_eval_arg(p_base, x_firstobj(x_restobj(p_args)));
+	x_obj_t *a, *b;
+	p_args = x_restobj(p_args);
+	a = x_prim_eval_arg(p_base, x_firstobj(p_args));
+	b = x_prim_eval_arg(p_base, x_firstobj(x_restobj(p_args)));
 
 	return a == b ? x_base_field_true(p_base) : x_base_field_false(p_base);
 }
@@ -32,8 +34,10 @@ static x_obj_t *x_prim_eq(x_obj_t *p_base, x_obj_t *p_args)
 /* =: (= a b) -> integer value equality */
 static x_obj_t *x_prim_numeq(x_obj_t *p_base, x_obj_t *p_args)
 {
-	x_obj_t *a = x_prim_eval_arg(p_base, x_firstobj(p_args)),
-		*b = x_prim_eval_arg(p_base, x_firstobj(x_restobj(p_args)));
+	x_obj_t *a, *b;
+	p_args = x_restobj(p_args);
+	a = x_prim_eval_arg(p_base, x_firstobj(p_args));
+	b = x_prim_eval_arg(p_base, x_firstobj(x_restobj(p_args)));
 
 	return x_intval(a) == x_intval(b)
 		? x_base_field_true(p_base) : x_base_field_false(p_base);
@@ -42,8 +46,10 @@ static x_obj_t *x_prim_numeq(x_obj_t *p_base, x_obj_t *p_args)
 /* <: (< a b) -> t if a < b */
 static x_obj_t *x_prim_lt(x_obj_t *p_base, x_obj_t *p_args)
 {
-	x_obj_t *a = x_prim_eval_arg(p_base, x_firstobj(p_args)),
-		*b = x_prim_eval_arg(p_base, x_firstobj(x_restobj(p_args)));
+	x_obj_t *a, *b;
+	p_args = x_restobj(p_args);
+	a = x_prim_eval_arg(p_base, x_firstobj(p_args));
+	b = x_prim_eval_arg(p_base, x_firstobj(x_restobj(p_args)));
 
 	return x_intval(a) < x_intval(b)
 		? x_base_field_true(p_base) : x_base_field_false(p_base);
@@ -52,7 +58,9 @@ static x_obj_t *x_prim_lt(x_obj_t *p_base, x_obj_t *p_args)
 /* char->integer: (char->integer c) -> integer char code */
 static x_obj_t *x_prim_char_to_integer(x_obj_t *p_base, x_obj_t *p_args)
 {
-	x_obj_t *p_c = x_prim_eval_arg(p_base, x_firstobj(p_args));
+	x_obj_t *p_c;
+	p_args = x_restobj(p_args);
+	p_c = x_prim_eval_arg(p_base, x_firstobj(p_args));
 
 	return x_mkint(p_base, (x_int_t)x_charval(p_c));
 }
@@ -60,7 +68,9 @@ static x_obj_t *x_prim_char_to_integer(x_obj_t *p_base, x_obj_t *p_args)
 /* integer->char: (integer->char n) -> character */
 static x_obj_t *x_prim_integer_to_char(x_obj_t *p_base, x_obj_t *p_args)
 {
-	x_obj_t *p_n = x_prim_eval_arg(p_base, x_firstobj(p_args));
+	x_obj_t *p_n;
+	p_args = x_restobj(p_args);
+	p_n = x_prim_eval_arg(p_base, x_firstobj(p_args));
 
 	return x_mkchar(p_base, (x_char_t)x_intval(p_n));
 }

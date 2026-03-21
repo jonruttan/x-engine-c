@@ -84,6 +84,7 @@ static x_obj_t *x_prim_dlopen(x_obj_t *p_base, x_obj_t *p_args)
 	x_obj_t *p_path, *p_flags;
 	void *h;
 
+	p_args = x_restobj(p_args);
 	p_path = x_prim_eval_arg(p_base, x_firstobj(p_args));
 	p_flags = x_prim_eval_arg(p_base, x_firstobj(x_restobj(p_args)));
 
@@ -102,6 +103,7 @@ static x_obj_t *x_prim_dlsym(x_obj_t *p_base, x_obj_t *p_args)
 	x_obj_t *p_handle, *p_name;
 	void *sym;
 
+	p_args = x_restobj(p_args);
 	p_handle = x_prim_eval_arg(p_base, x_firstobj(p_args));
 	p_name = x_prim_eval_arg(p_base, x_firstobj(x_restobj(p_args)));
 
@@ -132,6 +134,7 @@ static x_obj_t *x_prim_ffi_call(x_obj_t *p_base, x_obj_t *p_args)
 	void *fptr;
 	double a, b, r;
 
+	p_args = x_restobj(p_args);
 	p_conv = x_prim_eval_arg(p_base, x_firstobj(p_args));
 	p_fptr = x_prim_eval_arg(p_base, x_firstobj(x_restobj(p_args)));
 	p_rest = x_restobj(x_restobj(p_args));
@@ -298,6 +301,7 @@ static x_obj_t *x_prim_ptr_call(x_obj_t *p_base, x_obj_t *p_args)
 	x_obj_t *arg, *p_fptr;
 	long (*fn)(long, long, long, long, long, long, long);
 
+	p_args = x_restobj(p_args);
 	p_fptr = x_prim_eval_arg(p_base, x_firstobj(p_args));
 	p_args = x_restobj(p_args);
 
@@ -324,7 +328,9 @@ static x_obj_t *x_prim_ptr_call(x_obj_t *p_base, x_obj_t *p_args)
 /* int->ptr: (int->ptr n) -> ptr */
 static x_obj_t *x_prim_int_to_ptr(x_obj_t *p_base, x_obj_t *p_args)
 {
-	x_obj_t *p_n = x_prim_eval_arg(p_base, x_firstobj(p_args));
+	x_obj_t *p_n;
+	p_args = x_restobj(p_args);
+	p_n = x_prim_eval_arg(p_base, x_firstobj(p_args));
 
 	return x_mkptr(p_base, (void *)x_intval(p_n));
 }
@@ -332,7 +338,9 @@ static x_obj_t *x_prim_int_to_ptr(x_obj_t *p_base, x_obj_t *p_args)
 /* ptr->int: (ptr->int p) -> int */
 static x_obj_t *x_prim_ptr_to_int(x_obj_t *p_base, x_obj_t *p_args)
 {
-	x_obj_t *p_p = x_prim_eval_arg(p_base, x_firstobj(p_args));
+	x_obj_t *p_p;
+	p_args = x_restobj(p_args);
+	p_p = x_prim_eval_arg(p_base, x_firstobj(p_args));
 
 	return x_mkint(p_base, (x_int_t)x_ptrval(p_p));
 }
@@ -345,6 +353,7 @@ static x_obj_t *x_prim_ptr_set(x_obj_t *p_base, x_obj_t *p_args)
 	unsigned char *mem;
 	x_int_t val, nbytes;
 
+	p_args = x_restobj(p_args);
 	p_ptr = x_prim_eval_arg(p_base, x_firstobj(p_args));
 	p_offset = x_prim_eval_arg(p_base,
 		x_firstobj(x_restobj(p_args)));
@@ -370,6 +379,7 @@ static x_obj_t *x_prim_ptr_ref(x_obj_t *p_base, x_obj_t *p_args)
 	x_int_t val = 0;
 	x_int_t nbytes;
 
+	p_args = x_restobj(p_args);
 	p_ptr = x_prim_eval_arg(p_base, x_firstobj(p_args));
 	p_offset = x_prim_eval_arg(p_base,
 		x_firstobj(x_restobj(p_args)));
@@ -391,6 +401,7 @@ static x_obj_t *x_prim_ptr_set_word(x_obj_t *p_base, x_obj_t *p_args)
 	unsigned char *mem;
 	long val;
 
+	p_args = x_restobj(p_args);
 	p_ptr = x_prim_eval_arg(p_base, x_firstobj(p_args));
 	p_offset = x_prim_eval_arg(p_base,
 		x_firstobj(x_restobj(p_args)));
@@ -408,7 +419,9 @@ static x_obj_t *x_prim_ptr_set_word(x_obj_t *p_base, x_obj_t *p_args)
  * Get raw char* of string as ptr. */
 static x_obj_t *x_prim_string_to_ptr(x_obj_t *p_base, x_obj_t *p_args)
 {
-	x_obj_t *p_str = x_prim_eval_arg(p_base, x_firstobj(p_args));
+	x_obj_t *p_str;
+	p_args = x_restobj(p_args);
+	p_str = x_prim_eval_arg(p_base, x_firstobj(p_args));
 
 	return x_mkptr(p_base, (void *)x_strval(p_str));
 }
@@ -417,7 +430,9 @@ static x_obj_t *x_prim_string_to_ptr(x_obj_t *p_base, x_obj_t *p_args)
  * Create string from null-terminated C char* at ptr. */
 static x_obj_t *x_prim_ptr_to_string(x_obj_t *p_base, x_obj_t *p_args)
 {
-	x_obj_t *p_ptr = x_prim_eval_arg(p_base, x_firstobj(p_args));
+	x_obj_t *p_ptr;
+	p_args = x_restobj(p_args);
+	p_ptr = x_prim_eval_arg(p_base, x_firstobj(p_args));
 	x_char_t *s = (x_char_t *)x_ptrval(p_ptr);
 
 	return x_mkstrown(p_base, x_lib_strndup(s, x_lib_strlen(s)));
@@ -427,7 +442,9 @@ static x_obj_t *x_prim_ptr_to_string(x_obj_t *p_base, x_obj_t *p_args)
  * Returns raw pointer to the object's base array. */
 static x_obj_t *x_prim_obj_to_ptr(x_obj_t *p_base, x_obj_t *p_args)
 {
-	x_obj_t *p_obj = x_prim_eval_arg(p_base, x_firstobj(p_args));
+	x_obj_t *p_obj;
+	p_args = x_restobj(p_args);
+	p_obj = x_prim_eval_arg(p_base, x_firstobj(p_args));
 
 	return x_mkptr(p_base, (void *)p_obj);
 }
@@ -440,6 +457,7 @@ static x_obj_t *x_prim_ptr_ref_word(x_obj_t *p_base, x_obj_t *p_args)
 	unsigned char *mem;
 	long val;
 
+	p_args = x_restobj(p_args);
 	p_ptr = x_prim_eval_arg(p_base, x_firstobj(p_args));
 	p_offset = x_prim_eval_arg(p_base,
 		x_firstobj(x_restobj(p_args)));
@@ -454,6 +472,7 @@ static x_obj_t *x_prim_ptr_ref_word(x_obj_t *p_base, x_obj_t *p_args)
  * Get the current extra metadata slot count. */
 static x_obj_t *x_prim_obj_meta_extra(x_obj_t *p_base, x_obj_t *p_args)
 {
+	p_args = x_restobj(p_args);
 	return x_mkint(p_base, (x_int_t)x_obj_meta_extra);
 }
 
@@ -464,6 +483,7 @@ static x_obj_t *x_prim_obj_meta_extra_set(x_obj_t *p_base, x_obj_t *p_args)
 	x_obj_t *p_n;
 	x_int_t old;
 
+	p_args = x_restobj(p_args);
 	old = (x_int_t)x_obj_meta_extra;
 	p_n = x_prim_eval_arg(p_base, x_firstobj(p_args));
 	x_obj_meta_extra = (size_t)x_intval(p_n);
@@ -481,6 +501,7 @@ static x_obj_t *x_prim_obj_meta_ref(x_obj_t *p_base, x_obj_t *p_args)
 {
 	x_obj_t *p_obj, *p_i;
 
+	p_args = x_restobj(p_args);
 	p_obj = x_prim_eval_arg(p_base, x_firstobj(p_args));
 	p_i = x_prim_eval_arg(p_base, x_firstobj(x_restobj(p_args)));
 
@@ -498,6 +519,7 @@ static x_obj_t *x_prim_obj_meta_set(x_obj_t *p_base, x_obj_t *p_args)
 {
 	x_obj_t *p_obj, *p_i, *p_val;
 
+	p_args = x_restobj(p_args);
 	p_obj = x_prim_eval_arg(p_base, x_firstobj(p_args));
 	p_i = x_prim_eval_arg(p_base, x_firstobj(x_restobj(p_args)));
 	p_val = x_prim_eval_arg(p_base,

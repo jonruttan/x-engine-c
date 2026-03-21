@@ -22,8 +22,10 @@
 /* +: (+ a b) -> binary addition */
 static x_obj_t *x_prim_sum(x_obj_t *p_base, x_obj_t *p_args)
 {
-	x_obj_t *a = x_prim_eval_arg(p_base, x_firstobj(p_args)),
-		*b = x_prim_eval_arg(p_base, x_firstobj(x_restobj(p_args)));
+	x_obj_t *a, *b;
+	p_args = x_restobj(p_args);
+	a = x_prim_eval_arg(p_base, x_firstobj(p_args));
+	b = x_prim_eval_arg(p_base, x_firstobj(x_restobj(p_args)));
 
 	return x_mkint(p_base, x_intval(a) + x_intval(b));
 }
@@ -31,7 +33,9 @@ static x_obj_t *x_prim_sum(x_obj_t *p_base, x_obj_t *p_args)
 /* -: (- a) -> negate; (- a b) -> subtract */
 static x_obj_t *x_prim_sub(x_obj_t *p_base, x_obj_t *p_args)
 {
-	x_obj_t *a = x_prim_eval_arg(p_base, x_firstobj(p_args));
+	x_obj_t *a;
+	p_args = x_restobj(p_args);
+	a = x_prim_eval_arg(p_base, x_firstobj(p_args));
 
 	if (x_obj_isnil(p_base, x_restobj(p_args)))
 		return x_mkint(p_base, -x_intval(a));
@@ -44,8 +48,10 @@ static x_obj_t *x_prim_sub(x_obj_t *p_base, x_obj_t *p_args)
 /* *: (* a b) -> binary multiplication */
 static x_obj_t *x_prim_prod(x_obj_t *p_base, x_obj_t *p_args)
 {
-	x_obj_t *a = x_prim_eval_arg(p_base, x_firstobj(p_args)),
-		*b = x_prim_eval_arg(p_base, x_firstobj(x_restobj(p_args)));
+	x_obj_t *a, *b;
+	p_args = x_restobj(p_args);
+	a = x_prim_eval_arg(p_base, x_firstobj(p_args));
+	b = x_prim_eval_arg(p_base, x_firstobj(x_restobj(p_args)));
 
 	return x_mkint(p_base, x_intval(a) * x_intval(b));
 }
@@ -53,8 +59,10 @@ static x_obj_t *x_prim_prod(x_obj_t *p_base, x_obj_t *p_args)
 /* /: (/ a b) -> binary integer division */
 static x_obj_t *x_prim_div(x_obj_t *p_base, x_obj_t *p_args)
 {
-	x_obj_t *a = x_prim_eval_arg(p_base, x_firstobj(p_args)),
-		*b = x_prim_eval_arg(p_base, x_firstobj(x_restobj(p_args)));
+	x_obj_t *a, *b;
+	p_args = x_restobj(p_args);
+	a = x_prim_eval_arg(p_base, x_firstobj(p_args));
+	b = x_prim_eval_arg(p_base, x_firstobj(x_restobj(p_args)));
 
 	return x_mkint(p_base, x_intval(a) / x_intval(b));
 }
@@ -62,8 +70,10 @@ static x_obj_t *x_prim_div(x_obj_t *p_base, x_obj_t *p_args)
 /* %: (% a b) -> binary integer modulo */
 static x_obj_t *x_prim_mod(x_obj_t *p_base, x_obj_t *p_args)
 {
-	x_obj_t *a = x_prim_eval_arg(p_base, x_firstobj(p_args)),
-		*b = x_prim_eval_arg(p_base, x_firstobj(x_restobj(p_args)));
+	x_obj_t *a, *b;
+	p_args = x_restobj(p_args);
+	a = x_prim_eval_arg(p_base, x_firstobj(p_args));
+	b = x_prim_eval_arg(p_base, x_firstobj(x_restobj(p_args)));
 
 	return x_mkint(p_base, x_intval(a) % x_intval(b));
 }
@@ -71,7 +81,9 @@ static x_obj_t *x_prim_mod(x_obj_t *p_base, x_obj_t *p_args)
 /* ~: (~ n) -> bitwise NOT */
 static x_obj_t *x_prim_bitnot(x_obj_t *p_base, x_obj_t *p_args)
 {
-	x_obj_t *a = x_prim_eval_arg(p_base, x_firstobj(p_args));
+	x_obj_t *a;
+	p_args = x_restobj(p_args);
+	a = x_prim_eval_arg(p_base, x_firstobj(p_args));
 
 	return x_mkint(p_base, ~x_intval(a));
 }
@@ -79,8 +91,10 @@ static x_obj_t *x_prim_bitnot(x_obj_t *p_base, x_obj_t *p_args)
 /* &: (& a b) -> bitwise AND */
 static x_obj_t *x_prim_bitand(x_obj_t *p_base, x_obj_t *p_args)
 {
-	x_obj_t *a = x_prim_eval_arg(p_base, x_firstobj(p_args)),
-		*b = x_prim_eval_arg(p_base, x_firstobj(x_restobj(p_args)));
+	x_obj_t *a, *b;
+	p_args = x_restobj(p_args);
+	a = x_prim_eval_arg(p_base, x_firstobj(p_args));
+	b = x_prim_eval_arg(p_base, x_firstobj(x_restobj(p_args)));
 
 	return x_mkint(p_base, x_intval(a) & x_intval(b));
 }
@@ -88,8 +102,10 @@ static x_obj_t *x_prim_bitand(x_obj_t *p_base, x_obj_t *p_args)
 /* |: (| a b) -> bitwise OR */
 static x_obj_t *x_prim_bitor(x_obj_t *p_base, x_obj_t *p_args)
 {
-	x_obj_t *a = x_prim_eval_arg(p_base, x_firstobj(p_args)),
-		*b = x_prim_eval_arg(p_base, x_firstobj(x_restobj(p_args)));
+	x_obj_t *a, *b;
+	p_args = x_restobj(p_args);
+	a = x_prim_eval_arg(p_base, x_firstobj(p_args));
+	b = x_prim_eval_arg(p_base, x_firstobj(x_restobj(p_args)));
 
 	return x_mkint(p_base, x_intval(a) | x_intval(b));
 }
@@ -97,8 +113,10 @@ static x_obj_t *x_prim_bitor(x_obj_t *p_base, x_obj_t *p_args)
 /* ^: (^ a b) -> bitwise XOR */
 static x_obj_t *x_prim_bitxor(x_obj_t *p_base, x_obj_t *p_args)
 {
-	x_obj_t *a = x_prim_eval_arg(p_base, x_firstobj(p_args)),
-		*b = x_prim_eval_arg(p_base, x_firstobj(x_restobj(p_args)));
+	x_obj_t *a, *b;
+	p_args = x_restobj(p_args);
+	a = x_prim_eval_arg(p_base, x_firstobj(p_args));
+	b = x_prim_eval_arg(p_base, x_firstobj(x_restobj(p_args)));
 
 	return x_mkint(p_base, x_intval(a) ^ x_intval(b));
 }
@@ -106,8 +124,10 @@ static x_obj_t *x_prim_bitxor(x_obj_t *p_base, x_obj_t *p_args)
 /* <<: (<< a b) -> shift left */
 static x_obj_t *x_prim_shl(x_obj_t *p_base, x_obj_t *p_args)
 {
-	x_obj_t *a = x_prim_eval_arg(p_base, x_firstobj(p_args)),
-		*b = x_prim_eval_arg(p_base, x_firstobj(x_restobj(p_args)));
+	x_obj_t *a, *b;
+	p_args = x_restobj(p_args);
+	a = x_prim_eval_arg(p_base, x_firstobj(p_args));
+	b = x_prim_eval_arg(p_base, x_firstobj(x_restobj(p_args)));
 
 	return x_mkint(p_base, x_intval(a) << x_intval(b));
 }
@@ -115,8 +135,10 @@ static x_obj_t *x_prim_shl(x_obj_t *p_base, x_obj_t *p_args)
 /* >>: (>> a b) -> shift right */
 static x_obj_t *x_prim_shr(x_obj_t *p_base, x_obj_t *p_args)
 {
-	x_obj_t *a = x_prim_eval_arg(p_base, x_firstobj(p_args)),
-		*b = x_prim_eval_arg(p_base, x_firstobj(x_restobj(p_args)));
+	x_obj_t *a, *b;
+	p_args = x_restobj(p_args);
+	a = x_prim_eval_arg(p_base, x_firstobj(p_args));
+	b = x_prim_eval_arg(p_base, x_firstobj(x_restobj(p_args)));
 
 	return x_mkint(p_base, x_intval(a) >> x_intval(b));
 }

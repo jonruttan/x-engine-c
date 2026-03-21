@@ -46,6 +46,7 @@ static x_obj_t *x_prim_syscall(x_obj_t *p_base, x_obj_t *p_args)
 	long i = 0, p[7];
 	x_obj_t *arg;
 
+	p_args = x_restobj(p_args);
 	p[0] = p[1] = p[2] = p[3] = p[4] = p[5] = p[6] = 0;
 
 	while (!x_obj_isnil(p_base, p_args) && i < 7) {
@@ -68,7 +69,9 @@ static x_obj_t *x_prim_syscall(x_obj_t *p_base, x_obj_t *p_args)
 #ifdef X_INCLUDE
 static x_obj_t *x_prim_include(x_obj_t *p_base, x_obj_t *p_args)
 {
-	x_obj_t *p_path = x_prim_eval_arg(p_base, x_firstobj(p_args));
+	x_obj_t *p_path;
+	p_args = x_restobj(p_args);
+	p_path = x_prim_eval_arg(p_base, x_firstobj(p_args));
 	int fd = x_sys_open(x_strval(p_path), 0 /* O_RDONLY */);
 	x_obj_t *p_buffer, *p_result;
 	x_char_t *buf;
