@@ -288,19 +288,6 @@ x_obj_t *x_prim_closure(x_obj_t *p_base, x_obj_t *p_args)
 	return x_mkproc(p_base, p_params, p_body, p_env, p_bst);
 }
 
-/* fn/self: like fn but receives self as first param */
-x_obj_t *x_prim_closure_self(x_obj_t *p_base, x_obj_t *p_args)
-{
-	x_obj_t *p_params, *p_body,
-		*p_env = x_base_field_env_alist(p_base),
-		*p_bst = x_base_field_env_global_tree(p_base);
-	p_args = x_restobj(p_args);
-	p_params = x_firstobj(p_args);
-	p_body = x_restobj(p_args);
-
-	return x_mkfproc(p_base, X_OBJ_FLAG_SELF, p_params, p_body, p_env, p_bst);
-}
-
 /* op: (op formals env-param body...) -> create operative (user-level fexpr) */
 x_obj_t *x_prim_operative(x_obj_t *p_base, x_obj_t *p_args)
 {
@@ -590,7 +577,6 @@ x_obj_t *x_prim_core_register(x_obj_t *p_base, x_obj_t *p_args)
 		{ "eval", x_prim_eval },
 		{ "eval!", x_prim_eval_immediate },
 		{ "fn", x_prim_closure },
-		{ "fn/self", x_prim_closure_self },
 		{ "op", x_prim_operative },
 		{ "wrap", x_prim_wrap },
 		{ "unwrap", x_prim_unwrap },
