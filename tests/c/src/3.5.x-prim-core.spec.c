@@ -47,6 +47,10 @@
 #include "src/x-token.c"
 #include "src/x-prim.c"
 #include "src/x-prim/core.c"
+#include "src/x-syntax/binding.c"
+#include "src/x-syntax/closure.c"
+#include "src/x-syntax/control.c"
+#include "src/x-syntax/quote.c"
 
 /* Stubs for primitives not under test. */
 x_obj_t *x_prim_arith_register(x_obj_t *p_base, x_obj_t *p_args) { return p_base; }

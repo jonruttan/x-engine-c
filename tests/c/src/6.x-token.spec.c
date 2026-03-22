@@ -48,6 +48,7 @@ x_obj_t *x_sexp_pair_write(x_obj_t *p_base, x_obj_t *p_args) { return p_args; }
 #define STUB_X_OBJ_OBJ
 #define STUB_X_STR
 #define STUB_X_SEXP_PAIR_WRITE
+#define STUB_X_PRIM_FLAG1
 #include "helper-stubs.c"
 
 #include "ext/x-expr/tests/src/helper-system-functions.c"

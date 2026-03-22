@@ -56,6 +56,10 @@ x_obj_t *x_prim_string_register(x_obj_t *p_base, x_obj_t *p_args) { return p_bas
 x_obj_t *x_prim_io_register(x_obj_t *p_base, x_obj_t *p_args) { return p_base; }
 x_obj_t *x_prim_ffi_register(x_obj_t *p_base, x_obj_t *p_args) { return p_base; }
 x_obj_t *x_prim_callcc_register(x_obj_t *p_base, x_obj_t *p_args) { return p_base; }
+x_obj_t *x_syntax_binding_register(x_obj_t *p_base, x_obj_t *p_args) { return p_base; }
+x_obj_t *x_syntax_closure_register(x_obj_t *p_base, x_obj_t *p_args) { return p_base; }
+x_obj_t *x_syntax_control_register(x_obj_t *p_base, x_obj_t *p_args) { return p_base; }
+x_obj_t *x_syntax_quote_register(x_obj_t *p_base, x_obj_t *p_args) { return p_base; }
 
 #include "ext/x-expr/tests/src/helper-system-functions.c"
 
@@ -614,8 +618,11 @@ static char *test_type_token_read_string(void)
 	return NULL;
 }
 
+/* convert primitive moved to x-lang (lib/x/convert.x) — tests disabled */
+#if 0
 static char *test_type_convert(void)
 {
+
 	x_obj_t *p_base, *p_args, *p_result, *p_int;
 	x_obj_t *p_int_handle;
 
@@ -668,6 +675,7 @@ static char *test_type_convert(void)
 	test_cleanup(p_base);
 	return NULL;
 }
+#endif /* convert test disabled */
 
 static char *test_type_type_name_nil_name(void)
 {
@@ -698,6 +706,7 @@ static char *test_type_type_name_nil_name(void)
 	return NULL;
 }
 
+#if 0 /* convert tests disabled */
 static x_obj_t *test_convert_handler(x_obj_t *p_base, x_obj_t *p_args)
 {
 	/* Return the first arg (the value being converted) */
@@ -933,6 +942,7 @@ static char *test_type_convert_no_match(void)
 	test_cleanup(p_base);
 	return NULL;
 }
+#endif /* convert tests disabled */
 
 static char *test_type_token_read_string_tokens(void)
 {
@@ -1058,13 +1068,9 @@ static char *run_tests() {
 	_run_test(test_type_base_bind);
 	_run_test(test_type_buffer_token);
 	_run_test(test_type_token_read_string);
-	_run_test(test_type_convert);
+	/* convert tests disabled — primitive moved to x-lang */
 	_run_test(test_type_make_instance_nil_type);
 	_run_test(test_type_type_name_nil_name);
-	_run_test(test_type_convert_from_exact);
-	_run_test(test_type_convert_wildcard);
-	_run_test(test_type_convert_to_alist);
-	_run_test(test_type_convert_no_match);
 	_run_test(test_type_token_read_string_tokens);
 	_run_test(test_type_base_eval_error_no_parent);
 

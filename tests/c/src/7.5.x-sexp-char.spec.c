@@ -37,6 +37,7 @@
 #define STUB_X_OPERATIVE
 #define STUB_X_HEAP
 #define STUB_X_OBJ_OBJ
+#define STUB_X_PRIM_FLAG1
 #include "helper-stubs.c"
 
 /*
@@ -120,9 +121,14 @@ static char *test_sexp_char_analyse1(void)
 	p_buffer = x_mkbuffer(p_base, buffer);
 	p_args = x_mkspair(p_base, p_buffer, p_base);
 	p_obj = x_type_buffer_read(p_base, p_args);
-	p_obj = x_sexp_char_analyse1(p_base, p_args);
+	{
+	/* Wrap (self . buffer_args) for spair analyzer dispatch */
+	x_spair_t sp = x_obj_set(NULL, X_OBJ_FLAG_NONE,
+		{ (x_obj_t *)&x_sexp_char_analyse1_prim }, { p_args });
+	p_obj = x_sexp_char_analyse1(p_base, (x_obj_t *)&sp);
+	}
 	_it_should("return the analyse2 primitive",
-		x_sexp_char_analyse2_prim == p_obj
+		(x_obj_t *)&x_sexp_char_analyse2_prim == p_obj
 	);
 
 	test_cleanup(p_base);

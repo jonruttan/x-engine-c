@@ -44,6 +44,7 @@
 #define STUB_X_OBJ_OBJ
 #define STUB_X_INT
 #define STUB_X_SYMBOL
+#define STUB_X_PRIM_FLAG1
 #include "helper-stubs.c"
 
 #include "ext/x-expr/tests/src/helper-system-functions.c"
@@ -97,9 +98,13 @@ static char *test_sexp_str_analyse1(void)
 	p_buffer = x_mkbuffer(p_base, buffer);
 	p_args = x_mkspair(p_base, p_buffer, p_base);
 	p_obj = x_type_buffer_read(p_base, p_args);
-	p_obj = x_sexp_str_analyse1(p_base, p_args);
+	{
+	x_spair_t sp = x_obj_set(NULL, X_OBJ_FLAG_NONE,
+		{ (x_obj_t *)&x_sexp_str_analyse1_prim }, { p_args });
+	p_obj = x_sexp_str_analyse1(p_base, (x_obj_t *)&sp);
+	}
 	_it_should("return the analyse2 primitive object",
-		x_sexp_str_analyse2_prim == p_obj
+		(x_obj_t *)&x_sexp_str_analyse2_prim == p_obj
 	);
 
 
@@ -109,7 +114,11 @@ static char *test_sexp_str_analyse1(void)
 	x_type_buffer_reset(p_base, p_args);
 
 	p_obj = x_type_buffer_read(p_base, p_args);
-	p_obj = x_sexp_str_analyse1(p_base, p_args);
+	{
+	x_spair_t sp2 = x_obj_set(NULL, X_OBJ_FLAG_NONE,
+		{ (x_obj_t *)&x_sexp_str_analyse1_prim }, { p_args });
+	p_obj = x_sexp_str_analyse1(p_base, (x_obj_t *)&sp2);
+	}
 	_it_should("return NULL", NULL == p_obj);
 
 
