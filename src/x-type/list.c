@@ -55,7 +55,8 @@ x_obj_t *x_type_list_struct(x_obj_t *p_base, x_obj_t *p_args)
 		.p_analyse = x_sexp_list_analyse_prim,
 		.p_delimit = x_sexp_list_delimit_prim,
 		.p_read = x_sexp_list_read_prim,
-		.p_write = x_sexp_list_write_prim
+		.p_write = x_sexp_list_write_prim,
+		.p_display = x_sexp_list_display_prim
 	};
 
 	return x_type_struct_make(p_base, type);

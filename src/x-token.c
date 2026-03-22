@@ -357,7 +357,7 @@ x_obj_t *x_token_display(x_obj_t *p_base, x_obj_t *p_args)
 	}
 
 	if (x_obj_type_isspair(p_obj)) {
-		return x_sexp_pair_write(p_base, p_args);
+		return x_sexp_pair_display(p_base, p_args);
 	}
 
 	if ( ! x_obj_isnil(p_base, x_obj_type(p_obj))) {

@@ -24,9 +24,11 @@
 /*
  * # Data Structures
  */
-extern x_satom_t x_sexp_pair_write_prim;
+extern x_satom_t x_sexp_pair_write_prim,
+	x_sexp_pair_display_prim;
 
 x_obj_t *x_sexp_pair_read(x_obj_t *p_base, x_obj_t *args);
 x_obj_t *x_sexp_pair_write(x_obj_t *p_base, x_obj_t *args);
+x_obj_t *x_sexp_pair_display(x_obj_t *p_base, x_obj_t *args);
 
 #endif /* X_SEXP_PAIR_H */

@@ -26,7 +26,8 @@
 x_satom_t x_sexp_list_analyse_prim = x_obj_set(x_type_atom_obj, X_OBJ_FLAG_NONE, { .fn = x_sexp_list_analyse }),
 	x_sexp_list_delimit_prim = x_obj_set(x_type_atom_obj, X_OBJ_FLAG_NONE, { .fn = x_sexp_list_delimit }),
 	x_sexp_list_read_prim = x_obj_set(x_type_atom_obj, X_OBJ_FLAG_NONE, { .fn = x_sexp_list_read }),
-	x_sexp_list_write_prim = x_obj_set(x_type_atom_obj, X_OBJ_FLAG_NONE, { .fn = x_sexp_list_write });
+	x_sexp_list_write_prim = x_obj_set(x_type_atom_obj, X_OBJ_FLAG_NONE, { .fn = x_sexp_list_write }),
+	x_sexp_list_display_prim = x_obj_set(x_type_atom_obj, X_OBJ_FLAG_NONE, { .fn = x_sexp_list_display });
 
 x_obj_t *x_sexp_list_analyse(x_obj_t *p_base, x_obj_t *p_args)
 {
@@ -142,6 +143,54 @@ x_obj_t *x_sexp_list_write(x_obj_t *p_base, x_obj_t *p_args)
 
 			x_firstobj((x_obj_t *)write_wrap) = p_obj;
 			x_token_write(p_base, (x_obj_t *)write_wrap);
+
+			x_atomstr(str) = X_SEXP_LIST_POST_STR;
+			x_base_write_str(p_base, (x_obj_t *)&wrap);
+
+			break;
+		}
+
+		x_atomstr(str) = X_SEXP_WHITESPACE_SPACE_STR;
+		x_base_write_str(p_base, (x_obj_t *)&wrap);
+	}
+
+	return p_obj;
+}
+
+x_obj_t *x_sexp_list_display(x_obj_t *p_base, x_obj_t *p_args)
+{
+	x_obj_t *p_obj = x_firstobj(p_args);
+	x_satom_t str = x_obj_set(x_type_atom_obj, X_OBJ_FLAG_NONE, { .s = NULL }),
+		disp_wrap = x_obj_set(NULL, X_OBJ_FLAG_NONE, { NULL });
+	x_spair_t wrap = x_obj_set(NULL, X_OBJ_FLAG_NONE, { str }, { NULL });
+
+	x_atomstr(str) = X_SEXP_LIST_PRE_STR;
+	x_base_write_str(p_base, (x_obj_t *)&wrap);
+
+	for (;;) {
+		if (x_obj_isnil(p_base, x_firstobj(p_obj))) {
+			x_atomstr(str) = "()";
+			x_base_write_str(p_base, (x_obj_t *)&wrap);
+		} else {
+			x_firstobj((x_obj_t *)disp_wrap) = x_firstobj(p_obj);
+			x_token_display(p_base, (x_obj_t *)disp_wrap);
+		}
+
+		p_obj = x_restobj(p_obj);
+
+		if (x_obj_isnil(p_base, p_obj)) {
+			x_atomstr(str) = X_SEXP_LIST_POST_STR;
+			x_base_write_str(p_base, (x_obj_t *)&wrap);
+
+			break;
+		}
+
+		if ( ! x_obj_type_islist(p_base, p_obj)) {
+			x_atomstr(str) = X_SEXP_WHITESPACE_SPACE_STR X_SEXP_LIST_DOT_STR X_SEXP_WHITESPACE_SPACE_STR;
+			x_base_write_str(p_base, (x_obj_t *)&wrap);
+
+			x_firstobj((x_obj_t *)disp_wrap) = p_obj;
+			x_token_display(p_base, (x_obj_t *)disp_wrap);
 
 			x_atomstr(str) = X_SEXP_LIST_POST_STR;
 			x_base_write_str(p_base, (x_obj_t *)&wrap);
