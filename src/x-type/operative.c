@@ -39,7 +39,7 @@ x_obj_t *x_make_operative(x_obj_t *p_base, x_obj_flag_t flags,
 		*p_state = x_mkspair(p_base, p_params, p_s2);
 
 	return x_obj_make(p_base, p_type, flags, X_OBJ_LENGTH_PAIR,
-		(x_prim_fn)NULL, p_state);
+		(x_prim_fn)x_type_operative_call, p_state);
 }
 
 x_obj_t *x_type_operative_struct(x_obj_t *p_base, x_obj_t *p_args)

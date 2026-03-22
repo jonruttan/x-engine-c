@@ -62,6 +62,7 @@ x_obj_t *x_type_procedure_register(x_obj_t *p_base, x_obj_t *p_args);
 x_obj_t *x_type_procedure_struct(x_obj_t *p_base, x_obj_t *p_args);
 x_obj_t *x_type_procedure_make(x_obj_t *p_base, x_obj_t *p_args);
 x_obj_t *x_type_procedure_call(x_obj_t *p_base, x_obj_t *p_args);
+x_obj_t *x_type_procedure_apply(x_obj_t *p_base, x_obj_t *p_args);
 x_obj_t *x_type_procedure_write(x_obj_t *p_base, x_obj_t *p_args);
 
 #endif /* X_TYPE_PROCEDURE_H */

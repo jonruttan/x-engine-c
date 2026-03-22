@@ -40,7 +40,7 @@ x_obj_t *x_make_procedure(x_obj_t *p_base, x_obj_flag_t flags,
 		*p_state = x_mkspair(p_base, p_params, p_s2);
 
 	return x_obj_make(p_base, p_type, flags, X_OBJ_LENGTH_PAIR,
-		(x_prim_fn)NULL, p_state);
+		(x_prim_fn)x_type_procedure_call, p_state);
 }
 
 x_obj_t *x_type_procedure_struct(x_obj_t *p_base, x_obj_t *p_args)
@@ -124,6 +124,38 @@ x_obj_t *x_type_procedure_call(x_obj_t *p_base, x_obj_t *p_args)
 
 		return x_prim_body_eval_tco(p_base, x_procbody(p_proc));
 	}
+}
+
+/* Non-TCO apply path: args already evaluated, used by (apply f args) */
+x_obj_t *x_type_procedure_apply(x_obj_t *p_base, x_obj_t *p_args)
+{
+	x_obj_t *p_proc = x_firstobj(p_args),
+		*p_result,
+		*p_saved_boundary = x_base_field_env_local_boundary(p_base),
+		*p_saved_bst = x_base_field_env_global_tree(p_base),
+		*p_saved_flag1 = x_base_field_flag1_list(p_base);
+
+	/* Set boundary and BST from closure */
+	x_base_field_env_local_boundary(p_base) = x_procenv(p_proc);
+	x_base_field_env_global_tree(p_base) = x_procbst(p_proc);
+
+	/* Self-passing + extend env */
+	{
+	x_spair_t sp = x_obj_set(NULL, X_OBJ_FLAG_NONE,
+		{ p_proc }, { x_restobj(p_args) });
+	x_base_field_env_alist(p_base) = x_prim_multiple_extend(
+		p_base, x_procenv(p_proc), x_procparams(p_proc),
+		(x_obj_t *)&sp);
+	}
+
+	p_result = x_prim_body_eval(p_base, x_procbody(p_proc));
+
+	/* Restore boundary, BST, and flag1 */
+	x_base_field_env_local_boundary(p_base) = p_saved_boundary;
+	x_base_field_env_global_tree(p_base) = p_saved_bst;
+	x_prim_clear_flag1_to(p_base, p_saved_flag1);
+
+	return p_result;
 }
 
 x_obj_t *x_type_procedure_write(x_obj_t *p_base, x_obj_t *p_args)
