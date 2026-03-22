@@ -93,8 +93,8 @@ x_obj_t *x_type_operative_call(x_obj_t *p_base, x_obj_t *p_args)
 	/* Capture the caller's environment. */
 	p_caller_env = x_base_field_env_alist(p_base);
 
-	/* Self-passing: always prepend callable to args */
-	p_unevaluated_args = x_mkspair(p_base, p_op, p_unevaluated_args);
+	/* Operatives do NOT get self-passing — they use dynamic scoping
+	 * and need source-form stability for compile-on-first-use (and/or). */
 
 	/* Extend caller's env with param bindings (unevaluated args).
 	 * Operatives use dynamic scoping — body runs in caller's context
