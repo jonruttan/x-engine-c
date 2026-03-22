@@ -24,12 +24,15 @@
 /*
  * # Data Structures
  */
-extern x_satom_t x_sexp_int_analyse_sign_prim,
+/* Analyzer states: spair with state slot for composable transitions */
+extern x_spair_t x_sexp_int_analyse_sign_prim,
 	x_sexp_int_analyse_prefix_prim,
 	x_sexp_int_analyse_base_prim,
 	x_sexp_int_analyse_digits_prim,
-	x_sexp_int_analyse_xdigits_prim,
-	x_sexp_int_read_prim,
+	x_sexp_int_analyse_xdigits_prim;
+
+/* Read/write: satom (type-internal) */
+extern x_satom_t x_sexp_int_read_prim,
 	x_sexp_int_write_prim;
 
 
