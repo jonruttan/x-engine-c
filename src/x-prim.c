@@ -17,6 +17,7 @@
  * # Includes
  */
 #include "x-prim.h"
+#include "x-syntax.h"
 #include "x-alist.h"
 #include "x-base.h"
 #include "x-eval.h"
@@ -331,6 +332,10 @@ x_obj_t *x_prim_register(x_obj_t *p_base, x_obj_t *p_args)
 	}
 
 	x_prim_core_register(p_base, p_args);
+	x_syntax_quote_register(p_base, p_args);
+	x_syntax_binding_register(p_base, p_args);
+	x_syntax_closure_register(p_base, p_args);
+	x_syntax_control_register(p_base, p_args);
 	x_prim_arith_register(p_base, p_args);
 	x_prim_pred_register(p_base, p_args);
 	x_prim_string_register(p_base, p_args);
