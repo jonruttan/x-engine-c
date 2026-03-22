@@ -492,11 +492,13 @@ static char *test_base_error_with_handler(void)
 
 	p_base = x_base_make(NULL, NULL);
 
-	/* Build handler: (jmp-ptr saved-env error-value) */
+	/* Build handler: (jmp-ptr (saved-env . saved-boundary) error-value) */
 	p_handler = x_mkspair(p_base,
 		x_mksatom(p_base, &jmp),
 		x_mkspair(p_base,
-			x_base_field_env_alist(p_base),
+			x_mkspair(p_base,
+				x_base_field_env_alist(p_base),
+				x_base_field_env_local_boundary(p_base)),
 			x_mkspair(p_base, NULL, NULL)));
 	x_base_field_error_handler(p_base) = p_handler;
 
