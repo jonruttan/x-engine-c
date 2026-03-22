@@ -32,7 +32,7 @@ x_obj_t *x_prim_eval_arg(x_obj_t *p_base, x_obj_t *p_arg);
  * NULL pointers skip that position (like _ in pattern matching).
  *   x_args(p_args, 3, NULL, &a, &b)  -- skip self, extract 2
  */
-static void x_args(x_obj_t *p_args, int count, ...)
+static void __attribute__((unused)) x_args(x_obj_t *p_args, int count, ...)
 {
 	va_list ap;
 	int i;
@@ -52,7 +52,7 @@ static void x_args(x_obj_t *p_args, int count, ...)
  * NULL pointers skip that position without evaluating.
  *   x_eargs(p_base, p_args, 3, NULL, &a, &b)  -- skip self, eval+extract 2
  */
-static void x_eargs(x_obj_t *p_base, x_obj_t *p_args, int count, ...)
+static void __attribute__((unused)) x_eargs(x_obj_t *p_base, x_obj_t *p_args, int count, ...)
 {
 	va_list ap;
 	int i;

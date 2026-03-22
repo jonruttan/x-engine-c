@@ -68,8 +68,7 @@ x_obj_t *x_type_procedure_register(x_obj_t *p_base, x_obj_t *p_args)
 
 x_obj_t *x_type_procedure_make(x_obj_t *p_base, x_obj_t *p_args)
 {
-	x_obj_t *p_type = x_type_procedure_register(p_base, p_base),
-		*p_params = x_0(p_args),
+	x_obj_t *p_params = x_0(p_args),
 		*p_body = x_01(p_args),
 		*p_env = x_011(p_args),
 		*p_bst = x_0111(p_args);
