@@ -331,6 +331,12 @@ x_obj_t *x_token_display(x_obj_t *p_base, x_obj_t *p_args)
 	x_obj_t *p_obj = x_firstobj(p_args);
 
 	if (x_obj_isnil(p_base, p_obj)) {
+		x_satom_t nil_str = x_obj_set(x_type_atom_obj,
+			X_OBJ_FLAG_NONE, { .s = (x_char_t *)"()" });
+		x_spair_t nil_args[1] = {
+			x_obj_set(NULL, X_OBJ_FLAG_NONE, { nil_str }, { NULL })
+		};
+		x_base_write_str(p_base, (x_obj_t *)nil_args);
 		return NULL;
 	}
 
