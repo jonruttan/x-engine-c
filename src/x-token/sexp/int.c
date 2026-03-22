@@ -44,11 +44,9 @@ x_satom_t x_sexp_int_read_prim = x_obj_set(x_type_atom_obj, X_OBJ_FLAG_NONE, { .
 
 x_obj_t *x_sexp_int_analyse_digits(x_obj_t *p_base, x_obj_t *p_args)
 {
-	x_obj_t *p_self = x_firstobj(p_args);
-	x_obj_t *p_buffer, *p_score;
-	p_args = x_restobj(p_args);
-	p_buffer = x_token_read_arg_buffer(p_args);
-	p_score = x_token_read_arg_score(p_args);
+	x_obj_t *p_self = x_0(p_args),
+		*p_buffer = x_token_read_arg_buffer(x_1(p_args)),
+		*p_score = x_token_read_arg_score(x_1(p_args));
 
 	if (isdigit(x_bufferlastchar(p_buffer))) {
 		return p_self;
@@ -66,11 +64,9 @@ x_obj_t *x_sexp_int_analyse_digits(x_obj_t *p_base, x_obj_t *p_args)
 
 x_obj_t *x_sexp_int_analyse_xdigits(x_obj_t *p_base, x_obj_t *p_args)
 {
-	x_obj_t *p_self = x_firstobj(p_args);
-	x_obj_t *p_buffer, *p_score;
-	p_args = x_restobj(p_args);
-	p_buffer = x_token_read_arg_buffer(p_args);
-	p_score = x_token_read_arg_score(p_args);
+	x_obj_t *p_self = x_0(p_args),
+		*p_buffer = x_token_read_arg_buffer(x_1(p_args)),
+		*p_score = x_token_read_arg_score(x_1(p_args));
 
 	if (isxdigit(x_bufferlastchar(p_buffer))) {
 		return p_self;
@@ -88,25 +84,21 @@ x_obj_t *x_sexp_int_analyse_xdigits(x_obj_t *p_base, x_obj_t *p_args)
 
 x_obj_t *x_sexp_int_analyse_base(x_obj_t *p_base, x_obj_t *p_args)
 {
-	x_obj_t *p_self = x_firstobj(p_args);
-	x_obj_t *p_buffer;
-	p_args = x_restobj(p_args);
-	p_buffer = x_token_read_arg_buffer(p_args);
+	x_obj_t *p_self = x_0(p_args),
+		*p_buffer = x_token_read_arg_buffer(x_1(p_args));
 
 	if (x_lib_strchr("Xx", x_bufferlastchar(p_buffer))) {
 		return x_next_state(p_self, &x_sexp_int_analyse_xdigits_prim);
 	}
 
 	return x_sexp_int_analyse_digits(p_base,
-		x_mkspair(p_base, (x_obj_t *)&x_sexp_int_analyse_digits_prim, p_args));
+		x_mkspair(p_base, (x_obj_t *)&x_sexp_int_analyse_digits_prim, x_1(p_args)));
 }
 
 x_obj_t *x_sexp_int_analyse_prefix(x_obj_t *p_base, x_obj_t *p_args)
 {
-	x_obj_t *p_self = x_firstobj(p_args);
-	x_obj_t *p_buffer;
-	p_args = x_restobj(p_args);
-	p_buffer = x_token_read_arg_buffer(p_args);
+	x_obj_t *p_self = x_0(p_args),
+		*p_buffer = x_token_read_arg_buffer(x_1(p_args));
 
 	if ('0' == x_bufferlastchar(p_buffer)) {
 		return x_next_state(p_self, &x_sexp_int_analyse_base_prim);
@@ -118,22 +110,20 @@ x_obj_t *x_sexp_int_analyse_prefix(x_obj_t *p_base, x_obj_t *p_args)
 	}
 
 	return x_sexp_int_analyse_digits(p_base,
-		x_mkspair(p_base, (x_obj_t *)&x_sexp_int_analyse_digits_prim, p_args));
+		x_mkspair(p_base, (x_obj_t *)&x_sexp_int_analyse_digits_prim, x_1(p_args)));
 }
 
 x_obj_t *x_sexp_int_analyse_sign(x_obj_t *p_base, x_obj_t *p_args)
 {
-	x_obj_t *p_self = x_firstobj(p_args);
-	x_obj_t *p_buffer;
-	p_args = x_restobj(p_args);
-	p_buffer = x_token_read_arg_buffer(p_args);
+	x_obj_t *p_self = x_0(p_args),
+		*p_buffer = x_token_read_arg_buffer(x_1(p_args));
 
 	if (x_lib_strchr("+-", x_bufferlastchar(p_buffer)) != NULL) {
 		return x_next_state(p_self, &x_sexp_int_analyse_prefix_prim);
 	}
 
 	return x_sexp_int_analyse_prefix(p_base,
-		x_mkspair(p_base, (x_obj_t *)&x_sexp_int_analyse_prefix_prim, p_args));
+		x_mkspair(p_base, (x_obj_t *)&x_sexp_int_analyse_prefix_prim, x_1(p_args)));
 }
 
 x_obj_t *x_sexp_int_read(x_obj_t *p_base, x_obj_t *p_args)

@@ -34,9 +34,7 @@
 /* write: (write obj) -> output s-expression to stdout */
 static x_obj_t *x_prim_write(x_obj_t *p_base, x_obj_t *p_args)
 {
-	x_obj_t *p_val;
-	p_args = x_restobj(p_args);
-	p_val = x_prim_eval_arg(p_base, x_firstobj(p_args));
+	x_obj_t *p_val = x_prim_eval_arg(p_base, x_01(p_args));
 	x_spair_t write_args[1] = {
 		x_obj_set(NULL, X_OBJ_FLAG_NONE, { p_val }, { NULL })
 	};
@@ -49,9 +47,7 @@ static x_obj_t *x_prim_write(x_obj_t *p_base, x_obj_t *p_args)
 /* display: (display obj) -> output human-readable via type system */
 static x_obj_t *x_prim_display(x_obj_t *p_base, x_obj_t *p_args)
 {
-	x_obj_t *p_val;
-	p_args = x_restobj(p_args);
-	p_val = x_prim_eval_arg(p_base, x_firstobj(p_args));
+	x_obj_t *p_val = x_prim_eval_arg(p_base, x_01(p_args));
 	x_spair_t display_args[1] = {
 		x_obj_set(NULL, X_OBJ_FLAG_NONE, { p_val }, { NULL })
 	};
@@ -64,10 +60,9 @@ static x_obj_t *x_prim_display(x_obj_t *p_base, x_obj_t *p_args)
 /* read: (read) -> read one s-expression from stdin */
 static x_obj_t *x_prim_read_expr(x_obj_t *p_base, x_obj_t *p_args)
 {
-	x_obj_t *p_buffer;
+	x_obj_t *p_buffer = x_base_field_buffer(p_base);
 	x_spair_t read_args[1];
-	p_args = x_restobj(p_args);
-	p_buffer = x_base_field_buffer(p_base);
+	(void)p_args;
 	read_args[0][X_OBJ_META_TYPE].p = NULL;
 	read_args[0][X_OBJ_META_FLAGS].i = X_OBJ_FLAG_NONE;
 	x_firstobj((x_obj_t *)read_args) = p_buffer;
@@ -79,10 +74,9 @@ static x_obj_t *x_prim_read_expr(x_obj_t *p_base, x_obj_t *p_args)
 /* read-char: (read-char) -> read one character from stdin */
 static x_obj_t *x_prim_read_char(x_obj_t *p_base, x_obj_t *p_args)
 {
-	x_obj_t *p_buffer;
+	x_obj_t *p_buffer = x_base_field_buffer(p_base);
 	x_spair_t buf_args[1];
-	p_args = x_restobj(p_args);
-	p_buffer = x_base_field_buffer(p_base);
+	(void)p_args;
 	buf_args[0][X_OBJ_META_TYPE].p = NULL;
 	buf_args[0][X_OBJ_META_FLAGS].i = X_OBJ_FLAG_NONE;
 	x_firstobj((x_obj_t *)buf_args) = p_buffer;
@@ -143,22 +137,20 @@ static x_obj_t *x_prim_to_string(x_obj_t *p_base, x_obj_t *p_args,
 /* write-to-string: (write-to-string obj) -> string representation */
 x_obj_t *x_prim_write_to_string(x_obj_t *p_base, x_obj_t *p_args)
 {
-	p_args = x_restobj(p_args);
-	return x_prim_to_string(p_base, p_args, x_token_write);
+	return x_prim_to_string(p_base, x_1(p_args), x_token_write);
 }
 
 /* display-to-string: (display-to-string obj) -> display representation */
 static x_obj_t *x_prim_display_to_string(x_obj_t *p_base, x_obj_t *p_args)
 {
-	p_args = x_restobj(p_args);
-	return x_prim_to_string(p_base, p_args, x_token_display);
+	return x_prim_to_string(p_base, x_1(p_args), x_token_display);
 }
 
 #ifdef X_CLOCK
 /* clock: (clock) -> CPU microseconds since process start */
 static x_obj_t *x_prim_clock(x_obj_t *p_base, x_obj_t *p_args)
 {
-	p_args = x_restobj(p_args);
+	(void)p_args;
 	return x_mkint(p_base, x_sys_clock());
 }
 #endif /* X_CLOCK */
@@ -166,7 +158,7 @@ static x_obj_t *x_prim_clock(x_obj_t *p_base, x_obj_t *p_args)
 /* heap-sweep: (heap-sweep) -> sweep unmarked objects from heap */
 static x_obj_t *x_prim_heap_sweep(x_obj_t *p_base, x_obj_t *p_args)
 {
-	p_args = x_restobj(p_args);
+	(void)p_args;
 #ifdef X_PROFILE
 	if (x_base_isset(p_base))
 		x_atomint(x_base_field_profile_gc_runs(p_base))++;
@@ -198,8 +190,8 @@ static x_obj_t *x_prim_heap_sweep(x_obj_t *p_base, x_obj_t *p_args)
 static x_obj_t *x_prim_heap_count(x_obj_t *p_base, x_obj_t *p_args)
 {
 	x_obj_t *p = x_obj_heap(p_base);
-	p_args = x_restobj(p_args);
 	long count = 0;
+	(void)p_args;
 
 	while (p) {
 		count++;
@@ -212,7 +204,7 @@ static x_obj_t *x_prim_heap_count(x_obj_t *p_base, x_obj_t *p_args)
 /* heap-mark: (heap-mark) -> mark reachable objects on heap */
 static x_obj_t *x_prim_heap_mark(x_obj_t *p_base, x_obj_t *p_args)
 {
-	p_args = x_restobj(p_args);
+	(void)p_args;
 	/* Normal mark: trace from base data tree */
 	x_heap_mark(p_base, x_atomobj(p_base), X_OBJ_FLAG_HEAP,
 		x_type_heap_mark);
@@ -255,9 +247,7 @@ static x_obj_t *x_prim_heap_mark(x_obj_t *p_base, x_obj_t *p_args)
  * pattern as x_heap_mark. */
 static x_obj_t *x_prim_system_mark(x_obj_t *p_base, x_obj_t *p_args)
 {
-	x_obj_t *p_obj;
-	p_args = x_restobj(p_args);
-	p_obj = x_prim_eval_arg(p_base, x_firstobj(p_args));
+	x_obj_t *p_obj = x_prim_eval_arg(p_base, x_01(p_args));
 
 	/* Reuse the mark traversal with SYSTEM flag */
 	x_heap_mark(p_base, p_obj, X_OBJ_FLAG_SYSTEM, x_type_heap_mark);
@@ -271,7 +261,7 @@ static x_obj_t *x_prim_atomic(x_obj_t *p_base, x_obj_t *p_args)
 {
 	x_obj_t *p_result = NULL;
 	x_spair_t call_args[1];
-	p_args = x_restobj(p_args);
+	p_args = x_1(p_args);
 
 	call_args[0][X_OBJ_META_TYPE].p = NULL;
 	call_args[0][X_OBJ_META_FLAGS].i = X_OBJ_FLAG_NONE;

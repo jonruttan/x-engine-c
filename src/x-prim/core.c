@@ -33,17 +33,15 @@
 /* quote: (quote x) -> x, unevaluated */
 x_obj_t *x_prim_quote(x_obj_t *p_base, x_obj_t *p_args)
 {
-	p_args = x_restobj(p_args);
-	return x_firstobj(p_args);
+	return x_01(p_args);
 }
 
 /* pair: (pair a b) -> (a . b) */
 x_obj_t *x_prim_pair(x_obj_t *p_base, x_obj_t *p_args)
 {
 	x_obj_t *a, *b;
-	p_args = x_restobj(p_args);
-	a = x_prim_eval_arg(p_base, x_firstobj(p_args));
-	b = x_prim_eval_arg(p_base, x_firstobj(x_restobj(p_args)));
+	a = x_prim_eval_arg(p_base, x_01(p_args));
+	b = x_prim_eval_arg(p_base, x_011(p_args));
 
 	return x_mklist(p_base, a, b);
 }
@@ -52,8 +50,7 @@ x_obj_t *x_prim_pair(x_obj_t *p_base, x_obj_t *p_args)
 x_obj_t *x_prim_first(x_obj_t *p_base, x_obj_t *p_args)
 {
 	x_obj_t *x;
-	p_args = x_restobj(p_args);
-	x = x_prim_eval_arg(p_base, x_firstobj(p_args));
+	x = x_prim_eval_arg(p_base, x_01(p_args));
 
 	return x_firstobj(x);
 }
@@ -62,8 +59,7 @@ x_obj_t *x_prim_first(x_obj_t *p_base, x_obj_t *p_args)
 x_obj_t *x_prim_rest(x_obj_t *p_base, x_obj_t *p_args)
 {
 	x_obj_t *x;
-	p_args = x_restobj(p_args);
-	x = x_prim_eval_arg(p_base, x_firstobj(p_args));
+	x = x_prim_eval_arg(p_base, x_01(p_args));
 
 	return x_restobj(x);
 }
@@ -72,12 +68,11 @@ x_obj_t *x_prim_rest(x_obj_t *p_base, x_obj_t *p_args)
 x_obj_t *x_prim_define(x_obj_t *p_base, x_obj_t *p_args)
 {
 	x_obj_t *p_name, *p_pair, *p_val;
-	p_args = x_restobj(p_args);
-	p_name = x_firstobj(p_args);
+	p_name = x_01(p_args);
 	p_pair = x_mkspair(p_base, p_name, NULL);
 
 	x_base_env_alist_extend(p_base, p_pair);
-	p_val = x_prim_eval_arg(p_base, x_firstobj(x_restobj(p_args)));
+	p_val = x_prim_eval_arg(p_base, x_011(p_args));
 	x_restobj(p_pair) = p_val;
 
 	/* Top-level: insert into BST and advance boundary.
@@ -107,9 +102,8 @@ x_obj_t *x_prim_set(x_obj_t *p_base, x_obj_t *p_args)
 {
 	x_obj_t *p_name, *p_val;
 	x_obj_t *p_alist, *p_boundary, *p_entry;
-	p_args = x_restobj(p_args);
-	p_name = x_firstobj(p_args);
-	p_val = x_prim_eval_arg(p_base, x_firstobj(x_restobj(p_args)));
+	p_name = x_01(p_args);
+	p_val = x_prim_eval_arg(p_base, x_011(p_args));
 
 	p_alist = x_base_field_env_alist(p_base);
 	p_boundary = x_base_field_env_local_boundary(p_base);
@@ -160,9 +154,8 @@ x_obj_t *x_prim_set(x_obj_t *p_base, x_obj_t *p_args)
 x_obj_t *x_prim_apply(x_obj_t *p_base, x_obj_t *p_args)
 {
 	x_obj_t *p_fn, *p_evaled, *p_vals, *p_walk;
-	p_args = x_restobj(p_args);
-	p_fn = x_prim_eval_arg(p_base, x_firstobj(p_args));
-	p_evaled = x_prim_evlis(p_base, x_restobj(p_args));
+	p_fn = x_prim_eval_arg(p_base, x_01(p_args));
+	p_evaled = x_prim_evlis(p_base, x_11(p_args));
 
 	/* Build combined arg list: prefix args prepended to tail list.
 	 * (apply f a b '(c d)) -> p_evaled = (a b (c d))
@@ -231,9 +224,8 @@ x_obj_t *x_prim_apply(x_obj_t *p_base, x_obj_t *p_args)
 x_obj_t *x_prim_eval(x_obj_t *p_base, x_obj_t *p_args)
 {
 	x_obj_t *p_expr, *p_env_arg;
-	p_args = x_restobj(p_args);
-	p_expr = x_prim_eval_arg(p_base, x_firstobj(p_args));
-	p_env_arg = x_restobj(p_args);
+	p_expr = x_prim_eval_arg(p_base, x_01(p_args));
+	p_env_arg = x_11(p_args);
 
 	if ( ! x_obj_isnil(p_base, p_env_arg)) {
 		/* eval with env: save/restore via base save-stack */
@@ -281,9 +273,8 @@ x_obj_t *x_prim_closure(x_obj_t *p_base, x_obj_t *p_args)
 	x_obj_t *p_params, *p_body,
 		*p_env = x_base_field_env_alist(p_base),
 		*p_bst = x_base_field_env_global_tree(p_base);
-	p_args = x_restobj(p_args);
-	p_params = x_firstobj(p_args);
-	p_body = x_restobj(p_args);
+	p_params = x_01(p_args);
+	p_body = x_11(p_args);
 
 	return x_mkproc(p_base, p_params, p_body, p_env, p_bst);
 }
@@ -293,10 +284,9 @@ x_obj_t *x_prim_operative(x_obj_t *p_base, x_obj_t *p_args)
 {
 	x_obj_t *p_params, *p_envparam, *p_body,
 		*p_env = x_base_field_env_alist(p_base);
-	p_args = x_restobj(p_args);
-	p_params = x_firstobj(p_args);
-	p_envparam = x_firstobj(x_restobj(p_args));
-	p_body = x_restobj(x_restobj(p_args));
+	p_params = x_01(p_args);
+	p_envparam = x_011(p_args);
+	p_body = x_111(p_args);
 
 	return x_mkop(p_base, p_params, p_envparam, p_body, p_env);
 }
@@ -305,8 +295,7 @@ x_obj_t *x_prim_operative(x_obj_t *p_base, x_obj_t *p_args)
 x_obj_t *x_prim_wrap(x_obj_t *p_base, x_obj_t *p_args)
 {
 	x_obj_t *p_combiner;
-	p_args = x_restobj(p_args);
-	p_combiner = x_prim_eval_arg(p_base, x_firstobj(p_args));
+	p_combiner = x_prim_eval_arg(p_base, x_01(p_args));
 
 	return x_mkwrap(p_base, p_combiner);
 }
@@ -315,8 +304,7 @@ x_obj_t *x_prim_wrap(x_obj_t *p_base, x_obj_t *p_args)
 x_obj_t *x_prim_unwrap(x_obj_t *p_base, x_obj_t *p_args)
 {
 	x_obj_t *p_applicative;
-	p_args = x_restobj(p_args);
-	p_applicative = x_prim_eval_arg(p_base, x_firstobj(p_args));
+	p_applicative = x_prim_eval_arg(p_base, x_01(p_args));
 
 	return x_procenv(p_applicative);
 }
@@ -329,11 +317,10 @@ x_obj_t *x_prim_guard(x_obj_t *p_base, x_obj_t *p_args)
 		*p_prev_handler = x_base_field_error_handler(p_base),
 		*p_saved_save_stack = x_base_field_save_stack(p_base),
 		*p_handler, *p_result = NULL;
-	p_args = x_restobj(p_args);
-	p_clause = x_firstobj(p_args);
+	p_clause = x_01(p_args);
 	p_var = x_firstobj(p_clause);
 	p_handler_body = x_restobj(p_clause);
-	p_body = x_restobj(p_args);
+	p_body = x_11(p_args);
 
 	/* Build handler: (jmp-ptr (saved-env . saved-boundary) error-value) */
 	p_handler = x_mkspair(p_base,
@@ -371,8 +358,7 @@ x_obj_t *x_prim_guard(x_obj_t *p_base, x_obj_t *p_args)
 x_obj_t *x_prim_error(x_obj_t *p_base, x_obj_t *p_args)
 {
 	x_obj_t *p_msg, *p_handler = x_base_field_error_handler(p_base);
-	p_args = x_restobj(p_args);
-	p_msg = x_prim_eval_arg(p_base, x_firstobj(p_args));
+	p_msg = x_prim_eval_arg(p_base, x_01(p_args));
 
 	/* If handler installed, use it. */
 	if ( ! x_obj_isnil(p_base, p_handler)) {
@@ -396,7 +382,7 @@ x_obj_t *x_prim_error(x_obj_t *p_base, x_obj_t *p_args)
 x_obj_t *x_prim_match(x_obj_t *p_base, x_obj_t *p_args)
 {
 	x_obj_t *p_clause, *p_test;
-	p_args = x_restobj(p_args);
+	p_args = x_1(p_args);
 	while ( ! x_obj_isnil(p_base, p_args)) {
 		p_clause = x_firstobj(p_args);
 		p_test = x_prim_eval_arg(p_base, x_firstobj(p_clause));
@@ -419,8 +405,7 @@ x_obj_t *x_prim_match(x_obj_t *p_base, x_obj_t *p_args)
 x_obj_t *x_prim_first_int(x_obj_t *p_base, x_obj_t *p_args)
 {
 	x_obj_t *x;
-	p_args = x_restobj(p_args);
-	x = x_prim_eval_arg(p_base, x_firstobj(p_args));
+	x = x_prim_eval_arg(p_base, x_01(p_args));
 
 	return x_mkint(p_base, x_firstint(x));
 }
@@ -429,8 +414,7 @@ x_obj_t *x_prim_first_int(x_obj_t *p_base, x_obj_t *p_args)
 x_obj_t *x_prim_rest_int(x_obj_t *p_base, x_obj_t *p_args)
 {
 	x_obj_t *x;
-	p_args = x_restobj(p_args);
-	x = x_prim_eval_arg(p_base, x_firstobj(p_args));
+	x = x_prim_eval_arg(p_base, x_01(p_args));
 
 	return x_mkint(p_base, x_restint(x));
 }
@@ -439,10 +423,8 @@ x_obj_t *x_prim_rest_int(x_obj_t *p_base, x_obj_t *p_args)
 x_obj_t *x_prim_set_first(x_obj_t *p_base, x_obj_t *p_args)
 {
 	x_obj_t *p_pair, *p_val;
-	p_args = x_restobj(p_args);
-	p_pair = x_prim_eval_arg(p_base, x_firstobj(p_args));
-	p_val = x_prim_eval_arg(p_base,
-		x_firstobj(x_restobj(p_args)));
+	p_pair = x_prim_eval_arg(p_base, x_01(p_args));
+	p_val = x_prim_eval_arg(p_base, x_011(p_args));
 
 	x_firstobj(p_pair) = p_val;
 
@@ -453,10 +435,8 @@ x_obj_t *x_prim_set_first(x_obj_t *p_base, x_obj_t *p_args)
 x_obj_t *x_prim_set_rest(x_obj_t *p_base, x_obj_t *p_args)
 {
 	x_obj_t *p_pair, *p_val;
-	p_args = x_restobj(p_args);
-	p_pair = x_prim_eval_arg(p_base, x_firstobj(p_args));
-	p_val = x_prim_eval_arg(p_base,
-		x_firstobj(x_restobj(p_args)));
+	p_pair = x_prim_eval_arg(p_base, x_01(p_args));
+	p_val = x_prim_eval_arg(p_base, x_011(p_args));
 
 	x_restobj(p_pair) = p_val;
 
@@ -467,10 +447,8 @@ x_obj_t *x_prim_set_rest(x_obj_t *p_base, x_obj_t *p_args)
 x_obj_t *x_prim_set_first_int(x_obj_t *p_base, x_obj_t *p_args)
 {
 	x_obj_t *p_pair, *p_val;
-	p_args = x_restobj(p_args);
-	p_pair = x_prim_eval_arg(p_base, x_firstobj(p_args));
-	p_val = x_prim_eval_arg(p_base,
-		x_firstobj(x_restobj(p_args)));
+	p_pair = x_prim_eval_arg(p_base, x_01(p_args));
+	p_val = x_prim_eval_arg(p_base, x_011(p_args));
 
 	x_firstint(p_pair) = x_atomint(p_val);
 
@@ -481,10 +459,8 @@ x_obj_t *x_prim_set_first_int(x_obj_t *p_base, x_obj_t *p_args)
 x_obj_t *x_prim_set_rest_int(x_obj_t *p_base, x_obj_t *p_args)
 {
 	x_obj_t *p_pair, *p_val;
-	p_args = x_restobj(p_args);
-	p_pair = x_prim_eval_arg(p_base, x_firstobj(p_args));
-	p_val = x_prim_eval_arg(p_base,
-		x_firstobj(x_restobj(p_args)));
+	p_pair = x_prim_eval_arg(p_base, x_01(p_args));
+	p_val = x_prim_eval_arg(p_base, x_011(p_args));
 
 	x_restint(p_pair) = x_atomint(p_val);
 
@@ -496,8 +472,7 @@ x_obj_t *x_prim_set_rest_int(x_obj_t *p_base, x_obj_t *p_args)
 x_obj_t *x_prim_eval_immediate(x_obj_t *p_base, x_obj_t *p_args)
 {
 	x_obj_t *p_expr;
-	p_args = x_restobj(p_args);
-	p_expr = x_prim_eval_arg(p_base, x_firstobj(p_args));
+	p_expr = x_prim_eval_arg(p_base, x_01(p_args));
 
 	return x_prim_eval_arg(p_base, p_expr);
 }
@@ -506,9 +481,8 @@ x_obj_t *x_prim_eval_immediate(x_obj_t *p_base, x_obj_t *p_args)
 x_obj_t *x_prim_tail_eval(x_obj_t *p_base, x_obj_t *p_args)
 {
 	x_obj_t *p_expr, *p_env;
-	p_args = x_restobj(p_args);
-	p_expr = x_prim_eval_arg(p_base, x_firstobj(p_args));
-	p_env = x_prim_eval_arg(p_base, x_firstobj(x_restobj(p_args)));
+	p_expr = x_prim_eval_arg(p_base, x_01(p_args));
+	p_env = x_prim_eval_arg(p_base, x_011(p_args));
 
 	x_base_field_env_alist(p_base) = p_env;
 	/* Do NOT change local_boundary — the boundary from the enclosing
@@ -543,13 +517,12 @@ x_obj_t *x_prim_atomic(x_obj_t *p_base, x_obj_t *p_args)
 /* %seq: (%seq a b) -> eval a (blocking), tco-eval b */
 x_obj_t *x_prim_seq(x_obj_t *p_base, x_obj_t *p_args)
 {
-	p_args = x_restobj(p_args);
-	/* Root p_args so GC doesn't free it during eval of first arg */
+	/* Root args so GC doesn't free them during eval of first arg */
 	x_base_field_eval_list_stack(p_base) = x_mkspair(p_base,
-		p_args, x_base_field_eval_list_stack(p_base));
+		x_1(p_args), x_base_field_eval_list_stack(p_base));
 
-	x_prim_eval_arg(p_base, x_firstobj(p_args));
-	x_base_field_tco_expr(p_base) = x_firstobj(x_restobj(p_args));
+	x_prim_eval_arg(p_base, x_01(p_args));
+	x_base_field_tco_expr(p_base) = x_011(p_args);
 
 	/* Unroot */
 	x_base_field_eval_list_stack(p_base)
@@ -560,7 +533,6 @@ x_obj_t *x_prim_seq(x_obj_t *p_base, x_obj_t *p_args)
 
 x_obj_t *x_prim_base(x_obj_t *p_base, x_obj_t *p_args)
 {
-	p_args = x_restobj(p_args);
 	return p_base;
 }
 
