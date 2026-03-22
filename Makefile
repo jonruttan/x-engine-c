@@ -71,10 +71,11 @@ endif
 X_MACHINE?=\"$(DUMPMACHINE)\"
 
 # Dead strip unreferenced sections at link time
+# Export dynamic symbols so dlopen'd bundles can call host functions
 ifneq (,$(findstring darwin,$(DUMPMACHINE)))
-LDFLAGS+=-Wl,-dead_strip
+LDFLAGS+=-Wl,-export_dynamic
 else ifneq (,$(findstring linux,$(DUMPMACHINE)))
-LDFLAGS+=-Wl,--gc-sections
+LDFLAGS+=-Wl,--gc-sections -rdynamic
 endif
 
 BASEDIR=.
@@ -129,8 +130,8 @@ default: all strip ## Build and strip
 
 all: $(SOURCES) $(EXECUTABLE) ## Build all
 
-strip: $(EXECUTABLE) ## Strip symbols
-	strip $(EXECUTABLE)
+strip: $(EXECUTABLE) ## Strip non-global symbols (keep dynamic exports for dlopen)
+	strip -x $(EXECUTABLE)
 
 $(EXECUTABLE): $(OBJECTS) $(X_EXPR_OBJECTS) $(EXTRA_OBJS)
 	$(CC) $(LDFLAGS) $(OBJECTS) $(X_EXPR_OBJECTS) $(EXTRA_OBJS) $(EXTRA_LIBS) -o $(OUTPUT)
