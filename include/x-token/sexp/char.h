@@ -28,12 +28,12 @@
 /*
  * # Data Structures
  */
-extern x_satom_t x_sexp_char_analyse1_prim,
- 	x_sexp_char_analyse2_prim,
- 	x_sexp_char_analyse3_prim,
- 	x_sexp_char_read_prim,
- 	x_sexp_char_write_prim,
- 	x_sexp_char_display_prim;
+extern x_spair_t x_sexp_char_analyse1_prim,
+	x_sexp_char_analyse2_prim,
+	x_sexp_char_analyse3_prim;
+extern x_satom_t x_sexp_char_read_prim,
+	x_sexp_char_write_prim,
+	x_sexp_char_display_prim;
 
 x_obj_t *x_sexp_char_analyse1(x_obj_t *p_base, x_obj_t *p_args);
 x_obj_t *x_sexp_char_analyse2(x_obj_t *p_base, x_obj_t *p_args);

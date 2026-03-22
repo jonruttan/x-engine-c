@@ -44,10 +44,10 @@
 /*
  * # Data Structures
  */
-extern x_satom_t x_sexp_str_analyse1_prim,
+extern x_spair_t x_sexp_str_analyse1_prim,
 	x_sexp_str_analyse2_prim,
-	x_sexp_str_analyse3_prim,
-	x_sexp_str_read_prim,
+	x_sexp_str_analyse3_prim;
+extern x_satom_t x_sexp_str_read_prim,
 	x_sexp_str_write_prim,
 	x_sexp_str_display_prim;
 

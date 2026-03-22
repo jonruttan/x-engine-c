@@ -21,13 +21,15 @@
 #include "x-token.h"
 #include "x-type/str.h"
 #include "x-type/buffer.h"
+#include "x-type/prim.h"
 
-/* Forward declaration for escape state */
+/* Analyzer states: spair with state slot for composable transitions */
+x_spair_t x_sexp_str_analyse1_prim = x_obj_set(NULL, X_OBJ_FLAG_NONE, { .fn = x_sexp_str_analyse1 }, { NULL }),
+	x_sexp_str_analyse2_prim = x_obj_set(NULL, X_OBJ_FLAG_NONE, { .fn = x_sexp_str_analyse2 }, { NULL }),
+	x_sexp_str_analyse3_prim = x_obj_set(NULL, X_OBJ_FLAG_NONE, { .fn = x_sexp_str_analyse3 }, { NULL });
 
-x_satom_t x_sexp_str_analyse1_prim = x_obj_set(x_type_atom_obj, X_OBJ_FLAG_NONE, { .fn = x_sexp_str_analyse1 }),
-	x_sexp_str_analyse2_prim = x_obj_set(x_type_atom_obj, X_OBJ_FLAG_NONE, { .fn = x_sexp_str_analyse2 }),
-	x_sexp_str_analyse3_prim = x_obj_set(x_type_atom_obj, X_OBJ_FLAG_NONE, { .fn = x_sexp_str_analyse3 }),
-	x_sexp_str_read_prim = x_obj_set(x_type_atom_obj, X_OBJ_FLAG_NONE, { .fn = x_sexp_str_read }),
+/* Read/write/display: satom (type-internal, no self needed) */
+x_satom_t x_sexp_str_read_prim = x_obj_set(x_type_atom_obj, X_OBJ_FLAG_NONE, { .fn = x_sexp_str_read }),
 	x_sexp_str_write_prim = x_obj_set(x_type_atom_obj, X_OBJ_FLAG_NONE, { .fn = x_sexp_str_write }),
 	x_sexp_str_display_prim = x_obj_set(x_type_atom_obj, X_OBJ_FLAG_NONE, { .fn = x_sexp_str_display });
 
@@ -42,12 +44,18 @@ static int hex_digit(x_char_t c)
 	return -1;
 }
 
+/* Helper: read next-state from callable state slot, with default fallback */
+#define x_next_state(self, dflt) \
+	(x_obj_isnil(p_base, x_callable_state(self)) \
+		? (x_obj_t *)(dflt) : x_callable_state(self))
+
 x_obj_t *x_sexp_str_analyse1(x_obj_t *p_base, x_obj_t *p_args)
 {
-	x_obj_t *p_buffer = x_token_read_arg_buffer(p_args);
+	x_obj_t *p_self = x_0(p_args),
+		*p_buffer = x_token_read_arg_buffer(x_1(p_args));
 
 	if (0 == x_lib_strncmp(X_SEXP_STR_PRE_STR, x_bufferval(p_buffer), X_SEXP_STR_PRE_STR_LEN)) {
-		return x_sexp_str_analyse2_prim;
+		return x_next_state(p_self, &x_sexp_str_analyse2_prim);
 	}
 
 	return NULL;
@@ -55,12 +63,13 @@ x_obj_t *x_sexp_str_analyse1(x_obj_t *p_base, x_obj_t *p_args)
 
 x_obj_t *x_sexp_str_analyse2(x_obj_t *p_base, x_obj_t *p_args)
 {
-	x_obj_t *p_buffer = x_token_read_arg_buffer(p_args),
-		*p_score = x_token_read_arg_score(p_args);
+	x_obj_t *p_self = x_0(p_args),
+		*p_buffer = x_token_read_arg_buffer(x_1(p_args)),
+		*p_score = x_token_read_arg_score(x_1(p_args));
 
 	/* Backslash: enter escape state — next char consumed unconditionally */
 	if (*(x_bufferread(p_buffer) - 1) == '\\') {
-		return x_sexp_str_analyse3_prim;
+		return x_next_state(p_self, &x_sexp_str_analyse3_prim);
 	}
 
 	/* Closing quote: match */
@@ -71,13 +80,15 @@ x_obj_t *x_sexp_str_analyse2(x_obj_t *p_base, x_obj_t *p_args)
 		return p_score;
 	}
 
-	return x_sexp_str_analyse2_prim;
+	return p_self;
 }
 
 /* analyse3: escape state — consume one character, return to normal reading */
 x_obj_t *x_sexp_str_analyse3(x_obj_t *p_base, x_obj_t *p_args)
 {
-	return x_sexp_str_analyse2_prim;
+	x_obj_t *p_self = x_0(p_args);
+	(void)p_self;
+	return (x_obj_t *)&x_sexp_str_analyse2_prim;
 }
 
 x_obj_t *x_sexp_str_read(x_obj_t *p_base, x_obj_t *p_args)

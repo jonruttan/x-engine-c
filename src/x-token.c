@@ -126,6 +126,7 @@ x_obj_t *x_token_analyse(x_obj_t *p_base, x_obj_t *p_args)
 			 * doesn't match the type's accepted characters. */
 			skip = 0;
 			if ( ! x_obj_type_issatom(p_analyse)
+				&& x_primval(p_analyse) == NULL
 				&& ! x_buffereof(p_buffer)) {
 				p_hint = x_type_field_data(x_restobj(p_entry));
 				if ( ! x_obj_isnil(p_base, p_hint)) {

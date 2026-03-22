@@ -21,55 +21,67 @@
 #include "x-type/buffer.h"
 #include "x-type/char.h"
 #include "x-type/int.h"
+#include "x-type/prim.h"
 #include "x-token/sexp/char.h"
 
 /* Forward declaration for named-character state */
 static x_obj_t *x_sexp_char_analyse4(x_obj_t *p_base, x_obj_t *p_args);
 
-x_satom_t x_sexp_char_analyse1_prim = x_obj_set(x_type_atom_obj, X_OBJ_FLAG_NONE, { .fn = x_sexp_char_analyse1 }),
- 	x_sexp_char_analyse2_prim = x_obj_set(x_type_atom_obj, X_OBJ_FLAG_NONE, { .fn = x_sexp_char_analyse2 }),
- 	x_sexp_char_analyse3_prim = x_obj_set(x_type_atom_obj, X_OBJ_FLAG_NONE, { .fn = x_sexp_char_analyse3 }),
- 	x_sexp_char_read_prim = x_obj_set(x_type_atom_obj, X_OBJ_FLAG_NONE, { .fn = x_sexp_char_read }),
- 	x_sexp_char_write_prim = x_obj_set(x_type_atom_obj, X_OBJ_FLAG_NONE, { .fn = x_sexp_char_write }),
- 	x_sexp_char_display_prim = x_obj_set(x_type_atom_obj, X_OBJ_FLAG_NONE, { .fn = x_sexp_char_display });
+/* Analyzer states: spair with state slot for composable transitions */
+x_spair_t x_sexp_char_analyse1_prim = x_obj_set(NULL, X_OBJ_FLAG_NONE, { .fn = x_sexp_char_analyse1 }, { NULL }),
+	x_sexp_char_analyse2_prim = x_obj_set(NULL, X_OBJ_FLAG_NONE, { .fn = x_sexp_char_analyse2 }, { NULL }),
+	x_sexp_char_analyse3_prim = x_obj_set(NULL, X_OBJ_FLAG_NONE, { .fn = x_sexp_char_analyse3 }, { NULL });
 
-/* analyse4 prim: named-character state — reads lowercase letters */
-static x_satom_t x_sexp_char_analyse4_prim =
-	x_obj_set(x_type_atom_obj, X_OBJ_FLAG_NONE, { .fn = x_sexp_char_analyse4 });
+/* Read/write/display: satom (type-internal, no self needed) */
+x_satom_t x_sexp_char_read_prim = x_obj_set(x_type_atom_obj, X_OBJ_FLAG_NONE, { .fn = x_sexp_char_read }),
+	x_sexp_char_write_prim = x_obj_set(x_type_atom_obj, X_OBJ_FLAG_NONE, { .fn = x_sexp_char_write }),
+	x_sexp_char_display_prim = x_obj_set(x_type_atom_obj, X_OBJ_FLAG_NONE, { .fn = x_sexp_char_display });
+
+static x_spair_t x_sexp_char_analyse4_prim =
+	x_obj_set(NULL, X_OBJ_FLAG_NONE, { .fn = x_sexp_char_analyse4 }, { NULL });
 
 static int is_lower(x_char_t c)
 {
 	return c >= 'a' && c <= 'z';
 }
 
+/* Helper: read next-state from callable state slot, with default fallback */
+#define x_next_state(self, dflt) \
+	(x_obj_isnil(p_base, x_callable_state(self)) \
+		? (x_obj_t *)(dflt) : x_callable_state(self))
+
 x_obj_t *x_sexp_char_analyse1(x_obj_t *p_base, x_obj_t *p_args)
 {
-	if (X_SEXP_CHAR_PRE_STR[0] != x_bufferlastchar(x_token_read_arg_buffer(p_args))) {
+	x_obj_t *p_self = x_0(p_args);
+
+	if (X_SEXP_CHAR_PRE_STR[0] != x_bufferlastchar(x_token_read_arg_buffer(x_1(p_args)))) {
 		return NULL;
 	}
 
-	return x_sexp_char_analyse2_prim;
+	return x_next_state(p_self, &x_sexp_char_analyse2_prim);
 }
 
 x_obj_t *x_sexp_char_analyse2(x_obj_t *p_base, x_obj_t *p_args)
 {
-	x_obj_t *p_buffer = x_token_read_arg_buffer(p_args);
+	x_obj_t *p_self = x_0(p_args),
+		*p_buffer = x_token_read_arg_buffer(x_1(p_args));
 
 	if (X_SEXP_CHAR_PRE_STR[1] != x_bufferlastchar(p_buffer)) {
 		return NULL;
 	}
 
-	return x_sexp_char_analyse3_prim;
+	return x_next_state(p_self, &x_sexp_char_analyse3_prim);
 }
 
 x_obj_t *x_sexp_char_analyse3(x_obj_t *p_base, x_obj_t *p_args)
 {
-	x_obj_t *p_buffer = x_token_read_arg_buffer(p_args),
-		*p_score = x_token_read_arg_score(p_args);
+	x_obj_t *p_self = x_0(p_args),
+		*p_buffer = x_token_read_arg_buffer(x_1(p_args)),
+		*p_score = x_token_read_arg_score(x_1(p_args));
 
 	/* Lowercase letter: may be start of a named character */
 	if (is_lower(x_bufferlastchar(p_buffer))) {
-		return x_sexp_char_analyse4_prim;
+		return x_next_state(p_self, &x_sexp_char_analyse4_prim);
 	}
 
 	/* Non-letter: single character literal, score immediately */
@@ -80,11 +92,12 @@ x_obj_t *x_sexp_char_analyse3(x_obj_t *p_base, x_obj_t *p_args)
 /* analyse4: named-character state — keep reading lowercase letters */
 static x_obj_t *x_sexp_char_analyse4(x_obj_t *p_base, x_obj_t *p_args)
 {
-	x_obj_t *p_buffer = x_token_read_arg_buffer(p_args),
-		*p_score = x_token_read_arg_score(p_args);
+	x_obj_t *p_self = x_0(p_args),
+		*p_buffer = x_token_read_arg_buffer(x_1(p_args)),
+		*p_score = x_token_read_arg_score(x_1(p_args));
 
 	if (is_lower(x_bufferlastchar(p_buffer))) {
-		return x_sexp_char_analyse4_prim;
+		return p_self;
 	}
 
 	/* Non-letter delimiter: un-read it and score */
