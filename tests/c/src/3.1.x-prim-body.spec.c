@@ -131,13 +131,13 @@ static char *test_body_eval_tco(void)
 	x_obj_t *p_base, *p_body, *p_saved_env, *p_result;
 
 	/* nil body pops save-stack, restores env, returns NULL.
-	 * Save-stack entries are ((env . boundary) . bst). */
+	 * Save-stack entries are ((env . boundary) . (bst . flag1)). */
 	p_base = x_base_make(NULL, NULL);
 	p_saved_env = x_mkspair(p_base, x_mksatom(p_base, 99), NULL);
 	x_base_field_save_stack(p_base) = x_mkspair(p_base,
 		x_mkspair(p_base,
 			x_mkspair(p_base, p_saved_env, NULL),
-			NULL),
+			x_mkspair(p_base, NULL, NULL)),
 		x_base_field_save_stack(p_base));
 	x_base_field_env_alist(p_base) = NULL;
 	p_result = x_prim_body_eval_tco(p_base, NULL);
@@ -152,7 +152,7 @@ static char *test_body_eval_tco(void)
 	x_base_field_save_stack(p_base) = x_mkspair(p_base,
 		x_mkspair(p_base,
 			x_mkspair(p_base, p_saved_env, NULL),
-			NULL),
+			x_mkspair(p_base, NULL, NULL)),
 		x_base_field_save_stack(p_base));
 	p_body = x_mkspair(p_base, x_mksatom(p_base, 42), NULL);
 	x_base_field_tco_env(p_base) = NULL;
@@ -173,7 +173,7 @@ static char *test_body_eval_tco(void)
 	x_base_field_save_stack(p_base) = x_mkspair(p_base,
 		x_mkspair(p_base,
 			x_mkspair(p_base, p_saved_env, NULL),
-			NULL),
+			x_mkspair(p_base, NULL, NULL)),
 		x_base_field_save_stack(p_base));
 	p_body = x_mkspair(p_base, NULL, NULL);
 	p_result = x_prim_body_eval_tco(p_base, p_body);
@@ -190,7 +190,7 @@ static char *test_body_eval_tco(void)
 	x_base_field_save_stack(p_base) = x_mkspair(p_base,
 		x_mkspair(p_base,
 			x_mkspair(p_base, p_saved_env, NULL),
-			NULL),
+			x_mkspair(p_base, NULL, NULL)),
 		x_base_field_save_stack(p_base));
 	p_body = x_mkspair(p_base, x_mksatom(p_base, 10),
 		x_mkspair(p_base, x_mksatom(p_base, 20),
@@ -215,7 +215,7 @@ static char *test_body_eval_tco(void)
 		x_base_field_save_stack(p_base) = x_mkspair(p_base,
 			x_mkspair(p_base,
 				x_mkspair(p_base, p_saved_env, NULL),
-				NULL),
+				x_mkspair(p_base, NULL, NULL)),
 			x_base_field_save_stack(p_base));
 		p_body = x_mkspair(p_base, x_mksatom(p_base, 42), NULL);
 		x_base_field_tco_env(p_base) = p_existing_tco_env;
@@ -300,14 +300,14 @@ static char *test_tco_trampoline(void)
 		p_result != NULL && x_atomint(p_result) == 99);
 	test_cleanup(p_base);
 
-	/* tco_env restore: tco_env holds compound ((env . boundary) . bst) */
+	/* tco_env restore: tco_env holds compound ((env . boundary) . (bst . flag1)) */
 	p_base = x_base_make(NULL, NULL);
 	{
 		x_obj_t *p_env = x_mkspair(p_base,
 			x_mksatom(p_base, 77), NULL);
 		x_obj_t *p_tco_env = x_mkspair(p_base,
 			x_mkspair(p_base, p_env, NULL),
-			NULL);
+			x_mkspair(p_base, NULL, NULL));
 		x_base_field_tco_expr(p_base) = x_mksatom(p_base, 55);
 		x_base_field_tco_env(p_base) = p_tco_env;
 		x_base_field_env_alist(p_base) = NULL;

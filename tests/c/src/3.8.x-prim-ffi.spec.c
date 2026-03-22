@@ -123,11 +123,12 @@ static char *test_ffi_arith_add(void)
 	x_prim_register(p_base, NULL);
 
 	/* (ffi-call "d+d" () 3.0 4.0) -> 7.0 */
-	p_args = x_mkspair(p_base, x_mkstr(p_base, "d+d"),
+	p_args = x_mkspair(p_base, NULL,
+		x_mkspair(p_base, x_mkstr(p_base, "d+d"),
 		x_mkspair(p_base, NULL,
 		x_mkspair(p_base, test_mk_double(p_base, 3.0),
 		x_mkspair(p_base, test_mk_double(p_base, 4.0),
-		NULL))));
+		NULL)))));
 	p_result = x_prim_ffi_call(p_base, p_args);
 	r = test_get_double(p_base, p_result);
 	_it_should("d+d: 3.0 + 4.0 = 7.0", r == 7.0);
@@ -145,11 +146,12 @@ static char *test_ffi_arith_sub(void)
 	x_prim_register(p_base, NULL);
 
 	/* (ffi-call "d-d" () 10.0 3.0) -> 7.0 */
-	p_args = x_mkspair(p_base, x_mkstr(p_base, "d-d"),
+	p_args = x_mkspair(p_base, NULL,
+		x_mkspair(p_base, x_mkstr(p_base, "d-d"),
 		x_mkspair(p_base, NULL,
 		x_mkspair(p_base, test_mk_double(p_base, 10.0),
 		x_mkspair(p_base, test_mk_double(p_base, 3.0),
-		NULL))));
+		NULL)))));
 	p_result = x_prim_ffi_call(p_base, p_args);
 	r = test_get_double(p_base, p_result);
 	_it_should("d-d: 10.0 - 3.0 = 7.0", r == 7.0);
@@ -167,11 +169,12 @@ static char *test_ffi_arith_mul(void)
 	x_prim_register(p_base, NULL);
 
 	/* (ffi-call "d*d" () 3.0 5.0) -> 15.0 */
-	p_args = x_mkspair(p_base, x_mkstr(p_base, "d*d"),
+	p_args = x_mkspair(p_base, NULL,
+		x_mkspair(p_base, x_mkstr(p_base, "d*d"),
 		x_mkspair(p_base, NULL,
 		x_mkspair(p_base, test_mk_double(p_base, 3.0),
 		x_mkspair(p_base, test_mk_double(p_base, 5.0),
-		NULL))));
+		NULL)))));
 	p_result = x_prim_ffi_call(p_base, p_args);
 	r = test_get_double(p_base, p_result);
 	_it_should("d*d: 3.0 * 5.0 = 15.0", r == 15.0);
@@ -189,11 +192,12 @@ static char *test_ffi_arith_div(void)
 	x_prim_register(p_base, NULL);
 
 	/* (ffi-call "d/d" () 15.0 3.0) -> 5.0 */
-	p_args = x_mkspair(p_base, x_mkstr(p_base, "d/d"),
+	p_args = x_mkspair(p_base, NULL,
+		x_mkspair(p_base, x_mkstr(p_base, "d/d"),
 		x_mkspair(p_base, NULL,
 		x_mkspair(p_base, test_mk_double(p_base, 15.0),
 		x_mkspair(p_base, test_mk_double(p_base, 3.0),
-		NULL))));
+		NULL)))));
 	p_result = x_prim_ffi_call(p_base, p_args);
 	r = test_get_double(p_base, p_result);
 	_it_should("d/d: 15.0 / 3.0 = 5.0", r == 5.0);
@@ -210,41 +214,45 @@ static char *test_ffi_compare(void)
 	x_prim_register(p_base, NULL);
 
 	/* d<d: 1.0 < 2.0 -> t */
-	p_args = x_mkspair(p_base, x_mkstr(p_base, "d<d"),
+	p_args = x_mkspair(p_base, NULL,
+		x_mkspair(p_base, x_mkstr(p_base, "d<d"),
 		x_mkspair(p_base, NULL,
 		x_mkspair(p_base, test_mk_double(p_base, 1.0),
 		x_mkspair(p_base, test_mk_double(p_base, 2.0),
-		NULL))));
+		NULL)))));
 	p_result = x_prim_ffi_call(p_base, p_args);
 	_it_should("d<d: 1.0 < 2.0 is true",
 		p_result == x_base_field_true(p_base));
 
 	/* d<d: 2.0 < 1.0 -> #f */
-	p_args = x_mkspair(p_base, x_mkstr(p_base, "d<d"),
+	p_args = x_mkspair(p_base, NULL,
+		x_mkspair(p_base, x_mkstr(p_base, "d<d"),
 		x_mkspair(p_base, NULL,
 		x_mkspair(p_base, test_mk_double(p_base, 2.0),
 		x_mkspair(p_base, test_mk_double(p_base, 1.0),
-		NULL))));
+		NULL)))));
 	p_result = x_prim_ffi_call(p_base, p_args);
 	_it_should("d<d: 2.0 < 1.0 is false",
 		p_result == x_base_field_false(p_base));
 
 	/* d=d: 5.0 = 5.0 -> t */
-	p_args = x_mkspair(p_base, x_mkstr(p_base, "d=d"),
+	p_args = x_mkspair(p_base, NULL,
+		x_mkspair(p_base, x_mkstr(p_base, "d=d"),
 		x_mkspair(p_base, NULL,
 		x_mkspair(p_base, test_mk_double(p_base, 5.0),
 		x_mkspair(p_base, test_mk_double(p_base, 5.0),
-		NULL))));
+		NULL)))));
 	p_result = x_prim_ffi_call(p_base, p_args);
 	_it_should("d=d: 5.0 = 5.0 is true",
 		p_result == x_base_field_true(p_base));
 
 	/* d>=d: 3.0 >= 3.0 -> t */
-	p_args = x_mkspair(p_base, x_mkstr(p_base, "d>=d"),
+	p_args = x_mkspair(p_base, NULL,
+		x_mkspair(p_base, x_mkstr(p_base, "d>=d"),
 		x_mkspair(p_base, NULL,
 		x_mkspair(p_base, test_mk_double(p_base, 3.0),
 		x_mkspair(p_base, test_mk_double(p_base, 3.0),
-		NULL))));
+		NULL)))));
 	p_result = x_prim_ffi_call(p_base, p_args);
 	_it_should("d>=d: 3.0 >= 3.0 is true",
 		p_result == x_base_field_true(p_base));
@@ -262,10 +270,11 @@ static char *test_ffi_cast_i_to_d(void)
 	x_prim_register(p_base, NULL);
 
 	/* (ffi-call "i->d" () 42) -> 42.0 as IEEE bits */
-	p_args = x_mkspair(p_base, x_mkstr(p_base, "i->d"),
+	p_args = x_mkspair(p_base, NULL,
+		x_mkspair(p_base, x_mkstr(p_base, "i->d"),
 		x_mkspair(p_base, NULL,
 		x_mkspair(p_base, x_mkint(p_base, (x_int_t)42),
-		NULL)));
+		NULL))));
 	p_result = x_prim_ffi_call(p_base, p_args);
 	r = test_get_double(p_base, p_result);
 	_it_should("i->d: 42 -> 42.0", r == 42.0);
@@ -282,10 +291,11 @@ static char *test_ffi_cast_d_to_i(void)
 	x_prim_register(p_base, NULL);
 
 	/* (ffi-call "d->i" () 42.7-as-bits) -> 42 (truncated) */
-	p_args = x_mkspair(p_base, x_mkstr(p_base, "d->i"),
+	p_args = x_mkspair(p_base, NULL,
+		x_mkspair(p_base, x_mkstr(p_base, "d->i"),
 		x_mkspair(p_base, NULL,
 		x_mkspair(p_base, test_mk_double(p_base, 42.7),
-		NULL)));
+		NULL))));
 	p_result = x_prim_ffi_call(p_base, p_args);
 	_it_should("d->i: 42.7 -> 42", x_intval(p_result) == 42);
 
@@ -301,10 +311,11 @@ static char *test_ffi_d_to_s(void)
 	x_prim_register(p_base, NULL);
 
 	/* (ffi-call "d->s" () 3.14-as-bits) -> "3.14" */
-	p_args = x_mkspair(p_base, x_mkstr(p_base, "d->s"),
+	p_args = x_mkspair(p_base, NULL,
+		x_mkspair(p_base, x_mkstr(p_base, "d->s"),
 		x_mkspair(p_base, NULL,
 		x_mkspair(p_base, test_mk_double(p_base, 3.14),
-		NULL)));
+		NULL))));
 	p_result = x_prim_ffi_call(p_base, p_args);
 	_it_should("d->s returns a string",
 		p_result != NULL);
@@ -323,14 +334,16 @@ static char *test_ffi_int_ptr_convert(void)
 	x_prim_register(p_base, NULL);
 
 	/* int->ptr: convert 12345 to ptr */
-	p_args = x_mkspair(p_base,
-		x_mkint(p_base, (x_int_t)12345), NULL);
+	p_args = x_mkspair(p_base, NULL,
+		x_mkspair(p_base,
+		x_mkint(p_base, (x_int_t)12345), NULL));
 	p_result = x_prim_int_to_ptr(p_base, p_args);
 	_it_should("int->ptr returns a ptr",
 		p_result != NULL);
 
 	/* ptr->int: convert back to 12345 */
-	p_args = x_mkspair(p_base, p_result, NULL);
+	p_args = x_mkspair(p_base, NULL,
+		x_mkspair(p_base, p_result, NULL));
 	p_result = x_prim_ptr_to_int(p_base, p_args);
 	_it_should("ptr->int round-trips to 12345",
 		x_intval(p_result) == 12345);
@@ -350,11 +363,12 @@ static char *test_ffi_ptr_set_ref(void)
 	p_ptr = x_mkptr(p_base, mem);
 
 	/* ptr-set!: write byte 0xAB at offset 0 (nbytes=1) */
-	p_args = x_mkspair(p_base, p_ptr,
+	p_args = x_mkspair(p_base, NULL,
+		x_mkspair(p_base, p_ptr,
 		x_mkspair(p_base, x_mkint(p_base, (x_int_t)0),
 		x_mkspair(p_base, x_mkint(p_base, (x_int_t)0xAB),
 		x_mkspair(p_base, x_mkint(p_base, (x_int_t)1),
-		NULL))));
+		NULL)))));
 	x_prim_ptr_set(p_base, p_args);
 	_it_should("ptr-set! writes byte at offset",
 		mem[0] == 0xAB);
@@ -362,10 +376,11 @@ static char *test_ffi_ptr_set_ref(void)
 	/* ptr-ref: read back 1 byte */
 	memset(mem, 0, 16);
 	mem[0] = 42;
-	p_args = x_mkspair(p_base, p_ptr,
+	p_args = x_mkspair(p_base, NULL,
+		x_mkspair(p_base, p_ptr,
 		x_mkspair(p_base, x_mkint(p_base, (x_int_t)0),
 		x_mkspair(p_base, x_mkint(p_base, (x_int_t)1),
-		NULL)));
+		NULL))));
 	p_result = x_prim_ptr_ref(p_base, p_args);
 	_it_should("ptr-ref reads byte from offset",
 		x_intval(p_result) == 42);
@@ -382,14 +397,16 @@ static char *test_ffi_string_ptr_convert(void)
 	x_prim_register(p_base, NULL);
 
 	/* string->ptr: get raw pointer to string data */
-	p_args = x_mkspair(p_base,
-		x_mkstr(p_base, "hello"), NULL);
+	p_args = x_mkspair(p_base, NULL,
+		x_mkspair(p_base,
+		x_mkstr(p_base, "hello"), NULL));
 	p_ptr = x_prim_string_to_ptr(p_base, p_args);
 	_it_should("string->ptr returns a ptr",
 		p_ptr != NULL);
 
 	/* ptr->string: create string from pointer */
-	p_args = x_mkspair(p_base, p_ptr, NULL);
+	p_args = x_mkspair(p_base, NULL,
+		x_mkspair(p_base, p_ptr, NULL));
 	p_result = x_prim_ptr_to_string(p_base, p_args);
 	_it_should("ptr->string round-trips",
 		x_lib_strcmp(x_strval(p_result), "hello") == 0);
@@ -422,33 +439,37 @@ static char *test_ffi_dlopen_dlsym(void)
 
 	/* dlopen(NULL, RTLD_LAZY) -> handle to current process */
 	p_args = x_mkspair(p_base, NULL,
+		x_mkspair(p_base, NULL,
 		x_mkspair(p_base, x_mkint(p_base, (x_int_t)RTLD_LAZY),
-		NULL));
+		NULL)));
 	p_handle = x_prim_dlopen(p_base, p_args);
 	_it_should("dlopen returns handle for NULL path",
 		p_handle != NULL);
 
 	/* dlsym(handle, "x_prim_ffi_register") -> function pointer */
-	p_args = x_mkspair(p_base, p_handle,
+	p_args = x_mkspair(p_base, NULL,
+		x_mkspair(p_base, p_handle,
 		x_mkspair(p_base, x_mkstr(p_base, "x_prim_ffi_register"),
-		NULL));
+		NULL)));
 	p_sym = x_prim_dlsym(p_base, p_args);
 	_it_should("dlsym finds known symbol",
 		p_sym != NULL);
 
 	/* dlsym with bogus name -> NULL */
-	p_args = x_mkspair(p_base, p_handle,
+	p_args = x_mkspair(p_base, NULL,
+		x_mkspair(p_base, p_handle,
 		x_mkspair(p_base, x_mkstr(p_base, "____no_such_symbol____"),
-		NULL));
+		NULL)));
 	p_sym = x_prim_dlsym(p_base, p_args);
 	_it_should("dlsym returns NULL for unknown symbol",
 		p_sym == NULL);
 
 	/* dlopen with bogus path -> NULL */
-	p_args = x_mkspair(p_base,
+	p_args = x_mkspair(p_base, NULL,
+		x_mkspair(p_base,
 		x_mkstr(p_base, "/no/such/lib.so"),
 		x_mkspair(p_base, x_mkint(p_base, (x_int_t)RTLD_LAZY),
-		NULL));
+		NULL)));
 	p_handle = x_prim_dlopen(p_base, p_args);
 	_it_should("dlopen returns NULL for bad path",
 		p_handle == NULL);
@@ -466,10 +487,11 @@ static char *test_ffi_call_d_to_d(void)
 	x_prim_register(p_base, NULL);
 
 	/* (ffi-call "d->d" fptr 5.0) -> -5.0 */
-	p_args = x_mkspair(p_base, x_mkstr(p_base, "d->d"),
+	p_args = x_mkspair(p_base, NULL,
+		x_mkspair(p_base, x_mkstr(p_base, "d->d"),
 		x_mkspair(p_base, x_mkptr(p_base, (void *)test_ffi_double_negate),
 		x_mkspair(p_base, test_mk_double(p_base, 5.0),
-		NULL)));
+		NULL))));
 	p_result = x_prim_ffi_call(p_base, p_args);
 	r = test_get_double(p_base, p_result);
 	_it_should("d->d: negate(5.0) = -5.0", r == -5.0);
@@ -487,11 +509,12 @@ static char *test_ffi_call_dd_to_d(void)
 	x_prim_register(p_base, NULL);
 
 	/* (ffi-call "dd->d" fptr 3.0 7.0) -> 10.0 */
-	p_args = x_mkspair(p_base, x_mkstr(p_base, "dd->d"),
+	p_args = x_mkspair(p_base, NULL,
+		x_mkspair(p_base, x_mkstr(p_base, "dd->d"),
 		x_mkspair(p_base, x_mkptr(p_base, (void *)test_ffi_double_add),
 		x_mkspair(p_base, test_mk_double(p_base, 3.0),
 		x_mkspair(p_base, test_mk_double(p_base, 7.0),
-		NULL))));
+		NULL)))));
 	p_result = x_prim_ffi_call(p_base, p_args);
 	r = test_get_double(p_base, p_result);
 	_it_should("dd->d: add(3.0, 7.0) = 10.0", r == 10.0);
@@ -508,41 +531,45 @@ static char *test_ffi_compare_gt_le(void)
 	x_prim_register(p_base, NULL);
 
 	/* d>d: 5.0 > 3.0 -> t */
-	p_args = x_mkspair(p_base, x_mkstr(p_base, "d>d"),
+	p_args = x_mkspair(p_base, NULL,
+		x_mkspair(p_base, x_mkstr(p_base, "d>d"),
 		x_mkspair(p_base, NULL,
 		x_mkspair(p_base, test_mk_double(p_base, 5.0),
 		x_mkspair(p_base, test_mk_double(p_base, 3.0),
-		NULL))));
+		NULL)))));
 	p_result = x_prim_ffi_call(p_base, p_args);
 	_it_should("d>d: 5.0 > 3.0 is true",
 		p_result == x_base_field_true(p_base));
 
 	/* d>d: 1.0 > 2.0 -> #f */
-	p_args = x_mkspair(p_base, x_mkstr(p_base, "d>d"),
+	p_args = x_mkspair(p_base, NULL,
+		x_mkspair(p_base, x_mkstr(p_base, "d>d"),
 		x_mkspair(p_base, NULL,
 		x_mkspair(p_base, test_mk_double(p_base, 1.0),
 		x_mkspair(p_base, test_mk_double(p_base, 2.0),
-		NULL))));
+		NULL)))));
 	p_result = x_prim_ffi_call(p_base, p_args);
 	_it_should("d>d: 1.0 > 2.0 is false",
 		p_result == x_base_field_false(p_base));
 
 	/* d<=d: 3.0 <= 3.0 -> t */
-	p_args = x_mkspair(p_base, x_mkstr(p_base, "d<=d"),
+	p_args = x_mkspair(p_base, NULL,
+		x_mkspair(p_base, x_mkstr(p_base, "d<=d"),
 		x_mkspair(p_base, NULL,
 		x_mkspair(p_base, test_mk_double(p_base, 3.0),
 		x_mkspair(p_base, test_mk_double(p_base, 3.0),
-		NULL))));
+		NULL)))));
 	p_result = x_prim_ffi_call(p_base, p_args);
 	_it_should("d<=d: 3.0 <= 3.0 is true",
 		p_result == x_base_field_true(p_base));
 
 	/* d<=d: 5.0 <= 3.0 -> #f */
-	p_args = x_mkspair(p_base, x_mkstr(p_base, "d<=d"),
+	p_args = x_mkspair(p_base, NULL,
+		x_mkspair(p_base, x_mkstr(p_base, "d<=d"),
 		x_mkspair(p_base, NULL,
 		x_mkspair(p_base, test_mk_double(p_base, 5.0),
 		x_mkspair(p_base, test_mk_double(p_base, 3.0),
-		NULL))));
+		NULL)))));
 	p_result = x_prim_ffi_call(p_base, p_args);
 	_it_should("d<=d: 5.0 <= 3.0 is false",
 		p_result == x_base_field_false(p_base));
@@ -560,10 +587,11 @@ static char *test_ffi_call_s0_to_d(void)
 	x_prim_register(p_base, NULL);
 
 	/* (ffi-call "s0->d" fptr "5") -> 5.0 (our stub reads first char - '0') */
-	p_args = x_mkspair(p_base, x_mkstr(p_base, "s0->d"),
+	p_args = x_mkspair(p_base, NULL,
+		x_mkspair(p_base, x_mkstr(p_base, "s0->d"),
 		x_mkspair(p_base, x_mkptr(p_base, (void *)test_ffi_strtod),
 		x_mkspair(p_base, x_mkstr(p_base, "5"),
-		NULL)));
+		NULL))));
 	p_result = x_prim_ffi_call(p_base, p_args);
 	r = test_get_double(p_base, p_result);
 	_it_should("s0->d: strtod(\"5\") = 5.0", r == 5.0);
@@ -580,10 +608,11 @@ static char *test_ffi_unknown_convention(void)
 	x_prim_register(p_base, NULL);
 
 	/* (ffi-call "bogus" () 1) -> NULL */
-	p_args = x_mkspair(p_base, x_mkstr(p_base, "bogus"),
+	p_args = x_mkspair(p_base, NULL,
+		x_mkspair(p_base, x_mkstr(p_base, "bogus"),
 		x_mkspair(p_base, NULL,
 		x_mkspair(p_base, x_mkint(p_base, (x_int_t)1),
-		NULL)));
+		NULL))));
 	p_result = x_prim_ffi_call(p_base, p_args);
 	_it_should("unknown convention returns NULL",
 		p_result == NULL);
@@ -600,12 +629,13 @@ static char *test_ffi_ptr_call(void)
 	x_prim_register(p_base, NULL);
 
 	/* (ptr-call fptr 10 20 30) -> 60 */
-	p_args = x_mkspair(p_base,
+	p_args = x_mkspair(p_base, NULL,
+		x_mkspair(p_base,
 		x_mkptr(p_base, (void *)test_ffi_long_add3),
 		x_mkspair(p_base, x_mkint(p_base, (x_int_t)10),
 		x_mkspair(p_base, x_mkint(p_base, (x_int_t)20),
 		x_mkspair(p_base, x_mkint(p_base, (x_int_t)30),
-		NULL))));
+		NULL)))));
 	p_result = x_prim_ptr_call(p_base, p_args);
 	_it_should("ptr-call: add3(10,20,30) = 60",
 		x_intval(p_result) == 60);
@@ -626,10 +656,11 @@ static char *test_ffi_ptr_set_word(void)
 	memset(mem, 0, sizeof(mem));
 
 	/* (ptr-set-word! ptr 0 12345) */
-	p_args = x_mkspair(p_base, x_mkptr(p_base, mem),
+	p_args = x_mkspair(p_base, NULL,
+		x_mkspair(p_base, x_mkptr(p_base, mem),
 		x_mkspair(p_base, x_mkint(p_base, (x_int_t)0),
 		x_mkspair(p_base, x_mkint(p_base, (x_int_t)12345),
-		NULL)));
+		NULL))));
 	p_result = x_prim_ptr_set_word(p_base, p_args);
 	_it_should("ptr-set-word! returns ptr",
 		p_result != NULL);
@@ -649,19 +680,21 @@ static char *test_ffi_ptr_call_str_arg(void)
 	x_prim_register(p_base, NULL);
 
 	/* ptr-call with a string arg exercises the str branch */
-	p_args = x_mkspair(p_base,
+	p_args = x_mkspair(p_base, NULL,
+		x_mkspair(p_base,
 		x_mkptr(p_base, (void *)x_lib_strlen),
 		x_mkspair(p_base, x_mkstr(p_base, "hello"),
-		NULL));
+		NULL)));
 	p_result = x_prim_ptr_call(p_base, p_args);
 	_it_should("ptr-call with string arg: strlen(\"hello\") = 5",
 		x_intval(p_result) == 5);
 
 	/* ptr-call with a ptr arg exercises the ptr branch */
-	p_args = x_mkspair(p_base,
+	p_args = x_mkspair(p_base, NULL,
+		x_mkspair(p_base,
 		x_mkptr(p_base, (void *)x_lib_strlen),
 		x_mkspair(p_base, x_mkptr(p_base, (void *)"world"),
-		NULL));
+		NULL)));
 	p_result = x_prim_ptr_call(p_base, p_args);
 	_it_should("ptr-call with ptr arg: strlen(ptr(\"world\")) = 5",
 		x_intval(p_result) == 5);

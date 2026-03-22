@@ -102,17 +102,17 @@ static char *test_string_append(void)
 	x_prim_register(p_base, NULL);
 
 	/* (string-append "foo" "bar") -> "foobar" */
-	p_args = x_mkspair(p_base,
-		x_mkstr(p_base, "foo"),
-		x_mkspair(p_base, x_mkstr(p_base, "bar"), NULL));
+	p_args = x_mkspair(p_base, NULL,
+		x_mkspair(p_base, x_mkstr(p_base, "foo"),
+		x_mkspair(p_base, x_mkstr(p_base, "bar"), NULL)));
 	p_result = x_prim_string_append(p_base, p_args);
 	_it_should("(string-append \"foo\" \"bar\") = \"foobar\"",
 		x_lib_strcmp(x_strval(p_result), "foobar") == 0);
 
 	/* (string-append "" "x") -> "x" */
-	p_args = x_mkspair(p_base,
-		x_mkstr(p_base, ""),
-		x_mkspair(p_base, x_mkstr(p_base, "x"), NULL));
+	p_args = x_mkspair(p_base, NULL,
+		x_mkspair(p_base, x_mkstr(p_base, ""),
+		x_mkspair(p_base, x_mkstr(p_base, "x"), NULL)));
 	p_result = x_prim_string_append(p_base, p_args);
 	_it_should("(string-append \"\" \"x\") = \"x\"",
 		x_lib_strcmp(x_strval(p_result), "x") == 0);
@@ -129,8 +129,8 @@ static char *test_string_symbol_convert(void)
 	x_prim_register(p_base, NULL);
 
 	/* (string->symbol "foo") -> foo symbol */
-	p_args = x_mkspair(p_base,
-		x_mkstr(p_base, "foo"), NULL);
+	p_args = x_mkspair(p_base, NULL,
+		x_mkspair(p_base, x_mkstr(p_base, "foo"), NULL));
 	p_result = x_prim_string_to_symbol(p_base, p_args);
 	_it_should("(string->symbol \"foo\") is a symbol",
 		x_lib_strcmp(x_symbolval(p_result), "foo") == 0);
@@ -141,8 +141,8 @@ static char *test_string_symbol_convert(void)
 		p_sym = x_mksymbol(p_base, "mysym");
 		x_base_env_alist_extend(p_base,
 			x_mkspair(p_base, x_mksymbol(p_base, "mysym"), p_sym));
-		p_args = x_mkspair(p_base,
-			x_mksymbol(p_base, "mysym"), NULL);
+		p_args = x_mkspair(p_base, NULL,
+			x_mkspair(p_base, x_mksymbol(p_base, "mysym"), NULL));
 		p_result = x_prim_symbol_to_string(p_base, p_args);
 		_it_should("(symbol->string mysym) = \"mysym\"",
 			x_lib_strcmp(x_strval(p_result), "mysym") == 0);
@@ -163,13 +163,15 @@ static char *test_list_to_string(void)
 	p_list = x_mkspair(p_base, x_mkchar(p_base, 'a'),
 		x_mkspair(p_base, x_mkchar(p_base, 'b'),
 		x_mkspair(p_base, x_mkchar(p_base, 'c'), NULL)));
-	p_args = x_mkspair(p_base, p_list, NULL);
+	p_args = x_mkspair(p_base, NULL,
+		x_mkspair(p_base, p_list, NULL));
 	p_result = x_prim_list_to_string(p_base, p_args);
 	_it_should("(list->string '(a b c)) = \"abc\"",
 		x_lib_strcmp(x_strval(p_result), "abc") == 0);
 
 	/* Empty list -> "" */
-	p_args = x_mkspair(p_base, NULL, NULL);
+	p_args = x_mkspair(p_base, NULL,
+		x_mkspair(p_base, NULL, NULL));
 	p_result = x_prim_list_to_string(p_base, p_args);
 	_it_should("(list->string '()) = \"\"",
 		x_lib_strcmp(x_strval(p_result), "") == 0);

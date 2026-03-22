@@ -60,6 +60,7 @@ static void __attribute__((unused)) x_eargs(x_obj_t *p_base, x_obj_t *p_args, in
 	va_start(ap, count);
 	for (i = 0; i < count; i++) {
 		x_obj_t **slot = va_arg(ap, x_obj_t **);
+		if (p_args == NULL) { if (slot) *slot = NULL; continue; }
 		if (slot != NULL)
 			*slot = x_prim_eval_arg(p_base, x_firstobj(p_args));
 		p_args = x_restobj(p_args);

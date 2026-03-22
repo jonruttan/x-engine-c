@@ -103,23 +103,25 @@ static char *test_pred_eq(void)
 
 	/* Same object -> t */
 	p_obj = x_mksatom(p_base, (x_int_t)42);
-	p_args = x_mkspair(p_base, p_obj,
-		x_mkspair(p_base, p_obj, NULL));
+	p_args = x_mkspair(p_base, NULL,
+		x_mkspair(p_base, p_obj,
+		x_mkspair(p_base, p_obj, NULL)));
 	p_result = x_prim_eq(p_base, p_args);
 	_it_should("eq? same object returns t",
 		p_result == x_base_field_true(p_base));
 
 	/* Different objects -> #f */
-	p_args = x_mkspair(p_base,
-		x_mksatom(p_base, (x_int_t)1),
-		x_mkspair(p_base, x_mksatom(p_base, (x_int_t)2), NULL));
+	p_args = x_mkspair(p_base, NULL,
+		x_mkspair(p_base, x_mksatom(p_base, (x_int_t)1),
+		x_mkspair(p_base, x_mksatom(p_base, (x_int_t)2), NULL)));
 	p_result = x_prim_eq(p_base, p_args);
 	_it_should("eq? different objects returns #f",
 		p_result == x_base_field_false(p_base));
 
 	/* nil == nil -> t */
 	p_args = x_mkspair(p_base, NULL,
-		x_mkspair(p_base, NULL, NULL));
+		x_mkspair(p_base, NULL,
+		x_mkspair(p_base, NULL, NULL)));
 	p_result = x_prim_eq(p_base, p_args);
 	_it_should("eq? nil nil returns t",
 		p_result == x_base_field_true(p_base));
@@ -136,17 +138,17 @@ static char *test_pred_numeq(void)
 	x_prim_register(p_base, NULL);
 
 	/* (= 5 5) -> t */
-	p_args = x_mkspair(p_base,
-		x_mksatom(p_base, (x_int_t)5),
-		x_mkspair(p_base, x_mksatom(p_base, (x_int_t)5), NULL));
+	p_args = x_mkspair(p_base, NULL,
+		x_mkspair(p_base, x_mksatom(p_base, (x_int_t)5),
+		x_mkspair(p_base, x_mksatom(p_base, (x_int_t)5), NULL)));
 	p_result = x_prim_numeq(p_base, p_args);
 	_it_should("(= 5 5) returns t",
 		p_result == x_base_field_true(p_base));
 
 	/* (= 5 3) -> #f */
-	p_args = x_mkspair(p_base,
-		x_mksatom(p_base, (x_int_t)5),
-		x_mkspair(p_base, x_mksatom(p_base, (x_int_t)3), NULL));
+	p_args = x_mkspair(p_base, NULL,
+		x_mkspair(p_base, x_mksatom(p_base, (x_int_t)5),
+		x_mkspair(p_base, x_mksatom(p_base, (x_int_t)3), NULL)));
 	p_result = x_prim_numeq(p_base, p_args);
 	_it_should("(= 5 3) returns #f",
 		p_result == x_base_field_false(p_base));
@@ -163,25 +165,25 @@ static char *test_pred_lt(void)
 	x_prim_register(p_base, NULL);
 
 	/* (< 3 5) -> t */
-	p_args = x_mkspair(p_base,
-		x_mksatom(p_base, (x_int_t)3),
-		x_mkspair(p_base, x_mksatom(p_base, (x_int_t)5), NULL));
+	p_args = x_mkspair(p_base, NULL,
+		x_mkspair(p_base, x_mksatom(p_base, (x_int_t)3),
+		x_mkspair(p_base, x_mksatom(p_base, (x_int_t)5), NULL)));
 	p_result = x_prim_lt(p_base, p_args);
 	_it_should("(< 3 5) returns t",
 		p_result == x_base_field_true(p_base));
 
 	/* (< 5 3) -> #f */
-	p_args = x_mkspair(p_base,
-		x_mksatom(p_base, (x_int_t)5),
-		x_mkspair(p_base, x_mksatom(p_base, (x_int_t)3), NULL));
+	p_args = x_mkspair(p_base, NULL,
+		x_mkspair(p_base, x_mksatom(p_base, (x_int_t)5),
+		x_mkspair(p_base, x_mksatom(p_base, (x_int_t)3), NULL)));
 	p_result = x_prim_lt(p_base, p_args);
 	_it_should("(< 5 3) returns #f",
 		p_result == x_base_field_false(p_base));
 
 	/* (< 5 5) -> #f */
-	p_args = x_mkspair(p_base,
-		x_mksatom(p_base, (x_int_t)5),
-		x_mkspair(p_base, x_mksatom(p_base, (x_int_t)5), NULL));
+	p_args = x_mkspair(p_base, NULL,
+		x_mkspair(p_base, x_mksatom(p_base, (x_int_t)5),
+		x_mkspair(p_base, x_mksatom(p_base, (x_int_t)5), NULL)));
 	p_result = x_prim_lt(p_base, p_args);
 	_it_should("(< 5 5) returns #f",
 		p_result == x_base_field_false(p_base));
@@ -198,8 +200,8 @@ static char *test_pred_char_to_integer(void)
 	x_prim_register(p_base, NULL);
 
 	/* (char->integer #\A) -> 65 */
-	p_args = x_mkspair(p_base,
-		x_mkchar(p_base, 'A'), NULL);
+	p_args = x_mkspair(p_base, NULL,
+		x_mkspair(p_base, x_mkchar(p_base, 'A'), NULL));
 	p_result = x_prim_char_to_integer(p_base, p_args);
 	_it_should("(char->integer A) = 65",
 		x_intval(p_result) == 65);
@@ -216,8 +218,8 @@ static char *test_pred_integer_to_char(void)
 	x_prim_register(p_base, NULL);
 
 	/* (integer->char 65) -> #\A */
-	p_args = x_mkspair(p_base,
-		x_mksatom(p_base, (x_int_t)65), NULL);
+	p_args = x_mkspair(p_base, NULL,
+		x_mkspair(p_base, x_mksatom(p_base, (x_int_t)65), NULL));
 	p_result = x_prim_integer_to_char(p_base, p_args);
 	_it_should("(integer->char 65) = A",
 		x_charval(p_result) == 'A');

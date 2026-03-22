@@ -61,6 +61,12 @@ x_obj_t *x_syntax_closure_register(x_obj_t *p_base, x_obj_t *p_args) { return p_
 x_obj_t *x_syntax_control_register(x_obj_t *p_base, x_obj_t *p_args) { return p_base; }
 x_obj_t *x_syntax_quote_register(x_obj_t *p_base, x_obj_t *p_args) { return p_base; }
 
+/* Wrap direct prim call with NULL self (self-passing convention) */
+#define PCALL(fn, base, args) \
+	fn((base), x_mkspair((base), NULL, (args)))
+#define PCALL0(fn, base) \
+	fn((base), x_mkspair((base), NULL, NULL))
+
 #include "ext/x-expr/tests/src/helper-system-functions.c"
 
 
@@ -113,16 +119,18 @@ static char *test_type_typep(void)
 		x_mkspair(p_base, x_mksymbol(p_base, "inthandle"), p_int_handle));
 
 	/* (type? myint inthandle) -> t */
-	p_args = x_mkspair(p_base,
+	p_args = x_mkspair(p_base, NULL,
+		x_mkspair(p_base,
 		x_mksymbol(p_base, "myint"),
-		x_mkspair(p_base, x_mksymbol(p_base, "inthandle"), NULL));
+		x_mkspair(p_base, x_mksymbol(p_base, "inthandle"), NULL)));
 	p_result = x_prim_typep(p_base, p_args);
 	_it_should("type? matches correct type",
 		p_result == x_base_field_true(p_base));
 
 	/* (type? nil inthandle) -> #f */
 	p_args = x_mkspair(p_base, NULL,
-		x_mkspair(p_base, x_mksymbol(p_base, "inthandle"), NULL));
+		x_mkspair(p_base, NULL,
+		x_mkspair(p_base, x_mksymbol(p_base, "inthandle"), NULL)));
 	p_result = x_prim_typep(p_base, p_args);
 	_it_should("type? nil returns #f",
 		p_result == x_base_field_false(p_base));
@@ -143,8 +151,9 @@ static char *test_type_type_of(void)
 		x_mkspair(p_base, x_mksymbol(p_base, "myint"), p_int));
 
 	/* (type-of myint) -> int handle */
-	p_args = x_mkspair(p_base,
-		x_mksymbol(p_base, "myint"), NULL);
+	p_args = x_mkspair(p_base, NULL,
+		x_mkspair(p_base,
+		x_mksymbol(p_base, "myint"), NULL));
 	p_result = x_prim_type_of(p_base, p_args);
 	_it_should("type-of returns type handle",
 		p_result != NULL);
@@ -167,8 +176,9 @@ static char *test_type_type_name(void)
 		x_mkspair(p_base, x_mksymbol(p_base, "myint"), p_int));
 
 	/* (type-name myint) -> "int" */
-	p_args = x_mkspair(p_base,
-		x_mksymbol(p_base, "myint"), NULL);
+	p_args = x_mkspair(p_base, NULL,
+		x_mkspair(p_base,
+		x_mksymbol(p_base, "myint"), NULL));
 	p_result = x_prim_type_name(p_base, p_args);
 	_it_should("type-name returns string",
 		p_result != NULL);
@@ -176,7 +186,8 @@ static char *test_type_type_name(void)
 		x_lib_strcmp(x_strval(p_result), X_TYPE_INT_NAME) == 0);
 
 	/* (type-name nil) -> nil */
-	p_args = x_mkspair(p_base, NULL, NULL);
+	p_args = x_mkspair(p_base, NULL,
+		x_mkspair(p_base, NULL, NULL));
 	p_result = x_prim_type_name(p_base, p_args);
 	_it_should("type-name of nil returns nil",
 		p_result == NULL);
@@ -201,9 +212,10 @@ static char *test_type_make_instance(void)
 		x_mkspair(p_base, x_mksymbol(p_base, "inthandle"), p_int_handle));
 
 	/* (make-instance inthandle 42) -> int-typed instance with data 42 */
-	p_args = x_mkspair(p_base,
+	p_args = x_mkspair(p_base, NULL,
+		x_mkspair(p_base,
 		x_mksymbol(p_base, "inthandle"),
-		x_mkspair(p_base, x_mksatom(p_base, (x_int_t)42), NULL));
+		x_mkspair(p_base, x_mksatom(p_base, (x_int_t)42), NULL)));
 	p_result = x_prim_make_instance(p_base, p_args);
 	_it_should("make-instance returns an object",
 		p_result != NULL);
@@ -292,9 +304,10 @@ static char *test_type_make_type(void)
 		x_mkspair(p_base, x_mksymbol(p_base, "handlers"), p_handlers));
 
 	/* (make-type name handlers) */
-	p_args = x_mkspair(p_base,
+	p_args = x_mkspair(p_base, NULL,
+		x_mkspair(p_base,
 		x_mksymbol(p_base, "name"),
-		x_mkspair(p_base, x_mksymbol(p_base, "handlers"), NULL));
+		x_mkspair(p_base, x_mksymbol(p_base, "handlers"), NULL)));
 	p_result = x_prim_make_type(p_base, p_args);
 	_it_should("make-type returns name atom",
 		p_result != NULL);
@@ -305,9 +318,10 @@ static char *test_type_make_type(void)
 	p_name_handle = p_result;
 	x_base_env_alist_extend(p_base,
 		x_mkspair(p_base, x_mksymbol(p_base, "th"), p_name_handle));
-	p_args = x_mkspair(p_base,
+	p_args = x_mkspair(p_base, NULL,
+		x_mkspair(p_base,
 		x_mksymbol(p_base, "th"),
-		x_mkspair(p_base, x_mksatom(p_base, (x_int_t)99), NULL));
+		x_mkspair(p_base, x_mksatom(p_base, (x_int_t)99), NULL)));
 	p_instance = x_prim_make_instance(p_base, p_args);
 	_it_should("make-instance with custom type works",
 		p_instance != NULL);
@@ -362,9 +376,10 @@ static char *test_type_make_type_with_handlers(void)
 	x_base_env_alist_extend(p_base,
 		x_mkspair(p_base, x_mksymbol(p_base, "hdlrs"), p_handlers));
 
-	p_args = x_mkspair(p_base,
+	p_args = x_mkspair(p_base, NULL,
+		x_mkspair(p_base,
 		x_mksymbol(p_base, "name"),
-		x_mkspair(p_base, x_mksymbol(p_base, "hdlrs"), NULL));
+		x_mkspair(p_base, x_mksymbol(p_base, "hdlrs"), NULL)));
 	p_result = x_prim_make_type(p_base, p_args);
 	_it_should("make-type with all handlers returns name",
 		p_result != NULL);
@@ -392,10 +407,11 @@ static char *test_type_base_make_type(void)
 		x_mkspair(p_base, x_mksymbol(p_base, "hdlrs"), NULL));
 
 	/* (base-make-type tgt name hdlrs) */
-	p_args = x_mkspair(p_base,
+	p_args = x_mkspair(p_base, NULL,
+		x_mkspair(p_base,
 		x_mksymbol(p_base, "tgt"),
 		x_mkspair(p_base, x_mksymbol(p_base, "name"),
-		x_mkspair(p_base, x_mksymbol(p_base, "hdlrs"), NULL)));
+		x_mkspair(p_base, x_mksymbol(p_base, "hdlrs"), NULL))));
 	p_result = x_prim_base_make_type(p_base, p_args);
 	_it_should("base-make-type returns name atom",
 		p_result != NULL);
@@ -410,6 +426,7 @@ static char *test_type_make_base(void)
 {
 	x_obj_t *p_base, *p_new_base;
 
+	helper_set_alloc(MEM_SYSTEM);
 	p_base = x_base_make(NULL, NULL);
 	x_prim_register(p_base, NULL);
 
@@ -435,6 +452,7 @@ static char *test_type_base_eval(void)
 	x_obj_t *p_base, *p_args, *p_result, *p_target;
 	x_obj_t *p_sym;
 
+	helper_set_alloc(MEM_SYSTEM);
 	p_base = x_base_make(NULL, NULL);
 	x_prim_register(p_base, NULL);
 
@@ -456,9 +474,10 @@ static char *test_type_base_eval(void)
 		x_mkspair(p_base, x_mksymbol(p_base, "expr"), p_sym));
 
 	/* (base-eval tgt expr) -> evaluates xx in target -> 77 */
-	p_args = x_mkspair(p_base,
+	p_args = x_mkspair(p_base, NULL,
+		x_mkspair(p_base,
 		x_mksymbol(p_base, "tgt"),
-		x_mkspair(p_base, x_mksymbol(p_base, "expr"), NULL));
+		x_mkspair(p_base, x_mksymbol(p_base, "expr"), NULL)));
 	p_result = x_prim_base_eval(p_base, p_args);
 	_it_should("base-eval returns result from target",
 		p_result != NULL);
@@ -475,6 +494,7 @@ static char *test_type_base_eval_error(void)
 	jmp_buf jmp;
 	x_obj_t *p_handler;
 
+	helper_set_alloc(MEM_SYSTEM);
 	p_base = x_base_make(NULL, NULL);
 	x_prim_register(p_base, NULL);
 
@@ -502,9 +522,10 @@ static char *test_type_base_eval_error(void)
 	x_base_field_error_handler(p_base) = p_handler;
 
 	if (setjmp(jmp) == 0) {
-		p_args = x_mkspair(p_base,
+		p_args = x_mkspair(p_base, NULL,
+		x_mkspair(p_base,
 			x_mksymbol(p_base, "tgt"),
-			x_mkspair(p_base, x_mksymbol(p_base, "expr"), NULL));
+			x_mkspair(p_base, x_mksymbol(p_base, "expr"), NULL)));
 		p_result = x_prim_base_eval(p_base, p_args);
 		_it_should("base-eval error should have jumped", 0);
 	} else {
@@ -568,8 +589,9 @@ static char *test_type_buffer_token(void)
 		x_mkspair(p_base, x_mksymbol(p_base, "buf"), p_buffer));
 
 	/* (buffer-token buf) */
-	p_args = x_mkspair(p_base,
-		x_mksymbol(p_base, "buf"), NULL);
+	p_args = x_mkspair(p_base, NULL,
+		x_mkspair(p_base,
+		x_mksymbol(p_base, "buf"), NULL));
 	p_result = x_prim_buffer_token(p_base, p_args);
 	_it_should("buffer-token returns string",
 		p_result != NULL);
@@ -585,6 +607,7 @@ static char *test_type_token_read_string(void)
 	x_obj_t *p_base, *p_args, *p_result;
 	x_obj_t *p_token_base;
 
+	helper_set_alloc(MEM_SYSTEM);
 	p_base = x_base_make(NULL, NULL);
 	x_prim_register(p_base, NULL);
 
@@ -606,9 +629,10 @@ static char *test_type_token_read_string(void)
 	/* (token-read-string tb s) — exercises the function and RO buffer path.
 	 * The result may be NULL if the string doesn't match registered types
 	 * on the token base, but the code path is still exercised. */
-	p_args = x_mkspair(p_base,
+	p_args = x_mkspair(p_base, NULL,
+		x_mkspair(p_base,
 		x_mksymbol(p_base, "tb"),
-		x_mkspair(p_base, x_mksymbol(p_base, "s"), NULL));
+		x_mkspair(p_base, x_mksymbol(p_base, "s"), NULL)));
 	p_result = x_prim_token_read_string(p_base, p_args);
 	(void)p_result;
 	/* Just exercise the code path, result depends on type registration */
@@ -639,9 +663,10 @@ static char *test_type_convert(void)
 		x_mkspair(p_base, x_mksymbol(p_base, "h"), p_int_handle));
 
 	/* (convert v h) -> v (same type, short-circuit) */
-	p_args = x_mkspair(p_base,
+	p_args = x_mkspair(p_base, NULL,
+		x_mkspair(p_base,
 		x_mksymbol(p_base, "v"),
-		x_mkspair(p_base, x_mksymbol(p_base, "h"), NULL));
+		x_mkspair(p_base, x_mksymbol(p_base, "h"), NULL)));
 	p_result = x_prim_convert(p_base, p_args);
 	_it_should("convert short-circuits for same type",
 		p_result == p_int);
@@ -649,9 +674,10 @@ static char *test_type_convert(void)
 	/* (convert nil h) -> nil */
 	x_base_env_alist_extend(p_base,
 		x_mkspair(p_base, x_mksymbol(p_base, "v"), NULL));
-	p_args = x_mkspair(p_base,
+	p_args = x_mkspair(p_base, NULL,
+		x_mkspair(p_base,
 		x_mksymbol(p_base, "v"),
-		x_mkspair(p_base, x_mksymbol(p_base, "h"), NULL));
+		x_mkspair(p_base, x_mksymbol(p_base, "h"), NULL)));
 	p_result = x_prim_convert(p_base, p_args);
 	_it_should("convert nil returns nil",
 		p_result == NULL);
@@ -664,9 +690,10 @@ static char *test_type_convert(void)
 			x_mkspair(p_base, x_mksymbol(p_base, "v"), p_int));
 		x_base_env_alist_extend(p_base,
 			x_mkspair(p_base, x_mksymbol(p_base, "bh"), p_bogus));
-		p_args = x_mkspair(p_base,
+		p_args = x_mkspair(p_base, NULL,
+		x_mkspair(p_base,
 			x_mksymbol(p_base, "v"),
-			x_mkspair(p_base, x_mksymbol(p_base, "bh"), NULL));
+			x_mkspair(p_base, x_mksymbol(p_base, "bh"), NULL)));
 		p_result = x_prim_convert(p_base, p_args);
 		_it_should("convert with unregistered handle returns nil",
 			p_result == NULL);
@@ -697,7 +724,8 @@ static char *test_type_type_name_nil_name(void)
 		x_mksatom(p_base, (x_int_t)1), NULL);
 
 	/* Call x_prim_type_name directly with unevaluated arg */
-	p_args = x_mkspair(p_base, p_obj, NULL);
+	p_args = x_mkspair(p_base, NULL,
+		x_mkspair(p_base, p_obj, NULL));
 	p_result = x_prim_type_name(p_base, p_args);
 	_it_should("type-name with nil name returns nil",
 		p_result == NULL);
@@ -759,9 +787,10 @@ static char *test_type_convert_from_exact(void)
 		x_mkspair(p_base, x_mksymbol(p_base, "h"), p_tgt_handle));
 
 	/* (convert v h) -> from alist exact match */
-	p_args = x_mkspair(p_base,
+	p_args = x_mkspair(p_base, NULL,
+		x_mkspair(p_base,
 		x_mksymbol(p_base, "v"),
-		x_mkspair(p_base, x_mksymbol(p_base, "h"), NULL));
+		x_mkspair(p_base, x_mksymbol(p_base, "h"), NULL)));
 	p_result = x_prim_convert(p_base, p_args);
 	_it_should("convert via from alist exact match returns value",
 		p_result == p_instance);
@@ -815,9 +844,10 @@ static char *test_type_convert_wildcard(void)
 		x_mkspair(p_base, x_mksymbol(p_base, "h"), p_tgt_handle));
 
 	/* (convert v h) -> wildcard #t match in from alist */
-	p_args = x_mkspair(p_base,
+	p_args = x_mkspair(p_base, NULL,
+		x_mkspair(p_base,
 		x_mksymbol(p_base, "v"),
-		x_mkspair(p_base, x_mksymbol(p_base, "h"), NULL));
+		x_mkspair(p_base, x_mksymbol(p_base, "h"), NULL)));
 	p_result = x_prim_convert(p_base, p_args);
 	_it_should("convert via wildcard from alist returns value",
 		p_result == p_instance);
@@ -873,9 +903,10 @@ static char *test_type_convert_to_alist(void)
 		x_mkspair(p_base, x_mksymbol(p_base, "h"), p_tgt_handle));
 
 	/* (convert v h) -> source's to alist match */
-	p_args = x_mkspair(p_base,
+	p_args = x_mkspair(p_base, NULL,
+		x_mkspair(p_base,
 		x_mksymbol(p_base, "v"),
-		x_mkspair(p_base, x_mksymbol(p_base, "h"), NULL));
+		x_mkspair(p_base, x_mksymbol(p_base, "h"), NULL)));
 	p_result = x_prim_convert(p_base, p_args);
 	_it_should("convert via to alist returns value",
 		p_result == p_instance);
@@ -932,9 +963,10 @@ static char *test_type_convert_no_match(void)
 		x_mkspair(p_base, x_mksymbol(p_base, "h"), p_tgt_handle));
 
 	/* (convert v h) -> no from or to match, returns nil */
-	p_args = x_mkspair(p_base,
+	p_args = x_mkspair(p_base, NULL,
+		x_mkspair(p_base,
 		x_mksymbol(p_base, "v"),
-		x_mkspair(p_base, x_mksymbol(p_base, "h"), NULL));
+		x_mkspair(p_base, x_mksymbol(p_base, "h"), NULL)));
 	p_result = x_prim_convert(p_base, p_args);
 	_it_should("convert with no from/to match returns nil",
 		p_result == NULL);
@@ -949,6 +981,7 @@ static char *test_type_token_read_string_tokens(void)
 	x_obj_t *p_base, *p_args, *p_result;
 	x_obj_t *p_token_base;
 
+	helper_set_alloc(MEM_SYSTEM);
 	p_base = x_base_make(NULL, NULL);
 	x_prim_register(p_base, NULL);
 
@@ -961,9 +994,10 @@ static char *test_type_token_read_string_tokens(void)
 			x_mkstr(p_base, "(1)(2)")));
 
 	/* (token-read-string tb s) — "(1)(2)" produces two list tokens */
-	p_args = x_mkspair(p_base,
+	p_args = x_mkspair(p_base, NULL,
+		x_mkspair(p_base,
 		x_mksymbol(p_base, "tb"),
-		x_mkspair(p_base, x_mksymbol(p_base, "s"), NULL));
+		x_mkspair(p_base, x_mksymbol(p_base, "s"), NULL)));
 	p_result = x_prim_token_read_string(p_base, p_args);
 	_it_should("token-read-string returns non-nil for multi-token input",
 		p_result != NULL);
@@ -986,9 +1020,10 @@ static char *test_type_make_instance_nil_type(void)
 	p_bogus = x_mksatom(p_base, (x_int_t)999);
 	x_base_env_alist_extend(p_base,
 		x_mkspair(p_base, x_mksymbol(p_base, "bh"), p_bogus));
-	p_args = x_mkspair(p_base,
+	p_args = x_mkspair(p_base, NULL,
+		x_mkspair(p_base,
 		x_mksymbol(p_base, "bh"),
-		x_mkspair(p_base, x_mksatom(p_base, (x_int_t)0), NULL));
+		x_mkspair(p_base, x_mksatom(p_base, (x_int_t)0), NULL)));
 	p_result = x_prim_make_instance(p_base, p_args);
 	_it_should("make-instance with bad handle returns nil",
 		p_result == NULL);
@@ -1036,9 +1071,10 @@ static char *test_type_base_eval_error_no_parent(void)
 	x_obj_hook_error = test_error_hook_type_passthrough;
 	x_base_field_error_handler(p_base) = NULL;
 
-	p_args = x_mkspair(p_base,
+	p_args = x_mkspair(p_base, NULL,
+		x_mkspair(p_base,
 		x_mksymbol(p_base, "tgt"),
-		x_mkspair(p_base, x_mksymbol(p_base, "expr"), NULL));
+		x_mkspair(p_base, x_mksymbol(p_base, "expr"), NULL)));
 	p_result = x_prim_base_eval(p_base, p_args);
 	_it_should("base-eval error with no parent handler calls error hook twice",
 		test_error_hook_called_type == 2);
