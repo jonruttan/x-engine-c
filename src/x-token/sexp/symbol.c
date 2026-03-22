@@ -25,7 +25,8 @@
 
 x_satom_t x_sexp_symbol_analyse_prim = x_obj_set(x_type_atom_obj, X_OBJ_FLAG_NONE, { .fn = x_sexp_symbol_analyse }),
 	x_sexp_symbol_read_prim = x_obj_set(x_type_atom_obj, X_OBJ_FLAG_NONE, { .fn = x_sexp_symbol_read }),
-	x_sexp_symbol_write_prim = x_obj_set(x_type_atom_obj, X_OBJ_FLAG_NONE, { .fn = x_sexp_symbol_write });
+	x_sexp_symbol_write_prim = x_obj_set(x_type_atom_obj, X_OBJ_FLAG_NONE, { .fn = x_sexp_symbol_write }),
+	x_sexp_symbol_display_prim = x_obj_set(x_type_atom_obj, X_OBJ_FLAG_NONE, { .fn = x_sexp_symbol_display });
 
 x_obj_t *x_sexp_symbol_analyse(x_obj_t *p_base, x_obj_t *p_args)
 {
@@ -54,13 +55,32 @@ x_obj_t *x_sexp_symbol_read(x_obj_t *p_base, x_obj_t *p_args)
 	return x_type_symbol_make(p_base, (x_obj_t *)args);
 }
 
-x_obj_t *x_sexp_symbol_write(x_obj_t *p_base, x_obj_t *p_args)
+x_obj_t *x_sexp_symbol_display(x_obj_t *p_base, x_obj_t *p_args)
 {
 	x_satom_t str = x_obj_set(x_type_atom_obj, X_OBJ_FLAG_NONE,
 		{ .s = x_firststr(x_firstobj(p_args)) });
 	x_spair_t wrap = x_obj_set(NULL, X_OBJ_FLAG_NONE, { str }, { NULL });
 
 	x_base_write_str(p_base, (x_obj_t *)&wrap);
+
+	return x_firstobj(p_args);
+}
+
+x_obj_t *x_sexp_symbol_write(x_obj_t *p_base, x_obj_t *p_args)
+{
+	x_satom_t prefix = x_obj_set(x_type_atom_obj, X_OBJ_FLAG_NONE,
+		{ .s = (x_char_t *)"(lit " }),
+		str = x_obj_set(x_type_atom_obj, X_OBJ_FLAG_NONE,
+		{ .s = x_firststr(x_firstobj(p_args)) }),
+		suffix = x_obj_set(x_type_atom_obj, X_OBJ_FLAG_NONE,
+		{ .s = (x_char_t *)")" });
+	x_spair_t wrap_pre = x_obj_set(NULL, X_OBJ_FLAG_NONE, { prefix }, { NULL }),
+		wrap_str = x_obj_set(NULL, X_OBJ_FLAG_NONE, { str }, { NULL }),
+		wrap_suf = x_obj_set(NULL, X_OBJ_FLAG_NONE, { suffix }, { NULL });
+
+	x_base_write_str(p_base, (x_obj_t *)&wrap_pre);
+	x_base_write_str(p_base, (x_obj_t *)&wrap_str);
+	x_base_write_str(p_base, (x_obj_t *)&wrap_suf);
 
 	return x_firstobj(p_args);
 }

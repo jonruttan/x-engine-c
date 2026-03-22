@@ -26,10 +26,12 @@
  */
 extern x_satom_t x_sexp_symbol_analyse_prim,
 	x_sexp_symbol_read_prim,
-	x_sexp_symbol_write_prim;
+	x_sexp_symbol_write_prim,
+	x_sexp_symbol_display_prim;
 
 x_obj_t *x_sexp_symbol_analyse(x_obj_t *p_base, x_obj_t *p_args);
 x_obj_t *x_sexp_symbol_read(x_obj_t *p_base, x_obj_t *p_args);
 x_obj_t *x_sexp_symbol_write(x_obj_t *p_base, x_obj_t *p_args);
+x_obj_t *x_sexp_symbol_display(x_obj_t *p_base, x_obj_t *p_args);
 
 #endif /* X_SEXP_SYMBOL_H */
