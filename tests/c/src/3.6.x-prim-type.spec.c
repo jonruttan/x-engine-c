@@ -77,7 +77,10 @@ x_obj_t *x_syntax_quote_register(x_obj_t *p_base, x_obj_t *p_args) { return p_ba
 static void _setup(void)
 {
 	_buffer_index = -1;
-	helper_set_alloc(MEM_GUARANTEED);
+	/* Use system allocator: unified callable layout creates more objects
+	 * than the 1024-slot guaranteed pool can handle when registering
+	 * prims on multiple bases. */
+	helper_set_alloc(MEM_SYSTEM);
 }
 
 static void _teardown(void)
@@ -558,11 +561,12 @@ static char *test_type_base_bind(void)
 		x_mkspair(p_base, x_mksymbol(p_base, "val"),
 			x_mksatom(p_base, (x_int_t)55)));
 
-	/* (base-bind tgt nm val) */
-	p_args = x_mkspair(p_base,
+	/* (base-bind tgt nm val) — prepend NULL self */
+	p_args = x_mkspair(p_base, NULL,
+		x_mkspair(p_base,
 		x_mksymbol(p_base, "tgt"),
 		x_mkspair(p_base, x_mksymbol(p_base, "nm"),
-		x_mkspair(p_base, x_mksymbol(p_base, "val"), NULL)));
+		x_mkspair(p_base, x_mksymbol(p_base, "val"), NULL))));
 	p_result = x_prim_base_bind(p_base, p_args);
 	_it_should("base-bind returns value",
 		p_result != NULL);
