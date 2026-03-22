@@ -450,12 +450,19 @@ static x_obj_t *make_typed_obj(x_obj_t *p_base, x_char_t *name, int units)
 	x_obj_t *p_name = x_mksatom(p_base, name);
 	struct x_type_t ts = { .p_name = p_name };
 	x_obj_t *p_type = x_type_struct_make(p_base, ts);
+	x_obj_t *p_state;
 
 	x_base_type_alist_extend(p_base, p_type);
 
-	return x_obj_make(p_base, p_type, X_OBJ_FLAG_NONE, units,
-		(x_obj_t *)NULL, (x_obj_t *)NULL,
-		(x_obj_t *)NULL, (x_obj_t *)NULL);
+	/* Build a minimal state list for 2-unit callable layout:
+	   procedures need (params . (body . (env . bst))),
+	   operatives need (params . (envparam . (body . env))) */
+	p_state = x_mkfspair(p_base, X_OBJ_FLAG_SHARED, NULL,
+		x_mkfspair(p_base, X_OBJ_FLAG_SHARED, NULL,
+			x_mkfspair(p_base, X_OBJ_FLAG_SHARED, NULL, NULL)));
+
+	return x_obj_make(p_base, p_type, X_OBJ_FLAG_NONE,
+		X_OBJ_LENGTH_PAIR, (x_obj_t *)NULL, p_state);
 }
 
 static char *test_type_prim_call_procedure(void)
@@ -495,14 +502,28 @@ static char *test_type_prim_call_operative(void)
 static char *test_type_prim_apply_procedure(void)
 {
 	x_obj_t *p_base, *p_obj, *p_args, *p_ret, *p_env;
+	x_obj_t *p_state, *p_s3, *p_s2;
 
 	helper_alloc_reset();
 
 	p_base = x_base_make(NULL, NULL);
 	p_env = x_base_field_env_alist(p_base);
 
-	/* Procedure needs 3 data fields: params, body, env */
-	p_obj = make_typed_obj(p_base, (x_char_t *)X_TYPE_PROCEDURE_NAME, 3);
+	/* Build state list: (params . (body . (env . bst))) */
+	p_s3 = x_mkspair(p_base, NULL, NULL);       /* (env . bst) */
+	p_s2 = x_mkspair(p_base, NULL, p_s3);       /* (body . (env . bst)) */
+	p_state = x_mkspair(p_base, NULL, p_s2);    /* (params . (body . (env . bst))) */
+
+	/* Procedure is spair (2 slots): [fn-ptr][state] */
+	{
+	x_obj_t *p_name = x_mksatom(p_base, (x_char_t *)X_TYPE_PROCEDURE_NAME);
+	struct x_type_t ts = { .p_name = p_name };
+	x_obj_t *p_type = x_type_struct_make(p_base, ts);
+	x_base_type_alist_extend(p_base, p_type);
+	p_obj = x_obj_make(p_base, p_type, X_OBJ_FLAG_NONE, X_OBJ_LENGTH_PAIR,
+		(x_prim_fn)NULL, p_state);
+	}
+
 	p_args = x_mkspair(p_base, p_obj, NULL);
 
 	p_ret = x_type_prim_apply(p_base, p_args);

@@ -105,10 +105,21 @@ static char *test_sexp_char_analyse1(void)
 
 	p_base = x_base_make(NULL, NULL);
 	p_buffer = x_mkbuffer(p_base, buffer);
-	p_args = x_mkspair(p_base, p_buffer, p_base);
-	p_obj = x_type_buffer_read(p_base, p_args);
-	p_obj = x_sexp_char_analyse1(p_base, p_args);
-	_it_should("return NULL", NULL == p_obj);
+	{
+		x_spair_t score = x_obj_set(NULL, X_OBJ_FLAG_NONE, {});
+		x_spair_t buffer_args[3] = {
+			x_obj_set(NULL, X_OBJ_FLAG_NONE, { p_buffer }, { (x_obj_t *)(buffer_args + 1) }),
+			x_obj_set(NULL, X_OBJ_FLAG_NONE, { score }, { (x_obj_t *)(buffer_args + 2) }),
+			x_obj_set(NULL, X_OBJ_FLAG_NONE, { NULL }, { NULL }),
+		};
+		x_spair_t self_args = x_obj_set(NULL, X_OBJ_FLAG_NONE,
+			{ (x_obj_t *)&x_sexp_char_analyse1_prim }, { (x_obj_t *)buffer_args });
+
+		p_args = (x_obj_t *)buffer_args;
+		p_obj = x_type_buffer_read(p_base, p_args);
+		p_obj = x_sexp_char_analyse1(p_base, (x_obj_t *)&self_args);
+		_it_should("return NULL", NULL == p_obj);
+	}
 
 	test_cleanup(p_base);
 
@@ -119,13 +130,19 @@ static char *test_sexp_char_analyse1(void)
 
 	p_base = x_base_make(NULL, NULL);
 	p_buffer = x_mkbuffer(p_base, buffer);
-	p_args = x_mkspair(p_base, p_buffer, p_base);
-	p_obj = x_type_buffer_read(p_base, p_args);
 	{
-	/* Wrap (self . buffer_args) for spair analyzer dispatch */
-	x_spair_t sp = x_obj_set(NULL, X_OBJ_FLAG_NONE,
-		{ (x_obj_t *)&x_sexp_char_analyse1_prim }, { p_args });
-	p_obj = x_sexp_char_analyse1(p_base, (x_obj_t *)&sp);
+		x_spair_t score = x_obj_set(NULL, X_OBJ_FLAG_NONE, {});
+		x_spair_t buffer_args[3] = {
+			x_obj_set(NULL, X_OBJ_FLAG_NONE, { p_buffer }, { (x_obj_t *)(buffer_args + 1) }),
+			x_obj_set(NULL, X_OBJ_FLAG_NONE, { score }, { (x_obj_t *)(buffer_args + 2) }),
+			x_obj_set(NULL, X_OBJ_FLAG_NONE, { NULL }, { NULL }),
+		};
+		x_spair_t self_args = x_obj_set(NULL, X_OBJ_FLAG_NONE,
+			{ (x_obj_t *)&x_sexp_char_analyse1_prim }, { (x_obj_t *)buffer_args });
+
+		p_args = (x_obj_t *)buffer_args;
+		p_obj = x_type_buffer_read(p_base, p_args);
+		p_obj = x_sexp_char_analyse1(p_base, (x_obj_t *)&self_args);
 	}
 	_it_should("return the analyse2 primitive",
 		(x_obj_t *)&x_sexp_char_analyse2_prim == p_obj
@@ -148,10 +165,21 @@ static char *test_sexp_char_analyse2(void)
 
 	p_base = x_base_make(NULL, NULL);
 	p_buffer = x_mkbuffer(p_base, buffer);
-	p_args = x_mkspair(p_base, p_buffer, p_base);
-	p_obj = x_type_buffer_read(p_base, p_args);
-	p_obj = x_sexp_char_analyse2(p_base, p_args);
-	_it_should("return NULL", NULL == p_obj);
+	{
+		x_spair_t score = x_obj_set(NULL, X_OBJ_FLAG_NONE, {});
+		x_spair_t buffer_args[3] = {
+			x_obj_set(NULL, X_OBJ_FLAG_NONE, { p_buffer }, { (x_obj_t *)(buffer_args + 1) }),
+			x_obj_set(NULL, X_OBJ_FLAG_NONE, { score }, { (x_obj_t *)(buffer_args + 2) }),
+			x_obj_set(NULL, X_OBJ_FLAG_NONE, { NULL }, { NULL }),
+		};
+		x_spair_t self_args = x_obj_set(NULL, X_OBJ_FLAG_NONE,
+			{ (x_obj_t *)&x_sexp_char_analyse2_prim }, { (x_obj_t *)buffer_args });
+
+		p_args = (x_obj_t *)buffer_args;
+		p_obj = x_type_buffer_read(p_base, p_args);
+		p_obj = x_sexp_char_analyse2(p_base, (x_obj_t *)&self_args);
+		_it_should("return NULL", NULL == p_obj);
+	}
 
 	test_cleanup(p_base);
 
@@ -162,12 +190,23 @@ static char *test_sexp_char_analyse2(void)
 
 	p_base = x_base_make(NULL, NULL);
 	p_buffer = x_mkbuffer(p_base, buffer);
-	p_args = x_mkspair(p_base, p_buffer, p_base);
-	p_obj = x_type_buffer_read(p_base, p_args);
-	p_obj = x_sexp_char_analyse2(p_base, p_args);
-	_it_should("return the analyse3 primitive",
-		x_sexp_char_analyse3_prim == p_obj
-	);
+	{
+		x_spair_t score = x_obj_set(NULL, X_OBJ_FLAG_NONE, {});
+		x_spair_t buffer_args[3] = {
+			x_obj_set(NULL, X_OBJ_FLAG_NONE, { p_buffer }, { (x_obj_t *)(buffer_args + 1) }),
+			x_obj_set(NULL, X_OBJ_FLAG_NONE, { score }, { (x_obj_t *)(buffer_args + 2) }),
+			x_obj_set(NULL, X_OBJ_FLAG_NONE, { NULL }, { NULL }),
+		};
+		x_spair_t self_args = x_obj_set(NULL, X_OBJ_FLAG_NONE,
+			{ (x_obj_t *)&x_sexp_char_analyse2_prim }, { (x_obj_t *)buffer_args });
+
+		p_args = (x_obj_t *)buffer_args;
+		p_obj = x_type_buffer_read(p_base, p_args);
+		p_obj = x_sexp_char_analyse2(p_base, (x_obj_t *)&self_args);
+		_it_should("return the analyse3 primitive",
+			(x_obj_t *)&x_sexp_char_analyse3_prim == p_obj
+		);
+	}
 
 	test_cleanup(p_base);
 

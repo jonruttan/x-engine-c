@@ -146,25 +146,27 @@ static char *test_sexp_str_analyse2(void)
 			x_obj_set(NULL, X_OBJ_FLAG_NONE, { score }, { (x_obj_t *)(buffer_args + 2) }),
 			x_obj_set(NULL, X_OBJ_FLAG_NONE, { NULL }, { NULL }),
 		};
+		x_spair_t self_args = x_obj_set(NULL, X_OBJ_FLAG_NONE,
+			{ (x_obj_t *)&x_sexp_str_analyse2_prim }, { (x_obj_t *)buffer_args });
 		x_obj_t *p_score = (x_obj_t *)score;
 
 		p_args = (x_obj_t *)buffer_args;
 		p_obj = x_type_buffer_read(p_base, p_args);
-		p_obj = x_sexp_str_analyse2(p_base, p_args);
+		p_obj = x_sexp_str_analyse2(p_base, (x_obj_t *)&self_args);
 		_it_should("return the score", p_score == p_obj);
+
+
+		s = " ";
+		helper_file_buffer_ptr[TEST_HELPER_FILE_STDIN] = s;
+		helper_file_reset();
+		x_type_buffer_reset(p_base, p_args);
+
+		p_obj = x_type_buffer_read(p_base, p_args);
+		p_obj = x_sexp_str_analyse2(p_base, (x_obj_t *)&self_args);
+		_it_should("return the analyse2 primitive object",
+			(x_obj_t *)&x_sexp_str_analyse2_prim == p_obj
+		);
 	}
-
-
-	s = " ";
-	helper_file_buffer_ptr[TEST_HELPER_FILE_STDIN] = s;
-	helper_file_reset();
-	x_type_buffer_reset(p_base, p_args);
-
-	p_obj = x_type_buffer_read(p_base, p_args);
-	p_obj = x_sexp_str_analyse2(p_base, p_args);
-	_it_should("return the analyse2 primitive object",
-		x_sexp_str_analyse2_prim == p_obj
-	);
 
 
 	test_cleanup(p_base);
@@ -332,12 +334,14 @@ static char *test_sexp_str_analyse2_escape(void)
 			x_obj_set(NULL, X_OBJ_FLAG_NONE, { score }, { (x_obj_t *)(buffer_args + 2) }),
 			x_obj_set(NULL, X_OBJ_FLAG_NONE, { NULL }, { NULL }),
 		};
+		x_spair_t self_args = x_obj_set(NULL, X_OBJ_FLAG_NONE,
+			{ (x_obj_t *)&x_sexp_str_analyse2_prim }, { (x_obj_t *)buffer_args });
 
 		p_args = (x_obj_t *)buffer_args;
 		p_obj = x_type_buffer_read(p_base, p_args);
-		p_obj = x_sexp_str_analyse2(p_base, p_args);
+		p_obj = x_sexp_str_analyse2(p_base, (x_obj_t *)&self_args);
 		_it_should("backslash enters escape state (analyse3)",
-			x_sexp_str_analyse3_prim == p_obj);
+			(x_obj_t *)&x_sexp_str_analyse3_prim == p_obj);
 	}
 
 	test_cleanup(p_base);
@@ -349,10 +353,14 @@ static char *test_sexp_str_analyse3_return(void)
 	x_obj_t *p_base, *p_obj;
 
 	p_base = x_base_make(NULL, NULL);
-	/* analyse3 always returns analyse2 (go back to normal reading) */
-	p_obj = x_sexp_str_analyse3(p_base, NULL);
-	_it_should("analyse3 returns analyse2",
-		x_sexp_str_analyse2_prim == p_obj);
+	{
+		/* analyse3 always returns analyse2 (go back to normal reading) */
+		x_spair_t self_args = x_obj_set(NULL, X_OBJ_FLAG_NONE,
+			{ (x_obj_t *)&x_sexp_str_analyse3_prim }, { NULL });
+		p_obj = x_sexp_str_analyse3(p_base, (x_obj_t *)&self_args);
+		_it_should("analyse3 returns analyse2",
+			(x_obj_t *)&x_sexp_str_analyse2_prim == p_obj);
+	}
 
 	test_cleanup(p_base);
 	return NULL;
