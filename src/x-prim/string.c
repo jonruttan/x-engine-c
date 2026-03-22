@@ -21,16 +21,14 @@
 #include "x-type/str.h"
 #include "x-type/symbol.h"
 
-/* string-append: (string-append str...) -> concatenated string */
+/* string-append: (string-append a b) -> concatenated string */
 static x_obj_t *x_prim_string_append(x_obj_t *p_base, x_obj_t *p_args)
 {
 	x_obj_t *p_a, *p_b;
 	x_char_t *sa, *sb, *s;
 	size_t la, lb;
 
-	p_args = x_restobj(p_args);
-	p_a = x_prim_eval_arg(p_base, x_firstobj(p_args));
-	p_b = x_prim_eval_arg(p_base, x_firstobj(x_restobj(p_args)));
+	x_eargs(p_base, p_args, 3, NULL, &p_a, &p_b);
 	sa = x_strval(p_a);
 	sb = x_strval(p_b);
 	la = x_lib_strlen(sa);
@@ -46,8 +44,7 @@ static x_obj_t *x_prim_string_append(x_obj_t *p_base, x_obj_t *p_args)
 static x_obj_t *x_prim_string_to_symbol(x_obj_t *p_base, x_obj_t *p_args)
 {
 	x_obj_t *p_str;
-	p_args = x_restobj(p_args);
-	p_str = x_prim_eval_arg(p_base, x_firstobj(p_args));
+	x_eargs(p_base, p_args, 2, NULL, &p_str);
 
 	return x_mksymbol(p_base, x_strval(p_str));
 }
@@ -56,8 +53,7 @@ static x_obj_t *x_prim_string_to_symbol(x_obj_t *p_base, x_obj_t *p_args)
 static x_obj_t *x_prim_symbol_to_string(x_obj_t *p_base, x_obj_t *p_args)
 {
 	x_obj_t *p_sym;
-	p_args = x_restobj(p_args);
-	p_sym = x_prim_eval_arg(p_base, x_firstobj(p_args));
+	x_eargs(p_base, p_args, 2, NULL, &p_sym);
 
 	return x_mkstr(p_base, x_symbolval(p_sym));
 }
@@ -69,8 +65,7 @@ static x_obj_t *x_prim_list_to_string(x_obj_t *p_base, x_obj_t *p_args)
 	x_char_t *s;
 	size_t len = 0;
 
-	p_args = x_restobj(p_args);
-	p_list = x_prim_eval_arg(p_base, x_firstobj(p_args));
+	x_eargs(p_base, p_args, 2, NULL, &p_list);
 	for (p_cur = p_list; !x_obj_isnil(p_base, p_cur); p_cur = x_restobj(p_cur))
 		len++;
 	s = (x_char_t *)x_sys_malloc(len + 1);
