@@ -73,7 +73,7 @@ X_MACHINE?=\"$(DUMPMACHINE)\"
 # Dead strip unreferenced sections at link time
 # Export dynamic symbols so dlopen'd bundles can call host functions
 ifneq (,$(findstring darwin,$(DUMPMACHINE)))
-LDFLAGS+=-Wl,-export_dynamic
+LDFLAGS+=-Wl,-exported_symbols_list,exports.sym -Wl,-dead_strip -Wl,-dead_strip
 else ifneq (,$(findstring linux,$(DUMPMACHINE)))
 LDFLAGS+=-Wl,--gc-sections -rdynamic
 endif
