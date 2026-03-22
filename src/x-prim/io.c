@@ -34,11 +34,13 @@
 /* write: (write obj) -> output s-expression to stdout */
 static x_obj_t *x_prim_write(x_obj_t *p_base, x_obj_t *p_args)
 {
-	x_obj_t *p_val = x_prim_eval_arg(p_base, x_01(p_args));
+	x_obj_t *p_val;
 	x_spair_t write_args[1] = {
-		x_obj_set(NULL, X_OBJ_FLAG_NONE, { p_val }, { NULL })
+		x_obj_set(NULL, X_OBJ_FLAG_NONE, { NULL }, { NULL })
 	};
 
+	x_eargs(p_base, p_args, 2, NULL, &p_val);
+	x_firstobj((x_obj_t *)write_args) = p_val;
 	x_token_write(p_base, (x_obj_t *)write_args);
 
 	return NULL;
@@ -47,11 +49,13 @@ static x_obj_t *x_prim_write(x_obj_t *p_base, x_obj_t *p_args)
 /* display: (display obj) -> output human-readable via type system */
 static x_obj_t *x_prim_display(x_obj_t *p_base, x_obj_t *p_args)
 {
-	x_obj_t *p_val = x_prim_eval_arg(p_base, x_01(p_args));
+	x_obj_t *p_val;
 	x_spair_t display_args[1] = {
-		x_obj_set(NULL, X_OBJ_FLAG_NONE, { p_val }, { NULL })
+		x_obj_set(NULL, X_OBJ_FLAG_NONE, { NULL }, { NULL })
 	};
 
+	x_eargs(p_base, p_args, 2, NULL, &p_val);
+	x_firstobj((x_obj_t *)display_args) = p_val;
 	x_token_display(p_base, (x_obj_t *)display_args);
 
 	return NULL;
@@ -247,7 +251,8 @@ static x_obj_t *x_prim_heap_mark(x_obj_t *p_base, x_obj_t *p_args)
  * pattern as x_heap_mark. */
 static x_obj_t *x_prim_system_mark(x_obj_t *p_base, x_obj_t *p_args)
 {
-	x_obj_t *p_obj = x_prim_eval_arg(p_base, x_01(p_args));
+	x_obj_t *p_obj;
+	x_eargs(p_base, p_args, 2, NULL, &p_obj);
 
 	/* Reuse the mark traversal with SYSTEM flag */
 	x_heap_mark(p_base, p_obj, X_OBJ_FLAG_SYSTEM, x_type_heap_mark);

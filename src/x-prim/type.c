@@ -89,13 +89,15 @@ static x_obj_t *x_prim_type_build_struct(x_obj_t *p_base,
 /* make-type: (make-type name handlers-alist) -> create and register runtime type */
 static x_obj_t *x_prim_make_type(x_obj_t *p_base, x_obj_t *p_args)
 {
-	x_obj_t *p_name_str = x_prim_eval_arg(p_base, x_01(p_args)),
-		*p_handlers = x_prim_eval_arg(p_base, x_011(p_args));
-	x_char_t *name = x_lib_strndup(x_strval(p_name_str),
+	x_obj_t *p_name_str, *p_handlers;
+	x_char_t *name;
+	x_obj_t *p_name_atom, *p_type;
+
+	x_eargs(p_base, p_args, 3, NULL, &p_name_str, &p_handlers);
+	name = x_lib_strndup(x_strval(p_name_str),
 		x_lib_strlen(x_strval(p_name_str)));
-	x_obj_t *p_name_atom = x_obj_make(p_base, x_type_atom_obj,
-		X_OBJ_FLAG_OWN, X_OBJ_LENGTH_ATOM, name),
-		*p_type;
+	p_name_atom = x_obj_make(p_base, x_type_atom_obj,
+		X_OBJ_FLAG_OWN, X_OBJ_LENGTH_ATOM, name);
 
 	p_type = x_prim_type_build_struct(p_base, p_name_atom, p_handlers);
 	x_base_type_alist_extend(p_base, p_type);
@@ -106,14 +108,15 @@ static x_obj_t *x_prim_make_type(x_obj_t *p_base, x_obj_t *p_args)
 /* base-make-type: (base-make-type base name handlers) -> register type on target base */
 static x_obj_t *x_prim_base_make_type(x_obj_t *p_base, x_obj_t *p_args)
 {
-	x_obj_t *p_target = x_prim_eval_arg(p_base, x_01(p_args)),
-		*p_name_str = x_prim_eval_arg(p_base, x_011(p_args)),
-		*p_handlers = x_prim_eval_arg(p_base, x_0111(p_args));
-	x_char_t *name = x_lib_strndup(x_strval(p_name_str),
+	x_obj_t *p_target, *p_name_str, *p_handlers;
+	x_char_t *name;
+	x_obj_t *p_name_atom, *p_type;
+
+	x_eargs(p_base, p_args, 4, NULL, &p_target, &p_name_str, &p_handlers);
+	name = x_lib_strndup(x_strval(p_name_str),
 		x_lib_strlen(x_strval(p_name_str)));
-	x_obj_t *p_name_atom = x_obj_make(p_base, x_type_atom_obj,
-		X_OBJ_FLAG_OWN, X_OBJ_LENGTH_ATOM, name),
-		*p_type;
+	p_name_atom = x_obj_make(p_base, x_type_atom_obj,
+		X_OBJ_FLAG_OWN, X_OBJ_LENGTH_ATOM, name);
 
 	/* Build type using calling base; register on target. */
 	p_type = x_prim_type_build_struct(p_base, p_name_atom, p_handlers);
@@ -131,12 +134,15 @@ static x_obj_t *x_prim_base_make_type(x_obj_t *p_base, x_obj_t *p_args)
 /* make-instance: (make-instance type-handle data) -> create typed instance */
 static x_obj_t *x_prim_make_instance(x_obj_t *p_base, x_obj_t *p_args)
 {
-	x_obj_t *p_handle = x_prim_eval_arg(p_base, x_01(p_args)),
-		*p_data = x_prim_eval_arg(p_base, x_011(p_args));
+	x_obj_t *p_handle, *p_data;
 	x_spair_t lookup_args[1] = {
-		x_obj_set(NULL, X_OBJ_FLAG_NONE, { p_handle }, { NULL })
+		x_obj_set(NULL, X_OBJ_FLAG_NONE, { NULL }, { NULL })
 	};
-	x_obj_t *p_type = x_base_type_alist_assoc(p_base, (x_obj_t *)lookup_args);
+	x_obj_t *p_type;
+
+	x_eargs(p_base, p_args, 3, NULL, &p_handle, &p_data);
+	x_firstobj((x_obj_t *)lookup_args) = p_handle;
+	p_type = x_base_type_alist_assoc(p_base, (x_obj_t *)lookup_args);
 
 	if (x_obj_isnil(p_base, p_type)) {
 		return NULL;
@@ -148,8 +154,9 @@ static x_obj_t *x_prim_make_instance(x_obj_t *p_base, x_obj_t *p_args)
 /* type?: (type? obj type-handle) -> t if obj's type matches handle */
 static x_obj_t *x_prim_typep(x_obj_t *p_base, x_obj_t *p_args)
 {
-	x_obj_t *p_obj = x_prim_eval_arg(p_base, x_01(p_args)),
-		*p_handle = x_prim_eval_arg(p_base, x_011(p_args));
+	x_obj_t *p_obj, *p_handle;
+
+	x_eargs(p_base, p_args, 3, NULL, &p_obj, &p_handle);
 
 	if (x_obj_isnil(p_base, p_obj) || x_obj_isnil(p_base, x_obj_type(p_obj))) {
 		return x_base_field_false(p_base);
@@ -162,10 +169,14 @@ static x_obj_t *x_prim_typep(x_obj_t *p_base, x_obj_t *p_args)
 /* type-of: (type-of obj) -> type handle (name atom) for obj's type */
 static x_obj_t *x_prim_type_of(x_obj_t *p_base, x_obj_t *p_args)
 {
-	x_obj_t *p_obj = x_prim_eval_arg(p_base, x_01(p_args));
+	x_obj_t *p_obj;
 	x_spair_t name_args[1] = {
-		x_obj_set(NULL, X_OBJ_FLAG_NONE, { p_obj }, { p_base })
+		x_obj_set(NULL, X_OBJ_FLAG_NONE, { NULL }, { NULL })
 	};
+
+	x_eargs(p_base, p_args, 2, NULL, &p_obj);
+	x_firstobj((x_obj_t *)name_args) = p_obj;
+	x_restobj((x_obj_t *)name_args) = p_base;
 
 	return x_type_prim_type_name(p_base, (x_obj_t *)name_args);
 }
@@ -173,7 +184,9 @@ static x_obj_t *x_prim_type_of(x_obj_t *p_base, x_obj_t *p_args)
 /* type-name: (type-name obj) -> name string of obj's type */
 static x_obj_t *x_prim_type_name(x_obj_t *p_base, x_obj_t *p_args)
 {
-	x_obj_t *p_obj = x_prim_eval_arg(p_base, x_01(p_args)), *p_name;
+	x_obj_t *p_obj, *p_name;
+
+	x_eargs(p_base, p_args, 2, NULL, &p_obj);
 
 	if (x_obj_isnil(p_base, p_obj) || x_obj_isnil(p_base, x_obj_type(p_obj))) {
 		return NULL;
@@ -238,9 +251,10 @@ static x_obj_t *x_prim_make_base(x_obj_t *p_base, x_obj_t *p_args)
 static x_obj_t *x_prim_base_eval(x_obj_t *p_base, x_obj_t *p_args)
 {
 	jmp_buf jmp;
-	x_obj_t *p_target = x_prim_eval_arg(p_base, x_01(p_args)),
-		*p_expr = x_prim_eval_arg(p_base, x_011(p_args)),
-		*p_handler, *p_result;
+	x_obj_t *p_target, *p_expr;
+	x_obj_t *p_handler, *p_result;
+
+	x_eargs(p_base, p_args, 3, NULL, &p_target, &p_expr);
 
 	/* Build handler pair tree: (jmp-ptr saved-env error-value) */
 	p_handler = x_mkspair(p_target,
@@ -288,10 +302,10 @@ static x_obj_t *x_prim_base_eval(x_obj_t *p_base, x_obj_t *p_args)
 /* base-bind: (base-bind base name value) -> bind in target base */
 static x_obj_t *x_prim_base_bind(x_obj_t *p_base, x_obj_t *p_args)
 {
-	x_obj_t *p_target = x_prim_eval_arg(p_base, x_01(p_args)),
-		*p_name = x_prim_eval_arg(p_base, x_011(p_args)),
-		*p_val = x_prim_eval_arg(p_base, x_0111(p_args)),
-		*p_pair;
+	x_obj_t *p_target, *p_name, *p_val;
+	x_obj_t *p_pair;
+
+	x_eargs(p_base, p_args, 4, NULL, &p_target, &p_name, &p_val);
 
 	p_pair = x_mkspair(p_target, p_name, p_val);
 	x_base_env_alist_extend(p_target, p_pair);
@@ -302,9 +316,13 @@ static x_obj_t *x_prim_base_bind(x_obj_t *p_base, x_obj_t *p_args)
 /* buffer-token: (buffer-token buffer) -> extract consumed portion as string */
 static x_obj_t *x_prim_buffer_token(x_obj_t *p_base, x_obj_t *p_args)
 {
-	x_obj_t *p_buffer = x_prim_eval_arg(p_base, x_01(p_args));
-	x_int_t len = x_bufferlen(p_buffer);
-	x_char_t *str = x_lib_strndup(x_bufferval(p_buffer), len);
+	x_obj_t *p_buffer;
+	x_int_t len;
+	x_char_t *str;
+
+	x_eargs(p_base, p_args, 2, NULL, &p_buffer);
+	len = x_bufferlen(p_buffer);
+	str = x_lib_strndup(x_bufferval(p_buffer), len);
 
 	return x_mkstrown(p_base, str);
 }
@@ -312,12 +330,16 @@ static x_obj_t *x_prim_buffer_token(x_obj_t *p_base, x_obj_t *p_args)
 /* token-read-string: (token-read-string token-base string) -> list of tokens */
 static x_obj_t *x_prim_token_read_string(x_obj_t *p_base, x_obj_t *p_args)
 {
-	x_obj_t *p_token_base = x_prim_eval_arg(p_base, x_01(p_args)),
-		*p_str = x_prim_eval_arg(p_base, x_011(p_args));
-	x_char_t *str = x_strval(p_str);
-	x_int_t len = x_lib_strlen(str);
-	x_char_t *buf = (x_char_t *)x_sys_malloc(len + 1);
+	x_obj_t *p_token_base, *p_str;
+	x_char_t *str;
+	x_int_t len;
+	x_char_t *buf;
 	x_obj_t *p_buffer, *p_token, *p_result, *p_tail, *p_node;
+
+	x_eargs(p_base, p_args, 3, NULL, &p_token_base, &p_str);
+	str = x_strval(p_str);
+	len = x_lib_strlen(str);
+	buf = (x_char_t *)x_sys_malloc(len + 1);
 
 	x_lib_memcpy(buf, str, len);
 	buf[len] = '\0';
@@ -363,14 +385,17 @@ static x_obj_t *x_prim_token_read_string(x_obj_t *p_base, x_obj_t *p_args)
 /* make-obj: (make-obj type-handle n) -> allocate typed object with n slots */
 static x_obj_t *x_prim_make_obj(x_obj_t *p_base, x_obj_t *p_args)
 {
-	x_obj_t *p_handle = x_prim_eval_arg(p_base, x_01(p_args)),
-		*p_n = x_prim_eval_arg(p_base, x_011(p_args));
+	x_obj_t *p_handle, *p_n;
 	x_spair_t lookup_args[1] = {
-		x_obj_set(NULL, X_OBJ_FLAG_NONE, { p_handle }, { NULL })
+		x_obj_set(NULL, X_OBJ_FLAG_NONE, { NULL }, { NULL })
 	};
-	x_obj_t *p_type = x_base_type_alist_assoc(p_base, (x_obj_t *)lookup_args);
+	x_obj_t *p_type;
 	x_int_t n, i;
 	x_obj_t *p_obj;
+
+	x_eargs(p_base, p_args, 3, NULL, &p_handle, &p_n);
+	x_firstobj((x_obj_t *)lookup_args) = p_handle;
+	p_type = x_base_type_alist_assoc(p_base, (x_obj_t *)lookup_args);
 
 	if (x_obj_isnil(p_base, p_type)) {
 		return NULL;
@@ -389,8 +414,9 @@ static x_obj_t *x_prim_make_obj(x_obj_t *p_base, x_obj_t *p_args)
 /* obj-ref: (obj-ref obj i) -> value at slot i */
 static x_obj_t *x_prim_obj_ref(x_obj_t *p_base, x_obj_t *p_args)
 {
-	x_obj_t *p_obj = x_prim_eval_arg(p_base, x_01(p_args)),
-		*p_i = x_prim_eval_arg(p_base, x_011(p_args));
+	x_obj_t *p_obj, *p_i;
+
+	x_eargs(p_base, p_args, 3, NULL, &p_obj, &p_i);
 
 	return (&x_firstobj(p_obj))[x_intval(p_i)];
 }
@@ -398,9 +424,9 @@ static x_obj_t *x_prim_obj_ref(x_obj_t *p_base, x_obj_t *p_args)
 /* obj-set!: (obj-set! obj i val) -> val */
 static x_obj_t *x_prim_obj_set(x_obj_t *p_base, x_obj_t *p_args)
 {
-	x_obj_t *p_obj = x_prim_eval_arg(p_base, x_01(p_args)),
-		*p_i = x_prim_eval_arg(p_base, x_011(p_args)),
-		*p_val = x_prim_eval_arg(p_base, x_0111(p_args));
+	x_obj_t *p_obj, *p_i, *p_val;
+
+	x_eargs(p_base, p_args, 4, NULL, &p_obj, &p_i, &p_val);
 
 	(&x_firstobj(p_obj))[x_intval(p_i)] = p_val;
 
@@ -410,9 +436,12 @@ static x_obj_t *x_prim_obj_set(x_obj_t *p_base, x_obj_t *p_args)
 /* iter: (iter obj) -> call type's iter handler to get an iterator */
 static x_obj_t *x_prim_iter(x_obj_t *p_base, x_obj_t *p_args)
 {
-	x_obj_t *p_obj = x_prim_eval_arg(p_base, x_01(p_args));
-	x_obj_t *p_type = x_obj_type(p_obj);
+	x_obj_t *p_obj;
+	x_obj_t *p_type;
 	x_obj_t *p_iter_fn;
+
+	x_eargs(p_base, p_args, 2, NULL, &p_obj);
+	p_type = x_obj_type(p_obj);
 
 	if (x_obj_isnil(p_base, p_type) || ! x_obj_type_isspair(p_type)) {
 		return NULL;
