@@ -36,9 +36,6 @@
 #include <sys/syscall.h>
 #endif
 
-/* JIT helper — defined in src/x-obj/jit.c */
-x_obj_t *jit_make_prim(x_obj_t *p_base, x_obj_t *p_args);
-
 #define X_CLI_BUFFER_SIZE 65536
 
 #ifndef TESTS
@@ -175,9 +172,6 @@ x_obj_t * init(x_obj_t *p_base, x_char_t *buffer)
 	/* Register include primitive. */
 	x_prim_bind(p_base, "include", x_prim_include);
 #endif
-
-	/* Register JIT helper. */
-	x_prim_bind(p_base, "jit-make-prim", jit_make_prim);
 
 	return p_base;
 }

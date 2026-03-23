@@ -19,6 +19,7 @@
 #include "x-prim.h"
 #include "x-base.h"
 #include "x-type/int.h"
+#include "x-type/prim.h"
 #include "x-type/ptr.h"
 #include "x-type/str.h"
 #include "x-type/symbol.h"
@@ -434,6 +435,18 @@ static x_obj_t *x_prim_obj_meta_set(x_obj_t *p_base, x_obj_t *p_args)
 	return p_val;
 }
 
+/* make-prim: (make-prim fn-ptr) -> prim
+ * Create a proper prim object from a raw function pointer (PTR type). */
+static x_obj_t *x_prim_make_prim(x_obj_t *p_base, x_obj_t *p_args)
+{
+	x_obj_t *p_ptr;
+
+	x_eargs(p_base, p_args, 2, NULL, &p_ptr);
+
+	return x_make_prim(p_base, X_OBJ_FLAG_NONE,
+		(x_prim_fn)x_ptrval(p_ptr));
+}
+
 x_obj_t *x_prim_ffi_register(x_obj_t *p_base, x_obj_t *p_args)
 {
 	static const x_prim_entry_t entries[] = {
@@ -453,7 +466,8 @@ x_obj_t *x_prim_ffi_register(x_obj_t *p_base, x_obj_t *p_args)
 		{ "obj-meta-count", x_prim_obj_meta_extra },
 		{ "obj-meta-count!", x_prim_obj_meta_extra_set },
 		{ "obj-meta-ref", x_prim_obj_meta_ref },
-		{ "obj-meta-set!", x_prim_obj_meta_set }
+		{ "obj-meta-set!", x_prim_obj_meta_set },
+		{ "make-prim", x_prim_make_prim }
 	};
 
 	x_prim_bind_table(p_base, entries,
