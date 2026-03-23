@@ -269,7 +269,7 @@ valgrind: ## Run Valgrind
 watch: ## Watch for changes
 	while true; do \
 		fswatch -o --event Created --event Updated --event MovedTo $(HEADERS) $(SOURCES) tests/c | \
-		make debug && make test-c && make apidocs; \
+		make debug && make test-c; \
 	done
 .PHONY: watch
 
@@ -292,7 +292,6 @@ uninstall: ## Uninstall from PREFIX
 
 clean: cov-clean ## Clean build artifacts
 	rm -f $(EXECUTABLE) x-debug x-profile *.out $(SRCDIR)/*.o $(SRCDIR)/**/*.o $(SRCDIR)/**/**/*.o $(X_EXPR_DIR)/src/*.o *.core core
-	rm -Rf apidocs/
 .PHONY: clean
 
 help: ## Show targets

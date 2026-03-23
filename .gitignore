@@ -54,15 +54,7 @@ Module.symvers
 Mkfile.old
 dkms.conf
 
-# Generated API Documentation
-apidocs/
-
 # Project Specific Rules
-
-# Executables
-/rs
-/rs-debug
-/build
 
 # Editor files
 *.sublime-*
