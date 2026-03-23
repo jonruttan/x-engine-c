@@ -132,6 +132,7 @@ all: $(SOURCES) $(EXECUTABLE) ## Build all
 
 strip: $(EXECUTABLE) ## Strip non-global symbols (keep dynamic exports for dlopen)
 	strip -x $(EXECUTABLE)
+	@if [ -f entitlements.plist ]; then codesign -s - --entitlements entitlements.plist -f $(EXECUTABLE) 2>/dev/null || true; fi
 
 $(EXECUTABLE): $(OBJECTS) $(X_EXPR_OBJECTS) $(EXTRA_OBJS)
 	$(CC) $(LDFLAGS) $(OBJECTS) $(X_EXPR_OBJECTS) $(EXTRA_OBJS) $(EXTRA_LIBS) -o $(OUTPUT)
