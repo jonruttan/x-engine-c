@@ -40,7 +40,7 @@ x_obj_t *x_make_procedure(x_obj_t *p_base, x_obj_flag_t flags,
 		*p_state = x_mkspair(p_base, p_params, p_s2);
 
 	return x_obj_make(p_base, p_type, flags, X_OBJ_LENGTH_PAIR,
-		(x_prim_fn)x_type_procedure_call, p_state);
+		(x_callable_fn)x_type_procedure_call, p_state);
 }
 
 x_obj_t *x_type_procedure_struct(x_obj_t *p_base, x_obj_t *p_args)
@@ -87,7 +87,7 @@ x_obj_t *x_type_procedure_call(x_obj_t *p_base, x_obj_t *p_args)
 		*p_evaled_args;
 
 	/* Eval each argument in the current env. */
-	p_evaled_args = x_prim_evlis(p_base, p_unevaluated_args);
+	p_evaled_args = x_eval_list(p_base, p_unevaluated_args);
 
 	/* Wrapped combiner: dispatch to underlying combiner with eval'd args. */
 	if (x_obj_flags(p_proc) & X_OBJ_FLAG_WRAP) {
@@ -117,12 +117,12 @@ x_obj_t *x_type_procedure_call(x_obj_t *p_base, x_obj_t *p_args)
 			{ p_proc }, { p_evaled_args });
 		p_evaled_args = (x_obj_t *)&sp;
 
-		x_base_field_env_alist(p_base) = x_prim_multiple_extend(
+		x_base_field_env_alist(p_base) = x_env_extend(
 			p_base, x_procenv(p_proc), x_procparams(p_proc),
 			p_evaled_args);
 		}
 
-		return x_prim_body_eval_tco(p_base, x_procbody(p_proc));
+		return x_eval_body_tco(p_base, x_procbody(p_proc));
 	}
 }
 
@@ -144,12 +144,12 @@ x_obj_t *x_type_procedure_apply(x_obj_t *p_base, x_obj_t *p_args)
 	{
 	x_spair_t sp = x_obj_set(NULL, X_OBJ_FLAG_NONE,
 		{ p_proc }, { x_restobj(p_args) });
-	x_base_field_env_alist(p_base) = x_prim_multiple_extend(
+	x_base_field_env_alist(p_base) = x_env_extend(
 		p_base, x_procenv(p_proc), x_procparams(p_proc),
 		(x_obj_t *)&sp);
 	}
 
-	p_result = x_prim_body_eval(p_base, x_procbody(p_proc));
+	p_result = x_eval_body(p_base, x_procbody(p_proc));
 
 	/* Restore env, boundary, BST, and shadow */
 	x_base_field_env_alist(p_base) = p_saved_alist;

@@ -106,7 +106,7 @@ x_obj_t *x_type_list_call(x_obj_t *p_base, x_obj_t *p_args)
 		return NULL;
 	}
 
-	arg1 = x_prim_eval_arg(p_base, x_firstobj(vals));
+	arg1 = x_eval_arg(p_base, x_firstobj(vals));
 	vals = x_restobj(vals);
 
 	if (! x_obj_isnil(p_base, vals)) {
@@ -115,7 +115,7 @@ x_obj_t *x_type_list_call(x_obj_t *p_base, x_obj_t *p_args)
 		x_int_t len;
 		x_obj_t *p_result = NULL, *p_tail = NULL;
 
-		arg2 = x_prim_eval_arg(p_base, x_firstobj(vals));
+		arg2 = x_eval_arg(p_base, x_firstobj(vals));
 		len = x_atomint(arg2);
 
 		/* Walk to start position. */
@@ -197,7 +197,7 @@ x_obj_t *x_type_list_eval(x_obj_t *p_base, x_obj_t *p_args)
 	}
 
 	{
-		x_obj_t *p_result = x_type_prim_call(p_base, (x_obj_t *)prim_args);
+		x_obj_t *p_result = x_callable_call(p_base, (x_obj_t *)prim_args);
 		x_base_field_eval_list_stack(p_base)
 			= x_restobj(x_base_field_eval_list_stack(p_base));
 		return p_result;

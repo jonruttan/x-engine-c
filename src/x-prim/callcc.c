@@ -224,7 +224,7 @@ static x_obj_t *x_prim_callcc(x_obj_t *p_base, x_obj_t *p_args)
 				{ p_k }, { NULL })
 		};
 
-		p_result = x_type_prim_apply(p_base, (x_obj_t *)call_args);
+		p_result = x_callable_apply(p_base, (x_obj_t *)call_args);
 	}
 
 	return p_result;
@@ -235,12 +235,12 @@ static x_obj_t *x_prim_callcc(x_obj_t *p_base, x_obj_t *p_args)
  */
 x_obj_t *x_prim_callcc_register(x_obj_t *p_base, x_obj_t *p_args)
 {
-	static const x_prim_entry_t entries[] = {
+	static const x_callable_entry_t entries[] = {
 		{ "%cc-invoke", x_prim_cc_invoke },
 		{ "call/cc", x_prim_callcc }
 	};
 
-	x_prim_bind_table(p_base, entries,
+	x_callable_bind_table(p_base, entries,
 		sizeof(entries) / sizeof(entries[0]));
 
 	return p_base;

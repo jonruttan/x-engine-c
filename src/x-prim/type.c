@@ -268,7 +268,7 @@ static x_obj_t *x_prim_base_eval(x_obj_t *p_base, x_obj_t *p_args)
 		p_handler, x_base_field_error_handler_stack(p_target));
 
 	if (setjmp(jmp) == 0) {
-		p_result = x_prim_eval_arg(p_target, p_expr);
+		p_result = x_eval_arg(p_target, p_expr);
 	} else {
 		x_obj_t *p_err = x_error_handler_error(p_handler);
 
@@ -458,13 +458,13 @@ static x_obj_t *x_prim_iter(x_obj_t *p_base, x_obj_t *p_args)
 			x_obj_set(NULL, X_OBJ_FLAG_NONE, { p_iter_fn }, { NULL })
 		};
 		x_restobj((x_obj_t *)iter_call) = x_mkspair(p_base, p_obj, NULL);
-		return x_type_prim_call(p_base, (x_obj_t *)iter_call);
+		return x_callable_call(p_base, (x_obj_t *)iter_call);
 	}
 }
 
 x_obj_t *x_prim_type_register(x_obj_t *p_base, x_obj_t *p_args)
 {
-	static const x_prim_entry_t entries[] = {
+	static const x_callable_entry_t entries[] = {
 		{ "make-type", x_prim_make_type },
 		{ "base-make-type", x_prim_base_make_type },
 		{ "make-instance", x_prim_make_instance },
@@ -483,7 +483,7 @@ x_obj_t *x_prim_type_register(x_obj_t *p_base, x_obj_t *p_args)
 		{ "iter", x_prim_iter }
 	};
 
-	x_prim_bind_table(p_base, entries,
+	x_callable_bind_table(p_base, entries,
 		sizeof(entries) / sizeof(entries[0]));
 
 	return p_base;

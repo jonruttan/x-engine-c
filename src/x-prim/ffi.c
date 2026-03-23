@@ -109,7 +109,7 @@ static x_obj_t *x_prim_ffi_call(x_obj_t *p_base, x_obj_t *p_args)
 	/* Function call conventions */
 	if (x_lib_strcmp(conv, "d->d") == 0) {
 		fptr = x_ptrval(p_fptr);
-		p_a = x_prim_eval_arg(p_base, x_firstobj(p_rest));
+		p_a = x_eval_arg(p_base, x_firstobj(p_rest));
 		x_ffi_to_double(p_base, p_a, &a);
 		r = ((double (*)(double))fptr)(a);
 		return x_ffi_from_double(p_base, &r);
@@ -117,8 +117,8 @@ static x_obj_t *x_prim_ffi_call(x_obj_t *p_base, x_obj_t *p_args)
 
 	if (x_lib_strcmp(conv, "dd->d") == 0) {
 		fptr = x_ptrval(p_fptr);
-		p_a = x_prim_eval_arg(p_base, x_firstobj(p_rest));
-		p_b = x_prim_eval_arg(p_base,
+		p_a = x_eval_arg(p_base, x_firstobj(p_rest));
+		p_b = x_eval_arg(p_base,
 			x_firstobj(x_restobj(p_rest)));
 		x_ffi_to_double(p_base, p_a, &a);
 		x_ffi_to_double(p_base, p_b, &b);
@@ -128,8 +128,8 @@ static x_obj_t *x_prim_ffi_call(x_obj_t *p_base, x_obj_t *p_args)
 
 	/* Arithmetic conventions */
 	if (x_lib_strcmp(conv, "d+d") == 0) {
-		p_a = x_prim_eval_arg(p_base, x_firstobj(p_rest));
-		p_b = x_prim_eval_arg(p_base, x_firstobj(x_restobj(p_rest)));
+		p_a = x_eval_arg(p_base, x_firstobj(p_rest));
+		p_b = x_eval_arg(p_base, x_firstobj(x_restobj(p_rest)));
 		x_ffi_to_double(p_base, p_a, &a);
 		x_ffi_to_double(p_base, p_b, &b);
 		r = a + b;
@@ -137,8 +137,8 @@ static x_obj_t *x_prim_ffi_call(x_obj_t *p_base, x_obj_t *p_args)
 	}
 
 	if (x_lib_strcmp(conv, "d-d") == 0) {
-		p_a = x_prim_eval_arg(p_base, x_firstobj(p_rest));
-		p_b = x_prim_eval_arg(p_base, x_firstobj(x_restobj(p_rest)));
+		p_a = x_eval_arg(p_base, x_firstobj(p_rest));
+		p_b = x_eval_arg(p_base, x_firstobj(x_restobj(p_rest)));
 		x_ffi_to_double(p_base, p_a, &a);
 		x_ffi_to_double(p_base, p_b, &b);
 		r = a - b;
@@ -146,8 +146,8 @@ static x_obj_t *x_prim_ffi_call(x_obj_t *p_base, x_obj_t *p_args)
 	}
 
 	if (x_lib_strcmp(conv, "d*d") == 0) {
-		p_a = x_prim_eval_arg(p_base, x_firstobj(p_rest));
-		p_b = x_prim_eval_arg(p_base, x_firstobj(x_restobj(p_rest)));
+		p_a = x_eval_arg(p_base, x_firstobj(p_rest));
+		p_b = x_eval_arg(p_base, x_firstobj(x_restobj(p_rest)));
 		x_ffi_to_double(p_base, p_a, &a);
 		x_ffi_to_double(p_base, p_b, &b);
 		r = a * b;
@@ -155,8 +155,8 @@ static x_obj_t *x_prim_ffi_call(x_obj_t *p_base, x_obj_t *p_args)
 	}
 
 	if (x_lib_strcmp(conv, "d/d") == 0) {
-		p_a = x_prim_eval_arg(p_base, x_firstobj(p_rest));
-		p_b = x_prim_eval_arg(p_base, x_firstobj(x_restobj(p_rest)));
+		p_a = x_eval_arg(p_base, x_firstobj(p_rest));
+		p_b = x_eval_arg(p_base, x_firstobj(x_restobj(p_rest)));
 		x_ffi_to_double(p_base, p_a, &a);
 		x_ffi_to_double(p_base, p_b, &b);
 		r = a / b;
@@ -165,40 +165,40 @@ static x_obj_t *x_prim_ffi_call(x_obj_t *p_base, x_obj_t *p_args)
 
 	/* Comparison conventions */
 	if (x_lib_strcmp(conv, "d<d") == 0) {
-		p_a = x_prim_eval_arg(p_base, x_firstobj(p_rest));
-		p_b = x_prim_eval_arg(p_base, x_firstobj(x_restobj(p_rest)));
+		p_a = x_eval_arg(p_base, x_firstobj(p_rest));
+		p_b = x_eval_arg(p_base, x_firstobj(x_restobj(p_rest)));
 		x_ffi_to_double(p_base, p_a, &a);
 		x_ffi_to_double(p_base, p_b, &b);
 		return a < b ? x_base_field_true(p_base) : x_base_field_false(p_base);
 	}
 
 	if (x_lib_strcmp(conv, "d>d") == 0) {
-		p_a = x_prim_eval_arg(p_base, x_firstobj(p_rest));
-		p_b = x_prim_eval_arg(p_base, x_firstobj(x_restobj(p_rest)));
+		p_a = x_eval_arg(p_base, x_firstobj(p_rest));
+		p_b = x_eval_arg(p_base, x_firstobj(x_restobj(p_rest)));
 		x_ffi_to_double(p_base, p_a, &a);
 		x_ffi_to_double(p_base, p_b, &b);
 		return a > b ? x_base_field_true(p_base) : x_base_field_false(p_base);
 	}
 
 	if (x_lib_strcmp(conv, "d=d") == 0) {
-		p_a = x_prim_eval_arg(p_base, x_firstobj(p_rest));
-		p_b = x_prim_eval_arg(p_base, x_firstobj(x_restobj(p_rest)));
+		p_a = x_eval_arg(p_base, x_firstobj(p_rest));
+		p_b = x_eval_arg(p_base, x_firstobj(x_restobj(p_rest)));
 		x_ffi_to_double(p_base, p_a, &a);
 		x_ffi_to_double(p_base, p_b, &b);
 		return a == b ? x_base_field_true(p_base) : x_base_field_false(p_base);
 	}
 
 	if (x_lib_strcmp(conv, "d<=d") == 0) {
-		p_a = x_prim_eval_arg(p_base, x_firstobj(p_rest));
-		p_b = x_prim_eval_arg(p_base, x_firstobj(x_restobj(p_rest)));
+		p_a = x_eval_arg(p_base, x_firstobj(p_rest));
+		p_b = x_eval_arg(p_base, x_firstobj(x_restobj(p_rest)));
 		x_ffi_to_double(p_base, p_a, &a);
 		x_ffi_to_double(p_base, p_b, &b);
 		return a <= b ? x_base_field_true(p_base) : x_base_field_false(p_base);
 	}
 
 	if (x_lib_strcmp(conv, "d>=d") == 0) {
-		p_a = x_prim_eval_arg(p_base, x_firstobj(p_rest));
-		p_b = x_prim_eval_arg(p_base, x_firstobj(x_restobj(p_rest)));
+		p_a = x_eval_arg(p_base, x_firstobj(p_rest));
+		p_b = x_eval_arg(p_base, x_firstobj(x_restobj(p_rest)));
 		x_ffi_to_double(p_base, p_a, &a);
 		x_ffi_to_double(p_base, p_b, &b);
 		return a >= b ? x_base_field_true(p_base) : x_base_field_false(p_base);
@@ -206,13 +206,13 @@ static x_obj_t *x_prim_ffi_call(x_obj_t *p_base, x_obj_t *p_args)
 
 	/* Cast conventions */
 	if (x_lib_strcmp(conv, "i->d") == 0) {
-		p_a = x_prim_eval_arg(p_base, x_firstobj(p_rest));
+		p_a = x_eval_arg(p_base, x_firstobj(p_rest));
 		a = (double)x_intval(p_a);
 		return x_ffi_from_double(p_base, &a);
 	}
 
 	if (x_lib_strcmp(conv, "d->i") == 0) {
-		p_a = x_prim_eval_arg(p_base, x_firstobj(p_rest));
+		p_a = x_eval_arg(p_base, x_firstobj(p_rest));
 		x_ffi_to_double(p_base, p_a, &a);
 		return x_mkint(p_base, (x_int_t)a);
 	}
@@ -220,7 +220,7 @@ static x_obj_t *x_prim_ffi_call(x_obj_t *p_base, x_obj_t *p_args)
 	/* String/double conversions */
 	if (x_lib_strcmp(conv, "s0->d") == 0) {
 		fptr = x_ptrval(p_fptr);
-		p_a = x_prim_eval_arg(p_base, x_firstobj(p_rest));
+		p_a = x_eval_arg(p_base, x_firstobj(p_rest));
 		r = ((double (*)(const char *, void *))fptr)(
 			x_firststr(p_a), NULL);
 		return x_ffi_from_double(p_base, &r);
@@ -229,7 +229,7 @@ static x_obj_t *x_prim_ffi_call(x_obj_t *p_base, x_obj_t *p_args)
 	if (x_lib_strcmp(conv, "d->s") == 0) {
 		x_char_t buf[32];
 		int len;
-		p_a = x_prim_eval_arg(p_base, x_firstobj(p_rest));
+		p_a = x_eval_arg(p_base, x_firstobj(p_rest));
 		x_ffi_to_double(p_base, p_a, &a);
 		len = sprintf((char *)buf, "%.15g", a);
 		return x_mkstrown(p_base, x_lib_strndup(buf, len));
@@ -250,7 +250,7 @@ static x_obj_t *x_prim_ptr_call(x_obj_t *p_base, x_obj_t *p_args)
 	p[0] = p[1] = p[2] = p[3] = p[4] = p[5] = p[6] = 0;
 
 	while (!x_obj_isnil(p_base, p_args) && i < 7) {
-		arg = x_prim_eval_arg(p_base, x_firstobj(p_args));
+		arg = x_eval_arg(p_base, x_firstobj(p_args));
 		if (x_obj_type_isint(p_base, arg))
 			p[i++] = (long)x_intval(arg);
 		else if (x_obj_type_isstr(p_base, arg))
@@ -435,21 +435,21 @@ static x_obj_t *x_prim_obj_meta_set(x_obj_t *p_base, x_obj_t *p_args)
 	return p_val;
 }
 
-/* make-prim: (make-prim fn-ptr) -> prim
- * Create a proper prim object from a raw function pointer (PTR type). */
-static x_obj_t *x_prim_make_prim(x_obj_t *p_base, x_obj_t *p_args)
+/* make-callable: (make-callable fn-ptr) -> callable
+ * Create a callable object from a raw function pointer (PTR type). */
+static x_obj_t *x_prim_make_callable(x_obj_t *p_base, x_obj_t *p_args)
 {
 	x_obj_t *p_ptr;
 
 	x_eargs(p_base, p_args, 2, NULL, &p_ptr);
 
 	return x_make_prim(p_base, X_OBJ_FLAG_NONE,
-		(x_prim_fn)x_ptrval(p_ptr));
+		(x_callable_fn)x_ptrval(p_ptr));
 }
 
 x_obj_t *x_prim_ffi_register(x_obj_t *p_base, x_obj_t *p_args)
 {
-	static const x_prim_entry_t entries[] = {
+	static const x_callable_entry_t entries[] = {
 		{ "dlopen", x_prim_dlopen },
 		{ "dlsym", x_prim_dlsym },
 		{ "ffi-call", x_prim_ffi_call },
@@ -467,10 +467,10 @@ x_obj_t *x_prim_ffi_register(x_obj_t *p_base, x_obj_t *p_args)
 		{ "obj-meta-count!", x_prim_obj_meta_extra_set },
 		{ "obj-meta-ref", x_prim_obj_meta_ref },
 		{ "obj-meta-set!", x_prim_obj_meta_set },
-		{ "make-prim", x_prim_make_prim }
+		{ "make-callable", x_prim_make_callable }
 	};
 
-	x_prim_bind_table(p_base, entries,
+	x_callable_bind_table(p_base, entries,
 		sizeof(entries) / sizeof(entries[0]));
 
 	/* Bind platform constants */

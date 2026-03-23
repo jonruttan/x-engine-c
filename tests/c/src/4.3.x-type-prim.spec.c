@@ -111,7 +111,7 @@ static char *test_obj_type_isprim(void)
 static char *test_primval(void)
 {
 	x_obj_t *p_call;
-	x_prim_fn p_fn;
+	x_callable_fn p_fn;
 
 	p_call = x_mkprim(NULL, test_prim_fn);
 
@@ -279,7 +279,7 @@ static char *test_type_prim_struct(void)
 	);
 
 	_it_should("set the Call primitive",
-		x_type_prim_call == x_primval(x_type_field_call(p_type))
+		x_callable_call == x_primval(x_type_field_call(p_type))
 	);
 
 	_it_should("not set the Eval primitive",
@@ -303,7 +303,7 @@ static char *test_type_prim_struct(void)
 	);
 
 	_it_should("set the Write primitive",
-		x_type_prim_write_prim == x_type_field_write(p_type)
+		x_callable_write_prim == x_type_field_write(p_type)
 	);
 
 	test_cleanup(p_base);
@@ -429,7 +429,7 @@ static char *test_type_prim_call(void)
 	p_count = x_mksatom(NULL, 0);
 	p_args = x_mkspair(NULL, p_call, x_mkspair(NULL, p_count, NULL));
 
-	p_obj = x_type_prim_call(NULL, p_args);
+	p_obj = x_callable_call(NULL, p_args);
 	_it_should("call the test function and return the incremented argument",
 		p_count == p_obj
 		&& 1 == x_firstint(p_count)
@@ -476,7 +476,7 @@ static char *test_type_prim_call_procedure(void)
 	p_obj = make_typed_obj(p_base, (x_char_t *)X_TYPE_PROCEDURE_NAME, 1);
 	p_args = x_mkspair(p_base, p_obj, NULL);
 
-	p_ret = x_type_prim_call(p_base, p_args);
+	p_ret = x_callable_call(p_base, p_args);
 	_it_should("dispatch procedure to stub and return NULL",
 		NULL == p_ret);
 
@@ -493,7 +493,7 @@ static char *test_type_prim_call_operative(void)
 	p_obj = make_typed_obj(p_base, (x_char_t *)X_TYPE_OPERATIVE_NAME, 1);
 	p_args = x_mkspair(p_base, p_obj, NULL);
 
-	p_ret = x_type_prim_call(p_base, p_args);
+	p_ret = x_callable_call(p_base, p_args);
 	_it_should("dispatch operative to stub and return NULL",
 		NULL == p_ret);
 
@@ -522,12 +522,12 @@ static char *test_type_prim_apply_procedure(void)
 	x_obj_t *p_type = x_type_struct_make(p_base, ts);
 	x_base_type_alist_extend(p_base, p_type);
 	p_obj = x_obj_make(p_base, p_type, X_OBJ_FLAG_NONE, X_OBJ_LENGTH_PAIR,
-		(x_prim_fn)NULL, p_state);
+		(x_callable_fn)NULL, p_state);
 	}
 
 	p_args = x_mkspair(p_base, p_obj, NULL);
 
-	p_ret = x_type_prim_apply(p_base, p_args);
+	p_ret = x_callable_apply(p_base, p_args);
 	_it_should("apply procedure via stub and return NULL",
 		NULL == p_ret);
 	_it_should("restore the environment after apply",
@@ -546,7 +546,7 @@ static char *test_type_prim_apply_operative(void)
 	p_obj = make_typed_obj(p_base, (x_char_t *)X_TYPE_OPERATIVE_NAME, 1);
 	p_args = x_mkspair(p_base, p_obj, NULL);
 
-	p_ret = x_type_prim_apply(p_base, p_args);
+	p_ret = x_callable_apply(p_base, p_args);
 	_it_should("apply operative via stub and return NULL",
 		NULL == p_ret);
 
@@ -567,7 +567,7 @@ static char *test_type_prim_write(void)
 
 	helper_file_buffer_ptr[STDOUT_FILENO] = buf;
 	file_buffer_ptr[STDOUT_FILENO][TEST_HELPER_FILE_WRITE] = buf;
-	p_ret = x_type_prim_write(p_base, p_args);
+	p_ret = x_callable_write(p_base, p_args);
 	file_buffer_ptr[STDOUT_FILENO][TEST_HELPER_FILE_WRITE] = NULL;
 	helper_file_buffer_ptr[STDOUT_FILENO] = NULL;
 

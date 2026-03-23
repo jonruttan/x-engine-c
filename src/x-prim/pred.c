@@ -69,7 +69,7 @@ static x_obj_t *x_prim_integer_to_char(x_obj_t *p_base, x_obj_t *p_args)
 
 x_obj_t *x_prim_pred_register(x_obj_t *p_base, x_obj_t *p_args)
 {
-	static const x_prim_entry_t entries[] = {
+	static const x_callable_entry_t entries[] = {
 		{ "eq?", x_prim_eq },
 		{ "=", x_prim_numeq },
 		{ "<", x_prim_lt },
@@ -77,7 +77,7 @@ x_obj_t *x_prim_pred_register(x_obj_t *p_base, x_obj_t *p_args)
 		{ "integer->char", x_prim_integer_to_char }
 	};
 
-	x_prim_bind_table(p_base, entries,
+	x_callable_bind_table(p_base, entries,
 		sizeof(entries) / sizeof(entries[0]));
 
 	return p_base;

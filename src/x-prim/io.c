@@ -110,7 +110,7 @@ static x_obj_t *x_prim_to_string(x_obj_t *p_base, x_obj_t *p_args,
 		x_obj_set(NULL, X_OBJ_FLAG_NONE, { NULL }, { NULL })
 	};
 
-	p_val = x_prim_eval_arg(p_base, x_firstobj(p_args));
+	p_val = x_eval_arg(p_base, x_firstobj(p_args));
 
 	if (x_obj_isnil(p_base, p_val)) {
 		return x_mkstrown(p_base, x_lib_strndup((x_char_t *)"()", 2));
@@ -302,7 +302,7 @@ x_obj_t *x_prim_repl(x_obj_t *p_base, x_obj_t *p_args)
 		p_exp = x_prim_read_expr(p_base, (x_obj_t *)read_state);
 		if (x_obj_isnil(p_base, p_exp))
 			break;
-		x_prim_eval_arg(p_base, p_exp);
+		x_eval_arg(p_base, p_exp);
 		x_prim_clear_shadows(p_base);
 	}
 
@@ -311,7 +311,7 @@ x_obj_t *x_prim_repl(x_obj_t *p_base, x_obj_t *p_args)
 
 x_obj_t *x_prim_io_register(x_obj_t *p_base, x_obj_t *p_args)
 {
-	static const x_prim_entry_t entries[] = {
+	static const x_callable_entry_t entries[] = {
 		{ "write", x_prim_write },
 		{ "display", x_prim_display },
 		{ "read", x_prim_read_expr },
@@ -324,15 +324,15 @@ x_obj_t *x_prim_io_register(x_obj_t *p_base, x_obj_t *p_args)
 		{ "gc-pin!", x_prim_system_mark }
 	};
 #ifdef X_CLOCK
-	static const x_prim_entry_t clock_entry[] = {
+	static const x_callable_entry_t clock_entry[] = {
 		{ "clock", x_prim_clock }
 	};
 #endif /* X_CLOCK */
 
-	x_prim_bind_table(p_base, entries,
+	x_callable_bind_table(p_base, entries,
 		sizeof(entries) / sizeof(entries[0]));
 #ifdef X_CLOCK
-	x_prim_bind_table(p_base, clock_entry,
+	x_callable_bind_table(p_base, clock_entry,
 		sizeof(clock_entry) / sizeof(clock_entry[0]));
 #endif /* X_CLOCK */
 

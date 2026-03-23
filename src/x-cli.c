@@ -50,7 +50,7 @@ static x_obj_t *x_prim_syscall(x_obj_t *p_base, x_obj_t *p_args)
 	p[0] = p[1] = p[2] = p[3] = p[4] = p[5] = p[6] = 0;
 
 	while (!x_obj_isnil(p_base, p_args) && i < 7) {
-		arg = x_prim_eval_arg(p_base, x_firstobj(p_args));
+		arg = x_eval_arg(p_base, x_firstobj(p_args));
 		if (x_obj_type_isint(p_base, arg))
 			p[i++] = x_intval(arg);
 		else if (x_obj_type_isstr(p_base, arg))
@@ -170,7 +170,7 @@ x_obj_t * init(x_obj_t *p_base, x_char_t *buffer)
 
 #ifdef X_INCLUDE
 	/* Register include primitive. */
-	x_prim_bind(p_base, "include", x_prim_include);
+	x_callable_bind(p_base, "include", x_prim_include);
 #endif
 
 	return p_base;

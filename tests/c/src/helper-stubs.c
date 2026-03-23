@@ -14,15 +14,15 @@
 #define HELPER_STUBS_C
 
 #ifdef STUB_X_PRIM
-x_obj_t *x_prim_eval_arg(x_obj_t *p_base, x_obj_t *p_arg) { return p_arg; }
-x_obj_t *x_prim_evlis(x_obj_t *p_base, x_obj_t *p_args) { return p_args; }
-x_obj_t *x_prim_multiple_extend(x_obj_t *p_base, x_obj_t *p_env,
+x_obj_t *x_eval_arg(x_obj_t *p_base, x_obj_t *p_arg) { return p_arg; }
+x_obj_t *x_eval_list(x_obj_t *p_base, x_obj_t *p_args) { return p_args; }
+x_obj_t *x_env_extend(x_obj_t *p_base, x_obj_t *p_env,
 	x_obj_t *p_params, x_obj_t *p_vals) { return p_env; }
-x_obj_t *x_prim_body_eval(x_obj_t *p_base, x_obj_t *p_body) { return NULL; }
-x_obj_t *x_prim_body_eval_tco(x_obj_t *p_base, x_obj_t *p_body) { return NULL; }
-x_obj_t *x_prim_body_eval_tco_simple(x_obj_t *p_base, x_obj_t *p_body) { return NULL; }
-x_obj_t *x_prim_tco_trampoline(x_obj_t *p_base, x_obj_t *p_result) { return p_result; }
-void x_prim_bind(x_obj_t *p_base, x_char_t *name, x_prim_fn fn) {}
+x_obj_t *x_eval_body(x_obj_t *p_base, x_obj_t *p_body) { return NULL; }
+x_obj_t *x_eval_body_tco(x_obj_t *p_base, x_obj_t *p_body) { return NULL; }
+x_obj_t *x_eval_body_tco_simple(x_obj_t *p_base, x_obj_t *p_body) { return NULL; }
+x_obj_t *x_eval_tco_trampoline(x_obj_t *p_base, x_obj_t *p_result) { return p_result; }
+void x_callable_bind(x_obj_t *p_base, x_char_t *name, x_callable_fn fn) {}
 #endif
 
 #ifdef STUB_X_PROCEDURE

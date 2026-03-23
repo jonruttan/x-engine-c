@@ -26,7 +26,7 @@ static x_obj_t *x_prim_match(x_obj_t *p_base, x_obj_t *p_args)
 	p_args = x_1(p_args);
 	while ( ! x_obj_isnil(p_base, p_args)) {
 		p_clause = x_firstobj(p_args);
-		p_test = x_prim_eval_arg(p_base, x_firstobj(p_clause));
+		p_test = x_eval_arg(p_base, x_firstobj(p_clause));
 
 		if ( ! x_obj_isnil(p_base, p_test)
 				&& p_test != x_base_field_false(p_base)) {
@@ -66,7 +66,7 @@ static x_obj_t *x_prim_guard(x_obj_t *p_base, x_obj_t *p_args)
 
 	if (setjmp(jmp) == 0) {
 		/* Normal execution: evaluate body. */
-		p_result = x_prim_body_eval(p_base, p_body);
+		p_result = x_eval_body(p_base, p_body);
 	} else {
 		/* Error caught: restore save-stack and boundary to guard point. */
 		x_obj_t *p_err = x_error_handler_error(p_handler);
@@ -74,7 +74,7 @@ static x_obj_t *x_prim_guard(x_obj_t *p_base, x_obj_t *p_args)
 
 		x_base_field_save_stack(p_base) = p_saved_save_stack;
 		x_base_env_alist_extend(p_base, p_pair);
-		p_result = x_prim_body_eval(p_base, p_handler_body);
+		p_result = x_eval_body(p_base, p_handler_body);
 		x_base_field_env_alist(p_base)
 			= x_error_handler_saved_env(p_handler);
 		x_base_field_env_local_boundary(p_base)
@@ -123,7 +123,7 @@ static x_obj_t *x_prim_seq(x_obj_t *p_base, x_obj_t *p_args)
 	x_base_field_eval_list_stack(p_base) = x_mkspair(p_base,
 		x_1(p_args), x_base_field_eval_list_stack(p_base));
 
-	x_prim_eval_arg(p_base, p_a);
+	x_eval_arg(p_base, p_a);
 	x_base_field_tco_expr(p_base) = p_b;
 
 	/* Unroot */
@@ -135,14 +135,14 @@ static x_obj_t *x_prim_seq(x_obj_t *p_base, x_obj_t *p_args)
 
 x_obj_t *x_syntax_control_register(x_obj_t *p_base, x_obj_t *p_args)
 {
-	static const x_prim_entry_t entries[] = {
+	static const x_callable_entry_t entries[] = {
 		{ "match", x_prim_match },
 		{ "guard", x_prim_guard },
 		{ "error", x_prim_error },
 		{ "%seq", x_prim_seq }
 	};
 
-	x_prim_bind_table(p_base, entries,
+	x_callable_bind_table(p_base, entries,
 		sizeof(entries) / sizeof(entries[0]));
 
 	return p_base;

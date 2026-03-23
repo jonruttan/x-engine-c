@@ -51,7 +51,7 @@ x_obj_t *x_token_delimit(x_obj_t *p_base, x_obj_t *p_args)
 
 		if (p_type != x_restobj(x_firstobj(p_types))
 			&& ! x_obj_isnil(p_base, prim_arg_prim)
-			&& x_type_prim_apply(p_base, (x_obj_t *)prim_args) == p_buffer
+			&& x_callable_apply(p_base, (x_obj_t *)prim_args) == p_buffer
 		) {
 			return p_buffer;
 		}
@@ -164,7 +164,7 @@ x_obj_t *x_token_analyse(x_obj_t *p_base, x_obj_t *p_args)
 
 				x_atomint(arg_chr) = (x_int_t)x_bufferlastchar(p_buffer);
 				prim_arg_prim = p_analyse;
-				p_obj = x_type_prim_apply(p_base, (x_obj_t *)prim_args);
+				p_obj = x_callable_apply(p_base, (x_obj_t *)prim_args);
 
 				/* Not recognized. */
 				if (x_obj_isnil(p_base, p_obj)) {
@@ -269,7 +269,7 @@ x_obj_t *x_token_read(x_obj_t *p_base, x_obj_t *p_args)
 		}
 
 		prim_arg_prim = p_read;
-		p_obj = x_type_prim_apply(p_base, (x_obj_t *)prim_args);
+		p_obj = x_callable_apply(p_base, (x_obj_t *)prim_args);
 
 		if (x_obj_isnil(p_base, p_obj)) {
 			return NULL;

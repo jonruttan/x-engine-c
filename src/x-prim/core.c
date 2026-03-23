@@ -56,7 +56,7 @@ static x_obj_t *x_prim_apply(x_obj_t *p_base, x_obj_t *p_args)
 {
 	x_obj_t *p_fn, *p_evaled, *p_vals, *p_walk;
 	x_eargs(p_base, p_args, 2, NULL, &p_fn);
-	p_evaled = x_prim_evlis(p_base, x_11(p_args));
+	p_evaled = x_eval_list(p_base, x_11(p_args));
 
 	/* Build combined arg list: prefix args prepended to tail list.
 	 * (apply f a b '(c d)) -> p_evaled = (a b (c d))
@@ -65,7 +65,7 @@ static x_obj_t *x_prim_apply(x_obj_t *p_base, x_obj_t *p_args)
 		p_vals = x_firstobj(p_evaled);
 	} else {
 		/* Walk to second-to-last, splice tail list in place.
-		 * p_evaled is fresh from x_prim_evlis, safe to mutate. */
+		 * p_evaled is fresh from x_eval_list, safe to mutate. */
 		p_walk = p_evaled;
 		while ( ! x_obj_isnil(p_base,
 			x_restobj(x_restobj(p_walk)))) {
@@ -96,14 +96,14 @@ static x_obj_t *x_prim_apply(x_obj_t *p_base, x_obj_t *p_args)
 		x_base_field_env_global_tree(p_base) = x_procbst(p_fn);
 
 		p_vals = x_mkspair(p_base, p_fn, p_vals);
-		x_base_field_env_alist(p_base) = x_prim_multiple_extend(
+		x_base_field_env_alist(p_base) = x_env_extend(
 			p_base, x_procenv(p_fn), x_procparams(p_fn), p_vals);
 
 		/* Unroot */
 		x_base_field_eval_list_stack(p_base)
 			= x_restobj(x_restobj(x_base_field_eval_list_stack(p_base)));
 
-		return x_prim_body_eval_tco(p_base, x_procbody(p_fn));
+		return x_eval_body_tco(p_base, x_procbody(p_fn));
 	}
 
 	/* Operative / C primitive: delegate to type dispatch. */
@@ -111,7 +111,7 @@ static x_obj_t *x_prim_apply(x_obj_t *p_base, x_obj_t *p_args)
 		x_spair_t apply_args[1] = {
 			x_obj_set(NULL, X_OBJ_FLAG_NONE, { p_fn }, { p_vals })
 		};
-		x_obj_t *p_result = x_type_prim_apply(p_base, (x_obj_t *)apply_args);
+		x_obj_t *p_result = x_callable_apply(p_base, (x_obj_t *)apply_args);
 
 		/* Unroot */
 		x_base_field_eval_list_stack(p_base)
@@ -130,7 +130,7 @@ static x_obj_t *x_prim_eval(x_obj_t *p_base, x_obj_t *p_args)
 
 	if ( ! x_obj_isnil(p_base, p_env_arg)) {
 		/* eval with env: save/restore via base save-stack */
-		x_obj_t *p_env = x_prim_eval_arg(p_base, x_firstobj(p_env_arg));
+		x_obj_t *p_env = x_eval_arg(p_base, x_firstobj(p_env_arg));
 		x_obj_t *p_result;
 
 		/* Push ((env . boundary) . (bst . shadow_head)) onto save-stack */
@@ -144,7 +144,7 @@ static x_obj_t *x_prim_eval(x_obj_t *p_base, x_obj_t *p_args)
 
 		x_base_field_env_alist(p_base) = p_env;
 		/* Don't change boundary or BST — eval-with-env preserves scope context */
-		p_result = x_prim_eval_arg(p_base, p_expr);
+		p_result = x_eval_arg(p_base, p_expr);
 
 		/* Pop save-stack and restore env + boundary + bst + shadow */
 		{
@@ -174,7 +174,7 @@ static x_obj_t *x_prim_eval_immediate(x_obj_t *p_base, x_obj_t *p_args)
 	x_obj_t *p_expr;
 	x_eargs(p_base, p_args, 2, NULL, &p_expr);
 
-	return x_prim_eval_arg(p_base, p_expr);
+	return x_eval_arg(p_base, p_expr);
 }
 
 /* tail-eval: (tail-eval expr env) -> TCO-compatible eval in given env */
@@ -217,7 +217,7 @@ static x_obj_t *x_prim_atomic(x_obj_t *p_base, x_obj_t *p_args)
 		x_base_field_eval_list_stack(p_base) = x_mkspair(p_base,
 			p_args, x_base_field_eval_list_stack(p_base));
 
-		p_result = x_prim_eval_arg(p_base, x_firstobj(p_args));
+		p_result = x_eval_arg(p_base, x_firstobj(p_args));
 
 		x_base_field_eval_list_stack(p_base)
 			= x_restobj(x_base_field_eval_list_stack(p_base));
@@ -237,7 +237,7 @@ static x_obj_t *x_prim_base(x_obj_t *p_base, x_obj_t *p_args)
 
 x_obj_t *x_prim_core_register(x_obj_t *p_base, x_obj_t *p_args)
 {
-	static const x_prim_entry_t entries[] = {
+	static const x_callable_entry_t entries[] = {
 		{ "pair", x_prim_pair },
 		{ "first", x_prim_first },
 		{ "rest", x_prim_rest },
@@ -251,7 +251,7 @@ x_obj_t *x_prim_core_register(x_obj_t *p_base, x_obj_t *p_args)
 		{ "%base", x_prim_base }
 	};
 
-	x_prim_bind_table(p_base, entries,
+	x_callable_bind_table(p_base, entries,
 		sizeof(entries) / sizeof(entries[0]));
 
 	return p_base;

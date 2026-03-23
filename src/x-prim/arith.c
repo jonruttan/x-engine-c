@@ -38,7 +38,7 @@ static x_obj_t *x_prim_sub(x_obj_t *p_base, x_obj_t *p_args)
 		return x_mkint(p_base, -x_intval(a));
 
 	return x_mkint(p_base,
-		x_intval(a) - x_intval(x_prim_eval_arg(p_base, x_011(p_args))));
+		x_intval(a) - x_intval(x_eval_arg(p_base, x_011(p_args))));
 }
 
 /* *: (* a b) -> binary multiplication */
@@ -124,7 +124,7 @@ static x_obj_t *x_prim_shr(x_obj_t *p_base, x_obj_t *p_args)
 
 x_obj_t *x_prim_arith_register(x_obj_t *p_base, x_obj_t *p_args)
 {
-	static const x_prim_entry_t entries[] = {
+	static const x_callable_entry_t entries[] = {
 		{ "+", x_prim_sum },
 		{ "-", x_prim_sub },
 		{ "*", x_prim_prod },
@@ -138,7 +138,7 @@ x_obj_t *x_prim_arith_register(x_obj_t *p_base, x_obj_t *p_args)
 		{ ">>", x_prim_shr }
 	};
 
-	x_prim_bind_table(p_base, entries,
+	x_callable_bind_table(p_base, entries,
 		sizeof(entries) / sizeof(entries[0]));
 
 	return p_base;

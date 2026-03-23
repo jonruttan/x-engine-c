@@ -472,7 +472,7 @@ static char *test_type_base_eval(void)
 
 	/* Pass the symbol xx as expression — it self-evaluates in calling base
 	 * (it's a symbol atom), then gets eval'd in target base.
-	 * Bind the symbol to expr in calling base so x_prim_eval_arg resolves it. */
+	 * Bind the symbol to expr in calling base so x_eval_arg resolves it. */
 	x_base_env_alist_extend(p_base,
 		x_mkspair(p_base, x_mksymbol(p_base, "expr"), p_sym));
 

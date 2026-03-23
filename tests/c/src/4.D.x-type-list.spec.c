@@ -464,7 +464,7 @@ static char *test_type_list_eval(void)
 	x_obj_t *p_base, *p_type, *p_list, *p_prim, *p_atom, *p_args, *p_ret;
 	struct x_type_t type = {
 			.p_name = test_type_name,
-			.p_call = x_type_prim_call_prim
+			.p_call = x_callable_call_prim
 		};
 
 	helper_alloc_reset();

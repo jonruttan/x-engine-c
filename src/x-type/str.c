@@ -94,14 +94,14 @@ x_obj_t *x_type_str_call(x_obj_t *p_base, x_obj_t *p_args)
 		return x_mkint(p_base, x_lib_strlen(x_strval(proc)));
 	}
 
-	arg1 = x_prim_eval_arg(p_base, x_firstobj(vals));
+	arg1 = x_eval_arg(p_base, x_firstobj(vals));
 	vals = x_restobj(vals);
 
 	if (! x_obj_isnil(p_base, vals)) {
 		/* Slice: (str start len) -> substring */
 		x_int_t start = x_atomint(arg1);
 
-		arg2 = x_prim_eval_arg(p_base, x_firstobj(vals));
+		arg2 = x_eval_arg(p_base, x_firstobj(vals));
 
 		return x_mkstr(p_base, x_lib_strndup(x_strval(proc) + start, x_atomint(arg2)));
 	}

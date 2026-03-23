@@ -26,11 +26,11 @@ static x_obj_t *x_prim_quote(x_obj_t *p_base, x_obj_t *p_args)
 
 x_obj_t *x_syntax_quote_register(x_obj_t *p_base, x_obj_t *p_args)
 {
-	static const x_prim_entry_t entries[] = {
+	static const x_callable_entry_t entries[] = {
 		{ "lit", x_prim_quote }
 	};
 
-	x_prim_bind_table(p_base, entries,
+	x_callable_bind_table(p_base, entries,
 		sizeof(entries) / sizeof(entries[0]));
 
 	return p_base;

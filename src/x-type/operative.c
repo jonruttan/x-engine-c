@@ -39,7 +39,7 @@ x_obj_t *x_make_operative(x_obj_t *p_base, x_obj_flag_t flags,
 		*p_state = x_mkspair(p_base, p_params, p_s2);
 
 	return x_obj_make(p_base, p_type, flags, X_OBJ_LENGTH_PAIR,
-		(x_prim_fn)x_type_operative_call, p_state);
+		(x_callable_fn)x_type_operative_call, p_state);
 }
 
 x_obj_t *x_type_operative_struct(x_obj_t *p_base, x_obj_t *p_args)
@@ -98,7 +98,7 @@ x_obj_t *x_type_operative_call(x_obj_t *p_base, x_obj_t *p_args)
 	/* Extend caller's env with param bindings (unevaluated args).
 	 * Operatives use dynamic scoping — body runs in caller's context
 	 * so that def/set naturally affect the caller's environment. */
-	p_env = x_prim_multiple_extend(
+	p_env = x_env_extend(
 		p_base, p_caller_env, p_params, p_unevaluated_args);
 
 	/* Bind the env-param to the caller's environment. */
@@ -109,7 +109,7 @@ x_obj_t *x_type_operative_call(x_obj_t *p_base, x_obj_t *p_args)
 
 	x_base_field_env_alist(p_base) = p_env;
 
-	return x_prim_body_eval_tco_simple(p_base, p_body);
+	return x_eval_body_tco_simple(p_base, p_body);
 }
 
 x_obj_t *x_type_operative_write(x_obj_t *p_base, x_obj_t *p_args)

@@ -79,14 +79,14 @@ static x_obj_t *x_prim_list_to_string(x_obj_t *p_base, x_obj_t *p_args)
 
 x_obj_t *x_prim_string_register(x_obj_t *p_base, x_obj_t *p_args)
 {
-	static const x_prim_entry_t entries[] = {
+	static const x_callable_entry_t entries[] = {
 		{ "string-append", x_prim_string_append },
 		{ "string->symbol", x_prim_string_to_symbol },
 		{ "symbol->string", x_prim_symbol_to_string },
 		{ "list->string", x_prim_list_to_string }
 	};
 
-	x_prim_bind_table(p_base, entries,
+	x_callable_bind_table(p_base, entries,
 		sizeof(entries) / sizeof(entries[0]));
 
 	return p_base;

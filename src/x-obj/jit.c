@@ -45,7 +45,7 @@ long jit_atomint(x_obj_t *p)
 /* jit_eval_arg: evaluate an expression */
 x_obj_t *jit_eval_arg(x_obj_t *p_base, x_obj_t *p_expr)
 {
-	return x_prim_eval_arg(p_base, p_expr);
+	return x_eval_arg(p_base, p_expr);
 }
 
 /* jit_build_args: build x-lang arg list from raw integers.
@@ -99,8 +99,8 @@ long jit_buffer_len(x_obj_t *buffer)
  * dispatch and is usable as a normal x-lang value. */
 x_obj_t *jit_make_prim(x_obj_t *p_base, x_obj_t *p_args)
 {
-	x_obj_t *p_addr = x_prim_eval_arg(p_base, x_01(p_args));
+	x_obj_t *p_addr = x_eval_arg(p_base, x_01(p_args));
 
 	return x_make_prim(p_base, X_OBJ_FLAG_NONE,
-		(x_prim_fn)x_ptrval(p_addr));
+		(x_callable_fn)x_ptrval(p_addr));
 }

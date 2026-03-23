@@ -25,7 +25,7 @@
 /*
  * # Data Structures
  */
-x_obj_t *x_prim_eval_arg(x_obj_t *p_base, x_obj_t *p_arg);
+x_obj_t *x_eval_arg(x_obj_t *p_base, x_obj_t *p_arg);
 
 /*
  * x_args: unpack N elements from an args list into output pointers.
@@ -62,27 +62,27 @@ static void __attribute__((unused)) x_eargs(x_obj_t *p_base, x_obj_t *p_args, in
 		x_obj_t **slot = va_arg(ap, x_obj_t **);
 		if (p_args == NULL) { if (slot) *slot = NULL; continue; }
 		if (slot != NULL)
-			*slot = x_prim_eval_arg(p_base, x_firstobj(p_args));
+			*slot = x_eval_arg(p_base, x_firstobj(p_args));
 		p_args = x_restobj(p_args);
 	}
 	va_end(ap);
 }
-x_obj_t *x_prim_evlis(x_obj_t *p_base, x_obj_t *p_args);
-x_obj_t *x_prim_multiple_extend(x_obj_t *p_base, x_obj_t *p_env,
+x_obj_t *x_eval_list(x_obj_t *p_base, x_obj_t *p_args);
+x_obj_t *x_env_extend(x_obj_t *p_base, x_obj_t *p_env,
 	x_obj_t *p_params, x_obj_t *p_vals);
 
-x_obj_t *x_prim_body_eval(x_obj_t *p_base, x_obj_t *p_body);
-x_obj_t *x_prim_body_eval_tco(x_obj_t *p_base, x_obj_t *p_body);
-x_obj_t *x_prim_body_eval_tco_simple(x_obj_t *p_base, x_obj_t *p_body);
-x_obj_t *x_prim_tco_trampoline(x_obj_t *p_base, x_obj_t *p_result);
+x_obj_t *x_eval_body(x_obj_t *p_base, x_obj_t *p_body);
+x_obj_t *x_eval_body_tco(x_obj_t *p_base, x_obj_t *p_body);
+x_obj_t *x_eval_body_tco_simple(x_obj_t *p_base, x_obj_t *p_body);
+x_obj_t *x_eval_tco_trampoline(x_obj_t *p_base, x_obj_t *p_result);
 
 typedef struct {
 	x_char_t *name;
-	x_prim_fn fn;
-} x_prim_entry_t;
+	x_callable_fn fn;
+} x_callable_entry_t;
 
-void x_prim_bind(x_obj_t *p_base, x_char_t *name, x_prim_fn fn);
-void x_prim_bind_table(x_obj_t *p_base, const x_prim_entry_t *table, int count);
+void x_callable_bind(x_obj_t *p_base, x_char_t *name, x_callable_fn fn);
+void x_callable_bind_table(x_obj_t *p_base, const x_callable_entry_t *table, int count);
 
 x_obj_t *x_prim_core_register(x_obj_t *p_base, x_obj_t *p_args);
 x_obj_t *x_prim_arith_register(x_obj_t *p_base, x_obj_t *p_args);

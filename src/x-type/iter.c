@@ -89,5 +89,5 @@ x_obj_t *x_type_iter_next(x_obj_t *p_base, x_obj_t *p_args)
 	x_obj_t *p_iter = x_firstobj(p_args);
 	x_spair_t args = x_obj_set(NULL, X_OBJ_FLAG_NONE, { x_iterprim(p_iter) }, { p_args });
 
-	return x_type_prim_call(p_base, (x_obj_t *)args);
+	return x_callable_call(p_base, (x_obj_t *)args);
 }

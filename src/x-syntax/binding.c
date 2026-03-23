@@ -26,7 +26,7 @@ static x_obj_t *x_prim_define(x_obj_t *p_base, x_obj_t *p_args)
 	p_pair = x_mkspair(p_base, p_name, NULL);
 
 	x_base_env_alist_extend(p_base, p_pair);
-	p_val = x_prim_eval_arg(p_base, x_011(p_args));
+	p_val = x_eval_arg(p_base, x_011(p_args));
 	x_restobj(p_pair) = p_val;
 
 	/* Top-level: insert into BST and advance boundary.
@@ -57,7 +57,7 @@ static x_obj_t *x_prim_set(x_obj_t *p_base, x_obj_t *p_args)
 	x_obj_t *p_name, *p_val;
 	x_obj_t *p_alist, *p_boundary, *p_entry;
 	x_args(p_args, 2, NULL, &p_name);
-	p_val = x_prim_eval_arg(p_base, x_011(p_args));
+	p_val = x_eval_arg(p_base, x_011(p_args));
 
 	p_alist = x_base_field_env_alist(p_base);
 	p_boundary = x_base_field_env_local_boundary(p_base);
@@ -106,12 +106,12 @@ static x_obj_t *x_prim_set(x_obj_t *p_base, x_obj_t *p_args)
 
 x_obj_t *x_syntax_binding_register(x_obj_t *p_base, x_obj_t *p_args)
 {
-	static const x_prim_entry_t entries[] = {
+	static const x_callable_entry_t entries[] = {
 		{ "def", x_prim_define },
 		{ "set!", x_prim_set }
 	};
 
-	x_prim_bind_table(p_base, entries,
+	x_callable_bind_table(p_base, entries,
 		sizeof(entries) / sizeof(entries[0]));
 
 	return p_base;

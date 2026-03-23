@@ -55,7 +55,7 @@ eval_start:
 
 	if ( ! x_obj_isnil(p_base, x_firstobj((x_obj_t *)prim_args))) {
 		x_restobj((x_obj_t *)prim_args) = p_args;
-		p_exp = x_type_prim_call(p_base, (x_obj_t *)prim_args);
+		p_exp = x_callable_call(p_base, (x_obj_t *)prim_args);
 
 		if (p_exp == p_args) {
 			goto eval_start;

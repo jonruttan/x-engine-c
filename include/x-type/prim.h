@@ -41,16 +41,16 @@
  */
 extern x_satom_t x_type_prim_name,
 	x_type_prim_make_prim,
-	x_type_prim_call_prim,
+	x_callable_call_prim,
 	x_type_prim_struct_prim;
 
-x_obj_t *x_make_prim(x_obj_t *p_base, x_obj_flag_t flags, x_prim_fn fn);
+x_obj_t *x_make_prim(x_obj_t *p_base, x_obj_flag_t flags, x_callable_fn fn);
 
 x_obj_t *x_type_prim_register(x_obj_t *p_base, x_obj_t *p_args);
 x_obj_t *x_type_prim_struct(x_obj_t *p_base, x_obj_t *p_args);
 x_obj_t *x_type_prim_make(x_obj_t *p_base, x_obj_t *p_args);
-x_obj_t *x_type_prim_call(x_obj_t *p_base, x_obj_t *p_args);
-x_obj_t *x_type_prim_apply(x_obj_t *p_base, x_obj_t *p_args);
-x_obj_t *x_type_prim_write(x_obj_t *p_base, x_obj_t *p_args);
+x_obj_t *x_callable_call(x_obj_t *p_base, x_obj_t *p_args);
+x_obj_t *x_callable_apply(x_obj_t *p_base, x_obj_t *p_args);
+x_obj_t *x_callable_write(x_obj_t *p_base, x_obj_t *p_args);
 
 #endif /* X_TYPE_PRIM_H */

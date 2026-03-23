@@ -171,7 +171,7 @@ static char *test_core_def_set(void)
 	/* Lookup x -> 42 */
 	p_args = x_mkspair(p_base,
 		x_mksymbol(p_base, "x"), NULL);
-	p_result = x_prim_eval_arg(p_base, x_mksymbol(p_base, "x"));
+	p_result = x_eval_arg(p_base, x_mksymbol(p_base, "x"));
 	_it_should("x resolves to 42",
 		x_atomint(p_result) == 42);
 
@@ -184,7 +184,7 @@ static char *test_core_def_set(void)
 		x_atomint(p_result) == 99);
 
 	/* x now resolves to 99 */
-	p_result = x_prim_eval_arg(p_base, x_mksymbol(p_base, "x"));
+	p_result = x_eval_arg(p_base, x_mksymbol(p_base, "x"));
 	_it_should("x now resolves to 99",
 		x_atomint(p_result) == 99);
 
@@ -671,18 +671,18 @@ static char *test_core_error_guard_catch(void)
 	/* (guard (e e) (error 42)) -> guard catches error, e = 42, returns e */
 	/* Build: guard clause = (e e), body = (error 42) */
 	/* error is a prim, so body needs to be a call: we need (error 42) as an
-	 * expression that eval will dispatch. But x_prim_body_eval evaluates
+	 * expression that eval will dispatch. But x_eval_body evaluates
 	 * each form. We can call error directly inside guard. */
 
 	/* Simpler: call x_prim_guard with handler body that returns the error
 	 * variable, and a body that calls x_prim_error directly. */
 
 	/* Actually, the test body needs to trigger an error via x_prim_error.
-	 * Since body forms are evaluated by x_prim_body_eval, we need the body
+	 * Since body forms are evaluated by x_eval_body, we need the body
 	 * to be an expression that when evaluated calls error. The simplest:
 	 * use a C-level call approach.
 	 *
-	 * guard body = list of forms, each form evaluated by x_prim_eval_arg.
+	 * guard body = list of forms, each form evaluated by x_eval_arg.
 	 * A self-evaluating atom won't trigger error. We need to construct
 	 * a form like (error 42) that evaluates to an error call. */
 
