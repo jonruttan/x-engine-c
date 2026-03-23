@@ -7,3 +7,4 @@ _jit_firstobj
 _jit_restobj
 _jit_atomint
 _jit_eval_arg
+_jit_make_prim
