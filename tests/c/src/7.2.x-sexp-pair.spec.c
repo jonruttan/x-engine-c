@@ -19,6 +19,7 @@ x_obj_t *x_eval(x_obj_t *p_base, x_obj_t *p_args) { return p_base; }
 #define STUB_X_OBJ_OBJ
 #define STUB_X_STR
 #define STUB_X_TYPE_PRIM
+#define STUB_X_TOKEN_DISPLAY
 #include "helper-stubs.c"
 
 #include "ext/x-expr/tests/src/helper-system-functions.c"

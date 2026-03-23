@@ -33,7 +33,8 @@
 #define STUB_X_SYMBOL
 #define STUB_X_PRIM_REGISTER
 #define STUB_X_SEXP_PAIR_WRITE
-#define STUB_X_PRIM_FLAG1
+#define STUB_X_PRIM_SHADOW
+#define STUB_X_PROCEDURE_APPLY
 #include "helper-stubs.c"
 
 #include "ext/x-expr/tests/src/helper-system-functions.c"

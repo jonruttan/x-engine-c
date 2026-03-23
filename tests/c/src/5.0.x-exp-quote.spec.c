@@ -34,7 +34,8 @@
 #define STUB_X_HEAP
 #define STUB_X_OBJ_OBJ
 #define STUB_X_STR
-#define STUB_X_PRIM_FLAG1
+#define STUB_X_PRIM_SHADOW
+#define STUB_X_PROCEDURE_APPLY
 #include "helper-stubs.c"
 
 #include "ext/x-expr/tests/src/helper-system-functions.c"

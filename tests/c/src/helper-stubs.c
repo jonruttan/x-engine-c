@@ -94,14 +94,56 @@ x_obj_t *x_syntax_control_register(x_obj_t *p_base, x_obj_t *p_args) { return p_
 x_obj_t *x_syntax_quote_register(x_obj_t *p_base, x_obj_t *p_args) { return p_base; }
 #endif
 
+#ifdef STUB_X_PRIM_SHADOW
+void x_prim_clear_shadows_to(x_obj_t *p_base, x_obj_t *p_to) {}
+#endif
+
+/* Legacy alias */
 #ifdef STUB_X_PRIM_FLAG1
-void x_prim_clear_flag1_to(x_obj_t *p_base, x_obj_t *p_to) {}
+void x_prim_clear_shadows_to(x_obj_t *p_base, x_obj_t *p_to) {}
 #endif
 
 #ifdef STUB_X_TYPE_PRIM
 x_obj_t *x_type_prim_type_name(x_obj_t *p_base, x_obj_t *p_args) { return NULL; }
 x_obj_t *x_type_prim_units(x_obj_t *p_base, x_obj_t *p_args) { return NULL; }
 x_obj_t *x_type_prim_length(x_obj_t *p_base, x_obj_t *p_args) { return NULL; }
+#endif
+
+#ifdef STUB_X_TYPE_DISPLAY
+x_obj_t *x_type_display(x_obj_t *p_base, x_obj_t *p_args) { return NULL; }
+#endif
+
+#ifdef STUB_X_TYPE_ERROR
+void x_type_error(x_obj_t *p_base, x_char_t *msg, x_obj_t *p_obj) {}
+#endif
+
+#ifdef STUB_X_TYPE_WRITE
+x_obj_t *x_type_write(x_obj_t *p_base, x_obj_t *p_args) { return NULL; }
+#endif
+
+#ifdef STUB_X_TOKEN_DISPLAY
+x_obj_t *x_token_display(x_obj_t *p_base, x_obj_t *p_args) { return NULL; }
+#endif
+
+#ifdef STUB_X_TOKEN_ANALYSE
+x_obj_t *x_token_analyse(x_obj_t *p_base, x_obj_t *p_args) { return NULL; }
+#endif
+
+#ifdef STUB_X_TOKEN_DELIMIT
+x_obj_t *x_token_delimit(x_obj_t *p_base, x_obj_t *p_args) { return NULL; }
+#endif
+
+#ifdef STUB_X_PROCEDURE_APPLY
+x_obj_t *x_type_procedure_apply(x_obj_t *p_base, x_obj_t *p_args) { return NULL; }
+#endif
+
+#ifdef STUB_X_SEXP_PAIR_DISPLAY
+x_obj_t *x_sexp_pair_display(x_obj_t *p_base, x_obj_t *p_args) { return NULL; }
+x_satom_t x_sexp_pair_display_prim = x_obj_set(NULL, X_OBJ_FLAG_NONE, {.fn = NULL});
+#endif
+
+#ifdef STUB_X_SEXP_LIST_DISPLAY
+x_satom_t x_sexp_list_display_prim = x_obj_set(NULL, X_OBJ_FLAG_NONE, {.fn = NULL});
 #endif
 
 #ifdef STUB_X_SEXP_PAIR_WRITE

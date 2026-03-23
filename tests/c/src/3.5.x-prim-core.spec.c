@@ -349,64 +349,8 @@ static char *test_core_guard(void)
 	return NULL;
 }
 
-static char *test_core_first_rest_int(void)
-{
-	x_obj_t *p_base, *p_args, *p_result, *p_obj;
-
-	p_base = x_base_make(NULL, NULL);
-	x_prim_register(p_base, NULL);
-
-	/* Create satom with int value 42 */
-	p_obj = x_mksatom(p_base, (x_int_t)42);
-
-	p_args = x_mkspair(p_base, NULL,
-		x_mkspair(p_base, p_obj, NULL));
-	p_result = x_prim_first_int(p_base, p_args);
-	_it_should("first-int extracts car as integer",
-		x_intval(p_result) == 42);
-
-	test_cleanup(p_base);
-	return NULL;
-}
-
-static char *test_core_set_first_rest(void)
-{
-	x_obj_t *p_base, *p_args, *p_result, *p_pair;
-	x_obj_t *p_a, *p_b, *p_c;
-
-	p_base = x_base_make(NULL, NULL);
-	x_prim_register(p_base, NULL);
-
-	p_a = x_mksatom(p_base, (x_int_t)1);
-	p_b = x_mksatom(p_base, (x_int_t)2);
-	p_c = x_mksatom(p_base, (x_int_t)3);
-	p_pair = x_mklist(p_base, p_a, p_b);
-
-	/* Bind pair at C level (x_prim_define would eval the list) */
-	x_base_env_alist_extend(p_base,
-		x_mkspair(p_base, x_mksymbol(p_base, "pp"), p_pair));
-
-	/* (set-first pp 3) */
-	p_args = x_mkspair(p_base, NULL,
-		x_mkspair(p_base, x_mksymbol(p_base, "pp"),
-		x_mkspair(p_base, p_c, NULL)));
-	p_result = x_prim_set_first(p_base, p_args);
-	_it_should("set-first returns pair",
-		p_result == p_pair);
-	_it_should("set-first modifies first",
-		x_firstobj(p_pair) == p_c);
-
-	/* (set-rest pp 3) */
-	p_args = x_mkspair(p_base, NULL,
-		x_mkspair(p_base, x_mksymbol(p_base, "pp"),
-		x_mkspair(p_base, p_c, NULL)));
-	p_result = x_prim_set_rest(p_base, p_args);
-	_it_should("set-rest modifies rest",
-		x_restobj(p_pair) == p_c);
-
-	test_cleanup(p_base);
-	return NULL;
-}
+/* test_core_first_rest_int: moved to X (lib/x-core.x) */
+/* test_core_set_first_rest: moved to X (lib/x-core.x) */
 
 static char *test_core_wrap_unwrap(void)
 {
@@ -540,64 +484,8 @@ static char *test_core_rest(void)
 	return NULL;
 }
 
-static char *test_core_rest_int(void)
-{
-	x_obj_t *p_base, *p_args, *p_result, *p_pair;
-
-	p_base = x_base_make(NULL, NULL);
-	x_prim_register(p_base, NULL);
-
-	/* Create a pair with raw int in rest slot */
-	p_pair = x_mklist(p_base, x_mksatom(p_base, (x_int_t)10), NULL);
-	x_restint(p_pair) = 77;
-	x_base_env_alist_extend(p_base,
-		x_mkspair(p_base, x_mksymbol(p_base, "rr"), p_pair));
-
-	/* (rest-int rr) reads cdr as raw integer */
-	p_args = x_mkspair(p_base, NULL,
-		x_mkspair(p_base, x_mksymbol(p_base, "rr"), NULL));
-	p_result = x_prim_rest_int(p_base, p_args);
-	_it_should("rest-int extracts cdr as integer",
-		x_intval(p_result) == 77);
-
-	test_cleanup(p_base);
-	return NULL;
-}
-
-static char *test_core_set_first_rest_int(void)
-{
-	x_obj_t *p_base, *p_args, *p_result, *p_pair;
-
-	p_base = x_base_make(NULL, NULL);
-	x_prim_register(p_base, NULL);
-
-	/* Create a pair with raw int slots */
-	p_pair = x_mklist(p_base, NULL, NULL);
-	x_firstint(p_pair) = 0;
-	x_restint(p_pair) = 0;
-	x_base_env_alist_extend(p_base,
-		x_mkspair(p_base, x_mksymbol(p_base, "pp"), p_pair));
-
-	/* set-first-int evals both args. Second is satom (self-eval). */
-	/* (set-first-int pp 55) */
-	p_args = x_mkspair(p_base, NULL,
-		x_mkspair(p_base, x_mksymbol(p_base, "pp"),
-		x_mkspair(p_base, x_mksatom(p_base, (x_int_t)55), NULL)));
-	p_result = x_prim_set_first_int(p_base, p_args);
-	_it_should("set-first-int returns pair", p_result == p_pair);
-	_it_should("set-first-int wrote car", x_firstint(p_pair) == 55);
-
-	/* (set-rest-int pp 66) */
-	p_args = x_mkspair(p_base, NULL,
-		x_mkspair(p_base, x_mksymbol(p_base, "pp"),
-		x_mkspair(p_base, x_mksatom(p_base, (x_int_t)66), NULL)));
-	p_result = x_prim_set_rest_int(p_base, p_args);
-	_it_should("set-rest-int returns pair", p_result == p_pair);
-	_it_should("set-rest-int wrote cdr", x_restint(p_pair) == 66);
-
-	test_cleanup(p_base);
-	return NULL;
-}
+/* test_core_rest_int: moved to X (lib/x-core.x) */
+/* test_core_set_first_rest_int: moved to X (lib/x-core.x) */
 
 static char *test_core_eval_with_env(void)
 {
@@ -925,15 +813,15 @@ static char *run_tests() {
 	_run_test(test_core_eval_immediate);
 	_run_test(test_core_match);
 	_run_test(test_core_guard);
-	_run_test(test_core_first_rest_int);
-	_run_test(test_core_set_first_rest);
+	/* test_core_first_rest_int: moved to X (lib/x-core.x) */
+	/* test_core_set_first_rest: moved to X (lib/x-core.x) */
 	_run_test(test_core_wrap_unwrap);
 	_run_test(test_core_base);
 	_run_test(test_core_seq);
 	_run_test(test_core_tail_eval);
 	_run_test(test_core_rest);
-	_run_test(test_core_rest_int);
-	_run_test(test_core_set_first_rest_int);
+	/* test_core_rest_int: moved to X (lib/x-core.x) */
+	/* test_core_set_first_rest_int: moved to X (lib/x-core.x) */
 	_run_test(test_core_eval_with_env);
 	_run_test(test_core_apply);
 	_run_test(test_core_error_guard_catch);

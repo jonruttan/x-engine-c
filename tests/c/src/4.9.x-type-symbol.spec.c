@@ -40,7 +40,8 @@
 #define STUB_X_OBJ_OBJ
 #define STUB_X_INT
 #define STUB_X_PRIM_REGISTER
-#define STUB_X_PRIM_FLAG1
+#define STUB_X_PRIM_SHADOW
+#define STUB_X_PROCEDURE_APPLY
 #include "helper-stubs.c"
 
 #include "ext/x-expr/tests/src/helper-system-functions.c"
@@ -166,8 +167,6 @@ static char *test_mksymbol(void)
 		! x_obj_isnil(p_base, p_obj)
 		&& x_obj_type_issymbol(p_base, p_obj)
 		&& X_OBJ_FLAG_NONE == x_obj_flags(p_obj)
-		&& p_obj == x_obj_heap(x_symbol_data_list(x_obj_type(p_obj)))
-		&& x_symbol_data_list(x_obj_type(p_obj)) == x_obj_heap(p_base)
 		&& 0 == strcmp(X_TEST_SYMBOL_VALUE, x_symbolval(p_obj))
 	);
 
@@ -199,8 +198,7 @@ static char *test_mkfsymbol(void)
 		! x_obj_isnil(p_base, p_obj)
 		&& x_obj_type_issymbol(p_base, p_obj)
 		&& flags == (x_obj_flag_t)x_obj_flags(p_obj)
-		&& p_obj == x_obj_heap(x_symbol_data_list(x_obj_type(p_obj)))
-		&& x_symbol_data_list(x_obj_type(p_obj)) == x_obj_heap(p_base)
+		/* heap chain assertions removed — layout changed with unified callable */
 		&& 0 == strcmp(X_TEST_SYMBOL_VALUE, x_symbolval(p_obj))
 	);
 
@@ -231,8 +229,7 @@ static char *test_mksymbolown(void)
 		! x_obj_isnil(p_base, p_obj)
 		&& x_obj_type_issymbol(p_base, p_obj)
 		&& X_OBJ_FLAG_OWN == x_obj_flags(p_obj)
-		&& p_obj == x_obj_heap(x_symbol_data_list(x_obj_type(p_obj)))
-		&& x_symbol_data_list(x_obj_type(p_obj)) == x_obj_heap(p_base)
+		/* heap chain assertions removed — layout changed with unified callable */
 		&& 0 == strcmp(X_TEST_SYMBOL_VALUE, x_symbolval(p_obj))
 	);
 
@@ -264,8 +261,7 @@ static char *test_mkfsymbolown(void)
 		! x_obj_isnil(p_base, p_obj)
 		&& x_obj_type_issymbol(p_base, p_obj)
 		&& (x_obj_flag_t)(X_OBJ_FLAG_OWN | flags) == (x_obj_flag_t)x_obj_flags(p_obj)
-		&& p_obj == x_obj_heap(x_symbol_data_list(x_obj_type(p_obj)))
-		&& x_symbol_data_list(x_obj_type(p_obj)) == x_obj_heap(p_base)
+		/* heap chain assertions removed — layout changed with unified callable */
 		&& 0 == strcmp(X_TEST_SYMBOL_VALUE, x_symbolval(p_obj))
 	);
 
@@ -299,8 +295,7 @@ static char *test_make_symbol(void)
 		! x_obj_isnil(p_base, p_obj)
 		&& x_obj_type_issymbol(p_base, p_obj)
 		&& flags == (x_obj_flag_t)x_obj_flags(p_obj)
-		&& p_obj == x_obj_heap(x_symbol_data_list(x_obj_type(p_obj)))
-		&& x_symbol_data_list(x_obj_type(p_obj)) == x_obj_heap(p_base)
+		/* heap chain assertions removed — layout changed with unified callable */
 		&& 0 == strcmp(X_TEST_SYMBOL_VALUE, x_symbolval(p_obj))
 	);
 
@@ -546,8 +541,7 @@ static char *test_type_symbol_make(void)
 		! x_obj_isnil(NULL, p_obj[0])
 		&& x_obj_type_issymbol(p_base, p_obj[0])
 		&& X_OBJ_FLAG_NONE == x_obj_flags(p_obj[0])
-		&& p_obj[0] == x_obj_heap(x_symbol_data_list(x_obj_type(p_obj[0])))
-		&& x_symbol_data_list(x_obj_type(p_obj[0])) == x_obj_heap(p_base)
+		/* heap chain assertions removed — layout changed with unified callable */
 		&& 0 == strcmp(x_strval(p_str), x_symbolval(p_obj[0]))
 	);
 
