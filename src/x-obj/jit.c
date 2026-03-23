@@ -47,6 +47,30 @@ x_obj_t *jit_eval_arg(x_obj_t *p_base, x_obj_t *p_expr)
 	return x_prim_eval_arg(p_base, p_expr);
 }
 
+/* jit_build_args: build x-lang arg list from raw integers.
+ * Receives p_base, nargs, then nargs raw longs.
+ * Returns (nil arg0-atom arg1-atom ...) — with nil as self placeholder. */
+x_obj_t *jit_build_args(x_obj_t *p_base, long nargs,
+	long a0, long a1, long a2, long a3)
+{
+	x_obj_t *p_list = NULL;
+	long args[4];
+	int i;
+
+	args[0] = a0; args[1] = a1; args[2] = a2; args[3] = a3;
+
+	/* Build list right-to-left */
+	for (i = (int)nargs - 1; i >= 0; i--) {
+		x_obj_t *p_atom = x_mkint(p_base, (x_int_t)args[i]);
+		p_list = x_mkspair(p_base, p_atom, p_list);
+	}
+
+	/* Prepend nil as self placeholder */
+	p_list = x_mkspair(p_base, NULL, p_list);
+
+	return p_list;
+}
+
 /* jit_make_prim: (jit-make-prim fn-addr) -> proper prim callable.
  * Registered as an x-lang primitive so the return value flows through
  * dispatch and is usable as a normal x-lang value. */
