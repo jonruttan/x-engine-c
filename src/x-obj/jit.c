@@ -6,6 +6,7 @@
  */
 #include "x-obj.h"
 #include "x-prim.h"
+#include "x-type/buffer.h"
 #include "x-type/int.h"
 #include "x-type/pair.h"
 #include "x-type/prim.h"
@@ -69,6 +70,28 @@ x_obj_t *jit_build_args(x_obj_t *p_base, long nargs,
 	p_list = x_mkspair(p_base, NULL, p_list);
 
 	return p_list;
+}
+
+/* jit_score_set: (score-set score sign buffer) -> score
+ * Sets score integer to sign * bufferlen(buffer), returns score. */
+x_obj_t *jit_score_set(x_obj_t *score, long sign, x_obj_t *buffer)
+{
+	x_firstint(score) = (x_int_t)(sign * (long)x_bufferlen(buffer));
+	return score;
+}
+
+/* jit_buffer_unread: (buffer-unread buffer) -> buffer
+ * Decrements the buffer read pointer, returns buffer. */
+x_obj_t *jit_buffer_unread(x_obj_t *buffer)
+{
+	x_bufferread(buffer)--;
+	return buffer;
+}
+
+/* jit_buffer_len: (buffer-len buffer) -> raw length */
+long jit_buffer_len(x_obj_t *buffer)
+{
+	return (long)x_bufferlen(buffer);
 }
 
 /* jit_make_prim: (jit-make-prim fn-addr) -> proper prim callable.

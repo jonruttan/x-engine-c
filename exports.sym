@@ -10,3 +10,6 @@ _jit_atomint
 _jit_eval_arg
 _jit_build_args
 _jit_make_prim
+_jit_score_set
+_jit_buffer_unread
+_jit_buffer_len
