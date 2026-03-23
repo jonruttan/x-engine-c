@@ -40,10 +40,10 @@ static x_obj_t *x_prim_define(x_obj_t *p_base, x_obj_t *p_args)
 	} else if (x_base_isset(p_base)) {
 		if (x_alist_bst_lookup(p_base,
 			x_base_field_env_global_tree(p_base), p_name) != NULL) {
-			if ( ! (x_obj_flags(p_name) & X_OBJ_FLAG_1)) {
-				x_obj_flags(p_name) |= X_OBJ_FLAG_1;
-				x_base_field_flag1_list(p_base) = x_mkspair(p_base,
-					p_name, x_base_field_flag1_list(p_base));
+			if ( ! (x_obj_flags(p_name) & X_OBJ_FLAG_SHADOW)) {
+				x_obj_flags(p_name) |= X_OBJ_FLAG_SHADOW;
+				x_base_field_shadow_list(p_base) = x_mkspair(p_base,
+					p_name, x_base_field_shadow_list(p_base));
 			}
 		}
 	}
@@ -76,7 +76,7 @@ static x_obj_t *x_prim_set(x_obj_t *p_base, x_obj_t *p_args)
 	}
 
 	/* Step 2: BST lookup (skip re-defined symbols) */
-	if ( ! (x_obj_flags(p_name) & X_OBJ_FLAG_1)) {
+	if ( ! (x_obj_flags(p_name) & X_OBJ_FLAG_SHADOW)) {
 		p_entry = x_alist_bst_lookup(p_base,
 			x_base_field_env_global_tree(p_base), p_name);
 		if ( ! x_obj_isnil(p_base, p_entry)) {

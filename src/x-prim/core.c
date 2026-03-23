@@ -82,13 +82,13 @@ static x_obj_t *x_prim_apply(x_obj_t *p_base, x_obj_t *p_args)
 
 	/* Procedure: bind params, eval body with TCO for eval trampoline. */
 	if (x_obj_type_isprocedure(p_base, p_fn)) {
-		/* Push ((env . boundary) . (bst . flag1_head)) onto save-stack */
+		/* Push ((env . boundary) . (bst . shadow_head)) onto save-stack */
 		x_base_field_save_stack(p_base) = x_mkspair(p_base,
 			x_mkspair(p_base,
 				x_mkspair(p_base, x_base_field_env_alist(p_base),
 				                   x_base_field_env_local_boundary(p_base)),
 				x_mkspair(p_base, x_base_field_env_global_tree(p_base),
-				                   x_base_field_flag1_list(p_base))),
+				                   x_base_field_shadow_list(p_base))),
 			x_base_field_save_stack(p_base));
 
 		/* Set boundary and BST to closure's captured values */
@@ -133,20 +133,20 @@ static x_obj_t *x_prim_eval(x_obj_t *p_base, x_obj_t *p_args)
 		x_obj_t *p_env = x_prim_eval_arg(p_base, x_firstobj(p_env_arg));
 		x_obj_t *p_result;
 
-		/* Push ((env . boundary) . (bst . flag1_head)) onto save-stack */
+		/* Push ((env . boundary) . (bst . shadow_head)) onto save-stack */
 		x_base_field_save_stack(p_base) = x_mkspair(p_base,
 			x_mkspair(p_base,
 				x_mkspair(p_base, x_base_field_env_alist(p_base),
 				                   x_base_field_env_local_boundary(p_base)),
 				x_mkspair(p_base, x_base_field_env_global_tree(p_base),
-				                   x_base_field_flag1_list(p_base))),
+				                   x_base_field_shadow_list(p_base))),
 			x_base_field_save_stack(p_base));
 
 		x_base_field_env_alist(p_base) = p_env;
 		/* Don't change boundary or BST — eval-with-env preserves scope context */
 		p_result = x_prim_eval_arg(p_base, p_expr);
 
-		/* Pop save-stack and restore env + boundary + bst + flag1 */
+		/* Pop save-stack and restore env + boundary + bst + shadow */
 		{
 			x_obj_t *p_saved = x_firstobj(x_base_field_save_stack(p_base));
 			x_base_field_env_alist(p_base) = x_firstobj(x_firstobj(p_saved));
@@ -154,7 +154,7 @@ static x_obj_t *x_prim_eval(x_obj_t *p_base, x_obj_t *p_args)
 				= x_restobj(x_firstobj(p_saved));
 			x_base_field_env_global_tree(p_base)
 				= x_firstobj(x_restobj(p_saved));
-			x_prim_clear_flag1_to(p_base, x_restobj(x_restobj(p_saved)));
+			x_prim_clear_shadows_to(p_base, x_restobj(x_restobj(p_saved)));
 			x_base_field_save_stack(p_base)
 				= x_restobj(x_base_field_save_stack(p_base));
 		}

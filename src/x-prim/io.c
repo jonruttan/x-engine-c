@@ -303,7 +303,7 @@ x_obj_t *x_prim_repl(x_obj_t *p_base, x_obj_t *p_args)
 		if (x_obj_isnil(p_base, p_exp))
 			break;
 		x_prim_eval_arg(p_base, p_exp);
-		x_prim_clear_flag1(p_base);
+		x_prim_clear_shadows(p_base);
 	}
 
 	return NULL;

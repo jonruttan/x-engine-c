@@ -72,7 +72,12 @@
 #define x_base_field_env_local_boundary(X)	x_firstobj(x_base_env_aux(X))
 #define x_base_env_bst(X)					x_restobj(x_base_env_aux(X))
 #define x_base_field_env_global_tree(X)		x_firstobj(x_base_env_bst(X))
-#define x_base_field_flag1_list(X)			x_restobj(x_base_env_bst(X))
+/* Shadow list: symbols that shadow a global BST binding (flagged FLAG_SHADOW) */
+#define X_OBJ_FLAG_SHADOW					X_OBJ_FLAG_1
+#define x_base_field_shadow_list(X)			x_restobj(x_base_env_bst(X))
+
+/* Coverage flag: marks expressions that have been evaluated */
+#define X_OBJ_FLAG_COV						X_OBJ_FLAG_2
 
 /* -- ctrl group (rest of hot) -- */
 #define x_base_ctrl_group(X)				x_restobj(x_base_hot(X))

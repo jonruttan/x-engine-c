@@ -214,7 +214,7 @@ x_obj_t *x_type_symbol_eval(x_obj_t *p_base, x_obj_t *p_args)
 	}
 
 	/* Step 2: BST lookup (skip if symbol has local shadow flag) */
-	if ( ! (x_obj_flags(p_sym_obj) & X_OBJ_FLAG_1)) {
+	if ( ! (x_obj_flags(p_sym_obj) & X_OBJ_FLAG_SHADOW)) {
 		p_entry = x_alist_bst_lookup(p_base,
 			x_base_field_env_global_tree(p_base), p_sym_obj);
 		if ( ! x_obj_isnil(p_base, p_entry)) {

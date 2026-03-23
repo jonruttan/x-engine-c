@@ -37,7 +37,7 @@ eval_start:
 
 #ifdef X_COV
 	if (p_exp != NULL)
-		x_obj_flags(p_exp) |= X_OBJ_FLAG_2;
+		x_obj_flags(p_exp) |= X_OBJ_FLAG_COV;
 #endif
 
 	if (x_obj_isnil(p_base, p_exp)) {
@@ -90,7 +90,7 @@ eval_start:
 	if (trampolining && x_base_isset(p_base)) {
 		x_base_field_tco_env(p_base) = NULL;
 
-		/* Restore from compound ((env . boundary) . (bst . flag1)) */
+		/* Restore from compound ((env . boundary) . (bst . shadow)) */
 		if (p_tco_env_save != NULL
 			&& ! x_obj_isnil(p_base, p_tco_env_save)) {
 			x_base_field_env_alist(p_base)
@@ -99,7 +99,7 @@ eval_start:
 				= x_restobj(x_firstobj(p_tco_env_save));
 			x_base_field_env_global_tree(p_base)
 				= x_firstobj(x_restobj(p_tco_env_save));
-			x_prim_clear_flag1_to(p_base,
+			x_prim_clear_shadows_to(p_base,
 				x_restobj(x_restobj(p_tco_env_save)));
 		}
 

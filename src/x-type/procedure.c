@@ -98,13 +98,13 @@ x_obj_t *x_type_procedure_call(x_obj_t *p_base, x_obj_t *p_args)
 	}
 
 	{
-		/* Push ((env . boundary) . (bst . flag1_head)) onto save-stack */
+		/* Push ((env . boundary) . (bst . shadow_head)) onto save-stack */
 		x_base_field_save_stack(p_base) = x_mkspair(p_base,
 			x_mkspair(p_base,
 				x_mkspair(p_base, x_base_field_env_alist(p_base),
 				                   x_base_field_env_local_boundary(p_base)),
 				x_mkspair(p_base, x_base_field_env_global_tree(p_base),
-				                   x_base_field_flag1_list(p_base))),
+				                   x_base_field_shadow_list(p_base))),
 			x_base_field_save_stack(p_base));
 
 		/* Set boundary to closure env and BST to closure's captured BST */
@@ -134,7 +134,7 @@ x_obj_t *x_type_procedure_apply(x_obj_t *p_base, x_obj_t *p_args)
 		*p_saved_alist = x_base_field_env_alist(p_base),
 		*p_saved_boundary = x_base_field_env_local_boundary(p_base),
 		*p_saved_bst = x_base_field_env_global_tree(p_base),
-		*p_saved_flag1 = x_base_field_flag1_list(p_base);
+		*p_saved_shadow = x_base_field_shadow_list(p_base);
 
 	/* Set boundary and BST from closure */
 	x_base_field_env_local_boundary(p_base) = x_procenv(p_proc);
@@ -151,11 +151,11 @@ x_obj_t *x_type_procedure_apply(x_obj_t *p_base, x_obj_t *p_args)
 
 	p_result = x_prim_body_eval(p_base, x_procbody(p_proc));
 
-	/* Restore env, boundary, BST, and flag1 */
+	/* Restore env, boundary, BST, and shadow */
 	x_base_field_env_alist(p_base) = p_saved_alist;
 	x_base_field_env_local_boundary(p_base) = p_saved_boundary;
 	x_base_field_env_global_tree(p_base) = p_saved_bst;
-	x_prim_clear_flag1_to(p_base, p_saved_flag1);
+	x_prim_clear_shadows_to(p_base, p_saved_shadow);
 
 	return p_result;
 }
