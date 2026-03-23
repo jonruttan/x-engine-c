@@ -51,68 +51,6 @@ static x_obj_t *x_prim_rest(x_obj_t *p_base, x_obj_t *p_args)
 	return x_restobj(x);
 }
 
-/* first-int: (first-int x) -> car slot as integer atom */
-static x_obj_t *x_prim_first_int(x_obj_t *p_base, x_obj_t *p_args)
-{
-	x_obj_t *x;
-	x_eargs(p_base, p_args, 2, NULL, &x);
-
-	return x_mkint(p_base, x_firstint(x));
-}
-
-/* rest-int: (rest-int x) -> cdr slot as integer atom */
-static x_obj_t *x_prim_rest_int(x_obj_t *p_base, x_obj_t *p_args)
-{
-	x_obj_t *x;
-	x_eargs(p_base, p_args, 2, NULL, &x);
-
-	return x_mkint(p_base, x_restint(x));
-}
-
-/* set-first!: (set-first! pair val) -> write object pointer to car */
-static x_obj_t *x_prim_set_first(x_obj_t *p_base, x_obj_t *p_args)
-{
-	x_obj_t *p_pair, *p_val;
-	x_eargs(p_base, p_args, 3, NULL, &p_pair, &p_val);
-
-	x_firstobj(p_pair) = p_val;
-
-	return p_pair;
-}
-
-/* set-rest!: (set-rest! pair val) -> write object pointer to cdr */
-static x_obj_t *x_prim_set_rest(x_obj_t *p_base, x_obj_t *p_args)
-{
-	x_obj_t *p_pair, *p_val;
-	x_eargs(p_base, p_args, 3, NULL, &p_pair, &p_val);
-
-	x_restobj(p_pair) = p_val;
-
-	return p_pair;
-}
-
-/* set-first-int!: (set-first-int! pair val) -> write raw integer to car */
-static x_obj_t *x_prim_set_first_int(x_obj_t *p_base, x_obj_t *p_args)
-{
-	x_obj_t *p_pair, *p_val;
-	x_eargs(p_base, p_args, 3, NULL, &p_pair, &p_val);
-
-	x_firstint(p_pair) = x_atomint(p_val);
-
-	return p_pair;
-}
-
-/* set-rest-int!: (set-rest-int! pair val) -> write raw integer to cdr */
-static x_obj_t *x_prim_set_rest_int(x_obj_t *p_base, x_obj_t *p_args)
-{
-	x_obj_t *p_pair, *p_val;
-	x_eargs(p_base, p_args, 3, NULL, &p_pair, &p_val);
-
-	x_restint(p_pair) = x_atomint(p_val);
-
-	return p_pair;
-}
-
 /* apply: (apply f arg1 ... args) -> call callable with prefix + tail arg list */
 static x_obj_t *x_prim_apply(x_obj_t *p_base, x_obj_t *p_args)
 {
@@ -303,12 +241,6 @@ x_obj_t *x_prim_core_register(x_obj_t *p_base, x_obj_t *p_args)
 		{ "pair", x_prim_pair },
 		{ "first", x_prim_first },
 		{ "rest", x_prim_rest },
-		{ "first-int", x_prim_first_int },
-		{ "rest-int", x_prim_rest_int },
-		{ "set-first!", x_prim_set_first },
-		{ "set-rest!", x_prim_set_rest },
-		{ "set-first-int!", x_prim_set_first_int },
-		{ "set-rest-int!", x_prim_set_rest_int },
 		{ "apply", x_prim_apply },
 		{ "eval", x_prim_eval },
 		{ "eval!", x_prim_eval_immediate },
