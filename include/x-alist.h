@@ -4,7 +4,7 @@
 /*
  * # Computational Expressions in C
  *
- * ## x-eval.h -- Header - Evaluator
+ * ## x-alist.h -- Header - Evaluator
  *
  * @description Computational Expressions in C
  * @author [Jon Ruttan](jonruttan@gmail.com)
