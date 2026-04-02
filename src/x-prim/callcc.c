@@ -17,7 +17,7 @@
  * # Includes
  */
 #include "x-prim.h"
-#include "x-base.h"
+#include "x-base-typesystem.h"
 #include "x-eval.h"
 #include <setjmp.h>
 #include <string.h>
@@ -148,14 +148,14 @@ static x_obj_t *x_prim_callcc(x_obj_t *p_base, x_obj_t *p_args)
 	if (setjmp(cont->jmp) != 0) {
 		/* Continuation was invoked. Restore interpreter state and
 		 * return the value passed to the continuation. */
-		x_base_field_env_alist(p_base) = cont->p_env_alist;
+		x_firstobj(x_base_field_env_alist(p_base)) = cont->p_env_alist;
 		x_base_field_env_local_boundary(p_base) = cont->p_local_boundary;
 		x_base_field_env_global_tree(p_base) = cont->p_global_tree;
 		x_base_field_save_stack(p_base) = cont->p_save_stack;
-		x_base_field_error_handler(p_base) = cont->p_error_handler;
-		x_base_field_eval_list_stack(p_base) = cont->p_eval_list_stack;
-		x_base_field_tco_expr(p_base) = NULL;
-		x_base_field_tco_env(p_base) = NULL;
+		x_firstobj(x_base_field_error_handler(p_base)) = cont->p_error_handler;
+		x_firstobj(x_base_field_eval_list(p_base)) = cont->p_eval_list_stack;
+		x_firstobj(x_base_field_tco_expr(p_base)) = NULL;
+		x_firstobj(x_base_field_tco_env(p_base)) = NULL;
 
 		return cont->p_result;
 	}
@@ -168,17 +168,17 @@ static x_obj_t *x_prim_callcc(x_obj_t *p_base, x_obj_t *p_args)
 	/* Build GC-visible interpreter state list:
 	 * (env-alist save-stack error-handler local-boundary global-tree) */
 	p_state = x_mklist(p_base,
-		x_base_field_env_alist(p_base),
+		x_firstobj(x_base_field_env_alist(p_base)),
 		x_mklist(p_base,
 			x_base_field_save_stack(p_base),
 			x_mklist(p_base,
-				x_base_field_error_handler(p_base),
+				x_firstobj(x_base_field_error_handler(p_base)),
 				x_mklist(p_base,
 					x_base_field_env_local_boundary(p_base),
 					x_mklist(p_base,
 						x_base_field_env_global_tree(p_base),
 						x_mklist(p_base,
-							x_base_field_eval_list_stack(p_base),
+							x_firstobj(x_base_field_eval_list(p_base)),
 							NULL))))));
 
 	/* Wrap continuation struct as POINTER with OWN flag.
@@ -205,11 +205,11 @@ static x_obj_t *x_prim_callcc(x_obj_t *p_base, x_obj_t *p_args)
 		NULL);
 
 	/* env: extend current env with %cc-ptr and %cc-state */
-	p_env = x_mkspair(p_base,
-		x_mkspair(p_base, p_ptr_sym, p_ptr),
-		x_mkspair(p_base,
-			x_mkspair(p_base, p_state_sym, p_state),
-			x_base_field_env_alist(p_base)));
+	p_env = x_mkspair(p_base, X_OBJ_FLAG_NONE,
+		x_mkspair(p_base, X_OBJ_FLAG_NONE, p_ptr_sym, p_ptr),
+		x_mkspair(p_base, X_OBJ_FLAG_NONE,
+			x_mkspair(p_base, X_OBJ_FLAG_NONE, p_state_sym, p_state),
+			x_firstobj(x_base_field_env_alist(p_base))));
 
 	/* Create k as a procedure (fn). */
 	p_k = x_mkproc(p_base, p_params, p_body, p_env,

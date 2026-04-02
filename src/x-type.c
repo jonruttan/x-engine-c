@@ -17,14 +17,14 @@
  * # Includes
  */
 #include "x-type.h"
-#include "x-base.h"
+#include "x-base-typesystem.h"
 #include "x-heap.h"
 #include "x-obj.h"
 #include "x-type/prim.h"
 
 #define nil			NULL
-#define pair(X,Y)	(x_mkspair(p_base, (X), (Y)))
-#define atom(X)		(x_mksatom(p_base, (X)))
+#define pair(X,Y)	(x_mkspair(p_base, X_OBJ_FLAG_NONE, (X), (Y)))
+#define atom(X)		(x_mksatom(p_base, X_OBJ_FLAG_NONE, (X)))
 
 x_obj_t *x_type_struct_make(x_obj_t *p_base, struct x_type_t type)
 {
@@ -248,20 +248,21 @@ x_obj_t *x_type_heap_mark(x_obj_t *p_base, x_obj_t *p_obj, x_obj_flag_t flags)
 		}
 
 		{
-			/* Fall back to p_units generic N-slot traversal. */
+			/* Fall back to p_units generic N-slot traversal.
+			 * Mark ALL slots via tree_mark (handles non-heap
+			 * values safely — they won't be on the heap chain). */
 			x_obj_t *p_units = x_type_field_units(p_type);
 
 			if (p_units != NULL) {
 				x_int_t n = x_atomint(p_units);
 				x_int_t i;
 
-				for (i = 0; i < n - 1; i++) {
-					x_heap_mark(p_base,
+				for (i = 0; i < n; i++) {
+					x_heap_tree_mark(p_base,
 						x_obj(x_obj_data_i(p_obj, i)),
-						flags, x_type_heap_mark);
+						flags);
 				}
-				/* Return last slot for tail-iteration. */
-				return x_obj(x_obj_data_i(p_obj, n - 1));
+				return NULL;
 			}
 		}
 	}

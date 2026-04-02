@@ -143,9 +143,9 @@ static char *test_procedure_make(void)
 	p_base = x_base_make(NULL, NULL);
 
 	p_proc = x_make_procedure(p_base, X_OBJ_FLAG_NONE,
-		x_mksatom(p_base, "params"),
-		x_mksatom(p_base, "body"),
-		x_mksatom(p_base, "env"),
+		x_mksatom(p_base, X_OBJ_FLAG_NONE, "params"),
+		x_mksatom(p_base, X_OBJ_FLAG_NONE, "body"),
+		x_mksatom(p_base, X_OBJ_FLAG_NONE, "env"),
 		NULL);
 
 	_it_should("create a procedure",
@@ -172,8 +172,8 @@ static char *test_procedure_call(void)
 
 	/* (fn (x) x) — takes one param, body returns x.
 	 * Procedure evaluates args before binding, unlike operative. */
-	p_params = x_mkspair(p_base, x_mksymbol(p_base, "x"), NULL);
-	p_body = x_mkspair(p_base, x_mksymbol(p_base, "x"), NULL);
+	p_params = x_mkspair(p_base, X_OBJ_FLAG_NONE, x_mksymbol(p_base, "x"), NULL);
+	p_body = x_mkspair(p_base, X_OBJ_FLAG_NONE, x_mksymbol(p_base, "x"), NULL);
 	p_env = x_base_field_env_alist(p_base);
 
 	p_proc = x_make_procedure(p_base, X_OBJ_FLAG_NONE,
@@ -181,8 +181,8 @@ static char *test_procedure_call(void)
 		x_base_field_env_global_tree(p_base));
 
 	/* Call: (proc 42) — procedure evaluates args then binds. */
-	p_args = x_mkspair(p_base, p_proc,
-		x_mkspair(p_base, x_mksatom(p_base, 42), NULL));
+	p_args = x_mkspair(p_base, X_OBJ_FLAG_NONE, p_proc,
+		x_mkspair(p_base, X_OBJ_FLAG_NONE, x_mksatom(p_base, X_OBJ_FLAG_NONE, 42), NULL));
 
 	x_type_procedure_call(p_base, p_args);
 
@@ -204,7 +204,7 @@ static char *test_procedure_call_wrapped(void)
 	x_prim_register(p_base, NULL);
 
 	/* Create an operative that returns 77 */
-	p_body = x_mkspair(p_base, x_mksatom(p_base, 77), NULL);
+	p_body = x_mkspair(p_base, X_OBJ_FLAG_NONE, x_mksatom(p_base, X_OBJ_FLAG_NONE, 77), NULL);
 	p_op = x_make_operative(p_base, X_OBJ_FLAG_NONE,
 		NULL, NULL, p_body, x_base_field_env_alist(p_base));
 
@@ -213,7 +213,7 @@ static char *test_procedure_call_wrapped(void)
 		NULL, NULL, p_op, NULL);
 
 	/* Call: (proc) — wrapped combiner dispatches to underlying */
-	p_args = x_mkspair(p_base, p_proc, NULL);
+	p_args = x_mkspair(p_base, X_OBJ_FLAG_NONE, p_proc, NULL);
 
 	x_type_procedure_call(p_base, p_args);
 
@@ -242,7 +242,7 @@ static char *test_procedure_write(void)
 	helper_file_buffer_length[TEST_HELPER_FILE_STDOUT] = 64;
 	helper_file_reset();
 
-	p_args = x_mkspair(p_base, p_proc, NULL);
+	p_args = x_mkspair(p_base, X_OBJ_FLAG_NONE, p_proc, NULL);
 	p_ret = x_type_procedure_write(p_base, p_args);
 
 	_it_should("return the procedure",

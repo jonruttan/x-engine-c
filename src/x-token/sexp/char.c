@@ -16,7 +16,7 @@
 /*
  * # Includes
  */
-#include "x-base.h"
+#include "x-base-typesystem.h"
 #include "x-token.h"
 #include "x-type/buffer.h"
 #include "x-type/char.h"

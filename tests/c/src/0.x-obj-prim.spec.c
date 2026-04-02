@@ -38,8 +38,8 @@ static void _teardown(void)
  * ## Test Helpers
  */
 #define nil			p_base
-#define pair(X,Y)	(x_mkspair(p_base, (X), (Y)))
-#define atom(X)		(x_mksatom(p_base, (X)))
+#define pair(X,Y)	(x_mkspair(p_base, X_OBJ_FLAG_NONE, (X), (Y)))
+#define atom(X)		(x_mksatom(p_base, X_OBJ_FLAG_NONE, (X)))
 
 
 /*
@@ -83,12 +83,12 @@ static char *test_obj_prim_make(void)
 	);
 
 
-	p_obj = x_mksatom(NULL, 0);
-	p_flags = x_mksatom(NULL, 0xf0);
-	p_vals[0] = x_mksatom(NULL, 10);
-	p_args[2] = x_mkspair(NULL, p_vals[0], NULL);
-	p_args[1] = x_mkspair(NULL, p_flags, p_args[2]);
-	p_args[0] = x_mkspair(NULL, p_obj, p_args[1]);
+	p_obj = x_mksatom(NULL, X_OBJ_FLAG_NONE, 0);
+	p_flags = x_mksatom(NULL, X_OBJ_FLAG_NONE, 0xf0);
+	p_vals[0] = x_mksatom(NULL, X_OBJ_FLAG_NONE, 10);
+	p_args[2] = x_mkspair(NULL, X_OBJ_FLAG_NONE, p_vals[0], NULL);
+	p_args[1] = x_mkspair(NULL, X_OBJ_FLAG_NONE, p_flags, p_args[2]);
+	p_args[0] = x_mkspair(NULL, X_OBJ_FLAG_NONE, p_obj, p_args[1]);
 	p_ret = x_obj_prim_make(NULL, p_args[0]);
 	_it_should("return a new object with the same type as the atom "
 		"and flags and value from the arguments when base is NULL",
@@ -105,14 +105,14 @@ static char *test_obj_prim_make(void)
 	x_obj_free(p_args[0]);
 	x_obj_free(p_ret);
 
-	p_obj = x_mkspair(NULL, 0, 0);
-	p_flags = x_mksatom(NULL, 0xf0);
-	p_vals[0] = x_mksatom(NULL, 10);
-	p_vals[1] = x_mksatom(NULL, 20);
-	p_args[3] = x_mkspair(NULL, p_vals[1], NULL);
-	p_args[2] = x_mkspair(NULL, p_vals[0], p_args[3]);
-	p_args[1] = x_mkspair(NULL, p_flags, p_args[2]);
-	p_args[0] = x_mkspair(NULL, p_obj, p_args[1]);
+	p_obj = x_mkspair(NULL, X_OBJ_FLAG_NONE, 0, 0);
+	p_flags = x_mksatom(NULL, X_OBJ_FLAG_NONE, 0xf0);
+	p_vals[0] = x_mksatom(NULL, X_OBJ_FLAG_NONE, 10);
+	p_vals[1] = x_mksatom(NULL, X_OBJ_FLAG_NONE, 20);
+	p_args[3] = x_mkspair(NULL, X_OBJ_FLAG_NONE, p_vals[1], NULL);
+	p_args[2] = x_mkspair(NULL, X_OBJ_FLAG_NONE, p_vals[0], p_args[3]);
+	p_args[1] = x_mkspair(NULL, X_OBJ_FLAG_NONE, p_flags, p_args[2]);
+	p_args[0] = x_mkspair(NULL, X_OBJ_FLAG_NONE, p_obj, p_args[1]);
 	p_ret = x_obj_prim_make(NULL, p_args[0]);
 	_it_should("return a new object with the same type as the pair "
 		"and flags and values from the arguments when base is NULL",
@@ -133,13 +133,13 @@ static char *test_obj_prim_make(void)
 	x_obj_free(p_ret);
 
 
-	p_base = x_mksatom(NULL, 0);
-	p_obj = x_mksatom(p_base, 0);
-	p_flags = x_mksatom(p_base, 0xf0);
-	p_vals[0] = x_mksatom(p_base, 10);
-	p_args[2] = x_mkspair(p_base, p_vals[0], p_base);
-	p_args[1] = x_mkspair(p_base, p_flags, p_args[2]);
-	p_args[0] = x_mkspair(p_base, p_obj, p_args[1]);
+	p_base = x_mksatom(NULL, X_OBJ_FLAG_NONE, 0);
+	p_obj = x_mksatom(p_base, X_OBJ_FLAG_NONE, 0);
+	p_flags = x_mksatom(p_base, X_OBJ_FLAG_NONE, 0xf0);
+	p_vals[0] = x_mksatom(p_base, X_OBJ_FLAG_NONE, 10);
+	p_args[2] = x_mkspair(p_base, X_OBJ_FLAG_NONE, p_vals[0], p_base);
+	p_args[1] = x_mkspair(p_base, X_OBJ_FLAG_NONE, p_flags, p_args[2]);
+	p_args[0] = x_mkspair(p_base, X_OBJ_FLAG_NONE, p_obj, p_args[1]);
 	p_ret = x_obj_prim_make(p_base, p_args[0]);
 	p_ret = x_obj_prim_make(p_base, p_args[0]);
 	_it_should("return a new object with the same type as the atom "
@@ -158,15 +158,15 @@ static char *test_obj_prim_make(void)
 	x_obj_free(p_ret);
 	x_obj_free(p_base);
 
-	p_base = x_mksatom(NULL, 0);
-	p_obj = x_mkspair(NULL, 0, 0);
-	p_flags = x_mksatom(p_base, 0xf0);
-	p_vals[0] = x_mksatom(p_base, 10);
-	p_vals[1] = x_mksatom(p_base, 20);
-	p_args[3] = x_mkspair(p_base, p_vals[1], p_base);
-	p_args[2] = x_mkspair(p_base, p_vals[0], p_args[3]);
-	p_args[1] = x_mkspair(p_base, p_flags, p_args[2]);
-	p_args[0] = x_mkspair(p_base, p_obj, p_args[1]);
+	p_base = x_mksatom(NULL, X_OBJ_FLAG_NONE, 0);
+	p_obj = x_mkspair(NULL, X_OBJ_FLAG_NONE, 0, 0);
+	p_flags = x_mksatom(p_base, X_OBJ_FLAG_NONE, 0xf0);
+	p_vals[0] = x_mksatom(p_base, X_OBJ_FLAG_NONE, 10);
+	p_vals[1] = x_mksatom(p_base, X_OBJ_FLAG_NONE, 20);
+	p_args[3] = x_mkspair(p_base, X_OBJ_FLAG_NONE, p_vals[1], p_base);
+	p_args[2] = x_mkspair(p_base, X_OBJ_FLAG_NONE, p_vals[0], p_args[3]);
+	p_args[1] = x_mkspair(p_base, X_OBJ_FLAG_NONE, p_flags, p_args[2]);
+	p_args[0] = x_mkspair(p_base, X_OBJ_FLAG_NONE, p_obj, p_args[1]);
 	p_ret = x_obj_prim_make(p_base, p_args[0]);
 	_it_should("return a new object with the same type as the pair "
 		"and flags and values from the arguments when base is empty",
@@ -197,9 +197,9 @@ static char *test_obj_prim_make_null_type(void)
 	helper_alloc_reset();
 
 	/* Object whose type field is NULL */
-	p_obj = x_mksatom(NULL, 42);
+	p_obj = x_mksatom(NULL, X_OBJ_FLAG_NONE, 42);
 	x_obj_type(p_obj) = NULL;
-	p_args = x_mkspair(NULL, p_obj, NULL);
+	p_args = x_mkspair(NULL, X_OBJ_FLAG_NONE, p_obj, NULL);
 	p_ret = x_obj_prim_make(NULL, p_args);
 	_it_should("return NULL when object type is nil",
 		NULL == p_ret);
@@ -215,14 +215,14 @@ static char *test_obj_prim_make_custom_nil_name(void)
 
 	helper_alloc_reset();
 
-	p_base = x_mksatom(NULL, 0);
+	p_base = x_mksatom(NULL, X_OBJ_FLAG_NONE, 0);
 	p_type = _test_make_type(p_base);
 	p_obj = x_obj_make(p_base, p_type, X_OBJ_FLAG_NONE, X_OBJ_LENGTH_ATOM, 0);
 
 	/* Clear name field to NULL */
 	x_type_field_name(p_type) = NULL;
 
-	p_args = x_mkspair(NULL, p_obj, NULL);
+	p_args = x_mkspair(NULL, X_OBJ_FLAG_NONE, p_obj, NULL);
 	p_ret = x_obj_prim_make(p_base, p_args);
 	_it_should("return NULL when custom type name is nil",
 		NULL == p_ret);
@@ -244,15 +244,15 @@ static char *test_obj_prim_make_custom_with_make_fn(void)
 
 	helper_alloc_reset();
 
-	p_base = x_mksatom(NULL, 0);
+	p_base = x_mksatom(NULL, X_OBJ_FLAG_NONE, 0);
 	p_type = _test_make_type(p_base);
 	p_obj = x_obj_make(p_base, p_type, X_OBJ_FLAG_NONE, X_OBJ_LENGTH_ATOM, 0);
 
 	/* Set the make field (heap[1]) to a real function pointer */
-	x_type_field_make(p_type) = x_mksatom(NULL, (x_int_t)_test_prim_fn);
+	x_type_field_make(p_type) = x_mksatom(NULL, X_OBJ_FLAG_NONE, (x_int_t)_test_prim_fn);
 
 	_test_prim_fn_calls = 0;
-	p_args = x_mkspair(NULL, p_obj, NULL);
+	p_args = x_mkspair(NULL, X_OBJ_FLAG_NONE, p_obj, NULL);
 	p_ret = x_obj_prim_make(p_base, p_args);
 	_it_should("custom type with make fn calls the make function",
 		_test_prim_fn_calls == 1);
@@ -277,24 +277,24 @@ static char *test_obj_prim_call(void)
 		NULL == p_ret);
 
 	/* nil object returns NULL */
-	p_args = x_mkspair(NULL, NULL, NULL);
+	p_args = x_mkspair(NULL, X_OBJ_FLAG_NONE, NULL, NULL);
 	p_ret = x_obj_prim_call(NULL, p_args);
 	_it_should("return NULL for nil object",
 		NULL == p_ret);
 
 	/* Object with NULL type returns NULL */
-	p_obj = x_mksatom(NULL, 0);
+	p_obj = x_mksatom(NULL, X_OBJ_FLAG_NONE, 0);
 	x_obj_type(p_obj) = NULL;
-	p_args = x_mkspair(NULL, p_obj, NULL);
+	p_args = x_mkspair(NULL, X_OBJ_FLAG_NONE, p_obj, NULL);
 	p_ret = x_obj_prim_call(NULL, p_args);
 	_it_should("return NULL for NULL type",
 		NULL == p_ret);
 
 	/* Typed object with NULL call field returns NULL */
-	p_base = x_mksatom(NULL, 0);
+	p_base = x_mksatom(NULL, X_OBJ_FLAG_NONE, 0);
 	p_type = _test_make_type(p_base);
 	p_obj = x_obj_make(p_base, p_type, X_OBJ_FLAG_NONE, X_OBJ_LENGTH_ATOM, _test_prim_fn);
-	p_args = x_mkspair(p_base, p_obj, NULL);
+	p_args = x_mkspair(p_base, X_OBJ_FLAG_NONE, p_obj, NULL);
 
 	_test_prim_fn_calls = 0;
 	p_ret = x_obj_prim_call(p_base, p_args);
@@ -352,7 +352,7 @@ static char *test_obj_prim_units_typed(void)
 	x_obj_t *p_ret;
 
 	helper_alloc_reset();
-	p_base = x_mksatom(NULL, 0);
+	p_base = x_mksatom(NULL, X_OBJ_FLAG_NONE, 0);
 	p_type = _test_make_type(p_base);
 	p_obj = x_obj_make(p_base, p_type, X_OBJ_FLAG_NONE,
 		X_OBJ_LENGTH_ATOM, 42);
@@ -393,8 +393,8 @@ static char *test_obj_prim_length_satom(void)
 	x_int_t len;
 
 	helper_alloc_reset();
-	p_base = x_mksatom(NULL, 0);
-	p_obj = x_mksatom(p_base, 42);
+	p_base = x_mksatom(NULL, X_OBJ_FLAG_NONE, 0);
+	p_obj = x_mksatom(p_base, X_OBJ_FLAG_NONE, 42);
 
 	{
 		x_spair_t args = x_obj_set(NULL, X_OBJ_FLAG_NONE, { p_obj }, { p_base });
@@ -419,8 +419,8 @@ static char *test_obj_prim_length_spair(void)
 	x_int_t len;
 
 	helper_alloc_reset();
-	p_base = x_mksatom(NULL, 0);
-	p_obj = x_mkspair(p_base, NULL, NULL);
+	p_base = x_mksatom(NULL, X_OBJ_FLAG_NONE, 0);
+	p_obj = x_mkspair(p_base, X_OBJ_FLAG_NONE, NULL, NULL);
 
 	{
 		x_spair_t args = x_obj_set(NULL, X_OBJ_FLAG_NONE, { p_obj }, { p_base });
@@ -444,7 +444,7 @@ static char *test_obj_prim_length_typed(void)
 	x_obj_t *p_ret;
 
 	helper_alloc_reset();
-	p_base = x_mksatom(NULL, 0);
+	p_base = x_mksatom(NULL, X_OBJ_FLAG_NONE, 0);
 	p_type = _test_make_type(p_base);
 	p_obj = x_obj_make(p_base, p_type, X_OBJ_FLAG_NONE,
 		X_OBJ_LENGTH_ATOM, 42);

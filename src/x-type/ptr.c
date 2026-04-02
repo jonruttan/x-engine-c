@@ -17,7 +17,7 @@
  * # Includes
  */
 #include "x-type/ptr.h"
-#include "x-base.h"
+#include "x-base-typesystem.h"
 
 x_satom_t x_type_ptr_name = x_obj_set(x_type_atom_obj, X_OBJ_FLAG_NONE, { .s = (x_char_t *)X_TYPE_PTR_NAME }),
 	x_type_ptr_make_prim = x_obj_set(x_type_atom_obj, X_OBJ_FLAG_NONE, { (x_obj_t *)&x_type_ptr_make }),

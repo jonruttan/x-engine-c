@@ -51,17 +51,17 @@ static char *test_alist_extend(void)
 {
 	x_obj_t *p_base, *p_alist, *p_atoms[3], *p_args;
 
-	p_base = x_mksatom(NULL, 0);
+	p_base = x_mksatom(NULL, X_OBJ_FLAG_NONE, 0);
 
-	p_atoms[0] = x_mksatom(p_base, 1);
-	p_atoms[1] = x_mksatom(p_base, 2);
-	p_atoms[2] = x_mksatom(p_base, 3);
+	p_atoms[0] = x_mksatom(p_base, X_OBJ_FLAG_NONE, 1);
+	p_atoms[1] = x_mksatom(p_base, X_OBJ_FLAG_NONE, 2);
+	p_atoms[2] = x_mksatom(p_base, X_OBJ_FLAG_NONE, 3);
 
 
 	p_alist = NULL;
 
-	p_args = x_mkspair(p_base,
-		x_mkspair(p_base, p_atoms[0], p_atoms[1]),
+	p_args = x_mkspair(p_base, X_OBJ_FLAG_NONE,
+		x_mkspair(p_base, X_OBJ_FLAG_NONE, p_atoms[0], p_atoms[1]),
 		p_alist
 	);
 	p_alist = x_alist_extend(p_base, p_args);
@@ -73,8 +73,8 @@ static char *test_alist_extend(void)
 	);
 
 
-	p_args = x_mkspair(p_base,
-		x_mkspair(p_base, p_atoms[1], p_atoms[2]),
+	p_args = x_mkspair(p_base, X_OBJ_FLAG_NONE,
+		x_mkspair(p_base, X_OBJ_FLAG_NONE, p_atoms[1], p_atoms[2]),
 		p_alist
 	);
 	p_alist = x_alist_extend(p_base, p_args);
@@ -97,17 +97,17 @@ static char *test_alist_assoc(void)
 	x_obj_t *p_base, *p_obj, *p_alist, *p_atoms[3], *p_args;
 
 
-	p_base = x_mksatom(NULL, 0);
+	p_base = x_mksatom(NULL, X_OBJ_FLAG_NONE, 0);
 
-	p_atoms[0] = x_mksatom(p_base, 1);
-	p_atoms[1] = x_mksatom(p_base, 2);
-	p_atoms[2] = x_mksatom(p_base, 3);
+	p_atoms[0] = x_mksatom(p_base, X_OBJ_FLAG_NONE, 1);
+	p_atoms[1] = x_mksatom(p_base, X_OBJ_FLAG_NONE, 2);
+	p_atoms[2] = x_mksatom(p_base, X_OBJ_FLAG_NONE, 3);
 
-	p_alist = x_mkspair(p_base,
-		x_mkspair(p_base, p_atoms[0], p_atoms[0]), x_mkspair(p_base,
-		x_mkspair(p_base, p_atoms[1], p_atoms[1]), NULL));
+	p_alist = x_mkspair(p_base, X_OBJ_FLAG_NONE,
+		x_mkspair(p_base, X_OBJ_FLAG_NONE, p_atoms[0], p_atoms[0]), x_mkspair(p_base, X_OBJ_FLAG_NONE,
+		x_mkspair(p_base, X_OBJ_FLAG_NONE, p_atoms[1], p_atoms[1]), NULL));
 
-	p_args = x_mkspair(p_base, p_atoms[0], x_mkspair(p_base, p_alist, NULL));
+	p_args = x_mkspair(p_base, X_OBJ_FLAG_NONE, p_atoms[0], x_mkspair(p_base, X_OBJ_FLAG_NONE, p_alist, NULL));
 	p_obj = x_alist_assoc(p_base, p_args);
 	_it_should("assoc 1 with (#<0x1:0x1> . #<0x1:0x1>)",
 		x_obj_type_isspair(p_obj)
@@ -117,7 +117,7 @@ static char *test_alist_assoc(void)
 		&& x_firstobj(x_restobj(p_obj)) == x_firstobj(p_atoms[0])
 	);
 
-	p_args = x_mkspair(p_base, p_atoms[1], x_mkspair(p_base, p_alist, NULL));
+	p_args = x_mkspair(p_base, X_OBJ_FLAG_NONE, p_atoms[1], x_mkspair(p_base, X_OBJ_FLAG_NONE, p_alist, NULL));
 	p_obj = x_alist_assoc(p_base, p_args);
 	_it_should("assoc 2 with (#<0x1:0x2> . #<0x1:0x2>)",
 		x_obj_type_isspair(p_obj)
@@ -126,7 +126,7 @@ static char *test_alist_assoc(void)
 	);
 
 
-	p_args = x_mkspair(p_base, p_atoms[2], x_mkspair(p_base, p_alist, NULL));
+	p_args = x_mkspair(p_base, X_OBJ_FLAG_NONE, p_atoms[2], x_mkspair(p_base, X_OBJ_FLAG_NONE, p_alist, NULL));
 	p_obj = x_alist_assoc(p_base, p_args);
 	_it_should("assoc 3 with nil", x_obj_isnil(p_base, p_obj));
 

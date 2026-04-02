@@ -51,7 +51,7 @@ x_obj_t *x_obj_prim_make(x_obj_t *p_base, x_obj_t *p_args)
 		return NULL;
 	}
 
-	return (*x_atomfn(p_make))(p_base, x_mkspair(p_base, p_obj, NULL));
+	return (*x_atomfn(p_make))(p_base, x_mkspair(p_base, X_OBJ_FLAG_NONE, p_obj, NULL));
 }
 
 x_obj_t *x_obj_prim_call(x_obj_t *p_base, x_obj_t *p_args)

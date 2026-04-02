@@ -80,8 +80,8 @@ void test_cleanup(x_obj_t *p_base)
 #define X_TEST_INT_VALUE		'@'
 
 #define nil			p_base
-#define pair(X,Y)	(x_mkspair(p_base, (X), (Y)))
-#define atom(X)		(x_mksatom(p_base, (X)))
+#define pair(X,Y)	(x_mkspair(p_base, X_OBJ_FLAG_NONE, (X), (Y)))
+#define atom(X)		(x_mksatom(p_base, X_OBJ_FLAG_NONE, (X)))
 
 static char *test_sexp_int_analyse_digits(void)
 {
@@ -456,7 +456,7 @@ static char *test_sexp_int_read(void)
 	helper_file_reset();
 
 	p_buffer = x_mkbuffer(NULL, buffer);
-	p_args = x_mkspair(NULL, p_buffer, NULL);
+	p_args = x_mkspair(NULL, X_OBJ_FLAG_NONE, p_buffer, NULL);
 	p_obj = x_sexp_int_read(NULL, p_args);
 	_it_should("return the Base", x_obj_isnil(NULL, p_obj));
 
@@ -538,7 +538,7 @@ static char *test_sexp_int_read_token(void)
 	p_type = x_type_struct_make(p_base, type_whitespace);
 	x_base_type_alist_extend(p_base, p_type);
 	p_buffer = x_mkbuffer(p_base, buffer);
-	p_args = x_mkspair(p_base, p_buffer, p_base);
+	p_args = x_mkspair(p_base, X_OBJ_FLAG_NONE, p_buffer, p_base);
 
 	p_obj = x_token_read(p_base, p_args);
 	_it_should("return 1",
@@ -588,7 +588,7 @@ static char *test_sexp_int_write(void)
 	i = 123;
 	s = "123";
 	p_obj = x_mkint(NULL, i);
-	p_args = x_mkspair(NULL, p_obj, NULL);
+	p_args = x_mkspair(NULL, X_OBJ_FLAG_NONE, p_obj, NULL);
 	p_ret = x_sexp_int_write(NULL, p_args);
 	_it_should("write the value of the Integer object",
 		! x_obj_isnil(NULL, p_ret)

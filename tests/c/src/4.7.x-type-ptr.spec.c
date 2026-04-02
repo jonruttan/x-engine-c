@@ -76,15 +76,15 @@ void test_cleanup(x_obj_t *p_base)
 #define X_TEST_PTR_VALUE		(void *)0xa5
 
 #define nil			NULL
-#define pair(X,Y)	(x_mkspair(p_base, (X), (Y)))
-#define atom(X)		(x_mksatom(p_base, (X)))
+#define pair(X,Y)	(x_mkspair(p_base, X_OBJ_FLAG_NONE, (X), (Y)))
+#define atom(X)		(x_mksatom(p_base, X_OBJ_FLAG_NONE, (X)))
 
 static char *test_obj_type_isptr(void)
 {
 	x_obj_t *p_obj;
 	x_char_t *p_ptr, *ptr = X_TEST_PTR_VALUE;
 
-	p_obj = x_mksatom(NULL, ptr);
+	p_obj = x_mksatom(NULL, X_OBJ_FLAG_NONE, ptr);
 
 	p_ptr = x_ptrval(p_obj);
 	_it_should("return the Pointer's value", ptr == p_ptr);
@@ -99,7 +99,7 @@ static char *test_ptrval(void)
 	x_obj_t *p_obj;
 	x_char_t *p_ptr, *ptr = X_TEST_PTR_VALUE;
 
-	p_obj = x_mksatom(NULL, ptr);
+	p_obj = x_mksatom(NULL, X_OBJ_FLAG_NONE, ptr);
 
 	p_ptr = x_ptrval(p_obj);
 	_it_should("return the Pointer's value", ptr == p_ptr);
@@ -125,7 +125,7 @@ static char *test_mkptr(void)
 	x_sys_free(p_obj);
 
 
-	p_base = x_mksatom(NULL, 0);
+	p_base = x_mksatom(NULL, X_OBJ_FLAG_NONE, 0);
 	p_obj = x_mkptr(NULL, (void *)i);
 	_it_should("make a Pointer object, attach it to the Base object, and set its value",
 		! x_obj_isnil(NULL, p_obj)
@@ -157,7 +157,7 @@ static char *test_mkfptr(void)
 	x_sys_free(p_obj);
 
 
-	p_base = x_mksatom(NULL, 0);
+	p_base = x_mksatom(NULL, X_OBJ_FLAG_NONE, 0);
 	p_obj = x_mkfptr(p_base, flags, (void *)i);
 	_it_should("make a Pointer object, attach it to the Base object, and set its value",
 		! x_obj_isnil(p_base, p_obj)
@@ -188,7 +188,7 @@ static char *test_mkptrown(void)
 	x_sys_free(p_obj);
 
 
-	p_base = x_mksatom(NULL, 0);
+	p_base = x_mksatom(NULL, X_OBJ_FLAG_NONE, 0);
 	p_obj = x_mkptrown(p_base, (void *)i);
 	_it_should("make a Pointer object, attach it to the Base object, and set its value",
 		! x_obj_isnil(p_base, p_obj)
@@ -219,7 +219,7 @@ static char *test_mkfptrown(void)
 	x_sys_free(p_obj);
 
 
-	p_base = x_mksatom(NULL, 0);
+	p_base = x_mksatom(NULL, X_OBJ_FLAG_NONE, 0);
 	p_obj = x_mkfptrown(p_base, flags, (void *)i);
 	_it_should("make a Pointer object, attach it to the Base object, and set its value",
 		! x_obj_isnil(p_base, p_obj)
@@ -250,7 +250,7 @@ static char *test_make_ptr(void)
 	x_sys_free(p_obj);
 
 
-	p_base = x_mksatom(NULL, 0);
+	p_base = x_mksatom(NULL, X_OBJ_FLAG_NONE, 0);
 	p_obj = x_make_ptr(p_base, flags, (void *)i);
 	_it_should("make a Pointer object, attach it to the Base object, and set its value",
 		! x_obj_isnil(p_base, p_obj)
@@ -270,7 +270,7 @@ static char *test_type_ptr_struct(void)
 
 	helper_alloc_reset();
 
-	p_base = x_mksatom(NULL, 0);
+	p_base = x_mksatom(NULL, X_OBJ_FLAG_NONE, 0);
 	p_type = x_type_ptr_struct(p_base, p_base);
 	_it_should("return Pointer Type list",
 		! x_obj_isnil(p_base, p_type)
@@ -364,9 +364,9 @@ static char *test_base_alist_assoc(void)
 	helper_alloc_reset();
 
 	p_base = x_base_make(NULL, NULL);
-	x_base_type_alist_extend(p_base, x_mkspair(p_base, x_mkspair(p_base, x_type_ptr_name, NULL), atom(1)));
+	x_base_type_alist_extend(p_base, x_mkspair(p_base, X_OBJ_FLAG_NONE, x_mkspair(p_base, X_OBJ_FLAG_NONE, x_type_ptr_name, NULL), atom(1)));
 
-	p_type = x_base_type_alist_assoc(p_base, x_mkspair(p_base, x_type_ptr_name, NULL));
+	p_type = x_base_type_alist_assoc(p_base, x_mkspair(p_base, X_OBJ_FLAG_NONE, x_type_ptr_name, NULL));
 	_it_should("find the type in the Type alist and return its properties",
 		x_type_ptr_name == x_type_field_name(p_type)
 	);
@@ -382,8 +382,8 @@ static char *test_type_ptr_make(void)
 	helper_alloc_reset();
 
 	/* NULL p_base object */
-	p_ptr = x_mksatom(NULL, value);
-	p_args = x_mkspair(NULL, p_ptr, NULL);
+	p_ptr = x_mksatom(NULL, X_OBJ_FLAG_NONE, value);
+	p_args = x_mkspair(NULL, X_OBJ_FLAG_NONE, p_ptr, NULL);
 	p_obj[0] = x_type_ptr_make(NULL, p_args);
 	_it_should("make a Pointer object",
 		! x_obj_isnil(NULL, p_obj[0])
@@ -411,9 +411,9 @@ static char *test_type_ptr_make(void)
 	helper_alloc_reset();
 
 	/* Empty p_base object */
-	p_base = x_mksatom(NULL, NULL);
-	p_ptr = x_mksatom(p_base, value);
-	p_args = x_mkspair(p_base, p_ptr, NULL);
+	p_base = x_mksatom(NULL, X_OBJ_FLAG_NONE, NULL);
+	p_ptr = x_mksatom(p_base, X_OBJ_FLAG_NONE, value);
+	p_args = x_mkspair(p_base, X_OBJ_FLAG_NONE, p_ptr, NULL);
 
 	p_obj[0] = x_type_ptr_make(p_base, p_args);
 	_it_should("make a Pointer object",
@@ -444,8 +444,8 @@ static char *test_type_ptr_make(void)
 
 	/* With p_base object */
 	p_base = x_base_make(NULL, NULL);
-	p_ptr = x_mksatom(p_base, value);
-	p_args = x_mkspair(p_base, p_ptr, NULL);
+	p_ptr = x_mksatom(p_base, X_OBJ_FLAG_NONE, value);
+	p_args = x_mkspair(p_base, X_OBJ_FLAG_NONE, p_ptr, NULL);
 
 	p_obj[0] = x_type_ptr_make(p_base, p_args);
 	_it_should("make a Pointer object with a base object",
@@ -484,7 +484,7 @@ static char *test_type_ptr_write(void)
 	p_base = x_base_make(NULL, NULL);
 	x_type_ptr_register(p_base, p_base);
 	p_obj = x_mkptr(p_base, (void *)0x42);
-	p_args = x_mkspair(p_base, p_obj, NULL);
+	p_args = x_mkspair(p_base, X_OBJ_FLAG_NONE, p_obj, NULL);
 	p_result = x_type_ptr_write(p_base, p_args);
 
 	_it_should("ptr_write returns the ptr object",

@@ -86,8 +86,8 @@ static char *test_sexp_write(void)
 	x_obj_t *p_atom, *p_pair, *p_obj, *p_type, *p_args, *p_ret;
 
 
-	p_atom = x_mksatom(NULL, NULL);
-	p_args = x_mkspair(NULL, p_atom, NULL);
+	p_atom = x_mksatom(NULL, X_OBJ_FLAG_NONE, NULL);
+	p_args = x_mkspair(NULL, X_OBJ_FLAG_NONE, p_atom, NULL);
 
 	p_ret = x_token_write(NULL, p_args);
 
@@ -102,8 +102,8 @@ static char *test_sexp_write(void)
 	x_sys_free(p_atom);
 
 
-	p_pair = x_mkspair(NULL, NULL, NULL);
-	p_args = x_mkspair(NULL, p_pair, NULL);
+	p_pair = x_mkspair(NULL, X_OBJ_FLAG_NONE, NULL, NULL);
+	p_args = x_mkspair(NULL, X_OBJ_FLAG_NONE, p_pair, NULL);
 
 	p_ret = x_token_write(NULL, p_args);
 
@@ -118,10 +118,10 @@ static char *test_sexp_write(void)
 	x_sys_free(p_pair);
 
 
-	p_type = x_mksatom(NULL, NULL);
-	p_obj = x_mksatom(NULL, NULL);
+	p_type = x_mksatom(NULL, X_OBJ_FLAG_NONE, NULL);
+	p_obj = x_mksatom(NULL, X_OBJ_FLAG_NONE, NULL);
 	x_obj_type(p_obj) = p_type;
-	p_args = x_mkspair(NULL, p_obj, NULL);
+	p_args = x_mkspair(NULL, X_OBJ_FLAG_NONE, p_obj, NULL);
 
 	p_ret = x_token_write(NULL, p_args);
 
@@ -137,9 +137,9 @@ static char *test_sexp_write(void)
 	x_sys_free(p_type);
 
 
-	p_obj = x_mksatom(NULL, NULL);
+	p_obj = x_mksatom(NULL, X_OBJ_FLAG_NONE, NULL);
 	x_obj_type(p_obj) = NULL;
-	p_args = x_mkspair(NULL, p_obj, NULL);
+	p_args = x_mkspair(NULL, X_OBJ_FLAG_NONE, p_obj, NULL);
 
 	p_ret = x_token_write(NULL, p_args);
 

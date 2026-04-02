@@ -16,7 +16,7 @@
 /*
  * # Includes
  */
-#include "x-base.h"
+#include "x-base-typesystem.h"
 #include "x-obj.h"
 #include "x-token.h"
 #include "x-type.h"
@@ -40,7 +40,7 @@ x_obj_t *x_token_delimit(x_obj_t *p_base, x_obj_t *p_args)
 {
 	x_obj_t *p_buffer = x_firstobj(p_args),
 		*p_type = x_01(p_args),
-		*p_types = x_base_field_type_alist(p_base);
+		*p_types = x_firstobj(x_base_field_type_alist(p_base));
 	x_spair_t prim_args[1] = {
 			x_obj_set(NULL, X_OBJ_FLAG_NONE, { NULL }, { p_args }),
 		};
@@ -86,7 +86,7 @@ x_obj_t *x_token_analyse(x_obj_t *p_base, x_obj_t *p_args)
 		arg_chr = x_obj_set(NULL, X_OBJ_FLAG_NONE, { .i = 0 });
 	x_spair_t
 		score = x_obj_set(NULL, X_OBJ_FLAG_NONE, {}),
-		type_iter = x_obj_set(NULL, X_OBJ_FLAG_NONE, { x_type_list_iter_prim }, { x_base_field_type_alist(p_base) }),
+		type_iter = x_obj_set(NULL, X_OBJ_FLAG_NONE, { x_type_list_iter_prim }, { x_firstobj(x_base_field_type_alist(p_base)) }),
 		iter_args[2] = {
 			x_obj_set(NULL, X_OBJ_FLAG_NONE, { type_iter }, { (x_obj_t *)(iter_args + 1) }),
 			x_obj_set(NULL, X_OBJ_FLAG_NONE, { NULL }, { NULL }),
@@ -243,12 +243,12 @@ x_obj_t *x_token_read(x_obj_t *p_base, x_obj_t *p_args)
 		 * After x_token_analyse, bufferval..bufferread is the
 		 * consumed token text. Track independently of the base
 		 * line counter (which gets inflated by analysis rescans). */
-		if (x_obj_meta_extra > 0
-				&& (x_obj_flags(p_buffer) & X_OBJ_FLAG_EXT)) {
+		if (x_atomint(x_firstobj(x_base_field_obj_meta_extra(p_base))) > 0
+				&& (x_obj_flags(p_buffer) & X_OBJ_FLAG_META)) {
 			for (p_scan = x_bufferval(p_buffer);
 					p_scan < x_bufferread(p_buffer); p_scan++) {
 				if (*p_scan == '\n')
-					x_obj_meta_slot(p_buffer, 0).i++;
+					x_obj_meta_i(p_buffer, 0).i++;
 			}
 		}
 
@@ -263,9 +263,9 @@ x_obj_t *x_token_read(x_obj_t *p_base, x_obj_t *p_args)
 		/* Save line before read (read may advance buffer via
 		 * recursive x_token_read calls for nested lists). */
 		line = 0;
-		if (x_obj_meta_extra > 0
-				&& (x_obj_flags(p_buffer) & X_OBJ_FLAG_EXT)) {
-			line = x_obj_meta_slot(p_buffer, 0).i;
+		if (x_atomint(x_firstobj(x_base_field_obj_meta_extra(p_base))) > 0
+				&& (x_obj_flags(p_buffer) & X_OBJ_FLAG_META)) {
+			line = x_obj_meta_i(p_buffer, 0).i;
 		}
 
 		prim_arg_prim = p_read;
@@ -276,10 +276,10 @@ x_obj_t *x_token_read(x_obj_t *p_base, x_obj_t *p_args)
 		}
 
 		/* Stamp line number on created object. */
-		if (x_obj_meta_extra > 0
+		if (x_atomint(x_firstobj(x_base_field_obj_meta_extra(p_base))) > 0
 				&& !x_obj_isnil(p_base, p_obj)
-				&& (x_obj_flags(p_obj) & X_OBJ_FLAG_EXT)) {
-			x_obj_meta_slot(p_obj, 0).i = line;
+				&& (x_obj_flags(p_obj) & X_OBJ_FLAG_META)) {
+			x_obj_meta_i(p_obj, 0).i = line;
 		}
 
 		x_type_buffer_retain(p_base, (x_obj_t *)buffer_args);
@@ -301,8 +301,8 @@ x_obj_t *x_token_write(x_obj_t *p_base, x_obj_t *p_args)
 		return NULL;
 	}
 
-	if (p_obj == x_base_field_true(p_base)
-			|| p_obj == x_base_field_false(p_base)) {
+	if (p_obj == x_firstobj(x_base_field_true(p_base))
+			|| p_obj == x_firstobj(x_base_field_false(p_base))) {
 		x_satom_t bool_str = x_obj_set(x_type_atom_obj,
 			X_OBJ_FLAG_NONE, { .s = x_atomstr(p_obj) });
 		x_spair_t bool_args[1] = {
@@ -341,8 +341,8 @@ x_obj_t *x_token_display(x_obj_t *p_base, x_obj_t *p_args)
 		return NULL;
 	}
 
-	if (p_obj == x_base_field_true(p_base)
-			|| p_obj == x_base_field_false(p_base)) {
+	if (p_obj == x_firstobj(x_base_field_true(p_base))
+			|| p_obj == x_firstobj(x_base_field_false(p_base))) {
 		x_satom_t bool_str = x_obj_set(x_type_atom_obj,
 			X_OBJ_FLAG_NONE, { .s = x_atomstr(p_obj) });
 		x_spair_t bool_args[1] = {

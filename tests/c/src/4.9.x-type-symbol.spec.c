@@ -81,8 +81,8 @@ void test_cleanup(x_obj_t *p_base)
 #define X_TEST_SYMBOL_VALUE		"TEST"
 
 #define nil			NULL
-#define pair(X,Y)	(x_mkspair(p_base, (X), (Y)))
-#define atom(X)		(x_mksatom(p_base, (X)))
+#define pair(X,Y)	(x_mkspair(p_base, X_OBJ_FLAG_NONE, (X), (Y)))
+#define atom(X)		(x_mksatom(p_base, X_OBJ_FLAG_NONE, (X)))
 
 static char *test_obj_type_issymbol(void)
 {
@@ -96,7 +96,7 @@ static char *test_obj_type_issymbol(void)
 	);
 	x_obj_free(p_obj);
 
-	p_obj = x_mksatom(NULL, 0);
+	p_obj = x_mksatom(NULL, X_OBJ_FLAG_NONE, 0);
 	_it_should("return false when object is not a Symbol",
 		0 == x_obj_type_issymbol(NULL, p_obj)
 	);
@@ -161,7 +161,7 @@ static char *test_mksymbol(void)
 	x_sys_free(p_obj);
 
 
-	p_base = x_mksatom(NULL, 0);
+	p_base = x_mksatom(NULL, X_OBJ_FLAG_NONE, 0);
 	p_obj = x_mksymbol(p_base, X_TEST_SYMBOL_VALUE);
 	_it_should("make a Symbol object, attach it to the Base object, and set its value",
 		! x_obj_isnil(p_base, p_obj)
@@ -192,7 +192,7 @@ static char *test_mkfsymbol(void)
 	x_sys_free(p_obj);
 
 
-	p_base = x_mksatom(NULL, 0);
+	p_base = x_mksatom(NULL, X_OBJ_FLAG_NONE, 0);
 	p_obj = x_mkfsymbol(p_base, flags, X_TEST_SYMBOL_VALUE);
 	_it_should("make a Symbol object, attach it to the Base object, and set its value",
 		! x_obj_isnil(p_base, p_obj)
@@ -223,7 +223,7 @@ static char *test_mksymbolown(void)
 	x_sys_free(p_obj);
 
 
-	p_base = x_mksatom(NULL, 0);
+	p_base = x_mksatom(NULL, X_OBJ_FLAG_NONE, 0);
 	p_obj = x_mksymbolown(p_base, X_TEST_SYMBOL_VALUE);
 	_it_should("make an Owned Symbol, attach it to the Base object, object and set its value",
 		! x_obj_isnil(p_base, p_obj)
@@ -255,7 +255,7 @@ static char *test_mkfsymbolown(void)
 	x_sys_free(p_obj);
 
 
-	p_base = x_mksatom(NULL, 0);
+	p_base = x_mksatom(NULL, X_OBJ_FLAG_NONE, 0);
 	p_obj = x_mkfsymbolown(p_base, flags, X_TEST_SYMBOL_VALUE);
 	_it_should("make an Owned Symbol, attach it to the Base object, object and set its value",
 		! x_obj_isnil(p_base, p_obj)
@@ -289,7 +289,7 @@ static char *test_make_symbol(void)
 	x_sys_free(p_obj);
 
 
-	p_base = x_mksatom(NULL, 0);
+	p_base = x_mksatom(NULL, X_OBJ_FLAG_NONE, 0);
 	p_obj = x_make_symbol(p_base, flags, X_TEST_SYMBOL_VALUE);
 	_it_should("make a Symbol object, attach it to the Base object, and set its value",
 		! x_obj_isnil(p_base, p_obj)
@@ -311,7 +311,7 @@ static char *test_type_symbol_struct(void)
 
 	helper_alloc_reset();
 
-	p_base = x_mksatom(NULL, 0);
+	p_base = x_mksatom(NULL, X_OBJ_FLAG_NONE, 0);
 	p_type = x_type_symbol_struct(p_base, p_base);
 	_it_should("return Symbol Type list",
 		! x_obj_isnil(p_base, p_type)
@@ -410,9 +410,9 @@ static char *test_base_alist_assoc(void)
 	helper_alloc_reset();
 
 	p_base = x_base_make(NULL, NULL);
-	x_base_type_alist_extend(p_base, x_mkspair(p_base, x_mkspair(p_base, x_type_symbol_name, NULL), atom(1)));
+	x_base_type_alist_extend(p_base, x_mkspair(p_base, X_OBJ_FLAG_NONE, x_mkspair(p_base, X_OBJ_FLAG_NONE, x_type_symbol_name, NULL), atom(1)));
 
-	p_type = x_base_type_alist_assoc(p_base, x_mkspair(p_base, x_type_symbol_name, NULL));
+	p_type = x_base_type_alist_assoc(p_base, x_mkspair(p_base, X_OBJ_FLAG_NONE, x_type_symbol_name, NULL));
 	_it_should("find the type in the alist and return its properties",
 		x_type_symbol_name == x_type_field_name(p_type)
 	);
@@ -429,7 +429,7 @@ static char *test_base_alist_assoc(void)
 	p_base = x_base_make(NULL, NULL);
 
 
-	p_args = x_mkspair(p_base, x_mkstr(p_base, "SYMBOL"), p_base);
+	p_args = x_mkspair(p_base, X_OBJ_FLAG_NONE, x_mkstr(p_base, "SYMBOL"), p_base);
 	p_symbol = 	p_obj = x_type_symbol_insert(p_base, p_args);
 
 	_it_should("contain the symbol in the symbol list",
@@ -438,7 +438,7 @@ static char *test_base_alist_assoc(void)
 	);
 
 
-	p_args = x_mkspair(p_base, x_mkstr(p_base, "SYMBOL"), p_base);
+	p_args = x_mkspair(p_base, X_OBJ_FLAG_NONE, x_mkstr(p_base, "SYMBOL"), p_base);
 	p_obj = x_type_symbol_insert(p_base, p_args);
 
 	_it_should("return the same symbol",
@@ -458,7 +458,7 @@ static char *test_type_symbol_make(void)
 	p_str = x_mkstr(NULL, X_TEST_SYMBOL_VALUE);
 
 	/* NULL p_base object */
-	p_args = x_mkspair(NULL, p_str, NULL);
+	p_args = x_mkspair(NULL, X_OBJ_FLAG_NONE, p_str, NULL);
 	p_obj[0] = x_type_symbol_make(NULL, p_args);
 	_it_should("make a symbol object",
 		! x_obj_isnil(NULL, p_obj[0])
@@ -470,7 +470,7 @@ static char *test_type_symbol_make(void)
 	x_sys_free(p_args);
 
 
-	p_args = x_mkspair(NULL, p_str, NULL);
+	p_args = x_mkspair(NULL, X_OBJ_FLAG_NONE, p_str, NULL);
 	p_obj[1] = x_type_symbol_make(NULL, p_args);
 	_it_should("make a second symbol object",
 		! x_obj_isnil(NULL, p_obj[1])
@@ -491,8 +491,8 @@ static char *test_type_symbol_make(void)
 
 
 	/* Empty p_base object */
-	p_base = x_mksatom(NULL, NULL);
-	p_args = x_mkspair(p_base, p_str, NULL);
+	p_base = x_mksatom(NULL, X_OBJ_FLAG_NONE, NULL);
+	p_args = x_mkspair(p_base, X_OBJ_FLAG_NONE, p_str, NULL);
 	p_obj[0] = x_type_symbol_make(p_base, p_args);
 	_it_should("make a symbol object",
 		! x_obj_isnil(NULL, p_obj[0])
@@ -504,7 +504,7 @@ static char *test_type_symbol_make(void)
 	x_sys_free(p_args);
 
 
-	p_args = x_mkspair(p_base, p_str, NULL);
+	p_args = x_mkspair(p_base, X_OBJ_FLAG_NONE, p_str, NULL);
 	p_obj[1] = x_type_symbol_make(p_base, p_args);
 	_it_should("make a second symbol object",
 		! x_obj_isnil(NULL, p_obj[1])
@@ -535,7 +535,7 @@ static char *test_type_symbol_make(void)
 		x_obj_isnil(p_base, x_symbol_data_list(p_type))
 	);
 
-	p_args = x_mkspair(p_base, p_str, NULL);
+	p_args = x_mkspair(p_base, X_OBJ_FLAG_NONE, p_str, NULL);
 	p_obj[0] = x_type_symbol_make(p_base, p_args);
 	_it_should("make a Symbol object with a base object",
 		! x_obj_isnil(NULL, p_obj[0])
@@ -553,7 +553,7 @@ static char *test_type_symbol_make(void)
 	x_sys_free(p_args);
 
 
-	p_args = x_mkspair(p_base, p_str, NULL);
+	p_args = x_mkspair(p_base, X_OBJ_FLAG_NONE, p_str, NULL);
 	p_obj[1] = x_type_symbol_make(p_base, p_args);
 	_it_should("returned the same Symbol object with a base object",
 		p_obj[0] == p_obj[1]
@@ -571,7 +571,7 @@ static char *test_type_symbol_make(void)
 
 	p_str = x_mkstr(NULL, X_TEST_SYMBOL_VALUE "1");
 
-	p_args = x_mkspair(p_base, p_str, NULL);
+	p_args = x_mkspair(p_base, X_OBJ_FLAG_NONE, p_str, NULL);
 	p_obj[1] = x_type_symbol_make(p_base, p_args);
 	_it_should("make a new Symbol object with a base object",
 		p_obj[0] != p_obj[1]
@@ -605,7 +605,7 @@ static char *test_type_symbol_find(void)
 	p_base = x_base_make(NULL, NULL);
 
 	p_str = x_mkstr(p_base, "SYMBOL");
-	p_args = x_mkspair(p_base, p_str, NULL);
+	p_args = x_mkspair(p_base, X_OBJ_FLAG_NONE, p_str, NULL);
 
 	p_obj = x_type_symbol_find(p_base, p_args);
 	_it_should("not find the symbol in the symbol list",
@@ -622,7 +622,7 @@ static char *test_type_symbol_find(void)
 
 
 	p_str = x_mkstr(p_base, "ANOTHER SYMBOL");
-	p_args = x_mkspair(p_base, p_symbol, NULL);
+	p_args = x_mkspair(p_base, X_OBJ_FLAG_NONE, p_symbol, NULL);
 	p_symbol = x_type_symbol_make(p_base, p_args);
 
 	p_obj = x_type_symbol_find(p_base, p_args);

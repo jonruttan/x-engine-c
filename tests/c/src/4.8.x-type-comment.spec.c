@@ -77,15 +77,15 @@ void test_cleanup(x_obj_t *p_base)
 #define X_TEST_COMMENT_VALUE		"TEST"
 
 #define nil			NULL
-#define pair(X,Y)	(x_mkspair(p_base, (X), (Y)))
-#define atom(X)		(x_mksatom(p_base, (X)))
+#define pair(X,Y)	(x_mkspair(p_base, X_OBJ_FLAG_NONE, (X), (Y)))
+#define atom(X)		(x_mksatom(p_base, X_OBJ_FLAG_NONE, (X)))
 
 static char *test_commentval(void)
 {
 	x_obj_t *p_obj;
 	x_char_t *p_comment, *str = X_TEST_COMMENT_VALUE;
 
-	p_obj = x_mksatom(NULL, str);
+	p_obj = x_mksatom(NULL, X_OBJ_FLAG_NONE, str);
 
 	p_comment = x_commentval(p_obj);
 	_it_should("return the Comment's value", str == p_comment);
@@ -101,7 +101,7 @@ static char *test_type_comment_struct(void)
 
 	helper_alloc_reset();
 
-	p_base = x_mksatom(NULL, 0);
+	p_base = x_mksatom(NULL, X_OBJ_FLAG_NONE, 0);
 	p_type = x_type_comment_struct(p_base, p_base);
 	_it_should("return Comment Type list",
 		! x_obj_isnil(p_base, p_type)

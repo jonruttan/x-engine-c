@@ -80,8 +80,8 @@ void test_cleanup(x_obj_t *p_base)
 #define X_TEST_WHITESPACE_VALUE		"TEST"
 
 #define nil			p_base
-#define pair(X,Y)	(x_mkspair(p_base, (X), (Y)))
-#define atom(X)		(x_mksatom(p_base, (X)))
+#define pair(X,Y)	(x_mkspair(p_base, X_OBJ_FLAG_NONE, (X), (Y)))
+#define atom(X)		(x_mksatom(p_base, X_OBJ_FLAG_NONE, (X)))
 
 static char *test_sexp_whitespace_analyse1(void)
 {
@@ -96,7 +96,7 @@ static char *test_sexp_whitespace_analyse1(void)
 
 	p_base = x_base_make(NULL, NULL);
 	p_buffer = x_mkbuffer(p_base, buffer);
-	p_args = x_mkspair(p_base, p_buffer, p_base);
+	p_args = x_mkspair(p_base, X_OBJ_FLAG_NONE, p_buffer, p_base);
 
 	for (i = 0; i < strlen(X_SEXP_WHITESPACE_CHARS_STR); i++) {
 		p_obj = x_type_buffer_read(p_base, p_args);
@@ -129,7 +129,7 @@ static char *test_sexp_whitespace_analyse2(void)
 
 	p_base = x_base_make(NULL, NULL);
 	p_buffer = x_mkbuffer(p_base, buffer);
-	p_args = x_mkspair(p_base, p_buffer, p_base);
+	p_args = x_mkspair(p_base, X_OBJ_FLAG_NONE, p_buffer, p_base);
 
 	for (i = 0; i < strlen(X_SEXP_WHITESPACE_CHARS_STR); i++) {
 		p_obj = x_type_buffer_read(p_base, p_args);
@@ -174,7 +174,7 @@ static char *test_sexp_whitespace_delimit(void)
 
 	p_base = x_base_make(NULL, NULL);
 	p_buffer = x_mkbuffer(p_base, buffer);
-	p_args = x_mkspair(p_base, p_buffer, p_base);
+	p_args = x_mkspair(p_base, X_OBJ_FLAG_NONE, p_buffer, p_base);
 
 	for (i = 0; i < strlen(X_SEXP_WHITESPACE_CHARS_STR); i++) {
 		p_obj = x_type_buffer_read(p_base, p_args);
@@ -274,7 +274,7 @@ static char *test_sexp_whitespace_read_token(void)
 	x_base_type_alist_extend(p_base, p_type);
 	x_type_whitespace_register(p_base, p_base);
 	p_buffer = x_mkbuffer(p_base, buffer);
-	p_args = x_mkspair(p_base, p_buffer, p_base);
+	p_args = x_mkspair(p_base, X_OBJ_FLAG_NONE, p_buffer, p_base);
 
 	p_obj = x_token_read(p_base, p_args);
 	_it_should("return a String object with the value set",

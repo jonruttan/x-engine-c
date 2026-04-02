@@ -92,7 +92,7 @@ x_obj_t *x_sexp_int_analyse_base(x_obj_t *p_base, x_obj_t *p_args)
 	}
 
 	return x_sexp_int_analyse_digits(p_base,
-		x_mkspair(p_base, (x_obj_t *)&x_sexp_int_analyse_digits_prim, x_1(p_args)));
+		x_mkspair(p_base, X_OBJ_FLAG_NONE, (x_obj_t *)&x_sexp_int_analyse_digits_prim, x_1(p_args)));
 }
 
 x_obj_t *x_sexp_int_analyse_prefix(x_obj_t *p_base, x_obj_t *p_args)
@@ -110,7 +110,7 @@ x_obj_t *x_sexp_int_analyse_prefix(x_obj_t *p_base, x_obj_t *p_args)
 	}
 
 	return x_sexp_int_analyse_digits(p_base,
-		x_mkspair(p_base, (x_obj_t *)&x_sexp_int_analyse_digits_prim, x_1(p_args)));
+		x_mkspair(p_base, X_OBJ_FLAG_NONE, (x_obj_t *)&x_sexp_int_analyse_digits_prim, x_1(p_args)));
 }
 
 x_obj_t *x_sexp_int_analyse_sign(x_obj_t *p_base, x_obj_t *p_args)
@@ -123,7 +123,7 @@ x_obj_t *x_sexp_int_analyse_sign(x_obj_t *p_base, x_obj_t *p_args)
 	}
 
 	return x_sexp_int_analyse_prefix(p_base,
-		x_mkspair(p_base, (x_obj_t *)&x_sexp_int_analyse_prefix_prim, x_1(p_args)));
+		x_mkspair(p_base, X_OBJ_FLAG_NONE, (x_obj_t *)&x_sexp_int_analyse_prefix_prim, x_1(p_args)));
 }
 
 x_obj_t *x_sexp_int_read(x_obj_t *p_base, x_obj_t *p_args)

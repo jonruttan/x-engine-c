@@ -18,7 +18,7 @@
  */
 #include "x-prim.h"
 #include "x-alist.h"
-#include "x-base.h"
+#include "x-base-typesystem.h"
 #include "x-heap.h"
 #include "x-type.h"
 #include <stddef.h>
@@ -125,8 +125,7 @@ static x_obj_t *x_prim_base_make_type(x_obj_t *p_base, x_obj_t *p_args)
 	/* Mark target base and its tree with SHARED so calling base's GC
 	 * won't sweep handler closures referenced cross-base. */
 	x_obj_flags(p_target) |= X_OBJ_FLAG_SHARED;
-	x_heap_mark(p_base, x_atomobj(p_target), X_OBJ_FLAG_SHARED,
-		x_type_heap_mark);
+	x_heap_tree_mark(p_base, x_atomobj(p_target), X_OBJ_FLAG_SHARED);
 
 	return p_name_atom;
 }
@@ -159,11 +158,11 @@ static x_obj_t *x_prim_typep(x_obj_t *p_base, x_obj_t *p_args)
 	x_eargs(p_base, p_args, 3, NULL, &p_obj, &p_handle);
 
 	if (x_obj_isnil(p_base, p_obj) || x_obj_isnil(p_base, x_obj_type(p_obj))) {
-		return x_base_field_false(p_base);
+		return x_firstobj(x_base_field_false(p_base));
 	}
 
 	return x_type_field_name(x_obj_type(p_obj)) == p_handle
-		? x_base_field_true(p_base) : x_base_field_false(p_base);
+		? x_firstobj(x_base_field_true(p_base)) : x_firstobj(x_base_field_false(p_base));
 }
 
 /* type-of: (type-of obj) -> type handle (name atom) for obj's type */
@@ -204,12 +203,12 @@ static x_obj_t *x_prim_type_name(x_obj_t *p_base, x_obj_t *p_args)
 /* make-token-base: (make-token-base) -> bare base for tokenization */
 static x_obj_t *x_prim_make_token_base(x_obj_t *p_base, x_obj_t *p_args)
 {
-	x_obj_t *p_new = x_base_make(NULL, NULL);
+	x_obj_t *p_new = x_base_ts_make(NULL, NULL);
 	(void)p_args;
 
 	/* Inherit boolean singletons from calling base. */
-	x_base_field_true(p_new) = x_base_field_true(p_base);
-	x_base_field_false(p_new) = x_base_field_false(p_base);
+	x_base_field_true(p_new) = x_firstobj(x_base_field_true(p_base));
+	x_base_field_false(p_new) = x_firstobj(x_base_field_false(p_base));
 
 	return p_new;
 }
@@ -222,7 +221,7 @@ static x_obj_t *x_prim_make_base(x_obj_t *p_base, x_obj_t *p_args)
 	(void)p_args;
 
 	buffer = (x_char_t *)x_sys_malloc(256);
-	p_new_base = x_base_make(NULL, NULL);
+	p_new_base = x_base_ts_make(NULL, NULL);
 
 	/* Register types. */
 	x_type_prim_register(p_new_base, p_new_base);
@@ -238,8 +237,8 @@ static x_obj_t *x_prim_make_base(x_obj_t *p_base, x_obj_t *p_args)
 
 	/* Set up read buffer. */
 	p_buffer = x_mkbuffer(p_new_base, buffer);
-	x_base_field_buffer_stack(p_new_base) = x_mkspair(p_new_base,
-		p_buffer, x_base_field_buffer_stack(p_new_base));
+	x_base_field_buffer(p_new_base) = x_mkspair(p_new_base, X_OBJ_FLAG_NONE,
+		p_buffer, x_base_field_buffer(p_new_base));
 
 	/* Register primitives. */
 	x_prim_register(p_new_base, p_new_base);
@@ -257,15 +256,15 @@ static x_obj_t *x_prim_base_eval(x_obj_t *p_base, x_obj_t *p_args)
 	x_eargs(p_base, p_args, 3, NULL, &p_target, &p_expr);
 
 	/* Build handler pair tree: (jmp-ptr saved-env error-value) */
-	p_handler = x_mkspair(p_target,
+	p_handler = x_mkspair(p_target, X_OBJ_FLAG_NONE,
 		x_mkptr(p_target, &jmp),
-		x_mkspair(p_target,
-			x_base_field_env_alist(p_target),
-			x_mkspair(p_target, NULL, NULL)));
+		x_mkspair(p_target, X_OBJ_FLAG_NONE,
+			x_firstobj(x_base_field_env_alist(p_target)),
+			x_mkspair(p_target, X_OBJ_FLAG_NONE, NULL, NULL)));
 
 	/* Push handler onto error_handler_stack */
-	x_base_field_error_handler_stack(p_target) = x_mkspair(p_target,
-		p_handler, x_base_field_error_handler_stack(p_target));
+	x_base_field_error_handler(p_target) = x_mkspair(p_target, X_OBJ_FLAG_NONE,
+		p_handler, x_base_field_error_handler(p_target));
 
 	if (setjmp(jmp) == 0) {
 		p_result = x_eval_arg(p_target, p_expr);
@@ -273,16 +272,16 @@ static x_obj_t *x_prim_base_eval(x_obj_t *p_base, x_obj_t *p_args)
 		x_obj_t *p_err = x_error_handler_error(p_handler);
 
 		/* Error caught from target: pop handler, restore env, re-signal. */
-		x_base_field_error_handler_stack(p_target)
-			= x_restobj(x_base_field_error_handler_stack(p_target));
-		x_base_field_env_alist(p_target)
+		x_base_field_error_handler(p_target)
+			= x_restobj(x_base_field_error_handler(p_target));
+		x_firstobj(x_base_field_env_alist(p_target))
 			= x_error_handler_saved_env(p_handler);
 
-		if ( ! x_obj_isnil(p_base, x_base_field_error_handler(p_base))) {
-			x_obj_t *p_parent = x_base_field_error_handler(p_base);
+		if ( ! x_obj_isnil(p_base, x_firstobj(x_base_field_error_handler(p_base)))) {
+			x_obj_t *p_parent = x_firstobj(x_base_field_error_handler(p_base));
 
 			x_error_handler_error(p_parent) = p_err;
-			x_base_field_env_alist(p_base)
+			x_firstobj(x_base_field_env_alist(p_base))
 				= x_error_handler_saved_env(p_parent);
 			longjmp(*(jmp_buf *)x_error_handler_jmp(p_parent), 1);
 		}
@@ -293,8 +292,8 @@ static x_obj_t *x_prim_base_eval(x_obj_t *p_base, x_obj_t *p_args)
 	}
 
 	/* Pop error_handler_stack */
-	x_base_field_error_handler_stack(p_target)
-		= x_restobj(x_base_field_error_handler_stack(p_target));
+	x_base_field_error_handler(p_target)
+		= x_restobj(x_base_field_error_handler(p_target));
 
 	return p_result;
 }
@@ -307,7 +306,7 @@ static x_obj_t *x_prim_base_bind(x_obj_t *p_base, x_obj_t *p_args)
 
 	x_eargs(p_base, p_args, 4, NULL, &p_target, &p_name, &p_val);
 
-	p_pair = x_mkspair(p_target, p_name, p_val);
+	p_pair = x_mkspair(p_target, X_OBJ_FLAG_NONE, p_name, p_val);
 	x_base_env_alist_extend(p_target, p_pair);
 
 	return p_val;
@@ -347,9 +346,9 @@ static x_obj_t *x_prim_token_read_string(x_obj_t *p_base, x_obj_t *p_args)
 	p_buffer = x_mkfbufferown(p_token_base, X_OBJ_FLAG_RO, buf);
 	x_bufferwrite(p_buffer) = x_bufferval(p_buffer) + len;
 
-	if (x_obj_meta_extra > 0
-			&& (x_obj_flags(p_buffer) & X_OBJ_FLAG_EXT)) {
-		x_obj_meta_slot(p_buffer, 0).i = 1;
+	if (x_atomint(x_firstobj(x_base_field_obj_meta_extra(p_base))) > 0
+			&& (x_obj_flags(p_buffer) & X_OBJ_FLAG_META)) {
+		x_obj_meta_i(p_buffer, 0).i = 1;
 	}
 
 	p_result = NULL;
@@ -457,7 +456,7 @@ static x_obj_t *x_prim_iter(x_obj_t *p_base, x_obj_t *p_args)
 		x_spair_t iter_call[1] = {
 			x_obj_set(NULL, X_OBJ_FLAG_NONE, { p_iter_fn }, { NULL })
 		};
-		x_restobj((x_obj_t *)iter_call) = x_mkspair(p_base, p_obj, NULL);
+		x_restobj((x_obj_t *)iter_call) = x_mkspair(p_base, X_OBJ_FLAG_NONE, p_obj, NULL);
 		return x_callable_call(p_base, (x_obj_t *)iter_call);
 	}
 }

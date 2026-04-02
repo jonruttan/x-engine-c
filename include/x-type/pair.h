@@ -21,14 +21,14 @@
  */
 #include "x-type.h"
 
-#ifndef X_TYPE_PAIR_NAME
-#define X_TYPE_PAIR_NAME		"PAIR"
-#endif /* X_TYPE_PAIR_NAME */
+#ifndef X_TYPE_PAIR_SYMBOL
+#define X_TYPE_PAIR_SYMBOL		"PAIR"
+#endif /* X_TYPE_PAIR_SYMBOL */
 
 /*
  * # Macros
  */
-#define x_obj_type_ispair(B,X)		x_obj_is_type((B), (X), X_TYPE_PAIR_NAME)
+#define x_obj_type_ispair(B,X)		x_obj_is_type((B), (X), X_TYPE_PAIR_SYMBOL)
 
 #define x_mkpair(B,P1,P2)			x_make_pair((B), X_OBJ_FLAG_NONE, (P1), (P2))
 #define x_mkfpair(B,F,P1,P2)		x_make_pair((B), (F), (P1), (P2))

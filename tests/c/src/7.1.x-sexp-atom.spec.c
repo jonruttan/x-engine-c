@@ -49,12 +49,12 @@ static char *test_sexp_atom_write(void)
 
 	helper_file_reset();
 
-	p_atom = x_mksatom(NULL, NULL);
-	p_args = x_mkspair(NULL, p_atom, NULL);
+	p_atom = x_mksatom(NULL, X_OBJ_FLAG_NONE, NULL);
+	p_args = x_mkspair(NULL, X_OBJ_FLAG_NONE, p_atom, NULL);
 
 	x_sexp_atom_write(NULL, p_args);
 
-	expected = "#<"X_TYPE_ATOM_NAME":0x0>";
+	expected = "#<"X_TYPE_ATOM_SYMBOL":0x0>";
 	_it_should("write atom s-exp to stdout", 0 == strncmp(expected, buffer, strlen(expected)));
 
 	x_sys_free(p_args);
@@ -64,12 +64,12 @@ static char *test_sexp_atom_write(void)
 	helper_file_reset();
 	memset(buffer, 0, 4096);
 
-	p_pair = x_mkspair(NULL, NULL, NULL);
-	p_args = x_mkspair(NULL, p_pair, NULL);
+	p_pair = x_mkspair(NULL, X_OBJ_FLAG_NONE, NULL, NULL);
+	p_args = x_mkspair(NULL, X_OBJ_FLAG_NONE, p_pair, NULL);
 
 	x_sexp_atom_write(NULL, p_args);
 
-	expected = "#<"X_TYPE_PAIR_NAME":0x0>";
+	expected = "#<"X_TYPE_PAIR_SYMBOL":0x0>";
 	_it_should("write pair as atom s-exp to stdout", 0 == strncmp(expected, buffer, strlen(expected)));
 
 	x_sys_free(p_args);

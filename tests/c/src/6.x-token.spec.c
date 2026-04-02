@@ -148,7 +148,7 @@ x_obj_t *test_token_read_read_catchall(x_obj_t *p_base, x_obj_t *p_args)
 {
 	x_obj_t *p_buffer = x_token_read_arg_buffer(p_args);
 
-	return x_mksatom(p_base, x_bufferval(p_buffer)[0]);
+	return x_mksatom(p_base, X_OBJ_FLAG_NONE, x_bufferval(p_buffer)[0]);
 }
 
 
@@ -222,7 +222,7 @@ x_obj_t *test_token_read_read2(x_obj_t *p_base, x_obj_t *p_args)
 {
 	x_obj_t *p_buffer = x_token_read_arg_buffer(p_args);
 
-	return x_mksatom(p_base, x_bufferlastchar(p_buffer));
+	return x_mksatom(p_base, X_OBJ_FLAG_NONE, x_bufferlastchar(p_buffer));
 }
 
 
@@ -297,7 +297,7 @@ static char *test_token_delimit(void)
 	helper_file_buffer_ptr[TEST_HELPER_FILE_STDIN] = " ";
 	helper_file_reset();
 	p_buffer = x_mkbufferown(p_base, buffer);
-	x_type_buffer_read(p_base, x_mkspair(p_base, p_buffer, NULL));
+	x_type_buffer_read(p_base, x_mkspair(p_base, X_OBJ_FLAG_NONE, p_buffer, NULL));
 	{
 		x_spair_t delimit_args[2] = {
 			x_obj_set(NULL, X_OBJ_FLAG_NONE, { p_buffer }, { (x_obj_t *)(delimit_args + 1) }),
@@ -312,8 +312,8 @@ static char *test_token_delimit(void)
 		/* Non-delimiter char */
 		helper_file_buffer_ptr[TEST_HELPER_FILE_STDIN] = "A";
 		helper_file_reset();
-		x_type_buffer_reset(p_base, x_mkspair(p_base, p_buffer, NULL));
-		x_type_buffer_read(p_base, x_mkspair(p_base, p_buffer, NULL));
+		x_type_buffer_reset(p_base, x_mkspair(p_base, X_OBJ_FLAG_NONE, p_buffer, NULL));
+		x_type_buffer_read(p_base, x_mkspair(p_base, X_OBJ_FLAG_NONE, p_buffer, NULL));
 
 		p_obj = x_token_delimit(p_base2, p_args);
 		_it_should("delimit returns NULL for non-delimiter",
@@ -451,15 +451,15 @@ static char *test_token_write(void)
 	x_atomint(x_base_field_fileout(p_base)) = fd_null;
 
 	/* Write satom — exercises x_sexp_atom_write path */
-	p_obj = x_mksatom(p_base, 'Z');
-	p_args = x_mkspair(p_base, p_obj, NULL);
+	p_obj = x_mksatom(p_base, X_OBJ_FLAG_NONE, 'Z');
+	p_args = x_mkspair(p_base, X_OBJ_FLAG_NONE, p_obj, NULL);
 	p_ret = x_token_write(p_base, p_args);
 	_it_should("write satom returns non-NULL",
 		! x_obj_isnil(p_base, p_ret));
 
 	/* Write spair — exercises x_sexp_pair_write path */
-	p_obj = x_mkspair(p_base, x_mksatom(p_base, 'A'), x_mksatom(p_base, 'B'));
-	p_args = x_mkspair(p_base, p_obj, NULL);
+	p_obj = x_mkspair(p_base, X_OBJ_FLAG_NONE, x_mksatom(p_base, X_OBJ_FLAG_NONE, 'A'), x_mksatom(p_base, X_OBJ_FLAG_NONE, 'B'));
+	p_args = x_mkspair(p_base, X_OBJ_FLAG_NONE, p_obj, NULL);
 	p_ret = x_token_write(p_base, p_args);
 	_it_should("write spair returns non-NULL",
 		! x_obj_isnil(p_base, p_ret));
@@ -471,7 +471,7 @@ static char *test_token_write(void)
 			test_token_read_read_catchall);
 
 		x_atomint(x_base_field_fileout(p_base3)) = fd_null;
-		p_args = x_mkspair(p_base3, p_prim_obj, NULL);
+		p_args = x_mkspair(p_base3, X_OBJ_FLAG_NONE, p_prim_obj, NULL);
 		p_ret = x_token_write(p_base3, p_args);
 		_it_should("write typed obj returns non-NULL",
 			! x_obj_isnil(p_base3, p_ret));
@@ -480,7 +480,7 @@ static char *test_token_write(void)
 
 	/* Object with NULL type — exercises final return NULL */
 	p_obj = x_obj_make(p_base, NULL, X_OBJ_FLAG_NONE, X_OBJ_LENGTH_ATOM, NULL);
-	p_args = x_mkspair(p_base, p_obj, NULL);
+	p_args = x_mkspair(p_base, X_OBJ_FLAG_NONE, p_obj, NULL);
 	p_ret = x_token_write(p_base, p_args);
 	_it_should("write untyped obj returns NULL",
 		x_obj_isnil(p_base, p_ret));
@@ -569,7 +569,7 @@ static char *test_alist_iter_nil(void)
 
 	/* Iterator over empty list — x_type_alist_iter returns nil */
 	p_iter = x_mkiter(p_base, (x_obj_t *)&x_type_alist_iter_prim, NULL);
-	p_args = x_mkspair(p_base, p_iter, NULL);
+	p_args = x_mkspair(p_base, X_OBJ_FLAG_NONE, p_iter, NULL);
 	p_obj = x_type_alist_iter(p_base, p_args);
 	_it_should("alist_iter returns nil for empty list",
 		x_obj_isnil(p_base, p_obj));

@@ -16,7 +16,7 @@
 /*
  * # Includes
  */
-#include "x-base.h"
+#include "x-base-typesystem.h"
 #include "x-heap.h"
 #include "x-prim.h"
 #include "x-type/buffer.h"
@@ -86,17 +86,17 @@ static x_obj_t *x_prim_include(x_obj_t *p_base, x_obj_t *p_args)
 	}
 
 	/* Push line counter for included file. */
-	x_base_field_line_stack(p_base) = x_mkspair(p_base,
-		x_mksatom(p_base, 1), x_base_field_line_stack(p_base));
+	x_base_field_line(p_base) = x_mkspair(p_base, X_OBJ_FLAG_NONE,
+		x_mksatom(p_base, X_OBJ_FLAG_NONE, 1), x_base_field_line(p_base));
 
 	/* Push new input state. */
-	x_base_field_filein_stack(p_base) = x_mkspair(p_base,
-		x_mksatom(p_base, fd), x_base_field_filein_stack(p_base));
+	x_base_field_filein(p_base) = x_mkspair(p_base, X_OBJ_FLAG_NONE,
+		x_mksatom(p_base, X_OBJ_FLAG_NONE, fd), x_base_field_filein(p_base));
 
 	buf = (x_char_t *)x_sys_malloc(X_CLI_BUFFER_SIZE);
 	p_buffer = x_mkbufferown(p_base, buf);
-	x_base_field_buffer_stack(p_base) = x_mkspair(p_base,
-		p_buffer, x_base_field_buffer_stack(p_base));
+	x_base_field_buffer(p_base) = x_mkspair(p_base, X_OBJ_FLAG_NONE,
+		p_buffer, x_base_field_buffer(p_base));
 
 	/* Load all expressions. */
 #ifdef X_PROFILE
@@ -105,7 +105,7 @@ static x_obj_t *x_prim_include(x_obj_t *p_base, x_obj_t *p_args)
 	p_result = x_base_load(p_base, p_base);
 #ifdef X_PROFILE
 	t1 = x_sys_clock();
-	err_fd = x_atomint(x_base_field_fileerr(p_base));
+	err_fd = x_atomint(x_firstobj(x_base_field_fileerr(p_base)));
 	x_sys_write(err_fd, "[include] ", 10);
 	x_sys_write(err_fd, x_strval(p_path),
 		x_lib_strlen(x_strval(p_path)));
@@ -116,13 +116,13 @@ static x_obj_t *x_prim_include(x_obj_t *p_base, x_obj_t *p_args)
 #endif
 
 	/* Pop and close, restore line counter. */
-	x_base_field_filein_stack(p_base)
-		= x_restobj(x_base_field_filein_stack(p_base));
-	x_base_field_buffer_stack(p_base)
-		= x_restobj(x_base_field_buffer_stack(p_base));
+	x_base_field_filein(p_base)
+		= x_restobj(x_base_field_filein(p_base));
+	x_base_field_buffer(p_base)
+		= x_restobj(x_base_field_buffer(p_base));
 	x_sys_close(fd);
-	x_base_field_line_stack(p_base)
-		= x_restobj(x_base_field_line_stack(p_base));
+	x_base_field_line(p_base)
+		= x_restobj(x_base_field_line(p_base));
 
 	return p_result;
 }
@@ -135,7 +135,7 @@ x_obj_t * init(x_obj_t *p_base, x_char_t *buffer)
 	x_obj_t *p_buffer;
 
 	/* Create base object. */
-	p_base = x_base_make(NULL, NULL);
+	p_base = x_base_ts_make(NULL, NULL);
 
 	/* Register types for parsing. */
 	x_type_prim_register(p_base, p_base);
@@ -151,8 +151,8 @@ x_obj_t * init(x_obj_t *p_base, x_char_t *buffer)
 
 	/* Set up read buffer. */
 	p_buffer = x_mkbuffer(p_base, buffer);
-	x_base_field_buffer_stack(p_base) = x_mkspair(p_base,
-		p_buffer, x_base_field_buffer_stack(p_base));
+	x_base_field_buffer(p_base) = x_mkspair(p_base, X_OBJ_FLAG_NONE,
+		p_buffer, x_base_field_buffer(p_base));
 
 	/* Register primitives. */
 	x_prim_register(p_base, p_base);
@@ -163,7 +163,7 @@ x_obj_t * init(x_obj_t *p_base, x_char_t *buffer)
 		x_obj_t *p_sym = x_make_symbol(p_base, X_OBJ_FLAG_NONE,
 			(x_char_t *)"syscall");
 		x_obj_t *p_prim = x_mkprim(p_base, x_prim_syscall);
-		x_obj_t *p_pair = x_mkspair(p_base, p_sym, p_prim);
+		x_obj_t *p_pair = x_mkspair(p_base, X_OBJ_FLAG_NONE, p_sym, p_prim);
 		x_base_env_alist_extend(p_base, p_pair);
 	}
 #endif
@@ -185,12 +185,15 @@ int main(int argc, char *argv[])
 	x_obj_t *p_sym, *p_list = NULL, *p_pair;
 	int i;
 
-	/* Record stack base for conservative GC stack scanning */
-	x_heap_stack_base = (void *)&p_base;
+	(void)0; /* stack base set after init creates base */
 
 	x_callcc_init();
 
 	p_base = init(NULL, buffer);
+
+	/* Record stack base for conservative GC stack scanning. */
+	x_atomint(x_firstobj(x_base_field_stack_base(p_base)))
+		= (x_int_t)(void *)&p_base;
 
 	if (p_base == NULL) {
 		x_error(STDERR_FILENO, "Error: ", "Initialization");
@@ -204,19 +207,19 @@ int main(int argc, char *argv[])
 		p_list = x_mklist(p_base, x_mkstr(p_base, (x_char_t *)argv[i]), p_list);
 	}
 
-	p_pair = x_mkspair(p_base, p_sym, p_list);
+	p_pair = x_mkspair(p_base, X_OBJ_FLAG_NONE, p_sym, p_list);
 	x_base_env_alist_extend(p_base, p_pair);
 
 	/* Bind platform constants. */
 	p_sym = x_make_symbol(p_base, X_OBJ_FLAG_NONE,
 		(x_char_t *)"x-machine");
-	p_pair = x_mkspair(p_base, p_sym,
+	p_pair = x_mkspair(p_base, X_OBJ_FLAG_NONE, p_sym,
 		x_mkstr(p_base, (x_char_t *)X_MACHINE));
 	x_base_env_alist_extend(p_base, p_pair);
 
 	p_sym = x_make_symbol(p_base, X_OBJ_FLAG_NONE,
 		(x_char_t *)"x-version");
-	p_pair = x_mkspair(p_base, p_sym,
+	p_pair = x_mkspair(p_base, X_OBJ_FLAG_NONE, p_sym,
 		x_mkstr(p_base, (x_char_t *)X_VERSION));
 	x_base_env_alist_extend(p_base, p_pair);
 

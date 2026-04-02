@@ -163,7 +163,7 @@ static char *test_sexp_list_delimit(void)
 
 	p_base = x_base_make(NULL, NULL);
 	p_buffer = x_mkbuffer(p_base, buffer);
-	p_args = x_mkspair(p_base, p_buffer, NULL);
+	p_args = x_mkspair(p_base, X_OBJ_FLAG_NONE, p_buffer, NULL);
 	x_type_buffer_read(p_base, p_args);
 	p_obj = x_sexp_list_delimit(p_base, p_args);
 	_it_should("return NULL for non-list char", NULL == p_obj);
@@ -176,7 +176,7 @@ static char *test_sexp_list_delimit(void)
 
 	p_base = x_base_make(NULL, NULL);
 	p_buffer = x_mkbuffer(p_base, buffer);
-	p_args = x_mkspair(p_base, p_buffer, NULL);
+	p_args = x_mkspair(p_base, X_OBJ_FLAG_NONE, p_buffer, NULL);
 	x_type_buffer_read(p_base, p_args);
 	p_obj = x_sexp_list_delimit(p_base, p_args);
 	_it_should("return buffer for ')'", p_buffer == p_obj);
@@ -282,7 +282,7 @@ static char *test_sexp_list_write(void)
 	helper_file_reset();
 	s[0] = '\0';
 
-	p_args = x_mkspair(p_base, p_list, NULL);
+	p_args = x_mkspair(p_base, X_OBJ_FLAG_NONE, p_list, NULL);
 	x_sexp_list_write(p_base, p_args);
 
 	_it_should("write (()) for empty list (nil first written as ())",
@@ -298,7 +298,7 @@ static char *test_sexp_list_write(void)
 	helper_file_reset();
 	s[0] = '\0';
 
-	p_args = x_mkspair(p_base, p_list, NULL);
+	p_args = x_mkspair(p_base, X_OBJ_FLAG_NONE, p_list, NULL);
 	x_sexp_list_write(p_base, p_args);
 	helper_file_str(TEST_HELPER_FILE_STDOUT);
 
@@ -319,7 +319,7 @@ static char *test_sexp_list_write(void)
 	helper_file_reset();
 	s[0] = '\0';
 
-	p_args = x_mkspair(p_base, p_list, NULL);
+	p_args = x_mkspair(p_base, X_OBJ_FLAG_NONE, p_list, NULL);
 	x_sexp_list_write(p_base, p_args);
 	helper_file_str(TEST_HELPER_FILE_STDOUT);
 
@@ -336,7 +336,7 @@ static char *test_sexp_list_write(void)
 	helper_file_reset();
 	s[0] = '\0';
 
-	p_args = x_mkspair(p_base, p_list, NULL);
+	p_args = x_mkspair(p_base, X_OBJ_FLAG_NONE, p_list, NULL);
 	x_sexp_list_write(p_base, p_args);
 	helper_file_str(TEST_HELPER_FILE_STDOUT);
 

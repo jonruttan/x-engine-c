@@ -33,7 +33,7 @@
 /*
  * # Includes
  */
-#include "x-base.h"
+#include "x-base-typesystem.h"
 
 /*
  * # Defines

@@ -19,7 +19,7 @@
 #include "x-type/symbol.h"
 #include "x-type/str.h"
 #include "x-alist.h"
-#include "x-base.h"
+#include "x-base-typesystem.h"
 #include "x-eval.h"
 #include "x-token/sexp/symbol.h"
 
@@ -90,8 +90,8 @@ static x_obj_t *sym_bst_insert(x_obj_t *p_base, x_obj_t *p_tree,
 	int cmp;
 
 	if (x_obj_isnil(p_base, p_tree)) {
-		return x_mkspair(p_base, p_sym,
-			x_mkspair(p_base, NULL, NULL));
+		return x_mkspair(p_base, X_OBJ_FLAG_NONE, p_sym,
+			x_mkspair(p_base, X_OBJ_FLAG_NONE, NULL, NULL));
 	}
 
 	p_walk = p_tree;
@@ -104,15 +104,15 @@ static x_obj_t *sym_bst_insert(x_obj_t *p_base, x_obj_t *p_tree,
 		p_children = x_restobj(p_walk);
 		if (cmp < 0) {
 			if (x_obj_isnil(p_base, x_firstobj(p_children))) {
-				x_firstobj(p_children) = x_mkspair(p_base,
-					p_sym, x_mkspair(p_base, NULL, NULL));
+				x_firstobj(p_children) = x_mkspair(p_base, X_OBJ_FLAG_NONE,
+					p_sym, x_mkspair(p_base, X_OBJ_FLAG_NONE, NULL, NULL));
 				return p_tree;
 			}
 			p_walk = x_firstobj(p_children);
 		} else {
 			if (x_obj_isnil(p_base, x_restobj(p_children))) {
-				x_restobj(p_children) = x_mkspair(p_base,
-					p_sym, x_mkspair(p_base, NULL, NULL));
+				x_restobj(p_children) = x_mkspair(p_base, X_OBJ_FLAG_NONE,
+					p_sym, x_mkspair(p_base, X_OBJ_FLAG_NONE, NULL, NULL));
 				return p_tree;
 			}
 			p_walk = x_restobj(p_children);
@@ -129,7 +129,7 @@ x_obj_t *x_type_symbol_register(x_obj_t *p_base, x_obj_t *p_args)
 	x_obj_t *p_type = x_type_struct_get(p_base, (x_obj_t *)args);
 
 	if (x_obj_isnil(p_base, x_symbol_data(p_type))) {
-		x_symbol_data(p_type) = x_mkspair(p_base, NULL, NULL);
+		x_symbol_data(p_type) = x_mkspair(p_base, X_OBJ_FLAG_NONE, NULL, NULL);
 	}
 
 	return p_type;
@@ -155,7 +155,7 @@ x_obj_t *x_type_symbol_make(x_obj_t *p_base, x_obj_t *p_args)
 
 	p_obj = x_obj_make(p_base, p_type, flags, X_OBJ_LENGTH_ATOM,
 		x_symbolval(p_symbol));
-	x_symbol_data_list(p_type) = x_mkspair(p_base, p_obj,
+	x_symbol_data_list(p_type) = x_mkspair(p_base, X_OBJ_FLAG_NONE, p_obj,
 		x_symbol_data_list(p_type));
 	x_symbol_bst(p_type) = sym_bst_insert(p_base,
 		x_symbol_bst(p_type), p_obj);
@@ -171,7 +171,7 @@ x_obj_t *x_type_symbol_find(x_obj_t *p_base, x_obj_t *p_args)
 
 #ifdef X_PROFILE
 	if (x_base_isset(p_base))
-		x_atomint(x_base_field_profile_sym_find_calls(p_base))++;
+		x_atomint(x_firstobj(x_base_field_profile_sym_find_calls(p_base)))++;
 #endif
 
 	/* BST lookup: O(log n) */
@@ -198,7 +198,7 @@ x_obj_t *x_type_symbol_eval(x_obj_t *p_base, x_obj_t *p_args)
 		return NULL;
 	}
 
-	p_alist = x_base_field_env_alist(p_base);
+	p_alist = x_firstobj(x_base_field_env_alist(p_base));
 	p_boundary = x_base_field_env_local_boundary(p_base);
 
 	/* Step 1: walk locals (head of alist up to AND INCLUDING boundary) */

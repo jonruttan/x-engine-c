@@ -21,9 +21,9 @@
  */
 #include "x-type.h"
 
-#ifndef X_TYPE_ATOM_NAME
-#define X_TYPE_ATOM_NAME		"ATOM"
-#endif /* X_TYPE_ATOM_NAME */
+#ifndef X_TYPE_ATOM_SYMBOL
+#define X_TYPE_ATOM_SYMBOL		"ATOM"
+#endif /* X_TYPE_ATOM_SYMBOL */
 
 #define X_TYPE_ATOM_WRITE_STR	"#<atom>"
 #define X_TYPE_ATOM_WRITE_LEN	7
@@ -31,7 +31,7 @@
 /*
  * # Macros
  */
-#define x_obj_type_isatom(B,X)		x_obj_is_type((B), (X), X_TYPE_ATOM_NAME)
+#define x_obj_type_isatom(B,X)		x_obj_is_type((B), (X), X_TYPE_ATOM_SYMBOL)
 
 #define x_atomval(X)				x_atomptr(X)
 

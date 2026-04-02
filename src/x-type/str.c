@@ -16,7 +16,7 @@
 /*
  * # Includes
  */
-#include "x-base.h"
+#include "x-base-typesystem.h"
 #include "x-type/str.h"
 #include "x-token/sexp/str.h"
 #include "x-type/char.h"
@@ -80,7 +80,7 @@ x_obj_t *x_type_str_make(x_obj_t *p_base, x_obj_t *p_args)
 
 x_obj_t *x_type_str_length(x_obj_t *p_base, x_obj_t *p_args)
 {
-	return x_mksatom(p_base, x_strlen(x_firstobj(p_args)));
+	return x_mksatom(p_base, X_OBJ_FLAG_NONE, x_strlen(x_firstobj(p_args)));
 }
 
 x_obj_t *x_type_str_call(x_obj_t *p_base, x_obj_t *p_args)

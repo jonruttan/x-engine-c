@@ -75,8 +75,8 @@ void test_cleanup(x_obj_t *p_base)
 #define X_TEST_CHAR_VALUE		'@'
 
 #define nil			NULL
-#define pair(X,Y)	(x_mkspair(p_base, (X), (Y)))
-#define atom(X)		(x_mksatom(p_base, (X)))
+#define pair(X,Y)	(x_mkspair(p_base, X_OBJ_FLAG_NONE, (X), (Y)))
+#define atom(X)		(x_mksatom(p_base, X_OBJ_FLAG_NONE, (X)))
 
 static char *test_obj_type_ischar(void)
 {
@@ -90,7 +90,7 @@ static char *test_obj_type_ischar(void)
 	);
 	x_obj_free(p_obj);
 
-	p_obj = x_mksatom(NULL, 0);
+	p_obj = x_mksatom(NULL, X_OBJ_FLAG_NONE, 0);
 	_it_should("return false when object is not a char",
 		0 == x_obj_type_ischar(NULL, p_obj)
 	);
@@ -104,7 +104,7 @@ static char *test_charval(void)
 	x_obj_t *p_obj;
 	x_char_t c, value = X_TEST_CHAR_VALUE;
 
-	p_obj = x_mksatom(NULL, value);
+	p_obj = x_mksatom(NULL, X_OBJ_FLAG_NONE, value);
 
 	c = x_charval(p_obj);
 	_it_should("return the Character's value", value == c);
@@ -130,7 +130,7 @@ static char *test_mkchar(void)
 	x_sys_free(p_obj);
 
 
-	p_base = x_mksatom(NULL, 0);
+	p_base = x_mksatom(NULL, X_OBJ_FLAG_NONE, 0);
 	p_obj = x_mkchar(p_base, c);
 	_it_should("make a Character object, attach it to the Base object, and set its value",
 		! x_obj_isnil(p_base, p_obj)
@@ -163,7 +163,7 @@ static char *test_mkfchar(void)
 	x_sys_free(p_obj);
 
 
-	p_base = x_mksatom(NULL, 0);
+	p_base = x_mksatom(NULL, X_OBJ_FLAG_NONE, 0);
 	p_obj = x_mkfchar(p_base, flags, c);
 	_it_should("make a Character object, attach it to the Base object, and set its value",
 		! x_obj_isnil(p_base, p_obj)
@@ -196,7 +196,7 @@ static char *test_make_char(void)
 	x_sys_free(p_obj);
 
 
-	p_base = x_mksatom(NULL, 0);
+	p_base = x_mksatom(NULL, X_OBJ_FLAG_NONE, 0);
 	p_obj = x_make_char(p_base, flags, c);
 	_it_should("make a Character object, attach it to the Base object, and set its value",
 		! x_obj_isnil(p_base, p_obj)
@@ -218,7 +218,7 @@ static char *test_type_char_struct(void)
 
 	helper_alloc_reset();
 
-	p_base = x_mksatom(NULL, 0);
+	p_base = x_mksatom(NULL, X_OBJ_FLAG_NONE, 0);
 	p_type = x_type_char_struct(p_base, p_base);
 	_it_should("return Character Type list",
 		! x_obj_isnil(p_base, p_type)
@@ -312,9 +312,9 @@ static char *test_base_alist_assoc(void)
 	helper_alloc_reset();
 
 	p_base = x_base_make(NULL, NULL);
-	x_base_type_alist_extend(p_base, x_mkspair(p_base, x_mkspair(p_base, x_type_char_name, NULL), atom(1)));
+	x_base_type_alist_extend(p_base, x_mkspair(p_base, X_OBJ_FLAG_NONE, x_mkspair(p_base, X_OBJ_FLAG_NONE, x_type_char_name, NULL), atom(1)));
 
-	p_type = x_base_type_alist_assoc(p_base, x_mkspair(p_base, x_type_char_name, NULL));
+	p_type = x_base_type_alist_assoc(p_base, x_mkspair(p_base, X_OBJ_FLAG_NONE, x_type_char_name, NULL));
 	_it_should("find the type in the Type alist and return its properties",
 		x_type_char_name == x_type_field_name(p_type)
 	);
@@ -330,8 +330,8 @@ static char *test_type_char_make(void)
 	helper_alloc_reset();
 
 	/* NULL p_base object */
-	p_char = x_mksatom(NULL, value);
-	p_args = x_mkspair(NULL, p_char, NULL);
+	p_char = x_mksatom(NULL, X_OBJ_FLAG_NONE, value);
+	p_args = x_mkspair(NULL, X_OBJ_FLAG_NONE, p_char, NULL);
 
 	p_obj[0] = x_type_char_make(NULL, p_args);
 	_it_should("make a Character object",
@@ -360,9 +360,9 @@ static char *test_type_char_make(void)
 	helper_alloc_reset();
 
 	/* Empty p_base object */
-	p_base = x_mksatom(NULL, NULL);
-	p_char = x_mksatom(p_base, value);
-	p_args = x_mkspair(p_base, p_char, NULL);
+	p_base = x_mksatom(NULL, X_OBJ_FLAG_NONE, NULL);
+	p_char = x_mksatom(p_base, X_OBJ_FLAG_NONE, value);
+	p_args = x_mkspair(p_base, X_OBJ_FLAG_NONE, p_char, NULL);
 
 	p_obj[0] = x_type_char_make(p_base, p_args);
 	_it_should("make a Character object",
@@ -393,8 +393,8 @@ static char *test_type_char_make(void)
 
 	/* With p_base object */
 	p_base = x_base_make(NULL, NULL);
-	p_char = x_mksatom(p_base, value);
-	p_args = x_mkspair(p_base, p_char, NULL);
+	p_char = x_mksatom(p_base, X_OBJ_FLAG_NONE, value);
+	p_args = x_mkspair(p_base, X_OBJ_FLAG_NONE, p_char, NULL);
 
 	p_obj[0] = x_type_char_make(p_base, p_args);
 	_it_should("make a Character object with a base object",

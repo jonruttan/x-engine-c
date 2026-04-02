@@ -18,7 +18,7 @@
  */
 #include "x-type/buffer.h"
 #include "x-type/char.h"
-#include "x-base.h"
+#include "x-base-typesystem.h"
 #include "x-heap.h"
 
 x_satom_t x_type_buffer_name = x_obj_set(x_type_atom_obj, X_OBJ_FLAG_NONE, { .s = (x_char_t *)X_TYPE_BUFFER_NAME }),
@@ -45,8 +45,11 @@ x_obj_t *x_type_buffer_mark(x_obj_t *p_base, x_obj_t *p_args)
 	x_obj_flag_t flags = x_firstint(x_restobj(p_args));
 
 	/* Buffer data slots contain raw char pointers, not objects.
-	 * Mark the inner bookkeeping pair explicitly. */
-	x_heap_mark(p_base, x_restobj(p_obj), flags, NULL);
+	 * Flag the inner bookkeeping object directly — don't traverse
+	 * its slots since they're raw char pointers, not objects. */
+	if ( ! x_obj_isnil(p_base, x_restobj(p_obj))) {
+		x_obj_flags(x_restobj(p_obj)) |= flags;
+	}
 
 	return NULL;
 }
@@ -162,7 +165,7 @@ x_obj_t *x_type_buffer_read(x_obj_t *p_base, x_obj_t *p_args)
 
 	/* Track line numbers for error reporting. */
 	if (x_bufferlastchar(p_buffer) == '\n' && x_base_isset(p_base)) {
-		x_atomint(x_base_field_line(p_base)) += 1;
+		x_atomint(x_firstobj(x_base_field_line(p_base))) += 1;
 	}
 
 	return p_buffer;

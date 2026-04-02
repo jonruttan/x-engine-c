@@ -17,7 +17,7 @@
  * # Includes
  */
 #include "x-prim.h"
-#include "x-base.h"
+#include "x-base-typesystem.h"
 #include "x-type/int.h"
 #include "x-type/prim.h"
 #include "x-type/ptr.h"
@@ -62,7 +62,7 @@ static x_obj_t *x_ffi_from_double(x_obj_t *p_base, double *in)
 {
 	x_int_t parts[2];
 	memcpy(parts, in, sizeof(double));
-	return x_mkspair(p_base,
+	return x_mkspair(p_base, X_OBJ_FLAG_NONE,
 		x_mkint(p_base, parts[0]),
 		x_mkint(p_base, parts[1]));
 }
@@ -169,7 +169,7 @@ static x_obj_t *x_prim_ffi_call(x_obj_t *p_base, x_obj_t *p_args)
 		p_b = x_eval_arg(p_base, x_firstobj(x_restobj(p_rest)));
 		x_ffi_to_double(p_base, p_a, &a);
 		x_ffi_to_double(p_base, p_b, &b);
-		return a < b ? x_base_field_true(p_base) : x_base_field_false(p_base);
+		return a < b ? x_firstobj(x_base_field_true(p_base)) : x_firstobj(x_base_field_false(p_base));
 	}
 
 	if (x_lib_strcmp(conv, "d>d") == 0) {
@@ -177,7 +177,7 @@ static x_obj_t *x_prim_ffi_call(x_obj_t *p_base, x_obj_t *p_args)
 		p_b = x_eval_arg(p_base, x_firstobj(x_restobj(p_rest)));
 		x_ffi_to_double(p_base, p_a, &a);
 		x_ffi_to_double(p_base, p_b, &b);
-		return a > b ? x_base_field_true(p_base) : x_base_field_false(p_base);
+		return a > b ? x_firstobj(x_base_field_true(p_base)) : x_firstobj(x_base_field_false(p_base));
 	}
 
 	if (x_lib_strcmp(conv, "d=d") == 0) {
@@ -185,7 +185,7 @@ static x_obj_t *x_prim_ffi_call(x_obj_t *p_base, x_obj_t *p_args)
 		p_b = x_eval_arg(p_base, x_firstobj(x_restobj(p_rest)));
 		x_ffi_to_double(p_base, p_a, &a);
 		x_ffi_to_double(p_base, p_b, &b);
-		return a == b ? x_base_field_true(p_base) : x_base_field_false(p_base);
+		return a == b ? x_firstobj(x_base_field_true(p_base)) : x_firstobj(x_base_field_false(p_base));
 	}
 
 	if (x_lib_strcmp(conv, "d<=d") == 0) {
@@ -193,7 +193,7 @@ static x_obj_t *x_prim_ffi_call(x_obj_t *p_base, x_obj_t *p_args)
 		p_b = x_eval_arg(p_base, x_firstobj(x_restobj(p_rest)));
 		x_ffi_to_double(p_base, p_a, &a);
 		x_ffi_to_double(p_base, p_b, &b);
-		return a <= b ? x_base_field_true(p_base) : x_base_field_false(p_base);
+		return a <= b ? x_firstobj(x_base_field_true(p_base)) : x_firstobj(x_base_field_false(p_base));
 	}
 
 	if (x_lib_strcmp(conv, "d>=d") == 0) {
@@ -201,7 +201,7 @@ static x_obj_t *x_prim_ffi_call(x_obj_t *p_base, x_obj_t *p_args)
 		p_b = x_eval_arg(p_base, x_firstobj(x_restobj(p_rest)));
 		x_ffi_to_double(p_base, p_a, &a);
 		x_ffi_to_double(p_base, p_b, &b);
-		return a >= b ? x_base_field_true(p_base) : x_base_field_false(p_base);
+		return a >= b ? x_firstobj(x_base_field_true(p_base)) : x_firstobj(x_base_field_false(p_base));
 	}
 
 	/* Cast conventions */
@@ -385,22 +385,18 @@ static x_obj_t *x_prim_ptr_ref_word(x_obj_t *p_base, x_obj_t *p_args)
 static x_obj_t *x_prim_obj_meta_extra(x_obj_t *p_base, x_obj_t *p_args)
 {
 	(void)p_args;
-	return x_mkint(p_base, (x_int_t)x_obj_meta_extra);
+	return x_mkint(p_base, x_atomint(x_firstobj(x_base_field_obj_meta_extra(p_base))));
 }
 
 /* obj-meta-extra!: (obj-meta-extra! n) -> int */
 static x_obj_t *x_prim_obj_meta_extra_set(x_obj_t *p_base, x_obj_t *p_args)
 {
-	x_int_t old = (x_int_t)x_obj_meta_extra;
+	x_int_t old = x_atomint(x_firstobj(x_base_field_obj_meta_extra(p_base)));
 	x_obj_t *p_n;
 
 	x_eargs(p_base, p_args, 2, NULL, &p_n);
 
-	x_obj_meta_extra = (size_t)x_intval(p_n);
-
-	if (x_base_isset(p_base)) {
-		x_atomint(x_base_field_obj_meta_extra(p_base)) = x_intval(p_n);
-	}
+	x_atomint(x_firstobj(x_base_field_obj_meta_extra(p_base))) = x_intval(p_n);
 
 	return x_mkint(p_base, old);
 }
@@ -413,11 +409,11 @@ static x_obj_t *x_prim_obj_meta_ref(x_obj_t *p_base, x_obj_t *p_args)
 	x_eargs(p_base, p_args, 3, NULL, &p_obj, &p_i);
 
 	if (x_obj_isnil(p_base, p_obj)
-			|| !(x_obj_flags(p_obj) & X_OBJ_FLAG_EXT)) {
+			|| !(x_obj_flags(p_obj) & X_OBJ_FLAG_META)) {
 		return x_mkint(p_base, 0);
 	}
 
-	return x_mkint(p_base, x_obj_meta_slot(p_obj, x_intval(p_i)).i);
+	return x_mkint(p_base, x_obj_meta_i(p_obj, x_intval(p_i)).i);
 }
 
 /* obj-meta-set!: (obj-meta-set! obj i val) -> val */
@@ -428,8 +424,8 @@ static x_obj_t *x_prim_obj_meta_set(x_obj_t *p_base, x_obj_t *p_args)
 	x_eargs(p_base, p_args, 4, NULL, &p_obj, &p_i, &p_val);
 
 	if (!x_obj_isnil(p_base, p_obj)
-			&& (x_obj_flags(p_obj) & X_OBJ_FLAG_EXT)) {
-		x_obj_meta_slot(p_obj, x_intval(p_i)).i = x_intval(p_val);
+			&& (x_obj_flags(p_obj) & X_OBJ_FLAG_META)) {
+		x_obj_meta_i(p_obj, x_intval(p_i)).i = x_intval(p_val);
 	}
 
 	return p_val;
@@ -444,7 +440,7 @@ static x_obj_t *x_prim_make_callable(x_obj_t *p_base, x_obj_t *p_args)
 	x_eargs(p_base, p_args, 2, NULL, &p_ptr);
 
 	return x_make_prim(p_base, X_OBJ_FLAG_NONE,
-		(x_callable_fn)x_ptrval(p_ptr));
+		(x_fn_t)x_ptrval(p_ptr));
 }
 
 x_obj_t *x_prim_ffi_register(x_obj_t *p_base, x_obj_t *p_args)
@@ -489,7 +485,7 @@ x_obj_t *x_prim_ffi_register(x_obj_t *p_base, x_obj_t *p_args)
 			x_obj_t *p_sym = x_make_symbol(p_base,
 					X_OBJ_FLAG_NONE, consts[i].name),
 				*p_val = x_mkint(p_base, consts[i].val),
-				*p_pair = x_mkspair(p_base, p_sym, p_val);
+				*p_pair = x_mkspair(p_base, X_OBJ_FLAG_NONE, p_sym, p_val);
 			x_base_env_alist_extend(p_base, p_pair);
 		}
 	}

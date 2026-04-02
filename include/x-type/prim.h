@@ -44,7 +44,7 @@ extern x_satom_t x_type_prim_name,
 	x_callable_call_prim,
 	x_type_prim_struct_prim;
 
-x_obj_t *x_make_prim(x_obj_t *p_base, x_obj_flag_t flags, x_callable_fn fn);
+x_obj_t *x_make_prim(x_obj_t *p_base, x_obj_flag_t flags, x_fn_t fn);
 
 x_obj_t *x_type_prim_register(x_obj_t *p_base, x_obj_t *p_args);
 x_obj_t *x_type_prim_struct(x_obj_t *p_base, x_obj_t *p_args);

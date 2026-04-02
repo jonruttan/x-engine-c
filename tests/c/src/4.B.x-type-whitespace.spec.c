@@ -77,8 +77,8 @@ void test_cleanup(x_obj_t *p_base)
 #define X_TEST_WHITESPACE_VALUE		"TEST"
 
 #define nil			NULL
-#define pair(X,Y)	(x_mkspair(p_base, (X), (Y)))
-#define atom(X)		(x_mksatom(p_base, (X)))
+#define pair(X,Y)	(x_mkspair(p_base, X_OBJ_FLAG_NONE, (X), (Y)))
+#define atom(X)		(x_mksatom(p_base, X_OBJ_FLAG_NONE, (X)))
 
 static char *test_obj_type_iswhitespace(void)
 {
@@ -94,7 +94,7 @@ static char *test_obj_type_iswhitespace(void)
 	);
 	x_obj_free(p_obj);
 
-	p_obj = x_mksatom(NULL, 0);
+	p_obj = x_mksatom(NULL, X_OBJ_FLAG_NONE, 0);
 	_it_should("return false when object is not Whitespace",
 		0 == x_obj_type_iswhitespace(NULL, p_obj)
 	);
@@ -108,7 +108,7 @@ static char *test_whitespaceval(void)
 	x_obj_t *p_obj;
 	x_char_t *str = X_TEST_WHITESPACE_VALUE;
 
-	p_obj = x_mksatom(NULL, str);
+	p_obj = x_mksatom(NULL, X_OBJ_FLAG_NONE, str);
 
 	_it_should("return the Whitespace's value", str == x_whitespaceval(p_obj));
 
@@ -122,7 +122,7 @@ static char *test_whitespacelen(void)
 	x_obj_t *p_obj;
 	x_char_t *str = X_TEST_WHITESPACE_VALUE;
 
-	p_obj = x_mksatom(NULL, str);
+	p_obj = x_mksatom(NULL, X_OBJ_FLAG_NONE, str);
 
 	_it_should("return the Whitespace's length",
 		x_lib_strlen(str) == x_whitespacelen(p_obj)
@@ -139,7 +139,7 @@ static char *test_type_whitespace_struct(void)
 
 	helper_alloc_reset();
 
-	p_base = x_mksatom(NULL, 0);
+	p_base = x_mksatom(NULL, X_OBJ_FLAG_NONE, 0);
 	p_type = x_type_whitespace_struct(p_base, p_base);
 	_it_should("return Whitespace Type list",
 		! x_obj_isnil(p_base, p_type)

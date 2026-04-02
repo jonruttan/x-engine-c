@@ -17,7 +17,7 @@
  * # Includes
  */
 #include "x-prim.h"
-#include "x-base.h"
+#include "x-base-typesystem.h"
 #include "x-eval.h"
 #include "x-heap.h"
 #include "x-token.h"
@@ -64,7 +64,7 @@ static x_obj_t *x_prim_display(x_obj_t *p_base, x_obj_t *p_args)
 /* read: (read) -> read one s-expression from stdin */
 static x_obj_t *x_prim_read_expr(x_obj_t *p_base, x_obj_t *p_args)
 {
-	x_obj_t *p_buffer = x_base_field_buffer(p_base);
+	x_obj_t *p_buffer = x_firstobj(x_base_field_buffer(p_base));
 	x_spair_t read_args[1];
 	(void)p_args;
 	read_args[0][X_OBJ_META_TYPE].p = NULL;
@@ -78,7 +78,7 @@ static x_obj_t *x_prim_read_expr(x_obj_t *p_base, x_obj_t *p_args)
 /* read-char: (read-char) -> read one character from stdin */
 static x_obj_t *x_prim_read_char(x_obj_t *p_base, x_obj_t *p_args)
 {
-	x_obj_t *p_buffer = x_base_field_buffer(p_base);
+	x_obj_t *p_buffer = x_firstobj(x_base_field_buffer(p_base));
 	x_spair_t buf_args[1];
 	(void)p_args;
 	buf_args[0][X_OBJ_META_TYPE].p = NULL;
@@ -121,15 +121,15 @@ static x_obj_t *x_prim_to_string(x_obj_t *p_base, x_obj_t *p_args,
 	x_first((x_obj_t *)buf_obj).v = buf;
 
 	/* Push write-buffer onto write_buf_stack */
-	x_base_field_write_buf_stack(p_base) = x_mkspair(p_base,
-		(x_obj_t *)buf_obj, x_base_field_write_buf_stack(p_base));
+	x_base_field_write_buf(p_base) = x_mkspair(p_base, X_OBJ_FLAG_NONE,
+		(x_obj_t *)buf_obj, x_base_field_write_buf(p_base));
 
 	x_firstobj((x_obj_t *)dispatch_args) = p_val;
 	dispatch(p_base, (x_obj_t *)dispatch_args);
 
 	/* Pop write_buf_stack */
-	x_base_field_write_buf_stack(p_base)
-		= x_restobj(x_base_field_write_buf_stack(p_base));
+	x_base_field_write_buf(p_base)
+		= x_restobj(x_base_field_write_buf(p_base));
 	buf[x_atomint(buf_pos)] = '\0';
 
 	p_result = x_mkstrown(p_base,
@@ -165,12 +165,12 @@ static x_obj_t *x_prim_heap_sweep(x_obj_t *p_base, x_obj_t *p_args)
 	(void)p_args;
 #ifdef X_PROFILE
 	if (x_base_isset(p_base))
-		x_atomint(x_base_field_profile_gc_runs(p_base))++;
+		x_atomint(x_firstobj(x_base_field_profile_gc_runs(p_base)))++;
 #endif
 
 	/* Call free hooks before sweep */
 	if (x_base_isset(p_base)) {
-		x_obj_t *p_hooks = x_base_field_heap_free_hooks(p_base);
+		x_obj_t *p_hooks = x_firstobj(x_base_field_heap_free_hooks(p_base));
 		x_spair_t hook_args[1];
 
 		hook_args[0][X_OBJ_META_TYPE].p = NULL;
@@ -184,8 +184,7 @@ static x_obj_t *x_prim_heap_sweep(x_obj_t *p_base, x_obj_t *p_args)
 		}
 	}
 
-	x_heap_sweep(p_base, x_obj_heap(p_base), X_OBJ_FLAG_HEAP,
-		x_type_heap_free);
+	x_heap_sweep(p_base, x_obj_heap(p_base), X_OBJ_FLAG_HEAP);
 
 	return NULL;
 }
@@ -210,26 +209,25 @@ static x_obj_t *x_prim_heap_mark(x_obj_t *p_base, x_obj_t *p_args)
 {
 	(void)p_args;
 	/* Normal mark: trace from base data tree */
-	x_heap_mark(p_base, x_atomobj(p_base), X_OBJ_FLAG_HEAP,
-		x_type_heap_mark);
+	x_heap_tree_mark(p_base, x_atomobj(p_base), X_OBJ_FLAG_HEAP);
 
 	/* Conservative stack scan: mark objects referenced from C stack */
-	x_heap_mark_stack(p_base, X_OBJ_FLAG_HEAP, x_type_heap_mark);
+	x_heap_callstack_mark(p_base, X_OBJ_FLAG_HEAP);
 
 	/* Mark all registered GC roots */
 	if (x_base_isset(p_base)) {
-		x_obj_t *p_roots = x_base_field_heap_mark_roots(p_base);
+		x_obj_t *p_roots = x_firstobj(x_base_field_heap_mark_roots(p_base));
 
 		while ( ! x_obj_isnil(p_base, p_roots)) {
-			x_heap_mark(p_base, x_firstobj(p_roots),
-				X_OBJ_FLAG_HEAP, x_type_heap_mark);
+			x_heap_tree_mark(p_base, x_firstobj(p_roots),
+				X_OBJ_FLAG_HEAP);
 			p_roots = x_restobj(p_roots);
 		}
 	}
 
 	/* Call mark hooks (each is a callable) */
 	if (x_base_isset(p_base)) {
-		x_obj_t *p_hooks = x_base_field_heap_mark_hooks(p_base);
+		x_obj_t *p_hooks = x_firstobj(x_base_field_heap_mark_hooks(p_base));
 		x_spair_t hook_args[1];
 
 		hook_args[0][X_OBJ_META_TYPE].p = NULL;
@@ -255,7 +253,7 @@ static x_obj_t *x_prim_system_mark(x_obj_t *p_base, x_obj_t *p_args)
 	x_eargs(p_base, p_args, 2, NULL, &p_obj);
 
 	/* Reuse the mark traversal with SYSTEM flag */
-	x_heap_mark(p_base, p_obj, X_OBJ_FLAG_SYSTEM, x_type_heap_mark);
+	x_heap_tree_mark(p_base, p_obj, X_OBJ_FLAG_SHARED);
 
 	return p_obj;
 }
@@ -272,8 +270,8 @@ static x_obj_t *x_prim_atomic(x_obj_t *p_base, x_obj_t *p_args)
 	call_args[0][X_OBJ_META_FLAGS].i = X_OBJ_FLAG_NONE;
 
 	/* Root p_args so mark+sweep inside the loop doesn't free them */
-	x_base_field_eval_list_stack(p_base) = x_mkspair(p_base,
-		p_args, x_base_field_eval_list_stack(p_base));
+	x_base_field_eval_list(p_base) = x_mkspair(p_base, X_OBJ_FLAG_NONE,
+		p_args, x_base_field_eval_list(p_base));
 
 	while ( ! x_obj_isnil(p_base, p_args)) {
 		x_firstobj((x_obj_t *)call_args) = x_firstobj(p_args);
@@ -282,8 +280,8 @@ static x_obj_t *x_prim_atomic(x_obj_t *p_base, x_obj_t *p_args)
 		p_args = x_restobj(p_args);
 	}
 
-	x_base_field_eval_list_stack(p_base)
-		= x_restobj(x_base_field_eval_list_stack(p_base));
+	x_base_field_eval_list(p_base)
+		= x_restobj(x_base_field_eval_list(p_base));
 
 	return p_result;
 }
@@ -342,7 +340,7 @@ x_obj_t *x_prim_io_register(x_obj_t *p_base, x_obj_t *p_args)
 			"applicative"),
 			*p_prim = x_mkprim(p_base, x_prim_atomic),
 			*p_wrapped = x_mkwrap(p_base, p_prim),
-			*p_pair = x_mkspair(p_base, p_sym, p_wrapped);
+			*p_pair = x_mkspair(p_base, X_OBJ_FLAG_NONE, p_sym, p_wrapped);
 		x_base_env_alist_extend(p_base, p_pair);
 	}
 

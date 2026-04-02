@@ -17,14 +17,14 @@
  * # Includes
  */
 #include "x-alist.h"
-#include "x-base.h"
+#include "x-base-typesystem.h"
 #include "x-type/symbol.h"
 
 x_obj_t *x_alist_extend(x_obj_t *p_base, x_obj_t *p_args)
 {
 	x_obj_t *p_assoc = x_firstobj(p_args), *p_alist = x_restobj(p_args);
 
-	return x_mkspair(p_base, p_assoc, p_alist);
+	return x_mkspair(p_base, X_OBJ_FLAG_NONE, p_assoc, p_alist);
 }
 
 x_obj_t *x_alist_assoc(x_obj_t *p_base, x_obj_t *p_args)
@@ -34,13 +34,13 @@ x_obj_t *x_alist_assoc(x_obj_t *p_base, x_obj_t *p_args)
 
 #ifdef X_PROFILE
 	if (x_base_isset(p_base))
-		x_atomint(x_base_field_profile_assoc_calls(p_base))++;
+		x_atomint(x_firstobj(x_base_field_profile_assoc_calls(p_base)))++;
 #endif
 
 	while ( ! x_obj_isnil(p_base, p_alist)) {
 #ifdef X_PROFILE
 		if (x_base_isset(p_base))
-			x_atomint(x_base_field_profile_assoc_steps(p_base))++;
+			x_atomint(x_firstobj(x_base_field_profile_assoc_steps(p_base)))++;
 #endif
 		if (x_firstobj(x_firstobj(x_firstobj(p_alist))) == x_firstobj(p_obj)) {
 			return x_firstobj(p_alist);
@@ -68,7 +68,7 @@ x_obj_t *x_alist_bst_lookup(x_obj_t *p_base, x_obj_t *p_tree,
 		if (x_firstobj(p_entry) == p_sym) {
 #ifdef X_PROFILE
 			if (x_base_isset(p_base))
-				x_atomint(x_base_field_profile_bst_hits(p_base))++;
+				x_atomint(x_firstobj(x_base_field_profile_bst_hits(p_base)))++;
 #endif
 			return p_entry;
 		}
@@ -77,7 +77,7 @@ x_obj_t *x_alist_bst_lookup(x_obj_t *p_base, x_obj_t *p_tree,
 		if (cmp == 0) {
 #ifdef X_PROFILE
 			if (x_base_isset(p_base))
-				x_atomint(x_base_field_profile_bst_hits(p_base))++;
+				x_atomint(x_firstobj(x_base_field_profile_bst_hits(p_base)))++;
 #endif
 			return p_entry;
 		}
@@ -89,7 +89,7 @@ x_obj_t *x_alist_bst_lookup(x_obj_t *p_base, x_obj_t *p_tree,
 
 #ifdef X_PROFILE
 	if (x_base_isset(p_base))
-		x_atomint(x_base_field_profile_bst_misses(p_base))++;
+		x_atomint(x_firstobj(x_base_field_profile_bst_misses(p_base)))++;
 #endif
 	return NULL;
 }
@@ -100,7 +100,7 @@ x_obj_t *x_alist_bst_lookup(x_obj_t *p_base, x_obj_t *p_tree,
  */
 static x_obj_t *bst_pair(x_obj_t *p_base, x_obj_t *a, x_obj_t *b)
 {
-	x_obj_t *p = x_mkspair(p_base, a, b);
+	x_obj_t *p = x_mkspair(p_base, X_OBJ_FLAG_NONE, a, b);
 	x_obj_flags(p) |= X_OBJ_FLAG_SHARED;
 	return p;
 }

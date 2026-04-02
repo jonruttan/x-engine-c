@@ -26,7 +26,7 @@ static x_obj_t *x_prim_eq(x_obj_t *p_base, x_obj_t *p_args)
 	x_obj_t *a, *b;
 	x_eargs(p_base, p_args, 3, NULL, &a, &b);
 
-	return a == b ? x_base_field_true(p_base) : x_base_field_false(p_base);
+	return a == b ? x_firstobj(x_base_field_true(p_base)) : x_firstobj(x_base_field_false(p_base));
 }
 
 /* =: (= a b) -> integer value equality */
@@ -36,7 +36,7 @@ static x_obj_t *x_prim_numeq(x_obj_t *p_base, x_obj_t *p_args)
 	x_eargs(p_base, p_args, 3, NULL, &a, &b);
 
 	return x_intval(a) == x_intval(b)
-		? x_base_field_true(p_base) : x_base_field_false(p_base);
+		? x_firstobj(x_base_field_true(p_base)) : x_firstobj(x_base_field_false(p_base));
 }
 
 /* <: (< a b) -> t if a < b */
@@ -46,7 +46,7 @@ static x_obj_t *x_prim_lt(x_obj_t *p_base, x_obj_t *p_args)
 	x_eargs(p_base, p_args, 3, NULL, &a, &b);
 
 	return x_intval(a) < x_intval(b)
-		? x_base_field_true(p_base) : x_base_field_false(p_base);
+		? x_firstobj(x_base_field_true(p_base)) : x_firstobj(x_base_field_false(p_base));
 }
 
 /* char->integer: (char->integer c) -> integer char code */

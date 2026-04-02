@@ -19,9 +19,9 @@
 #include "x-type/atom.h"
 #include "x-type/int.h"
 #include "x-obj.h"
-#include "x-base.h"
+#include "x-base-typesystem.h"
 
-x_satom_t x_type_atom_name = x_obj_set(x_type_atom_obj, X_OBJ_FLAG_NONE, { .s = (x_char_t *)X_TYPE_ATOM_NAME }),
+x_satom_t x_type_atom_name = x_obj_set(x_type_atom_obj, X_OBJ_FLAG_NONE, { .s = (x_char_t *)X_TYPE_ATOM_SYMBOL }),
 	x_type_atom_make_prim = x_obj_set(x_type_atom_obj, X_OBJ_FLAG_NONE, { (x_obj_t *)&x_type_atom_make }),
 	x_type_atom_write_prim = x_obj_set(x_type_atom_obj, X_OBJ_FLAG_NONE, { (x_obj_t *)&x_type_atom_write }),
 	x_type_atom_struct_prim = x_obj_set(x_type_atom_obj, X_OBJ_FLAG_NONE, { (x_obj_t *)&x_type_atom_struct });

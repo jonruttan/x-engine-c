@@ -21,7 +21,7 @@ x_obj_t *jit_mkint(x_obj_t *p_base, long value)
 /* jit_mkpair: allocate a pair (cons) */
 x_obj_t *jit_mkpair(x_obj_t *p_base, x_obj_t *a, x_obj_t *b)
 {
-	return x_mkspair(p_base, a, b);
+	return x_mkspair(p_base, X_OBJ_FLAG_NONE, a, b);
 }
 
 /* jit_firstobj: car */
@@ -63,11 +63,11 @@ x_obj_t *jit_build_args(x_obj_t *p_base, long nargs,
 	/* Build list right-to-left */
 	for (i = (int)nargs - 1; i >= 0; i--) {
 		x_obj_t *p_atom = x_mkint(p_base, (x_int_t)args[i]);
-		p_list = x_mkspair(p_base, p_atom, p_list);
+		p_list = x_mkspair(p_base, X_OBJ_FLAG_NONE, p_atom, p_list);
 	}
 
 	/* Prepend nil as self placeholder */
-	p_list = x_mkspair(p_base, NULL, p_list);
+	p_list = x_mkspair(p_base, X_OBJ_FLAG_NONE, NULL, p_list);
 
 	return p_list;
 }
@@ -102,5 +102,5 @@ x_obj_t *jit_make_prim(x_obj_t *p_base, x_obj_t *p_args)
 	x_obj_t *p_addr = x_eval_arg(p_base, x_01(p_args));
 
 	return x_make_prim(p_base, X_OBJ_FLAG_NONE,
-		(x_callable_fn)x_ptrval(p_addr));
+		(x_fn_t)x_ptrval(p_addr));
 }

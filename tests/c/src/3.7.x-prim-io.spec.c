@@ -110,8 +110,8 @@ static char *test_io_display(void)
 	s[0] = '\0';
 
 	/* (display "hello") -> writes "hello" without quotes */
-	p_args = x_mkspair(p_base, NULL,
-		x_mkspair(p_base,
+	p_args = x_mkspair(p_base, X_OBJ_FLAG_NONE, NULL,
+		x_mkspair(p_base, X_OBJ_FLAG_NONE,
 		x_mkstr(p_base, "hello"), NULL));
 	x_prim_display(p_base, p_args);
 	_it_should("display writes string without quotes",
@@ -123,8 +123,8 @@ static char *test_io_display(void)
 	helper_file_reset();
 	s[0] = '\0';
 
-	p_args = x_mkspair(p_base, NULL,
-		x_mkspair(p_base,
+	p_args = x_mkspair(p_base, X_OBJ_FLAG_NONE, NULL,
+		x_mkspair(p_base, X_OBJ_FLAG_NONE,
 		x_mkint(p_base, (x_int_t)42), NULL));
 	x_prim_display(p_base, p_args);
 	_it_should("display writes integer",
@@ -148,8 +148,8 @@ static char *test_io_write(void)
 	s[0] = '\0';
 
 	/* (write 42) */
-	p_args = x_mkspair(p_base, NULL,
-		x_mkspair(p_base,
+	p_args = x_mkspair(p_base, X_OBJ_FLAG_NONE, NULL,
+		x_mkspair(p_base, X_OBJ_FLAG_NONE,
 		x_mkint(p_base, (x_int_t)42), NULL));
 	x_prim_write(p_base, p_args);
 	_it_should("write outputs integer",
@@ -210,8 +210,8 @@ static char *test_io_write_to_string(void)
 	x_prim_register(p_base, NULL);
 
 	/* (write-to-string 42) -> "42" */
-	p_args = x_mkspair(p_base, NULL,
-		x_mkspair(p_base,
+	p_args = x_mkspair(p_base, X_OBJ_FLAG_NONE, NULL,
+		x_mkspair(p_base, X_OBJ_FLAG_NONE,
 		x_mkint(p_base, (x_int_t)42), NULL));
 	p_result = x_prim_write_to_string(p_base, p_args);
 	_it_should("write-to-string returns a string",
@@ -220,16 +220,16 @@ static char *test_io_write_to_string(void)
 		x_lib_strcmp(x_strval(p_result), "42") == 0);
 
 	/* (write-to-string "hello") -> "\"hello\"" */
-	p_args = x_mkspair(p_base, NULL,
-		x_mkspair(p_base,
+	p_args = x_mkspair(p_base, X_OBJ_FLAG_NONE, NULL,
+		x_mkspair(p_base, X_OBJ_FLAG_NONE,
 		x_mkstr(p_base, "hello"), NULL));
 	p_result = x_prim_write_to_string(p_base, p_args);
 	_it_should("write-to-string of string includes quotes",
 		x_strval(p_result)[0] == '"');
 
 	/* (write-to-string ()) -> "" */
-	p_args = x_mkspair(p_base, NULL,
-		x_mkspair(p_base, NULL, NULL));
+	p_args = x_mkspair(p_base, X_OBJ_FLAG_NONE, NULL,
+		x_mkspair(p_base, X_OBJ_FLAG_NONE, NULL, NULL));
 	p_result = x_prim_write_to_string(p_base, p_args);
 	_it_should("write-to-string of nil is \"()\"",
 		x_lib_strcmp(x_strval(p_result), "()") == 0);

@@ -144,10 +144,10 @@ static char *test_operative_make(void)
 	p_base = x_base_make(NULL, NULL);
 
 	p_op = x_make_operative(p_base, X_OBJ_FLAG_NONE,
-		x_mksatom(p_base, "params"),
-		x_mksatom(p_base, "envparam"),
-		x_mksatom(p_base, "body"),
-		x_mksatom(p_base, "env"));
+		x_mksatom(p_base, X_OBJ_FLAG_NONE, "params"),
+		x_mksatom(p_base, X_OBJ_FLAG_NONE, "envparam"),
+		x_mksatom(p_base, X_OBJ_FLAG_NONE, "body"),
+		x_mksatom(p_base, X_OBJ_FLAG_NONE, "env"));
 
 	_it_should("create an operative object",
 		p_op != NULL);
@@ -176,7 +176,7 @@ static char *test_operative_call(void)
 	 * body_eval_tco_simple sets tco_expr for last form and returns NULL.
 	 * We verify env binding happened correctly. */
 	p_params = x_mksymbol(p_base, "x");
-	p_body = x_mkspair(p_base, x_mksatom(p_base, 99), NULL);
+	p_body = x_mkspair(p_base, X_OBJ_FLAG_NONE, x_mksatom(p_base, X_OBJ_FLAG_NONE, 99), NULL);
 
 	p_op = x_make_operative(p_base, X_OBJ_FLAG_NONE,
 		p_params, NULL, p_body, x_base_field_env_alist(p_base));
@@ -184,8 +184,8 @@ static char *test_operative_call(void)
 	p_saved_env = x_base_field_env_alist(p_base);
 
 	/* Call: (op 42) — args: (op . (42 . nil)) */
-	p_args = x_mkspair(p_base, p_op,
-		x_mkspair(p_base, x_mksatom(p_base, 42), NULL));
+	p_args = x_mkspair(p_base, X_OBJ_FLAG_NONE, p_op,
+		x_mkspair(p_base, X_OBJ_FLAG_NONE, x_mksatom(p_base, X_OBJ_FLAG_NONE, 42), NULL));
 
 	x_type_operative_call(p_base, p_args);
 
@@ -220,12 +220,12 @@ static char *test_operative_call_envparam(void)
 
 	/* Create operative with env-param 'e', no params, body is (42). */
 	p_envparam = x_mksymbol(p_base, "e");
-	p_body = x_mkspair(p_base, x_mksatom(p_base, 42), NULL);
+	p_body = x_mkspair(p_base, X_OBJ_FLAG_NONE, x_mksatom(p_base, X_OBJ_FLAG_NONE, 42), NULL);
 
 	p_op = x_make_operative(p_base, X_OBJ_FLAG_NONE,
 		NULL, p_envparam, p_body, x_base_field_env_alist(p_base));
 
-	p_args = x_mkspair(p_base, p_op, NULL);
+	p_args = x_mkspair(p_base, X_OBJ_FLAG_NONE, p_op, NULL);
 
 	x_type_operative_call(p_base, p_args);
 
@@ -257,7 +257,7 @@ static char *test_operative_write(void)
 	helper_file_buffer_length[TEST_HELPER_FILE_STDOUT] = 64;
 	helper_file_reset();
 
-	p_args = x_mkspair(p_base, p_op, NULL);
+	p_args = x_mkspair(p_base, X_OBJ_FLAG_NONE, p_op, NULL);
 	p_ret = x_type_operative_write(p_base, p_args);
 
 	_it_should("return the operative",

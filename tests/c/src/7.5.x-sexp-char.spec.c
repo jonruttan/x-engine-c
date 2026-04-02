@@ -92,8 +92,8 @@ void test_cleanup(x_obj_t *p_base)
 #define X_TEST_CHAR_VALUE		'@'
 
 #define nil			p_base
-#define pair(X,Y)	(x_mkspair(p_base, (X), (Y)))
-#define atom(X)		(x_mksatom(p_base, (X)))
+#define pair(X,Y)	(x_mkspair(p_base, X_OBJ_FLAG_NONE, (X), (Y)))
+#define atom(X)		(x_mksatom(p_base, X_OBJ_FLAG_NONE, (X)))
 
 static char *test_sexp_char_analyse1(void)
 {
@@ -226,7 +226,7 @@ static char *test_sexp_char_read(void)
 
 	p_base = x_base_make(NULL, NULL);
 	p_buffer = x_mkbuffer(p_base, buffer);
-	p_args = x_mkspair(p_base, p_buffer, p_base);
+	p_args = x_mkspair(p_base, X_OBJ_FLAG_NONE, p_buffer, p_base);
 
 	/* Read all chars into buffer. */
 	while ( ! x_obj_isnil(p_base, x_type_buffer_read_text(p_base, p_args))) {}
@@ -305,7 +305,7 @@ static char *test_sexp_char_read_token(void)
 	p_type = x_type_struct_make(p_base, type_whitespace);
 	x_base_type_alist_extend(p_base, p_type);
 	p_buffer = x_mkbuffer(p_base, buffer);
-	p_args = x_mkspair(p_base, p_buffer, p_base);
+	p_args = x_mkspair(p_base, X_OBJ_FLAG_NONE, p_buffer, p_base);
 
 	p_obj = x_token_read(p_base, p_args);
 	_it_should("return the @ character",
@@ -335,7 +335,7 @@ static char *test_sexp_char_read_named(void)
 	p_base = x_base_make(NULL, NULL);
 	x_type_char_register(p_base, p_base);
 	p_buffer = x_mkbuffer(p_base, buffer);
-	p_args = x_mkspair(p_base, p_buffer, p_base);
+	p_args = x_mkspair(p_base, X_OBJ_FLAG_NONE, p_buffer, p_base);
 
 	len = x_lib_strlen("#\\newline");
 	x_lib_memcpy(x_bufferval(p_buffer), "#\\newline", len);
@@ -354,7 +354,7 @@ static char *test_sexp_char_read_named(void)
 	p_base = x_base_make(NULL, NULL);
 	x_type_char_register(p_base, p_base);
 	p_buffer = x_mkbuffer(p_base, buffer);
-	p_args = x_mkspair(p_base, p_buffer, p_base);
+	p_args = x_mkspair(p_base, X_OBJ_FLAG_NONE, p_buffer, p_base);
 
 	len = x_lib_strlen("#\\space");
 	x_lib_memcpy(x_bufferval(p_buffer), "#\\space", len);
@@ -373,7 +373,7 @@ static char *test_sexp_char_read_named(void)
 	p_base = x_base_make(NULL, NULL);
 	x_type_char_register(p_base, p_base);
 	p_buffer = x_mkbuffer(p_base, buffer);
-	p_args = x_mkspair(p_base, p_buffer, p_base);
+	p_args = x_mkspair(p_base, X_OBJ_FLAG_NONE, p_buffer, p_base);
 
 	len = x_lib_strlen("#\\tab");
 	x_lib_memcpy(x_bufferval(p_buffer), "#\\tab", len);
@@ -411,7 +411,7 @@ static char *test_sexp_char_read_named_token(void)
 	p_type = x_type_struct_make(p_base, type_whitespace);
 	x_base_type_alist_extend(p_base, p_type);
 	p_buffer = x_mkbuffer(p_base, buffer);
-	p_args = x_mkspair(p_base, p_buffer, p_base);
+	p_args = x_mkspair(p_base, X_OBJ_FLAG_NONE, p_buffer, p_base);
 
 	p_obj = x_token_read(p_base, p_args);
 	_it_should("return a char for tokenized #\\newline",
@@ -435,7 +435,7 @@ static char *test_sexp_char_write(void)
 
 	c = '@';
 	p_obj = x_mkchar(NULL, c);
-	p_args = x_mkspair(NULL, p_obj, NULL);
+	p_args = x_mkspair(NULL, X_OBJ_FLAG_NONE, p_obj, NULL);
 	p_ret = x_sexp_char_write(NULL, p_args);
 	_it_should("write #\\char for the Character object",
 		! x_obj_isnil(NULL, p_ret)
@@ -464,7 +464,7 @@ static char *test_sexp_char_write_named(void)
 	x_type_char_register(p_base, p_base);
 
 	p_obj = x_mkchar(p_base, '\n');
-	p_args = x_mkspair(p_base, p_obj, p_base);
+	p_args = x_mkspair(p_base, X_OBJ_FLAG_NONE, p_obj, p_base);
 	p_ret = x_sexp_char_write(p_base, p_args);
 	_it_should("return the char object for named write",
 		p_obj == p_ret
@@ -484,7 +484,7 @@ static char *test_sexp_char_write_named(void)
 	x_type_char_register(p_base, p_base);
 
 	p_obj = x_mkchar(p_base, 'Z');
-	p_args = x_mkspair(p_base, p_obj, p_base);
+	p_args = x_mkspair(p_base, X_OBJ_FLAG_NONE, p_obj, p_base);
 	p_ret = x_sexp_char_write(p_base, p_args);
 	_it_should("return the char object for non-named write",
 		p_obj == p_ret
@@ -524,7 +524,7 @@ static char *test_sexp_char_read_unknown(void)
 	p_base = x_base_make(NULL, NULL);
 	x_type_char_register(p_base, p_base);
 	p_buffer = x_mkbuffer(p_base, buffer);
-	p_args = x_mkspair(p_base, p_buffer, p_base);
+	p_args = x_mkspair(p_base, X_OBJ_FLAG_NONE, p_buffer, p_base);
 
 	len = x_lib_strlen("#\\xyzzy");
 	x_lib_memcpy(x_bufferval(p_buffer), "#\\xyzzy", len);

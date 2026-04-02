@@ -114,8 +114,8 @@ static char *test_eval(void)
 	x_sys_free(p_args);
 
 
-	p_base = x_mksatom(NULL, NULL);
-	p_obj = x_mksatom(p_base, i);
+	p_base = x_mksatom(NULL, X_OBJ_FLAG_NONE, NULL);
+	p_obj = x_mksatom(p_base, X_OBJ_FLAG_NONE, i);
 	p_args = x_mkpair(p_base, x_mkpair(p_base, p_obj, p_base), p_base);
 	p_ret = x_eval(p_base, p_args);
 	_it_should("evaluate simple types as themselves",
@@ -126,7 +126,7 @@ static char *test_eval(void)
 	test_cleanup(p_base);
 
 
-	p_base = x_mksatom(NULL, NULL);
+	p_base = x_mksatom(NULL, X_OBJ_FLAG_NONE, NULL);
 	p_type = x_type_struct_make(p_base, types[0]);
 	p_obj = x_obj_make(p_base, p_type, X_OBJ_FLAG_NONE, X_OBJ_LENGTH_ATOM, i);
 	p_args = x_mkpair(p_base, x_mkpair(p_base, p_obj, p_base), p_base);
@@ -139,7 +139,7 @@ static char *test_eval(void)
 	test_cleanup(p_base);
 
 
-	p_base = x_mksatom(NULL, NULL);
+	p_base = x_mksatom(NULL, X_OBJ_FLAG_NONE, NULL);
 	p_type = x_type_struct_make(p_base, types[1]);
 	p_obj = x_obj_make(p_base, p_type, X_OBJ_FLAG_NONE, X_OBJ_LENGTH_ATOM, i);
 	p_args = x_mkpair(p_base, x_mkpair(p_base, p_obj, p_base), p_base);
@@ -152,9 +152,9 @@ static char *test_eval(void)
 	test_cleanup(p_base);
 
 
-	p_base = x_mksatom(NULL, NULL);
+	p_base = x_mksatom(NULL, X_OBJ_FLAG_NONE, NULL);
 	p_type = x_type_struct_make(p_base, types[2]);
-	p_obj = x_mksatom(p_base, i);
+	p_obj = x_mksatom(p_base, X_OBJ_FLAG_NONE, i);
 	p_args = x_mkpair(p_base,
 		x_mkpair(p_base,
 			x_obj_make(p_base, p_type, X_OBJ_FLAG_NONE, X_OBJ_LENGTH_ATOM, 0),
@@ -171,8 +171,8 @@ static char *test_eval(void)
 	test_cleanup(p_base);
 
 
-	p_base = x_mksatom(NULL, NULL);
-	p_obj = x_mksatom(p_base, i);
+	p_base = x_mksatom(NULL, X_OBJ_FLAG_NONE, NULL);
+	p_obj = x_mksatom(p_base, X_OBJ_FLAG_NONE, i);
 	p_args = x_mkpair(p_base, x_mkpair(p_base, p_obj, p_base), p_base);
 	p_ret = x_eval(p_base, p_args);
 	_it_should("evaluate unevaluated expressions as themselves",
@@ -196,7 +196,7 @@ x_obj_t *test_type_tco_eval(x_obj_t *p_base, x_obj_t *p_args)
 	tco_eval_calls++;
 
 	/* Set a self-evaluating satom as the TCO bounce target */
-	test_tco_result = x_mksatom(p_base, 999);
+	test_tco_result = x_mksatom(p_base, X_OBJ_FLAG_NONE, 999);
 	x_base_field_tco_expr(p_base) = test_tco_result;
 
 	return p_obj;
@@ -221,8 +221,8 @@ x_obj_t *test_type_tco_eval_two_bounce(x_obj_t *p_base, x_obj_t *p_args)
 		/* Second bounce: set tco_env for env restore.
 		 * tco_env holds compound ((env . boundary) . bst). */
 		if (test_tco_env_to_set != NULL) {
-			x_base_field_tco_env(p_base) = x_mkspair(p_base,
-				x_mkspair(p_base, test_tco_env_to_set, NULL),
+			x_base_field_tco_env(p_base) = x_mkspair(p_base, X_OBJ_FLAG_NONE,
+				x_mkspair(p_base, X_OBJ_FLAG_NONE, test_tco_env_to_set, NULL),
 				NULL);
 		}
 		x_base_field_tco_expr(p_base) = p_obj;
@@ -254,8 +254,8 @@ static char *test_eval_tco(void)
 	p_type = x_type_struct_make(p_base, tco_type);
 	p_obj = x_obj_make(p_base, p_type, X_OBJ_FLAG_NONE,
 		X_OBJ_LENGTH_ATOM, 42);
-	p_args = x_mkspair(p_base,
-		x_mkspair(p_base, p_obj, NULL), NULL);
+	p_args = x_mkspair(p_base, X_OBJ_FLAG_NONE,
+		x_mkspair(p_base, X_OBJ_FLAG_NONE, p_obj, NULL), NULL);
 
 	tco_eval_calls = 0;
 	p_ret = x_eval(p_base, p_args);
@@ -275,26 +275,26 @@ static char *test_eval_tco(void)
 	p_type = x_type_struct_make(p_base, tco_type);
 	p_obj = x_obj_make(p_base, p_type, X_OBJ_FLAG_NONE,
 		X_OBJ_LENGTH_ATOM, 42);
-	p_args = x_mkspair(p_base,
-		x_mkspair(p_base, p_obj, NULL), NULL);
+	p_args = x_mkspair(p_base, X_OBJ_FLAG_NONE,
+		x_mkspair(p_base, X_OBJ_FLAG_NONE, p_obj, NULL), NULL);
 
 	/* Set a tco_env so that after bounce, env is restored */
 	{
-		x_obj_t *p_saved_env = x_mkspair(p_base,
-			x_mkspair(p_base,
-				x_mksatom(p_base, "key"),
-				x_mksatom(p_base, "val")),
+		x_obj_t *p_saved_env = x_mkspair(p_base, X_OBJ_FLAG_NONE,
+			x_mkspair(p_base, X_OBJ_FLAG_NONE,
+				x_mksatom(p_base, X_OBJ_FLAG_NONE, "key"),
+				x_mksatom(p_base, X_OBJ_FLAG_NONE, "val")),
 			NULL);
 
-		x_base_field_tco_env(p_base) = x_mkspair(p_base,
-			x_mkspair(p_base, p_saved_env, NULL),
+		x_base_field_tco_env(p_base) = x_mkspair(p_base, X_OBJ_FLAG_NONE,
+			x_mkspair(p_base, X_OBJ_FLAG_NONE, p_saved_env, NULL),
 			NULL);
 
 		/* Modify env to something else */
-		x_base_field_env_alist(p_base) = x_mkspair(p_base,
-			x_mkspair(p_base,
-				x_mksatom(p_base, "other"),
-				x_mksatom(p_base, "env")),
+		x_base_field_env_alist(p_base) = x_mkspair(p_base, X_OBJ_FLAG_NONE,
+			x_mkspair(p_base, X_OBJ_FLAG_NONE,
+				x_mksatom(p_base, X_OBJ_FLAG_NONE, "other"),
+				x_mksatom(p_base, X_OBJ_FLAG_NONE, "env")),
 			NULL);
 
 		tco_eval_calls = 0;
@@ -317,7 +317,7 @@ static char *test_eval_nil_base(void)
 	x_obj_t *p_args, *p_ret;
 
 	/* nil expression returns NULL */
-	p_args = x_mkspair(NULL, x_mkspair(NULL, NULL, NULL), NULL);
+	p_args = x_mkspair(NULL, X_OBJ_FLAG_NONE, x_mkspair(NULL, X_OBJ_FLAG_NONE, NULL, NULL), NULL);
 	p_ret = x_eval(NULL, p_args);
 	_it_should("return NULL for nil expression",
 		p_ret == NULL);
@@ -344,14 +344,14 @@ static char *test_eval_tco_env_restore(void)
 	p_type = x_type_struct_make(p_base, tco_type);
 	p_obj = x_obj_make(p_base, p_type, X_OBJ_FLAG_NONE,
 		X_OBJ_LENGTH_ATOM, 42);
-	p_args = x_mkspair(p_base,
-		x_mkspair(p_base, p_obj, NULL), NULL);
+	p_args = x_mkspair(p_base, X_OBJ_FLAG_NONE,
+		x_mkspair(p_base, X_OBJ_FLAG_NONE, p_obj, NULL), NULL);
 
 	/* Set up env to restore: initial tco_env nil, second bounce sets it */
-	p_restore_env = x_mkspair(p_base,
-		x_mkspair(p_base,
-			x_mksatom(p_base, "restored"),
-			x_mksatom(p_base, "env")),
+	p_restore_env = x_mkspair(p_base, X_OBJ_FLAG_NONE,
+		x_mkspair(p_base, X_OBJ_FLAG_NONE,
+			x_mksatom(p_base, X_OBJ_FLAG_NONE, "restored"),
+			x_mksatom(p_base, X_OBJ_FLAG_NONE, "env")),
 		NULL);
 
 	test_tco_env_to_set = p_restore_env;

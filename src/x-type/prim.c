@@ -19,7 +19,7 @@
 #include "x-type/prim.h"
 #include "x-type/procedure.h"
 #include "x-type/operative.h"
-#include "x-base.h"
+#include "x-base-typesystem.h"
 #include "x-prim.h"
 
 x_satom_t x_type_prim_name = x_obj_set(x_type_atom_obj, X_OBJ_FLAG_NONE, { .s = (x_char_t *)X_TYPE_PRIM_NAME }),
@@ -28,7 +28,7 @@ x_satom_t x_type_prim_name = x_obj_set(x_type_atom_obj, X_OBJ_FLAG_NONE, { .s = 
 	x_callable_write_prim = x_obj_set(x_type_atom_obj, X_OBJ_FLAG_NONE, { (x_obj_t *)&x_callable_write }),
 	x_type_prim_struct_prim = x_obj_set(x_type_atom_obj, X_OBJ_FLAG_NONE, { (x_obj_t *)&x_type_prim_struct });
 
-x_obj_t *x_make_prim(x_obj_t *p_base, x_obj_flag_t flags, x_callable_fn fn)
+x_obj_t *x_make_prim(x_obj_t *p_base, x_obj_flag_t flags, x_fn_t fn)
 {
 	x_satom_t prim = x_obj_set(NULL, X_OBJ_FLAG_NONE, { .fn = fn }),
 		flags_obj = x_obj_set(NULL, X_OBJ_FLAG_NONE, { .i = flags });
@@ -102,12 +102,12 @@ x_obj_t *x_callable_apply(x_obj_t *p_base, x_obj_t *p_args)
 	}
 
 	/* Procedure: non-TCO apply path (args already evaluated) */
-	if (x_primval(p_fn) == (x_callable_fn)x_type_procedure_call) {
+	if (x_primval(p_fn) == (x_fn_t)x_type_procedure_call) {
 		return x_type_procedure_apply(p_base, p_args);
 	}
 
 	/* Operative via apply: trampoline for TCO */
-	if (x_primval(p_fn) == (x_callable_fn)x_type_operative_call) {
+	if (x_primval(p_fn) == (x_fn_t)x_type_operative_call) {
 		return x_eval_tco_trampoline(p_base,
 			x_type_operative_call(p_base, p_args));
 	}

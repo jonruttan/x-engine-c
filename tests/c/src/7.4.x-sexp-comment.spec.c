@@ -79,8 +79,8 @@ void test_cleanup(x_obj_t *p_base)
 #define X_TEST_COMMENT_VALUE		"TEST"
 
 #define nil			p_base
-#define pair(X,Y)	(x_mkspair(p_base, (X), (Y)))
-#define atom(X)		(x_mksatom(p_base, (X)))
+#define pair(X,Y)	(x_mkspair(p_base, X_OBJ_FLAG_NONE, (X), (Y)))
+#define atom(X)		(x_mksatom(p_base, X_OBJ_FLAG_NONE, (X)))
 
 static char *test_sexp_comment_analyse1(void)
 {
@@ -94,7 +94,7 @@ static char *test_sexp_comment_analyse1(void)
 
 	p_base = x_base_make(NULL, NULL);
 	p_buffer = x_mkbuffer(p_base, buffer);
-	p_args = x_mkspair(p_base, p_buffer, p_base);
+	p_args = x_mkspair(p_base, X_OBJ_FLAG_NONE, p_buffer, p_base);
 	p_obj = x_type_buffer_read(p_base, p_args);
 	p_obj = x_sexp_comment_analyse1(p_base, p_args);
 	_it_should("return the analyse2 primitive object",
@@ -174,7 +174,7 @@ static char *test_sexp_comment_delimit(void)
 
 	p_base = x_base_make(NULL, NULL);
 	p_buffer = x_mkbuffer(p_base, buffer);
-	p_args = x_mkspair(p_base, p_buffer, p_base);
+	p_args = x_mkspair(p_base, X_OBJ_FLAG_NONE, p_buffer, p_base);
 	p_obj = x_type_buffer_read(p_base, p_args);
 	p_obj = x_sexp_comment_delimit(p_base, p_args);
 	_it_should("return the buffer object", p_buffer == p_obj);
@@ -277,7 +277,7 @@ x_obj_t *test_token_read_read_catchall(x_obj_t *p_base, x_obj_t *p_args)
 {
 	x_obj_t *p_buffer = x_token_read_arg_buffer(p_args);
 
-	return x_mksatom(p_base, x_bufferval(p_buffer)[0]);
+	return x_mksatom(p_base, X_OBJ_FLAG_NONE, x_bufferval(p_buffer)[0]);
 }
 
 static char *test_sexp_comment_read_token(void)
@@ -308,7 +308,7 @@ static char *test_sexp_comment_read_token(void)
 	p_type = x_type_struct_make(p_base, type_catchall);
 	x_base_type_alist_extend(p_base, p_type);
 	p_buffer = x_mkbuffer(p_base, buffer);
-	p_args = x_mkspair(p_base, p_buffer, p_base);
+	p_args = x_mkspair(p_base, X_OBJ_FLAG_NONE, p_buffer, p_base);
 
 	p_obj = x_token_read(p_base, p_args);
 	_it_should("return an atom",

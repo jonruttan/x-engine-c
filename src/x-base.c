@@ -16,7 +16,7 @@
 /*
  * # Includes
  */
-#include "x-base.h"
+#include "x-base-typesystem.h"
 #include "x-type.h"
 #include "x-alist.h"
 #include "x-eval.h"
@@ -27,86 +27,95 @@
 #include "x-token.h"
 
 #define nil			NULL
-#define pair(X,Y)	(x_mkspair(p_base, (X), (Y)))
-#define atom(X)		(x_mksatom(p_base, (X)))
+#define pair(X,Y)	(x_mkspair(p_base, X_OBJ_FLAG_NONE, (X), (Y)))
+#define atom(X)		(x_mksatom(p_base, X_OBJ_FLAG_NONE, (X)))
 
-x_obj_t *x_base_make(x_obj_t *p_base, x_obj_t *p_args)
+static x_satom_t x_type_prim_type_name_hook =
+	x_obj_set(NULL, X_OBJ_FLAG_NONE, { .fn = x_type_prim_type_name });
+static x_satom_t x_type_prim_units_hook =
+	x_obj_set(NULL, X_OBJ_FLAG_NONE, { .fn = x_type_prim_units });
+static x_satom_t x_type_prim_length_hook =
+	x_obj_set(NULL, X_OBJ_FLAG_NONE, { .fn = x_type_prim_length });
+static x_satom_t x_base_error_hook =
+	x_obj_set(NULL, X_OBJ_FLAG_NONE, { .v = (void *)x_base_error });
+static x_satom_t x_type_heap_mark_hook =
+	x_obj_set(NULL, X_OBJ_FLAG_NONE, { .v = (void *)x_type_heap_mark });
+static x_satom_t x_type_heap_free_hook =
+	x_obj_set(NULL, X_OBJ_FLAG_NONE, { .v = (void *)x_type_heap_free });
+
+x_obj_t *x_base_ts_make(x_obj_t *p_base, x_obj_t *p_args)
 {
 	x_obj_t *p_parent = p_base;
+	struct x_base_t base_cfg;
 
-	p_base = x_obj_make(p_base, x_type_base_obj, X_OBJ_FLAG_NONE,
-		X_OBJ_LENGTH_ATOM, NULL);
-	x_atomobj(p_base) = pair(
-		/* === HOT: env + ctrl === */
+	base_cfg.filein = STDIN_FILENO;
+	base_cfg.fileout = STDOUT_FILENO;
+	base_cfg.fileerr = STDERR_FILENO;
+	base_cfg.p_hook_type_name = (x_obj_t *)x_type_prim_type_name_hook;
+	base_cfg.p_hook_units = (x_obj_t *)x_type_prim_units_hook;
+	base_cfg.p_hook_length = (x_obj_t *)x_type_prim_length_hook;
+	base_cfg.p_hook_error = (x_obj_t *)x_base_error_hook;
+	base_cfg.obj_meta_extra = 0;
+	base_cfg.p_heap_mark = (x_obj_t *)x_type_heap_mark_hook;
+	base_cfg.p_heap_free = (x_obj_t *)x_type_heap_free_hook;
+	base_cfg.p_stack_base = nil;
+
+	p_base = x_base_make(p_base, base_cfg);
+
+	/* Set base type (x-expr uses NULL). */
+	x_obj_type(p_base) = x_type_base_obj;
+
+	/* Replace x-expr's p_base sentinel in type-alist slot with a real stack cell. */
+	x_firstobj(x_firstobj(x_base_field_io_group(p_base))) = pair(nil, nil);
+
+	/* Fill env+ctrl (x-expr leaves nil). */
+	x_base_hot(p_base) = pair(
+		/* env-group */
 		pair(
-			/* env-group */
+			/* env-alist */
+			pair(nil, nil),
+			/* env-aux: (local-boundary . (global-tree . shadow-list)) */
+			pair(nil, pair(nil, nil))),
+		/* ctrl-group */
+		pair(
+			/* ctrl-head: (save-stack . error-handler) */
+			pair(nil, pair(nil, nil)),
+			/* tco: (tco-expr . tco-env) */
+			pair(pair(nil, nil), pair(nil, nil))));
+
+	/* Fill io-state (x-expr leaves nil). */
+	x_base_io_state(p_base) = pair(
+		/* line */
+		pair(atom(1), nil),
+		/* booleans: (true . false) */
+		pair(
+			pair(p_parent ? x_firstobj(x_base_field_true(p_parent)) : nil, nil),
+			pair(p_parent ? x_firstobj(x_base_field_false(p_parent)) : nil, nil)));
+
+	/* Extend profile (x-expr has 1 counter; we add 9 more). */
+	x_restobj(x_base_field_profile(p_base)) =
+		pair(pair(atom(0), nil), pair(pair(atom(0), nil),
+		pair(pair(atom(0), nil), pair(pair(atom(0), nil),
+		pair(pair(atom(0), nil), pair(pair(atom(0), nil),
+		pair(pair(atom(0), nil), pair(pair(atom(0), nil),
+		pair(pair(atom(0), nil),
+		nil)))))))));
+
+	/* Fill x-project-extras (x-expr leaves nil after heap-group). */
+	x_base_extras(p_base) = pair(
+		/* eval-list */
+		pair(nil, nil),
+		pair(
+			/* token-cache */
+			pair(nil, nil),
 			pair(
-				/* env-alist-stack */
+				/* mark-hooks */
 				pair(nil, nil),
-				/* env-aux: (local-boundary . (global-tree . ())) */
-				pair(nil, pair(nil, nil))),
-			/* ctrl-group */
-			pair(
-				/* ctrl-head: (save-stack . error-handler-stack) */
-				pair(nil, pair(nil, nil)),
-				/* tco: (tco-expr-stack . tco-env-stack) */
-				pair(pair(nil, nil), pair(nil, nil)))),
-		/* === COLD: io + meta === */
-		pair(
-			/* io-group */
-			pair(
-				/* io-head: (type-alist-stack . files) */
 				pair(
+					/* free-hooks */
 					pair(nil, nil),
-					pair(pair(atom(STDIN_FILENO), nil),
-					pair(pair(atom(STDOUT_FILENO), nil),
-					pair(pair(atom(STDERR_FILENO), nil),
-					pair(pair(nil, nil),
-					nil))))),
-				/* io-state: (line-stack . (true-stack . false-stack)) */
-				pair(
-					pair(atom(1), nil),
-					pair(
-						pair(p_parent ? x_base_field_true(p_parent) : nil, nil),
-						pair(p_parent ? x_base_field_false(p_parent) : nil, nil)))),
-			/* meta-group */
-			pair(
-				/* meta-head: (profile . hooks) */
-				pair(
-					/* profile: 10 stack-wrapped counters */
-					pair(pair(atom(0), nil), pair(pair(atom(0), nil),
-					pair(pair(atom(0), nil), pair(pair(atom(0), nil),
-					pair(pair(atom(0), nil), pair(pair(atom(0), nil),
-					pair(pair(atom(0), nil), pair(pair(atom(0), nil),
-					pair(pair(atom(0), nil), pair(pair(atom(0), nil),
-					nil)))))))))),
-					/* hooks: 4 stack-wrapped entries */
-					pair(pair(atom(x_type_prim_type_name), nil),
-					pair(pair(atom(x_type_prim_units), nil),
-					pair(pair(atom(x_type_prim_length), nil),
-					pair(pair(atom(x_base_error), nil),
-					nil))))),
-				/* meta-rest: (eval-list . (buffer . (token-cache .
-			   (obj-meta-extra . (mark-hooks . (free-hooks . mark-roots)))))) */
-				pair(
-					pair(nil, nil),
-					pair(
-						pair(nil, nil),
-						pair(
-							pair(nil, nil),
-							pair(
-								pair(atom(0), nil),
-								pair(
-									pair(nil, nil),
-									pair(
-										pair(nil, nil),
-										pair(nil, nil))))))))));
-
-	/* Set x-obj hooks for the type system. */
-	x_obj_hook_type_name = x_type_prim_type_name;
-	x_obj_hook_units = x_type_prim_units;
-	x_obj_hook_length = x_type_prim_length;
-	x_obj_hook_error = x_base_error;
+					/* mark-roots */
+					pair(nil, nil)))));
 
 	return p_base;
 }
@@ -127,9 +136,9 @@ void x_base_error(x_obj_t *p_base, x_char_t *message, x_obj_t *p_obj)
 
 	/* If an error handler is installed, build error string and longjmp. */
 	if (x_base_isset(p_base)
-		&& ! x_obj_isnil(p_base, x_base_field_error_handler(p_base))) {
-		x_obj_t *p_handler = x_base_field_error_handler(p_base);
-		x_int_t line = x_atomint(x_base_field_line(p_base));
+		&& ! x_obj_isnil(p_base, x_firstobj(x_base_field_error_handler(p_base)))) {
+		x_obj_t *p_handler = x_firstobj(x_base_field_error_handler(p_base));
+		x_int_t line = x_atomint(x_firstobj(x_base_field_line(p_base)));
 		x_char_t line_buf[24], *line_str;
 		size_t msg_len = x_lib_strlen(message);
 		size_t sym_len = symbol ? x_lib_strlen(symbol) : 0;
@@ -153,14 +162,14 @@ void x_base_error(x_obj_t *p_base, x_char_t *message, x_obj_t *p_obj)
 		*p++ = ')'; *p = '\0';
 
 		x_error_handler_error(p_handler) = x_mkstrown(p_base, combined);
-		x_base_field_env_alist(p_base)
+		x_firstobj(x_base_field_env_alist(p_base))
 			= x_error_handler_saved_env(p_handler);
 		x_base_field_env_local_boundary(p_base)
 			= x_error_handler_saved_boundary(p_handler);
 		longjmp(*(jmp_buf *)x_error_handler_jmp(p_handler), 1);
 	}
 
-	fd = x_base_isset(p_base) ? x_atomint(x_base_field_fileerr(p_base)) : STDERR_FILENO;
+	fd = x_base_isset(p_base) ? x_atomint(x_firstobj(x_base_field_fileerr(p_base))) : STDERR_FILENO;
 
 	x_error(fd, message, symbol);
 }
@@ -177,11 +186,11 @@ x_obj_t *x_base_type_alist_extend(x_obj_t *p_base, x_obj_t *p_args)
 	}
 
 	/* Wrap type struct as (name . type_struct) for alist keying */
-	p_entry = x_mkspair(p_base, x_type_field_name(p_args), p_args);
+	p_entry = x_mkspair(p_base, X_OBJ_FLAG_NONE, x_type_field_name(p_args), p_args);
 	x_firstobj((x_obj_t *)args) = p_entry;
-	x_restobj((x_obj_t *)args) = x_base_field_type_alist(p_base);
+	x_restobj((x_obj_t *)args) = x_firstobj(x_base_field_type_alist(p_base));
 
-	return x_base_field_type_alist(p_base) = x_alist_extend(p_base, (x_obj_t *)args);
+	return x_firstobj(x_base_field_type_alist(p_base)) = x_alist_extend(p_base, (x_obj_t *)args);
 }
 
 x_obj_t *x_base_type_alist_assoc(x_obj_t *p_base, x_obj_t *p_args)
@@ -196,7 +205,7 @@ x_obj_t *x_base_type_alist_assoc(x_obj_t *p_base, x_obj_t *p_args)
 		return NULL;
 	}
 
-	x_firstobj((x_obj_t *)args[1]) = x_base_field_type_alist(p_base);
+	x_firstobj((x_obj_t *)args[1]) = x_firstobj(x_base_field_type_alist(p_base));
 
 	p_result = x_alist_assoc(p_base, (x_obj_t *)args);
 
@@ -212,44 +221,44 @@ x_obj_t *x_base_env_alist_extend(x_obj_t *p_base, x_obj_t *p_args)
 		return NULL;
 	}
 
-	x_restobj((x_obj_t *)args) = x_base_field_env_alist(p_base);
+	x_restobj((x_obj_t *)args) = x_firstobj(x_base_field_env_alist(p_base));
 
-	return x_base_field_env_alist(p_base) = x_alist_extend(p_base, (x_obj_t *)args);
+	return x_firstobj(x_base_field_env_alist(p_base)) = x_alist_extend(p_base, (x_obj_t *)args);
 }
 
 x_obj_t *x_base_filein_push(x_obj_t *p_base, x_int_t fd)
 {
-	x_base_field_filein_stack(p_base) = x_mkspair(p_base,
-		x_mksatom(p_base, fd), x_base_field_filein_stack(p_base));
-	return x_base_field_filein(p_base);
+	x_base_field_filein(p_base) = x_mkspair(p_base, X_OBJ_FLAG_NONE,
+		x_mksatom(p_base, X_OBJ_FLAG_NONE, fd), x_base_field_filein(p_base));
+	return x_firstobj(x_base_field_filein(p_base));
 }
 
 x_obj_t *x_base_filein_pop(x_obj_t *p_base)
 {
-	x_obj_t *p_top = x_base_field_filein(p_base);
-	x_base_field_filein_stack(p_base) =
-		x_restobj(x_base_field_filein_stack(p_base));
+	x_obj_t *p_top = x_firstobj(x_base_field_filein(p_base));
+	x_base_field_filein(p_base) =
+		x_restobj(x_base_field_filein(p_base));
 	return p_top;
 }
 
 x_obj_t *x_base_buffer_push(x_obj_t *p_base, x_obj_t *p_buffer)
 {
-	x_base_field_buffer_stack(p_base) = x_mkspair(p_base,
-		p_buffer, x_base_field_buffer_stack(p_base));
+	x_base_field_buffer(p_base) = x_mkspair(p_base, X_OBJ_FLAG_NONE,
+		p_buffer, x_base_field_buffer(p_base));
 	return p_buffer;
 }
 
 x_obj_t *x_base_buffer_pop(x_obj_t *p_base)
 {
-	x_obj_t *p_top = x_base_field_buffer(p_base);
-	x_base_field_buffer_stack(p_base) =
-		x_restobj(x_base_field_buffer_stack(p_base));
+	x_obj_t *p_top = x_firstobj(x_base_field_buffer(p_base));
+	x_base_field_buffer(p_base) =
+		x_restobj(x_base_field_buffer(p_base));
 	return p_top;
 }
 
 x_obj_t *x_base_load(x_obj_t *p_base, x_obj_t *p_args)
 {
-	x_obj_t *p_buffer = x_base_field_buffer(p_base);
+	x_obj_t *p_buffer = x_firstobj(x_base_field_buffer(p_base));
 	x_obj_t *p_exp, *p_result = NULL;
 	x_satom_t exp_wrap = x_obj_set(NULL, X_OBJ_FLAG_NONE, { NULL });
 	x_spair_t eval_args[1] = {
@@ -268,19 +277,6 @@ x_obj_t *x_base_load(x_obj_t *p_base, x_obj_t *p_args)
 	}
 
 	return p_result;
-}
-
-x_obj_t *x_base_read(x_obj_t *p_base, x_obj_t *p_args)
-{
-	int fd = x_base_isset(p_base) ? x_atomint(x_base_field_filein(p_base)) : STDIN_FILENO;
-	x_obj_t *p_atom = x_firstobj(p_args);
-	x_int_t size = x_atomint(x_firstobj(x_restobj(p_args)));
-
-	if (x_sys_read(fd, &x_atomchar(p_atom), size) == size) {
-		return p_atom;
-	}
-
-	return NULL;
 }
 
 x_obj_t *x_base_write_str(x_obj_t *p_base, x_obj_t *p_args)
@@ -303,32 +299,3 @@ x_obj_t *x_base_write_str(x_obj_t *p_base, x_obj_t *p_args)
 	return x_base_write(p_base, (x_obj_t *)args);
 }
 
-x_obj_t *x_base_write(x_obj_t *p_base, x_obj_t *p_args)
-{
-	x_obj_t *p_atom = x_firstobj(p_args);
-	x_int_t size = x_atomint(x_firstobj(x_restobj(p_args)));
-
-	if (x_base_isset(p_base)) {
-		x_obj_t *p_buf = x_base_field_write_buf(p_base);
-
-		if ( ! x_obj_isnil(p_base, p_buf)) {
-			x_char_t *dst = (x_char_t *)x_ptrval(p_buf);
-			x_int_t pos = x_atomint(x_restobj(p_buf));
-
-			x_lib_memcpy(dst + pos, x_atomstr(p_atom), size);
-			x_atomint(x_restobj(p_buf)) = pos + size;
-			return p_atom;
-		}
-	}
-
-	{
-		int fd = x_base_isset(p_base)
-			? x_atomint(x_base_field_fileout(p_base)) : STDOUT_FILENO;
-
-		if (x_sys_write(fd, x_atomstr(p_atom), size) == size) {
-			return p_atom;
-		}
-	}
-
-	return NULL;
-}

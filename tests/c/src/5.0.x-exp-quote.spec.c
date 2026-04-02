@@ -69,8 +69,8 @@ void test_cleanup(x_obj_t *p_base)
  */
 
 #define nil     p_base
-#define pair(X,Y) (x_mkspair(p_base, (X), (Y)))
-#define atom(X)   (x_mksatom(p_base, (X)))
+#define pair(X,Y) (x_mkspair(p_base, X_OBJ_FLAG_NONE, (X), (Y)))
+#define atom(X)   (x_mksatom(p_base, X_OBJ_FLAG_NONE, (X)))
 
 
 static char *test_exp_quote(void)
@@ -80,13 +80,13 @@ static char *test_exp_quote(void)
 	helper_alloc_reset();
 
 	/* Make a simple base to help with cleanup. */
-	p_base = x_mksatom(NULL, NULL);
+	p_base = x_mksatom(NULL, X_OBJ_FLAG_NONE, NULL);
 	p_prim = x_mkprim(p_base, x_exp_quote);
 	p_list = x_mklist(p_base, p_prim,
-		x_mkspair(p_base, x_mksatom(p_base, 0),
-		x_mkspair(p_base, x_mksatom(p_base, 1),
+		x_mkspair(p_base, X_OBJ_FLAG_NONE, x_mksatom(p_base, X_OBJ_FLAG_NONE, 0),
+		x_mkspair(p_base, X_OBJ_FLAG_NONE, x_mksatom(p_base, X_OBJ_FLAG_NONE, 1),
 		p_base)));
-	p_args = x_mkspair(p_base, x_mkspair(p_base, p_list, p_base), p_base);
+	p_args = x_mkspair(p_base, X_OBJ_FLAG_NONE, x_mkspair(p_base, X_OBJ_FLAG_NONE, p_list, p_base), p_base);
 	p_ret = x_eval(p_base, p_args);
 	_it_should("return the unevaluated list",
 		x_01(p_list) == p_ret

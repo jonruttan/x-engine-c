@@ -17,9 +17,20 @@
  * # Includes
  */
 #include "x-type/operative.h"
-#include "x-base.h"
+#include "x-base-typesystem.h"
+#include "x-heap.h"
 #include "x-prim.h"
 
+/* Mark callback: only mark slot 1 (state list), not slot 0 (fn ptr). */
+static x_obj_t *x_type_operative_mark(x_obj_t *p_base, x_obj_t *p_args)
+{
+	x_obj_t *p_obj = x_firstobj(p_args);
+	x_obj_flag_t flags = (x_obj_flag_t)x_firstint(x_restobj(p_args));
+	x_heap_tree_mark(p_base, x_obj(x_obj_data_i(p_obj, 1)), flags);
+	return NULL;
+}
+
+static x_satom_t x_type_operative_mark_prim = x_obj_set(x_type_atom_obj, X_OBJ_FLAG_NONE, { (x_obj_t *)&x_type_operative_mark });
 static x_satom_t x_type_operative_units_obj = x_obj_set(NULL, X_OBJ_FLAG_NONE, { .i = 2 });
 
 x_satom_t x_type_operative_name = x_obj_set(x_type_atom_obj, X_OBJ_FLAG_NONE, { .s = (x_char_t *)X_TYPE_OPERATIVE_NAME }),
@@ -34,12 +45,12 @@ x_obj_t *x_make_operative(x_obj_t *p_base, x_obj_flag_t flags,
 	/* Build state list: (params . (envparam . (body . env)))
 	 * GC marks via p_units=2 fallback which walks slot 1 (state). */
 	x_obj_t *p_type = x_type_operative_register(p_base, p_base),
-		*p_s3 = x_mkspair(p_base, p_body, p_env),
-		*p_s2 = x_mkspair(p_base, p_envparam, p_s3),
-		*p_state = x_mkspair(p_base, p_params, p_s2);
+		*p_s3 = x_mkspair(p_base, X_OBJ_FLAG_NONE, p_body, p_env),
+		*p_s2 = x_mkspair(p_base, X_OBJ_FLAG_NONE, p_envparam, p_s3),
+		*p_state = x_mkspair(p_base, X_OBJ_FLAG_NONE, p_params, p_s2);
 
 	return x_obj_make(p_base, p_type, flags, X_OBJ_LENGTH_PAIR,
-		(x_callable_fn)x_type_operative_call, p_state);
+		(x_fn_t)x_type_operative_call, p_state);
 }
 
 x_obj_t *x_type_operative_struct(x_obj_t *p_base, x_obj_t *p_args)
@@ -49,7 +60,8 @@ x_obj_t *x_type_operative_struct(x_obj_t *p_base, x_obj_t *p_args)
 		.p_units = (x_obj_t *)&x_type_operative_units_obj,
 		.p_make = x_type_operative_make_prim,
 		.p_call = x_type_operative_call_prim,
-		.p_write = x_type_operative_write_prim
+		.p_write = x_type_operative_write_prim,
+		.p_mark = x_type_operative_mark_prim
 	};
 
 	return x_type_struct_make(p_base, type);
@@ -90,7 +102,7 @@ x_obj_t *x_type_operative_call(x_obj_t *p_base, x_obj_t *p_args)
 		*p_env;
 
 	/* Capture the caller's environment. */
-	p_caller_env = x_base_field_env_alist(p_base);
+	p_caller_env = x_firstobj(x_base_field_env_alist(p_base));
 
 	/* Operatives do NOT get self-passing — they use dynamic scoping
 	 * and need source-form stability for compile-on-first-use (and/or). */
@@ -103,11 +115,11 @@ x_obj_t *x_type_operative_call(x_obj_t *p_base, x_obj_t *p_args)
 
 	/* Bind the env-param to the caller's environment. */
 	if ( ! x_obj_isnil(p_base, p_envparam)) {
-		p_env = x_mkspair(p_base,
-			x_mkspair(p_base, p_envparam, p_caller_env), p_env);
+		p_env = x_mkspair(p_base, X_OBJ_FLAG_NONE,
+			x_mkspair(p_base, X_OBJ_FLAG_NONE, p_envparam, p_caller_env), p_env);
 	}
 
-	x_base_field_env_alist(p_base) = p_env;
+	x_firstobj(x_base_field_env_alist(p_base)) = p_env;
 
 	return x_eval_body_tco_simple(p_base, p_body);
 }

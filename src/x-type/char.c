@@ -16,7 +16,7 @@
 /*
  * # Includes
  */
-#include "x-base.h"
+#include "x-base-typesystem.h"
 #include "x-type/buffer.h"
 #include "x-type/char.h"
 #include "x-type/int.h"
@@ -41,8 +41,8 @@ x_obj_t *x_make_char(x_obj_t *p_base, x_obj_flag_t flags, x_char_t c)
 
 #define sym(S)		x_mksymbol(p_base, (x_char_t *)(S))
 #define num(N)		x_mkint(p_base, (N))
-#define entry(S,N)	x_mkspair(p_base, sym(S), num(N))
-#define cons(A,B)	x_mkspair(p_base, (A), (B))
+#define entry(S,N)	x_mkspair(p_base, X_OBJ_FLAG_NONE, sym(S), num(N))
+#define cons(A,B)	x_mkspair(p_base, X_OBJ_FLAG_NONE, (A), (B))
 
 x_obj_t *x_type_char_struct(x_obj_t *p_base, x_obj_t *p_obj)
 {

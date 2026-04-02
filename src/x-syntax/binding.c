@@ -15,7 +15,7 @@
  */
 #include "x-prim.h"
 #include "x-alist.h"
-#include "x-base.h"
+#include "x-base-typesystem.h"
 #include "x-type/symbol.h"
 
 /* def: (def name value) -> bind name in current environment */
@@ -23,7 +23,7 @@ static x_obj_t *x_prim_define(x_obj_t *p_base, x_obj_t *p_args)
 {
 	x_obj_t *p_name, *p_pair, *p_val;
 	x_args(p_args, 2, NULL, &p_name);
-	p_pair = x_mkspair(p_base, p_name, NULL);
+	p_pair = x_mkspair(p_base, X_OBJ_FLAG_NONE, p_name, NULL);
 
 	x_base_env_alist_extend(p_base, p_pair);
 	p_val = x_eval_arg(p_base, x_011(p_args));
@@ -36,13 +36,13 @@ static x_obj_t *x_prim_define(x_obj_t *p_base, x_obj_t *p_args)
 		x_base_field_env_global_tree(p_base) = x_alist_bst_insert(
 			p_base, x_base_field_env_global_tree(p_base), p_pair);
 		x_base_field_env_local_boundary(p_base)
-			= x_base_field_env_alist(p_base);
+			= x_firstobj(x_base_field_env_alist(p_base));
 	} else if (x_base_isset(p_base)) {
 		if (x_alist_bst_lookup(p_base,
 			x_base_field_env_global_tree(p_base), p_name) != NULL) {
 			if ( ! (x_obj_flags(p_name) & X_OBJ_FLAG_SHADOW)) {
 				x_obj_flags(p_name) |= X_OBJ_FLAG_SHADOW;
-				x_base_field_shadow_list(p_base) = x_mkspair(p_base,
+				x_base_field_shadow_list(p_base) = x_mkspair(p_base, X_OBJ_FLAG_NONE,
 					p_name, x_base_field_shadow_list(p_base));
 			}
 		}
@@ -59,7 +59,7 @@ static x_obj_t *x_prim_set(x_obj_t *p_base, x_obj_t *p_args)
 	x_args(p_args, 2, NULL, &p_name);
 	p_val = x_eval_arg(p_base, x_011(p_args));
 
-	p_alist = x_base_field_env_alist(p_base);
+	p_alist = x_firstobj(x_base_field_env_alist(p_base));
 	p_boundary = x_base_field_env_local_boundary(p_base);
 
 	/* Step 1: walk locals (up to AND INCLUDING boundary) */

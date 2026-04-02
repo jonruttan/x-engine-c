@@ -60,14 +60,14 @@ static char *test_sexp_pair_write(void)
 
 	helper_file_buffer_ptr[TEST_HELPER_FILE_STDOUT] = buffer;
 
-	p_atoms[0] = x_mksatom(NULL, 0);
-	p_atoms[1] = x_mksatom(NULL, 1);
-	p_pairs[0] = x_mkspair(NULL, NULL, NULL);
-	p_pairs[1] = x_mkspair(NULL, p_atoms[0], NULL);
-	p_pairs[2] = x_mkspair(NULL, p_atoms[0], p_atoms[1]);
-	p_pairs[3] = x_mkspair(NULL, p_atoms[1], p_pairs[1]);
+	p_atoms[0] = x_mksatom(NULL, X_OBJ_FLAG_NONE, 0);
+	p_atoms[1] = x_mksatom(NULL, X_OBJ_FLAG_NONE, 1);
+	p_pairs[0] = x_mkspair(NULL, X_OBJ_FLAG_NONE, NULL, NULL);
+	p_pairs[1] = x_mkspair(NULL, X_OBJ_FLAG_NONE, p_atoms[0], NULL);
+	p_pairs[2] = x_mkspair(NULL, X_OBJ_FLAG_NONE, p_atoms[0], p_atoms[1]);
+	p_pairs[3] = x_mkspair(NULL, X_OBJ_FLAG_NONE, p_atoms[1], p_pairs[1]);
 
-	p_args = x_mkspair(NULL, NULL, NULL);
+	p_args = x_mkspair(NULL, X_OBJ_FLAG_NONE, NULL, NULL);
 
 	helper_file_reset();
 	x_firstobj(p_args) = p_pairs[0];

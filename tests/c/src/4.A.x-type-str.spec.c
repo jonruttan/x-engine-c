@@ -75,8 +75,8 @@ void test_cleanup(x_obj_t *p_base)
 #define X_TEST_STR_VALUE		"TEST"
 
 #define nil			NULL
-#define pair(X,Y)	(x_mkspair(p_base, (X), (Y)))
-#define atom(X)		(x_mksatom(p_base, (X)))
+#define pair(X,Y)	(x_mkspair(p_base, X_OBJ_FLAG_NONE, (X), (Y)))
+#define atom(X)		(x_mksatom(p_base, X_OBJ_FLAG_NONE, (X)))
 
 static char *test_obj_type_isstr(void)
 {
@@ -90,7 +90,7 @@ static char *test_obj_type_isstr(void)
 	);
 	x_obj_free(p_obj);
 
-	p_obj = x_mksatom(NULL, 0);
+	p_obj = x_mksatom(NULL, X_OBJ_FLAG_NONE, 0);
 	_it_should("return false when object is not a String",
 		0 == x_obj_type_isstr(NULL, p_obj)
 	);
@@ -104,7 +104,7 @@ static char *test_strval(void)
 	x_obj_t *p_obj;
 	x_char_t *p_str, *str = X_TEST_STR_VALUE;
 
-	p_obj = x_mksatom(NULL, str);
+	p_obj = x_mksatom(NULL, X_OBJ_FLAG_NONE, str);
 
 	p_str = x_strval(p_obj);
 	_it_should("return the String's value", str == p_str);
@@ -129,7 +129,7 @@ static char *test_mkstr(void)
 	x_sys_free(p_obj);
 
 
-	p_base = x_mksatom(NULL, 0);
+	p_base = x_mksatom(NULL, X_OBJ_FLAG_NONE, 0);
 	p_obj = x_mkstr(p_base, X_TEST_STR_VALUE);
 	_it_should("make an String object, attach it to the Base object, and set its value",
 		! x_obj_isnil(p_base, p_obj)
@@ -161,7 +161,7 @@ static char *test_mkfstr(void)
 	x_sys_free(p_obj);
 
 
-	p_base = x_mksatom(NULL, 0);
+	p_base = x_mksatom(NULL, X_OBJ_FLAG_NONE, 0);
 	p_obj = x_mkfstr(p_base, flags, X_TEST_STR_VALUE);
 	_it_should("make an String object, attach it to the Base object, and set its value",
 		! x_obj_isnil(p_base, p_obj)
@@ -192,7 +192,7 @@ static char *test_mkstrown(void)
 	x_sys_free(p_obj);
 
 
-	p_base = x_mksatom(NULL, 0);
+	p_base = x_mksatom(NULL, X_OBJ_FLAG_NONE, 0);
 	p_obj = x_mkstrown(p_base, X_TEST_STR_VALUE);
 	_it_should("make an Owned String object, attach it to the Base object, and set its value",
 		! x_obj_isnil(p_base, p_obj)
@@ -224,7 +224,7 @@ static char *test_mkfstrown(void)
 	x_sys_free(p_obj);
 
 
-	p_base = x_mksatom(NULL, 0);
+	p_base = x_mksatom(NULL, X_OBJ_FLAG_NONE, 0);
 	p_obj = x_mkfstr(p_base, flags, X_TEST_STR_VALUE);
 	_it_should("make an Owned String object, attach it to the Base object, and set its value",
 		! x_obj_isnil(p_base, p_obj)
@@ -256,7 +256,7 @@ static char *test_make_str(void)
 	x_sys_free(p_obj);
 
 
-	p_base = x_mksatom(NULL, 0);
+	p_base = x_mksatom(NULL, X_OBJ_FLAG_NONE, 0);
 	p_obj = x_make_str(p_base, flags, X_TEST_STR_VALUE);
 	_it_should("make an Owned String object, attach it to the Base object, and set its value",
 		! x_obj_isnil(p_base, p_obj)
@@ -278,7 +278,7 @@ static char *test_type_str_struct(void)
 
 	helper_alloc_reset();
 
-	p_base = x_mksatom(NULL, 0);
+	p_base = x_mksatom(NULL, X_OBJ_FLAG_NONE, 0);
 	p_type = x_type_str_struct(p_base, p_base);
 	_it_should("return String Type list",
 		! x_obj_isnil(p_base, p_type)
@@ -372,9 +372,9 @@ static char *test_base_alist_assoc(void)
 	helper_alloc_reset();
 
 	p_base = x_base_make(NULL, NULL);
-	x_base_type_alist_extend(p_base, x_mkspair(p_base, x_mkspair(p_base, x_type_str_name, NULL), atom(1)));
+	x_base_type_alist_extend(p_base, x_mkspair(p_base, X_OBJ_FLAG_NONE, x_mkspair(p_base, X_OBJ_FLAG_NONE, x_type_str_name, NULL), atom(1)));
 
-	p_type = x_base_type_alist_assoc(p_base, x_mkspair(p_base, x_type_str_name, NULL));
+	p_type = x_base_type_alist_assoc(p_base, x_mkspair(p_base, X_OBJ_FLAG_NONE, x_type_str_name, NULL));
 	_it_should("find the type in the Type alist and return its properties",
 		x_type_str_name == x_type_field_name(p_type)
 	);
@@ -390,8 +390,8 @@ static char *test_type_str_make(void)
 	helper_alloc_reset();
 
 	/* NULL p_base object */
-	p_str = x_mksatom(NULL, value);
-	p_args = x_mkspair(NULL, p_str, NULL);
+	p_str = x_mksatom(NULL, X_OBJ_FLAG_NONE, value);
+	p_args = x_mkspair(NULL, X_OBJ_FLAG_NONE, p_str, NULL);
 	p_obj[0] = x_type_str_make(NULL, p_args);
 	_it_should("make a String object",
 		! x_obj_isnil(NULL, p_obj[0])
@@ -419,9 +419,9 @@ static char *test_type_str_make(void)
 	helper_alloc_reset();
 
 	/* Empty p_base object */
-	p_base = x_mksatom(NULL, NULL);
-	p_str = x_mksatom(p_base, value);
-	p_args = x_mkspair(p_base, p_str, NULL);
+	p_base = x_mksatom(NULL, X_OBJ_FLAG_NONE, NULL);
+	p_str = x_mksatom(p_base, X_OBJ_FLAG_NONE, value);
+	p_args = x_mkspair(p_base, X_OBJ_FLAG_NONE, p_str, NULL);
 
 	p_obj[0] = x_type_str_make(p_base, p_args);
 	_it_should("make a String object",
@@ -452,8 +452,8 @@ static char *test_type_str_make(void)
 
 	/* With p_base object */
 	p_base = x_base_make(NULL, NULL);
-	p_str = x_mksatom(p_base, value);
-	p_args = x_mkspair(p_base, p_str, NULL);
+	p_str = x_mksatom(p_base, X_OBJ_FLAG_NONE, value);
+	p_args = x_mkspair(p_base, X_OBJ_FLAG_NONE, p_str, NULL);
 
 	p_obj[0] = x_type_str_make(p_base, p_args);
 	_it_should("make a String object with a base object",
@@ -488,7 +488,7 @@ static char *test_type_str_length(void)
 
 	p_base = x_base_make(NULL, NULL);
 	p_str = x_mkstr(p_base, "hello");
-	p_args = x_mkspair(p_base, p_str, NULL);
+	p_args = x_mkspair(p_base, X_OBJ_FLAG_NONE, p_str, NULL);
 
 	p_ret = x_type_str_length(p_base, p_args);
 	_it_should("return 5 for 'hello'",
@@ -505,19 +505,19 @@ static char *test_type_str_call(void)
 
 	p_base = x_base_make(NULL, NULL);
 
-	p_str = x_mksatom(p_base, X_TYPE_STR_NAME);
+	p_str = x_mksatom(p_base, X_OBJ_FLAG_NONE, X_TYPE_STR_NAME);
 
 	/* No args — returns NULL */
-	p_args = x_mkspair(p_base, p_str, NULL);
+	p_args = x_mkspair(p_base, X_OBJ_FLAG_NONE, p_str, NULL);
 	p_obj = x_type_str_call(p_base, p_args);
 	_it_should("return NULL with no index arg",
 		NULL == p_obj);
 
 	/* Slice: (str start len) */
-	p_str = x_mksatom(p_base, X_TYPE_STR_NAME);
-	p_args = x_mkspair(p_base, p_str,
-		x_mkspair(p_base, x_mksatom(p_base, 0),
-		x_mkspair(p_base, x_mksatom(p_base, 3), NULL)));
+	p_str = x_mksatom(p_base, X_OBJ_FLAG_NONE, X_TYPE_STR_NAME);
+	p_args = x_mkspair(p_base, X_OBJ_FLAG_NONE, p_str,
+		x_mkspair(p_base, X_OBJ_FLAG_NONE, x_mksatom(p_base, X_OBJ_FLAG_NONE, 0),
+		x_mkspair(p_base, X_OBJ_FLAG_NONE, x_mksatom(p_base, X_OBJ_FLAG_NONE, 3), NULL)));
 	p_obj = x_type_str_call(p_base, p_args);
 	_it_should("return substring for slice",
 		0 == x_lib_strncmp(x_strval(p_obj), X_TYPE_STR_NAME, 3));

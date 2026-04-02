@@ -82,8 +82,8 @@ void test_cleanup(x_obj_t *p_base)
 #define X_TEST_STR_VALUE		"TEST"
 
 #define nil			p_base
-#define pair(X,Y)	(x_mkspair(p_base, (X), (Y)))
-#define atom(X)		(x_mksatom(p_base, (X)))
+#define pair(X,Y)	(x_mkspair(p_base, X_OBJ_FLAG_NONE, (X), (Y)))
+#define atom(X)		(x_mksatom(p_base, X_OBJ_FLAG_NONE, (X)))
 
 static char *test_sexp_str_analyse1(void)
 {
@@ -97,7 +97,7 @@ static char *test_sexp_str_analyse1(void)
 
 	p_base = x_base_make(NULL, NULL);
 	p_buffer = x_mkbuffer(p_base, buffer);
-	p_args = x_mkspair(p_base, p_buffer, p_base);
+	p_args = x_mkspair(p_base, X_OBJ_FLAG_NONE, p_buffer, p_base);
 	p_obj = x_type_buffer_read(p_base, p_args);
 	{
 	x_spair_t sp = x_obj_set(NULL, X_OBJ_FLAG_NONE,
@@ -186,7 +186,7 @@ static char *test_sexp_str_read(void)
 
 	p_base = x_base_make(NULL, NULL);
 	p_buffer = x_mkbuffer(p_base, buffer);
-	p_args = x_mkspair(p_base, p_buffer, p_base);
+	p_args = x_mkspair(p_base, X_OBJ_FLAG_NONE, p_buffer, p_base);
 
 	while ( ! x_obj_isnil(p_base, x_type_buffer_read_text(p_base, p_args))) {}
 	/* Back up to before the null. */
@@ -269,7 +269,7 @@ static char *test_sexp_str_read_token(void)
 	p_type = x_type_struct_make(p_base, type_whitespace);
 	x_base_type_alist_extend(p_base, p_type);
 	p_buffer = x_mkbuffer(p_base, buffer);
-	p_args = x_mkspair(p_base, p_buffer, p_base);
+	p_args = x_mkspair(p_base, X_OBJ_FLAG_NONE, p_buffer, p_base);
 
 	p_obj = x_token_read(p_base, p_args);
 	_it_should("return a String object with the value set",
@@ -301,7 +301,7 @@ static char *test_sexp_str_write(void)
 
 	sprintf(tmp, X_SEXP_STR_PRE_STR "%s" X_SEXP_STR_POST_STR, s);
 	p_obj = x_mkstr(NULL, s);
-	p_args = x_mkspair(NULL, p_obj, NULL);
+	p_args = x_mkspair(NULL, X_OBJ_FLAG_NONE, p_obj, NULL);
 	p_ret = x_sexp_str_write(NULL, p_args);
 	_it_should("write the value of the string object",
 		! x_obj_isnil(NULL, p_ret)
@@ -374,7 +374,7 @@ static char *test_sexp_str_read_escapes(void)
 
 	p_base = x_base_make(NULL, NULL);
 	p_buffer = x_mkbuffer(p_base, buffer);
-	p_args = x_mkspair(p_base, p_buffer, p_base);
+	p_args = x_mkspair(p_base, X_OBJ_FLAG_NONE, p_buffer, p_base);
 
 	/* Test \" escape */
 	s = "\"\\\"\"";
@@ -497,7 +497,7 @@ static char *test_sexp_str_write_escapes(void)
 	input[4] = '\r';
 	input[5] = '\0';
 	p_obj = x_mkstr(NULL, input);
-	p_args = x_mkspair(NULL, p_obj, NULL);
+	p_args = x_mkspair(NULL, X_OBJ_FLAG_NONE, p_obj, NULL);
 	x_sexp_str_write(NULL, p_args);
 	/* Should produce: "\"\\n\t\r" */
 	_it_should("write escapes special characters",
@@ -514,7 +514,7 @@ static char *test_sexp_str_write_escapes(void)
 	input[0] = 1; /* control char */
 	input[1] = '\0';
 	p_obj = x_mkstr(NULL, input);
-	p_args = x_mkspair(NULL, p_obj, NULL);
+	p_args = x_mkspair(NULL, X_OBJ_FLAG_NONE, p_obj, NULL);
 	x_sexp_str_write(NULL, p_args);
 	/* Should produce: "\x01" */
 	_it_should("write hex-escapes control characters",

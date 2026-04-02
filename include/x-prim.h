@@ -78,10 +78,10 @@ x_obj_t *x_eval_tco_trampoline(x_obj_t *p_base, x_obj_t *p_result);
 
 typedef struct {
 	x_char_t *name;
-	x_callable_fn fn;
+	x_fn_t fn;
 } x_callable_entry_t;
 
-void x_callable_bind(x_obj_t *p_base, x_char_t *name, x_callable_fn fn);
+void x_callable_bind(x_obj_t *p_base, x_char_t *name, x_fn_t fn);
 void x_callable_bind_table(x_obj_t *p_base, const x_callable_entry_t *table, int count);
 
 x_obj_t *x_prim_core_register(x_obj_t *p_base, x_obj_t *p_args);
