@@ -1,31 +1,31 @@
-/*
- * # Computational Expressions in C
- *
- * ## x-sexp/pair.c -- Implementation - SExp - Pair
- *
- * @description Computational Expressions in C
- * @author [Jon Ruttan](jonruttan@gmail.com)
+/**
+ * @file pair.c
+ * @brief S-expression writer and display for stack-allocated pair objects.
+ * @author Jon Ruttan (jonruttan@gmail.com)
  * @copyright 2023 Jon Ruttan
  * @license MIT No Attribution (MIT-0)
- *
+ */
+/*
  *     ., .,
  *     {O,O}
  *     (   )
  *      " "
  */
-/*
- * # Includes
- */
+
 #include "x-type/pair.h"
 #include "x-token.h"
 
-/*
- * Writes a written representation of _args_ pair to output.
+/**
+ * Write the external representation of a stack-allocated pair.
  *
- * @function x_sexp_pair_write
- * @param {x_obj_t *} p_base A pointer to the p_base of the object structure.
- * @param {x_obj_t *} p_args A pointer to the pair to be written.
- * @returns {x_obj_t *} The object pointer passed as _args_.
+ * Walks the pair chain, outputting elements in parenthesised form.
+ * Non-spair tails are rendered with dot notation.  Uses
+ * @c x_obj_type_isspair to distinguish spairs from heap pairs
+ * (heap pairs are handled by the list writer).
+ *
+ * @param p_base  Execution context.
+ * @param p_args  Pair whose first element is the pair to write.
+ * @return The tail of the pair after writing.
  */
 x_obj_t *x_sexp_pair_write(x_obj_t *p_base, x_obj_t *p_args)
 {
@@ -75,6 +75,16 @@ x_obj_t *x_sexp_pair_write(x_obj_t *p_base, x_obj_t *p_args)
 	return p_obj;
 }
 
+/**
+ * Display a stack-allocated pair in human-readable form.
+ *
+ * Same structure as write but dispatches through @c x_token_display
+ * for each element.
+ *
+ * @param p_base  Execution context.
+ * @param p_args  Pair whose first element is the pair to display.
+ * @return The tail of the pair after displaying.
+ */
 x_obj_t *x_sexp_pair_display(x_obj_t *p_base, x_obj_t *p_args)
 {
 	x_obj_t *p_obj = x_firstobj(p_args);

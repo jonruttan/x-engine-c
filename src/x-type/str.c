@@ -1,13 +1,11 @@
-/*
- * # Computational Expressions in C
- *
- * ## x-type.c -- Implementation - Type - String
- *
- * @description Computational Expressions in C
- * @author [Jon Ruttan](jonruttan@gmail.com)
+/**
+ * @file str.c
+ * @brief String type implementation.
+ * @author Jon Ruttan (jonruttan@gmail.com)
  * @copyright 2021 Jon Ruttan
  * @license MIT No Attribution (MIT-0)
- *
+ */
+/*
  *     ., .,
  *     {O,O}
  *     (   )
@@ -30,6 +28,16 @@ x_satom_t x_type_str_name = x_obj_set(x_type_atom_obj, X_OBJ_FLAG_NONE, { .s = (
 	x_type_str_call_prim = x_obj_set(x_type_atom_obj, X_OBJ_FLAG_NONE, { (x_obj_t *)&x_type_str_call }),
 	x_type_str_struct_prim = x_obj_set(x_type_atom_obj, X_OBJ_FLAG_NONE, { (x_obj_t *)&x_type_str_struct });
 
+/**
+ * Allocate a heap string object wrapping a C string pointer.
+ *
+ * Builds a stack-based argument list and delegates to x_type_str_make.
+ *
+ * @param p_base  x_obj_t* -- Execution context
+ * @param flags   x_obj_flag_t -- Object flags (e.g. X_OBJ_FLAG_OWN)
+ * @param s       x_char_t* -- C string pointer to wrap
+ * @return x_obj_t* -- New heap-allocated string object
+ */
 x_obj_t *x_make_str(x_obj_t *p_base, x_obj_flag_t flags, x_char_t *s)
 {
 	x_satom_t o_str = x_obj_set(NULL, X_OBJ_FLAG_NONE, { .s = s }),
@@ -42,6 +50,16 @@ x_obj_t *x_make_str(x_obj_t *p_base, x_obj_flag_t flags, x_char_t *s)
 	return x_type_str_make(p_base, (x_obj_t *)args);
 }
 
+/**
+ * Build the string type descriptor struct.
+ *
+ * Populates name, length, make, call, analyse, read, write,
+ * and display callbacks.
+ *
+ * @param p_base  x_obj_t* -- Execution context
+ * @param p_obj   x_obj_t* -- Unused
+ * @return x_obj_t* -- Type descriptor pair list
+ */
 x_obj_t *x_type_str_struct(x_obj_t *p_base, x_obj_t *p_obj)
 {
 	struct x_type_t type = {
@@ -58,6 +76,13 @@ x_obj_t *x_type_str_struct(x_obj_t *p_base, x_obj_t *p_obj)
 	return x_type_struct_make(p_base, type);
 }
 
+/**
+ * Register or retrieve the string type on the base context.
+ *
+ * @param p_base  x_obj_t* -- Execution context
+ * @param p_args  x_obj_t* -- Unused
+ * @return x_obj_t* -- Registered type object
+ */
 x_obj_t *x_type_str_register(x_obj_t *p_base, x_obj_t *p_args)
 {
 	x_spair_t args[2] = {
@@ -68,6 +93,16 @@ x_obj_t *x_type_str_register(x_obj_t *p_base, x_obj_t *p_args)
 	return x_type_struct_get(p_base, (x_obj_t *)args);
 }
 
+/**
+ * Type-system make callback for string objects.
+ *
+ * Extracts the string pointer and optional flags from p_args,
+ * then allocates a heap object via x_obj_make.
+ *
+ * @param p_base  x_obj_t* -- Execution context
+ * @param p_args  x_obj_t* -- (str-value . (flags | nil))
+ * @return x_obj_t* -- New heap-allocated string object
+ */
 x_obj_t *x_type_str_make(x_obj_t *p_base, x_obj_t *p_args)
 {
 	x_obj_t *p_type = x_type_str_register(p_base, p_base),
@@ -78,11 +113,32 @@ x_obj_t *x_type_str_make(x_obj_t *p_base, x_obj_t *p_args)
 	return x_obj_make(p_base, p_type, flags, X_OBJ_LENGTH_ATOM, x_strval(p_str));
 }
 
+/**
+ * Type-system length callback -- returns string length as an integer.
+ *
+ * @param p_base  x_obj_t* -- Execution context
+ * @param p_args  x_obj_t* -- (string-object . ...)
+ * @return x_obj_t* -- Integer object with string length
+ */
 x_obj_t *x_type_str_length(x_obj_t *p_base, x_obj_t *p_args)
 {
 	return x_mksatom(p_base, X_OBJ_FLAG_NONE, x_strlen(x_firstobj(p_args)));
 }
 
+/**
+ * Type-system call callback -- string as callable.
+ *
+ * Supports three calling conventions:
+ * - No args: returns the string length as an integer.
+ * - One arg (index): returns the character at that position.
+ *   Negative indices count from the end.
+ * - Two args (start, len): returns a substring.
+ *
+ * @param p_base  x_obj_t* -- Execution context
+ * @param p_args  x_obj_t* -- (string-object . evaluated-args)
+ * @return x_obj_t* -- Integer (length), character, or substring
+ * @see x_type_str_length
+ */
 x_obj_t *x_type_str_call(x_obj_t *p_base, x_obj_t *p_args)
 {
 	x_obj_t *proc = x_firstobj(p_args), *vals = x_restobj(p_args);

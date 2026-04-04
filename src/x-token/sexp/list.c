@@ -1,21 +1,17 @@
-/*
- * # Computational Expressions in C
- *
- * ## x-sexp/list.c -- Implementation - SExp - List
- *
- * @description Computational Expressions in C
- * @author [Jon Ruttan](jonruttan@gmail.com)
+/**
+ * @file list.c
+ * @brief S-expression analyser, reader, writer, and display for list literals.
+ * @author Jon Ruttan (jonruttan@gmail.com)
  * @copyright 2023 Jon Ruttan
  * @license MIT No Attribution (MIT-0)
- *
+ */
+/*
  *     ., .,
  *     {O,O}
  *     (   )
  *      " "
  */
-/*
- * # Includes
- */
+
 #include "x-type/list.h"
 #include "x-type/buffer.h"
 #include "x-token.h"
@@ -29,6 +25,16 @@ x_satom_t x_sexp_list_analyse_prim = x_obj_set(x_type_atom_obj, X_OBJ_FLAG_NONE,
 	x_sexp_list_write_prim = x_obj_set(x_type_atom_obj, X_OBJ_FLAG_NONE, { .fn = x_sexp_list_write }),
 	x_sexp_list_display_prim = x_obj_set(x_type_atom_obj, X_OBJ_FLAG_NONE, { .fn = x_sexp_list_display });
 
+/**
+ * Analyse: score on any list delimiter character.
+ *
+ * Matches @c (, @c ), and @c . characters.  Scores the buffer length
+ * immediately since list delimiters are always single-character tokens.
+ *
+ * @param p_base  Execution context.
+ * @param p_args  Read-args containing the token buffer and score.
+ * @return Score on match, or NULL.
+ */
 x_obj_t *x_sexp_list_analyse(x_obj_t *p_base, x_obj_t *p_args)
 {
 	x_obj_t *p_buffer = x_token_read_arg_buffer(p_args),
@@ -42,6 +48,16 @@ x_obj_t *x_sexp_list_analyse(x_obj_t *p_base, x_obj_t *p_args)
 	return NULL;
 }
 
+/**
+ * Delimiter callback for list characters.
+ *
+ * Backs up the read pointer when a list delimiter is encountered so
+ * the current token is terminated before the delimiter.
+ *
+ * @param p_base  Execution context.
+ * @param p_args  Read-args containing the token buffer.
+ * @return The buffer on delimiter match, or NULL.
+ */
 x_obj_t *x_sexp_list_delimit(x_obj_t *p_base, x_obj_t *p_args)
 {
 	x_obj_t *p_buffer = x_token_read_arg_buffer(p_args);
@@ -54,6 +70,19 @@ x_obj_t *x_sexp_list_delimit(x_obj_t *p_base, x_obj_t *p_args)
 	return NULL;
 }
 
+/**
+ * Read a list (or dotted pair) from the token stream.
+ *
+ * Handles three cases based on the delimiter character:
+ * - @c ) -- returns the read_prim sentinel (end of list).
+ * - @c . -- returns the delimit_prim sentinel (dotted pair).
+ * - @c ( -- recursively reads elements via @c x_token_read until
+ *   a close-paren or dot sentinel is encountered.
+ *
+ * @param p_base  Execution context.
+ * @param p_args  Read-args containing the token buffer.
+ * @return The constructed list, or a sentinel primitive.
+ */
 x_obj_t *x_sexp_list_read(x_obj_t *p_base, x_obj_t *p_args)
 {
 	x_obj_t *p_buffer = x_token_read_arg_buffer(p_args);
@@ -101,13 +130,16 @@ x_obj_t *x_sexp_list_read(x_obj_t *p_base, x_obj_t *p_args)
 		return head;
 	}
 }
-/*
- * Writes a written representation of _args_ list to output.
+/**
+ * Write the external representation of a list.
  *
- * @function x_sexp_list_write
- * @param {x_obj_t *} p_base A pointer to the p_base of the object structure.
- * @param {x_obj_t *} p_args A pointer to the list to be written.
- * @returns {x_obj_t *} The object pointer passed as _args_.
+ * Outputs parenthesised elements separated by spaces.  Improper lists
+ * are rendered with dot notation (e.g. @c (a\ .\ b)).  Nil elements
+ * within the list are written as @c ().
+ *
+ * @param p_base  Execution context.
+ * @param p_args  Pair whose first element is the list to write.
+ * @return The tail of the list after writing.
  */
 x_obj_t *x_sexp_list_write(x_obj_t *p_base, x_obj_t *p_args)
 {
@@ -157,6 +189,16 @@ x_obj_t *x_sexp_list_write(x_obj_t *p_base, x_obj_t *p_args)
 	return p_obj;
 }
 
+/**
+ * Display a list in human-readable form.
+ *
+ * Same structure as write but dispatches through @c x_token_display
+ * for each element so that strings appear unquoted, etc.
+ *
+ * @param p_base  Execution context.
+ * @param p_args  Pair whose first element is the list to display.
+ * @return The tail of the list after displaying.
+ */
 x_obj_t *x_sexp_list_display(x_obj_t *p_base, x_obj_t *p_args)
 {
 	x_obj_t *p_obj = x_firstobj(p_args);

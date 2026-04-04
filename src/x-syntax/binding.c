@@ -1,14 +1,11 @@
-/*
- * # Computational Expressions in C
- *
- * ## x-syntax/binding.c -- Syntax - Binding Forms (def, set!)
- *
- * @description Computational Expressions in C
- * @author [Jon Ruttan](jonruttan@gmail.com)
- * @copyright 2024 Jon Ruttan
- * @license MIT No Attribution (MIT-0)
- *
- *     ., .,
+/** @file binding.c
+ *  @brief Syntax - Binding Forms (def, set!)
+ *  @author Jon Ruttan (jonruttan@gmail.com)
+ *  @copyright 2024 Jon Ruttan
+ *  @license MIT No Attribution (MIT-0)
+ */
+
+/*     ., .,
  *     {O,O}
  *     (   )
  *      " "
@@ -18,7 +15,20 @@
 #include "x-base-typesystem.h"
 #include "x-type/symbol.h"
 
-/* def: (def name value) -> bind name in current environment */
+/**
+ * Define form. x-lang: (def name value)
+ *
+ * Binds name to the evaluated value in the current environment (fexpr --
+ * name is not evaluated, value is explicitly evaluated).  At top level the
+ * binding is also inserted into the BST index and the local boundary is
+ * advanced.  Inside a closure, if the name shadows a BST global the symbol
+ * is flagged with X_OBJ_FLAG_SHADOW and added to the shadow list.
+ *
+ * @param p_base  Execution context.
+ * @param p_args  Unevaluated argument list; expects (caller name value).
+ * @return The evaluated value.
+ * @see x_prim_set
+ */
 static x_obj_t *x_prim_define(x_obj_t *p_base, x_obj_t *p_args)
 {
 	x_obj_t *p_name, *p_pair, *p_val;
@@ -50,7 +60,21 @@ static x_obj_t *x_prim_define(x_obj_t *p_base, x_obj_t *p_args)
 	return p_val;
 }
 
-/* set: (set name value) -> mutate existing binding (3-step BST-aware) */
+/**
+ * Mutation form. x-lang: (set! name value)
+ *
+ * Mutates an existing binding for name to the evaluated value (fexpr --
+ * name is not evaluated, value is explicitly evaluated).  Uses a 3-step
+ * BST-aware lookup: (1) walk locals up to and including the boundary,
+ * (2) BST lookup skipping shadowed symbols, (3) continue alist walk from
+ * the boundary.  Signals an error if the symbol is unbound.
+ *
+ * @param p_base  Execution context.
+ * @param p_args  Unevaluated argument list; expects (caller name value).
+ * @return The evaluated value.
+ * @note Raises "Unbound symbol" error if name has no existing binding.
+ * @see x_prim_define
+ */
 static x_obj_t *x_prim_set(x_obj_t *p_base, x_obj_t *p_args)
 {
 	x_obj_t *p_name, *p_val;
@@ -103,6 +127,15 @@ static x_obj_t *x_prim_set(x_obj_t *p_base, x_obj_t *p_args)
 	return NULL;
 }
 
+/**
+ * Register binding syntax primitives.
+ *
+ * Binds: def, set!.
+ *
+ * @param p_base  Execution context.
+ * @param p_args  Unused.
+ * @return p_base.
+ */
 x_obj_t *x_syntax_binding_register(x_obj_t *p_base, x_obj_t *p_args)
 {
 	static const x_callable_entry_t entries[] = {

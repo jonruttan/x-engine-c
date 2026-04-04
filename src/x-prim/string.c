@@ -1,27 +1,27 @@
+/** @file string.c
+ *  @brief String manipulation primitives.
+ *  @author Jon Ruttan (jonruttan@gmail.com)
+ *  @copyright 2024 Jon Ruttan
+ *  @license MIT No Attribution (MIT-0)
+ */
 /*
- * # Computational Expressions in C
- *
- * ## x-prim/string.c -- Implementation - Primitives - Strings
- *
- * @description Computational Expressions in C
- * @author [Jon Ruttan](jonruttan@gmail.com)
- * @copyright 2024 Jon Ruttan
- * @license MIT No Attribution (MIT-0)
- *
  *     ., .,
  *     {O,O}
  *     (   )
  *      " "
- */
-/*
- * # Includes
  */
 #include "x-prim.h"
 #include "x-type/char.h"
 #include "x-type/str.h"
 #include "x-type/symbol.h"
 
-/* string-append: (string-append a b) -> concatenated string */
+/** Concatenate two strings.
+ *  x-lang: (str-append a b)
+ *  @param p_base Interpreter base context.
+ *  @param p_args Unevaluated argument list: (str-append a b).
+ *  @return A newly allocated string containing @p a followed by @p b.
+ *  @note The result is heap-allocated and owned by the returned object.
+ */
 static x_obj_t *x_prim_string_append(x_obj_t *p_base, x_obj_t *p_args)
 {
 	x_obj_t *p_a, *p_b;
@@ -40,7 +40,12 @@ static x_obj_t *x_prim_string_append(x_obj_t *p_base, x_obj_t *p_args)
 	return x_mkstrown(p_base, s);
 }
 
-/* string->symbol: (string->symbol str) -> convert string to symbol */
+/** Convert a string to an interned symbol.
+ *  x-lang: (str->symbol str)
+ *  @param p_base Interpreter base context.
+ *  @param p_args Unevaluated argument list: (str->symbol str).
+ *  @return A symbol whose name matches the content of @p str.
+ */
 static x_obj_t *x_prim_string_to_symbol(x_obj_t *p_base, x_obj_t *p_args)
 {
 	x_obj_t *p_str;
@@ -49,7 +54,12 @@ static x_obj_t *x_prim_string_to_symbol(x_obj_t *p_base, x_obj_t *p_args)
 	return x_mksymbol(p_base, x_strval(p_str));
 }
 
-/* symbol->string: (symbol->string sym) -> convert symbol to string */
+/** Convert a symbol to a string.
+ *  x-lang: (symbol->str sym)
+ *  @param p_base Interpreter base context.
+ *  @param p_args Unevaluated argument list: (symbol->str sym).
+ *  @return A string object containing the symbol's name.
+ */
 static x_obj_t *x_prim_symbol_to_string(x_obj_t *p_base, x_obj_t *p_args)
 {
 	x_obj_t *p_sym;
@@ -58,7 +68,14 @@ static x_obj_t *x_prim_symbol_to_string(x_obj_t *p_base, x_obj_t *p_args)
 	return x_mkstr(p_base, x_symbolval(p_sym));
 }
 
-/* list->string: (list->string list-of-chars) -> string */
+/** Build a string from a list of characters.
+ *  x-lang: (list->str list-of-chars)
+ *  @param p_base Interpreter base context.
+ *  @param p_args Unevaluated argument list: (list->str list-of-chars).
+ *  @return A newly allocated string composed of the characters in the list.
+ *  @note Walks the list twice: once to measure length, once to copy.
+ *        Safe inside tokenizer callbacks (no x-lang dispatch).
+ */
 static x_obj_t *x_prim_list_to_string(x_obj_t *p_base, x_obj_t *p_args)
 {
 	x_obj_t *p_list, *p_cur;
@@ -77,6 +94,14 @@ static x_obj_t *x_prim_list_to_string(x_obj_t *p_base, x_obj_t *p_args)
 	return x_mkstrown(p_base, s);
 }
 
+/** Register string manipulation primitives.
+ *
+ *  Binds: @c str-append, @c str->symbol, @c symbol->str, @c list->str.
+ *
+ *  @param p_base Interpreter base context.
+ *  @param p_args Unused.
+ *  @return @p p_base.
+ */
 x_obj_t *x_prim_string_register(x_obj_t *p_base, x_obj_t *p_args)
 {
 	static const x_callable_entry_t entries[] = {

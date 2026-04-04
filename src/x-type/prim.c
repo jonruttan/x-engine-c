@@ -1,21 +1,16 @@
+/** @file x-type/prim.c
+ *  @brief Primitive type -- construction, registration, and unified callable dispatch.
+ *  @author Jon Ruttan (jonruttan@gmail.com)
+ *  @copyright 2024 Jon Ruttan
+ *  @license MIT No Attribution (MIT-0)
+ */
 /*
- * # Computational Expressions in C
- *
- * ## x-type/prim.c -- Implementation - Type - Primitive
- *
- * @description Computational Expressions in C
- * @author [Jon Ruttan](jonruttan@gmail.com)
- * @copyright 2024 Jon Ruttan
- * @license MIT No Attribution (MIT-0)
- *
  *     ., .,
  *     {O,O}
  *     (   )
  *      " "
  */
-/*
- * # Includes
- */
+
 #include "x-type/prim.h"
 #include "x-type/procedure.h"
 #include "x-type/operative.h"
@@ -28,6 +23,14 @@ x_satom_t x_type_prim_name = x_obj_set(x_type_atom_obj, X_OBJ_FLAG_NONE, { .s = 
 	x_callable_write_prim = x_obj_set(x_type_atom_obj, X_OBJ_FLAG_NONE, { (x_obj_t *)&x_callable_write }),
 	x_type_prim_struct_prim = x_obj_set(x_type_atom_obj, X_OBJ_FLAG_NONE, { (x_obj_t *)&x_type_prim_struct });
 
+/**
+ * Allocate a PRIMITIVE object wrapping a C function pointer.
+ *
+ * @param p_base  Execution context.
+ * @param flags   Object flags.
+ * @param fn      C function pointer to wrap.
+ * @return Newly allocated PRIMITIVE object.
+ */
 x_obj_t *x_make_prim(x_obj_t *p_base, x_obj_flag_t flags, x_fn_t fn)
 {
 	x_satom_t prim = x_obj_set(NULL, X_OBJ_FLAG_NONE, { .fn = fn }),
@@ -40,6 +43,15 @@ x_obj_t *x_make_prim(x_obj_t *p_base, x_obj_flag_t flags, x_fn_t fn)
 	return x_type_prim_make(p_base, (x_obj_t *)args);
 }
 
+/**
+ * Build the PRIMITIVE type struct descriptor.
+ *
+ * Populates name, make, call, and write hooks.
+ *
+ * @param p_base  Execution context.
+ * @param p_args  Unused.
+ * @return Type struct pair-tree for PRIMITIVE.
+ */
 x_obj_t *x_type_prim_struct(x_obj_t *p_base, x_obj_t *p_args)
 {
 	struct x_type_t type = {
@@ -52,6 +64,13 @@ x_obj_t *x_type_prim_struct(x_obj_t *p_base, x_obj_t *p_args)
 	return x_type_struct_make(p_base, type);
 }
 
+/**
+ * Register (or retrieve) the PRIMITIVE type in the type alist.
+ *
+ * @param p_base  Execution context.
+ * @param p_args  Unused.
+ * @return The registered PRIMITIVE type object.
+ */
 x_obj_t *x_type_prim_register(x_obj_t *p_base, x_obj_t *p_args)
 {
 	x_spair_t args[2] = {
@@ -62,6 +81,16 @@ x_obj_t *x_type_prim_register(x_obj_t *p_base, x_obj_t *p_args)
 	return x_type_struct_get(p_base, (x_obj_t *)args);
 }
 
+/**
+ * Type-system make handler for PRIMITIVE objects.
+ *
+ * Extracts the function pointer from @c p_args[0] and optional flags
+ * from @c p_args[1], then allocates a pair-length object via x_obj_make().
+ *
+ * @param p_base  Execution context.
+ * @param p_args  Argument list: (fn-atom [flags-atom]).
+ * @return Newly allocated PRIMITIVE object.
+ */
 x_obj_t *x_type_prim_make(x_obj_t *p_base, x_obj_t *p_args)
 {
 	x_obj_t *p_type = x_type_prim_register(p_base, p_base),
@@ -73,11 +102,17 @@ x_obj_t *x_type_prim_make(x_obj_t *p_base, x_obj_t *p_args)
 		x_atomfn(p_prim), NULL);
 }
 
-/*
- * Unified dispatch: all callables have fn-ptr in slot 0.
- * - Closures/operatives: fn-ptr = x_type_procedure_call / x_type_operative_call
- * - C prims (spair): fn-ptr = the C function
- * - Type handlers (satom): fn-ptr = type-internal handler, no self-passing
+/**
+ * Unified call dispatch for all callable types.
+ *
+ * All callables store a function pointer in slot 0:
+ * - Closures/operatives: fn-ptr is x_type_procedure_call / x_type_operative_call.
+ * - C primitives (spair): fn-ptr is the C function itself.
+ * - Type handlers (satom): fn-ptr is a type-internal handler (no self-passing).
+ *
+ * @param p_base  Execution context.
+ * @param p_args  Argument list: (callable . args).
+ * @return Result of the called function.
  */
 x_obj_t *x_callable_call(x_obj_t *p_base, x_obj_t *p_args)
 {
@@ -92,6 +127,19 @@ x_obj_t *x_callable_call(x_obj_t *p_base, x_obj_t *p_args)
 	return (*x_primval(p_fn))(p_base, p_args);
 }
 
+/**
+ * Unified apply dispatch with TCO trampoline support.
+ *
+ * Like x_callable_call() but uses the non-TCO apply path for procedures
+ * (args already evaluated) and a trampoline for operatives.
+ *
+ * @param p_base  Execution context.
+ * @param p_args  Argument list: (callable . args).
+ * @return Result of the applied function.
+ *
+ * @see x_callable_call
+ * @see x_eval_tco_trampoline
+ */
 x_obj_t *x_callable_apply(x_obj_t *p_base, x_obj_t *p_args)
 {
 	x_obj_t *p_fn = x_firstobj(p_args);
@@ -116,6 +164,15 @@ x_obj_t *x_callable_apply(x_obj_t *p_base, x_obj_t *p_args)
 	return (*x_primval(p_fn))(p_base, p_args);
 }
 
+/**
+ * Write handler for callable types.
+ *
+ * Outputs the fixed string @c #\<prim\> to the base output channel.
+ *
+ * @param p_base  Execution context.
+ * @param p_args  Argument list whose first element is the callable.
+ * @return The callable object (pass-through).
+ */
 x_obj_t *x_callable_write(x_obj_t *p_base, x_obj_t *p_args)
 {
 	x_satom_t str = x_obj_set(x_type_atom_obj, X_OBJ_FLAG_NONE,

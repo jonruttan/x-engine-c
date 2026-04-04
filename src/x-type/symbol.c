@@ -1,21 +1,16 @@
+/** @file x-type/symbol.c
+ *  @brief Interned symbol type -- BST index, make, find, and 3-step eval.
+ *  @author Jon Ruttan (jonruttan@gmail.com)
+ *  @copyright 2021 Jon Ruttan
+ *  @license MIT No Attribution (MIT-0)
+ */
 /*
- * # Computational Expressions in C
- *
- * ## x-type.c -- Implementation - Type - Symbol
- *
- * @description Computational Expressions in C
- * @author [Jon Ruttan](jonruttan@gmail.com)
- * @copyright 2021 Jon Ruttan
- * @license MIT No Attribution (MIT-0)
- *
  *     ., .,
  *     {O,O}
  *     (   )
  *      " "
  */
-/*
- * # Includes
- */
+
 #include "x-type/symbol.h"
 #include "x-type/str.h"
 #include "x-alist.h"
@@ -28,6 +23,17 @@ x_satom_t x_type_symbol_name = x_obj_set(x_type_atom_obj, X_OBJ_FLAG_NONE, { .s 
 	x_type_symbol_eval_prim = x_obj_set(x_type_atom_obj, X_OBJ_FLAG_NONE, { (x_obj_t *)&x_type_symbol_eval }),
 	x_type_symbol_struct_prim = x_obj_set(x_type_atom_obj, X_OBJ_FLAG_NONE, { (x_obj_t *)&x_type_symbol_struct });
 
+/**
+ * Allocate (or retrieve interned) SYMBOL for string @p s.
+ *
+ * Packs the string and flags into stack-allocated args and delegates
+ * to x_type_symbol_make(), which handles interning.
+ *
+ * @param p_base  Execution context.
+ * @param flags   Object flags (e.g. @c X_OBJ_FLAG_OWN).
+ * @param s       Null-terminated symbol name.
+ * @return Interned SYMBOL object.
+ */
 x_obj_t *x_make_symbol(x_obj_t *p_base, x_obj_flag_t flags, x_char_t *s)
 {
 	x_satom_t o_symbol = x_obj_set(NULL, X_OBJ_FLAG_NONE, { .s = s }),
@@ -40,6 +46,15 @@ x_obj_t *x_make_symbol(x_obj_t *p_base, x_obj_flag_t flags, x_char_t *s)
 	return x_type_symbol_make(p_base, (x_obj_t *)args);
 }
 
+/**
+ * Build the SYMBOL type struct descriptor.
+ *
+ * Populates name, make, eval, analyse, read, write, and display hooks.
+ *
+ * @param p_base  Execution context.
+ * @param p_obj   Unused.
+ * @return Type struct pair-tree for SYMBOL.
+ */
 x_obj_t *x_type_symbol_struct(x_obj_t *p_base, x_obj_t *p_obj)
 {
 	struct x_type_t type = {
@@ -55,13 +70,24 @@ x_obj_t *x_type_symbol_struct(x_obj_t *p_base, x_obj_t *p_obj)
 	return x_type_struct_make(p_base, type);
 }
 
-/*
- * Symbol intern BST: index for O(log n) symbol lookup by name.
- * Node: (symbol . (left . right)), keyed by x_symbolval.
- * Stored in x_restobj(x_symbol_data(p_type)).
+/**
+ * @name Symbol Intern BST
+ *
+ * Index for O(log n) symbol lookup by name.
+ * Node layout: @c (symbol . (left . right)), keyed by x_symbolval.
+ * Stored in @c x_restobj(x_symbol_data(p_type)).
+ * @{
  */
 #define x_symbol_bst(T) x_restobj(x_symbol_data((T)))
 
+/**
+ * Search the BST for a node whose symbol matches @p name.
+ *
+ * @param p_base  Execution context.
+ * @param p_tree  BST root node (or NULL).
+ * @param name    Symbol name to find.
+ * @return BST node containing the symbol, or NULL if not found.
+ */
 static x_obj_t *sym_bst_lookup(x_obj_t *p_base, x_obj_t *p_tree,
 	x_char_t *name)
 {
@@ -83,6 +109,16 @@ static x_obj_t *sym_bst_lookup(x_obj_t *p_base, x_obj_t *p_tree,
 	return NULL;
 }
 
+/**
+ * Insert a symbol into the BST, returning the (possibly unchanged) root.
+ *
+ * If the symbol already exists, the tree is returned unmodified.
+ *
+ * @param p_base  Execution context (for allocation).
+ * @param p_tree  Current BST root (or NULL for empty tree).
+ * @param p_sym   Symbol object to insert.
+ * @return BST root after insertion.
+ */
 static x_obj_t *sym_bst_insert(x_obj_t *p_base, x_obj_t *p_tree,
 	x_obj_t *p_sym)
 {
@@ -120,6 +156,18 @@ static x_obj_t *sym_bst_insert(x_obj_t *p_base, x_obj_t *p_tree,
 	}
 }
 
+/** @} */
+
+/**
+ * Register (or retrieve) the SYMBOL type and initialize its data field.
+ *
+ * On first call, allocates the intern list and BST root in the type's
+ * data slot.
+ *
+ * @param p_base  Execution context.
+ * @param p_args  Unused.
+ * @return The registered SYMBOL type object.
+ */
 x_obj_t *x_type_symbol_register(x_obj_t *p_base, x_obj_t *p_args)
 {
 	x_spair_t args[2] = {
@@ -135,7 +183,20 @@ x_obj_t *x_type_symbol_register(x_obj_t *p_base, x_obj_t *p_args)
 	return p_type;
 }
 
-/* TODO: Alter so symbol list can be optionally supplied by argument. */
+/**
+ * Type-system make handler -- intern or allocate a new SYMBOL.
+ *
+ * If a symbol with the same name already exists, returns the existing
+ * interned object.  Otherwise allocates a new one, appends it to the
+ * intern list, and inserts it into the BST.  Ownership of the source
+ * string is transferred when the source has @c X_OBJ_FLAG_OWN set.
+ *
+ * @param p_base  Execution context.
+ * @param p_args  Argument list: (name-atom [flags-atom]).
+ * @return Interned SYMBOL object.
+ *
+ * @note TODO: allow the symbol list to be optionally supplied by argument.
+ */
 x_obj_t *x_type_symbol_make(x_obj_t *p_base, x_obj_t *p_args)
 {
 	x_obj_t *p_type = x_type_symbol_register(p_base, p_base),
@@ -163,6 +224,13 @@ x_obj_t *x_type_symbol_make(x_obj_t *p_base, x_obj_t *p_args)
 	return p_obj;
 }
 
+/**
+ * Look up an interned symbol by name using the BST index.
+ *
+ * @param p_base  Execution context.
+ * @param p_args  Argument list whose first element wraps the name string.
+ * @return BST node containing the symbol, or NULL if not interned.
+ */
 x_obj_t *x_type_symbol_find(x_obj_t *p_base, x_obj_t *p_args)
 {
 	x_obj_t *p_type = x_type_symbol_register(p_base, p_base),
@@ -183,11 +251,20 @@ x_obj_t *x_type_symbol_find(x_obj_t *p_base, x_obj_t *p_args)
 	return NULL;
 }
 
-/*
- * Symbol eval: 3-step lookup.
- *   1. Walk alist head to local_boundary (catches locals in 2-3 steps)
- *   2. BST lookup for globals (O(log n))
- *   3. Continue alist walk from boundary (nested closure fallback)
+/**
+ * Type-system eval handler -- 3-step environment lookup for symbols.
+ *
+ * 1. Walk the alist head to @c local_boundary (catches locals in 2-3 steps).
+ * 2. BST lookup for globals (O(log n)), skipped if shadow flag is set.
+ * 3. Continue alist walk from the boundary (nested closure fallback).
+ *
+ * Raises an "Unbound SYMBOL" error if the symbol is not found.
+ *
+ * @param p_base  Execution context.
+ * @param p_args  Eval argument frame containing the symbol expression.
+ * @return The bound value, or NULL on error.
+ *
+ * @see x_alist_bst_lookup
  */
 x_obj_t *x_type_symbol_eval(x_obj_t *p_base, x_obj_t *p_args)
 {

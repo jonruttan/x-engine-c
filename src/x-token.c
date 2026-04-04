@@ -1,13 +1,10 @@
+/** @file x-token.c
+ *  @brief Tokenizer: analysis, reading, writing, and display of expressions.
+ *  @author Jon Ruttan (jonruttan@gmail.com)
+ *  @copyright 2021 Jon Ruttan
+ *  @license MIT No Attribution (MIT-0)
+ */
 /*
- * # Computational Expressions in C
- *
- * ## x-token.c -- Implementation - Token
- *
- * @description Computational Expressions in C
- * @author [Jon Ruttan](jonruttan@gmail.com)
- * @copyright 2021 Jon Ruttan
- * @license MIT No Attribution (MIT-0)
- *
  *     ., .,
  *     {O,O}
  *     (   )
@@ -30,12 +27,19 @@
 #include "x-token/sexp/atom.h"
 #include "x-token/sexp/pair.h"
 
-/*
- * # Tokenization Functions
- */
-
 #define prim_arg_prim			x_0((x_obj_t *)prim_args)
 
+/**
+ * Check whether any type's delimiter matches at the current buffer position.
+ *
+ * Iterates all registered types (except the given type itself) and
+ * calls each type's delimit hook. Returns the buffer if a delimiter
+ * matched, NULL otherwise.
+ *
+ * @param p_base  x_obj_t* -- Execution context
+ * @param p_args  x_obj_t* -- (buffer . type) where type is excluded from checks
+ * @return x_obj_t* -- The buffer if a delimiter matched, or NULL
+ */
 x_obj_t *x_token_delimit(x_obj_t *p_base, x_obj_t *p_args)
 {
 	x_obj_t *p_buffer = x_firstobj(p_args),
@@ -67,6 +71,16 @@ extern x_satom_t x_type_list_iter_prim;
 x_obj_t *x_type_alist_iter(x_obj_t *p_base, x_obj_t *p_args);
 x_satom_t x_type_alist_iter_prim = x_obj_set(x_type_atom_obj, X_OBJ_FLAG_NONE, { .fn = x_type_alist_iter });
 
+/**
+ * Iterator that yields analyse hooks from type alist entries.
+ *
+ * Wraps x_type_list_iter to advance through the type alist, then
+ * extracts the analyse field from each entry's type struct.
+ *
+ * @param p_base  x_obj_t* -- Execution context
+ * @param p_args  x_obj_t* -- Iterator state pair
+ * @return x_obj_t* -- Analyse hook from the next type entry, or NULL at end
+ */
 x_obj_t *x_type_alist_iter(x_obj_t *p_base, x_obj_t *p_args)
 {
 	x_obj_t *p_obj = x_type_list_iter(p_base, p_args);
@@ -78,6 +92,27 @@ x_obj_t *x_type_alist_iter(x_obj_t *p_base, x_obj_t *p_args)
 	return x_type_field_analyse(x_restobj(p_obj));
 }
 
+/**
+ * Determine which type best matches the next token in the buffer.
+ *
+ * Iterates all registered types, calling each type's analyse hook
+ * character by character. Tracks the winning type by score (number
+ * of buffer characters consumed). Uses first-char hint strings on
+ * x-lang closures to skip non-matching types early. The >= comparison
+ * means later types (C built-ins) win ties against earlier (custom)
+ * types.
+ *
+ * After finding the winner, advances the buffer read pointer by the
+ * winning score.
+ *
+ * @param p_base  x_obj_t* -- Execution context
+ * @param p_args  x_obj_t* -- (buffer . base) pair
+ * @return x_obj_t* -- Winning type alist entry (name . type-struct),
+ *                      or NULL if no type matched
+ *
+ * @note Negative scores indicate inverse-priority matches (e.g.
+ *       whitespace). The absolute value determines advancement.
+ */
 x_obj_t *x_token_analyse(x_obj_t *p_base, x_obj_t *p_args)
 {
 	x_int_t i_best, i_consumed;
@@ -219,6 +254,19 @@ x_obj_t *x_token_analyse(x_obj_t *p_base, x_obj_t *p_args)
 	return p_winner;
 }
 
+/**
+ * Read the next token from the buffer and return its parsed object.
+ *
+ * Calls x_token_analyse to identify the token type, counts newlines
+ * in the consumed region for line tracking, then invokes the winning
+ * type's read hook. Types with no read hook (e.g. whitespace) are
+ * discarded and the loop retries. Stamps source line numbers on
+ * created objects when meta tracking is enabled.
+ *
+ * @param p_base  x_obj_t* -- Execution context
+ * @param p_args  x_obj_t* -- (buffer . base) pair
+ * @return x_obj_t* -- Parsed object, or NULL on EOF / read failure
+ */
 x_obj_t *x_token_read(x_obj_t *p_base, x_obj_t *p_args)
 {
 	x_obj_t *p_buffer = x_firstobj(p_args), *p_entry, *p_read, *p_obj;
@@ -287,6 +335,17 @@ x_obj_t *x_token_read(x_obj_t *p_base, x_obj_t *p_args)
 	}
 }
 
+/**
+ * Write an object in its external (machine-readable) representation.
+ *
+ * Dispatches based on object type: nil prints "()", booleans print
+ * their atom string (#t/#f), stack atoms and pairs use sexp writers,
+ * and heap-typed objects delegate to their type's write hook.
+ *
+ * @param p_base  x_obj_t* -- Execution context
+ * @param p_args  x_obj_t* -- (object)
+ * @return x_obj_t* -- Write result, or NULL
+ */
 x_obj_t *x_token_write(x_obj_t *p_base, x_obj_t *p_args)
 {
 	x_obj_t *p_obj = x_firstobj(p_args);
@@ -327,6 +386,20 @@ x_obj_t *x_token_write(x_obj_t *p_base, x_obj_t *p_args)
 	return NULL;
 }
 
+/**
+ * Display an object in its human-readable representation.
+ *
+ * Like x_token_write but uses display hooks where available: pairs
+ * use sexp_pair_display (no dot notation for proper lists), and
+ * heap-typed objects delegate to their type's display hook (falling
+ * back to write).
+ *
+ * @param p_base  x_obj_t* -- Execution context
+ * @param p_args  x_obj_t* -- (object)
+ * @return x_obj_t* -- Display result, or NULL
+ *
+ * @see x_token_write
+ */
 x_obj_t *x_token_display(x_obj_t *p_base, x_obj_t *p_args)
 {
 	x_obj_t *p_obj = x_firstobj(p_args);

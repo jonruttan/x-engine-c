@@ -1,13 +1,11 @@
-/*
- * # Computational Expressions in C
- *
- * ## x-type.c -- Implementation - Type - Character
- *
- * @description Computational Expressions in C
- * @author [Jon Ruttan](jonruttan@gmail.com)
+/**
+ * @file char.c
+ * @brief Character type implementation.
+ * @author Jon Ruttan (jonruttan@gmail.com)
  * @copyright 2021 Jon Ruttan
  * @license MIT No Attribution (MIT-0)
- *
+ */
+/*
  *     ., .,
  *     {O,O}
  *     (   )
@@ -27,6 +25,16 @@ x_satom_t x_type_char_name = x_obj_set(x_type_atom_obj, X_OBJ_FLAG_NONE, { .s = 
 	x_type_char_make_prim = x_obj_set(x_type_atom_obj, X_OBJ_FLAG_NONE, { (x_obj_t *)&x_type_char_make }),
 	x_type_char_struct_prim = x_obj_set(x_type_atom_obj, X_OBJ_FLAG_NONE, { (x_obj_t *)&x_type_char_struct });
 
+/**
+ * Allocate a heap character object with a given value.
+ *
+ * Builds a stack-based argument list and delegates to x_type_char_make.
+ *
+ * @param p_base  x_obj_t* -- Execution context
+ * @param flags   x_obj_flag_t -- Object flags
+ * @param c       x_char_t -- Character value
+ * @return x_obj_t* -- New heap-allocated character object
+ */
 x_obj_t *x_make_char(x_obj_t *p_base, x_obj_flag_t flags, x_char_t c)
 {
 	x_satom_t o_char = x_obj_set(NULL, X_OBJ_FLAG_NONE, { .c = c }),
@@ -44,6 +52,17 @@ x_obj_t *x_make_char(x_obj_t *p_base, x_obj_flag_t flags, x_char_t c)
 #define entry(S,N)	x_mkspair(p_base, X_OBJ_FLAG_NONE, sym(S), num(N))
 #define cons(A,B)	x_mkspair(p_base, X_OBJ_FLAG_NONE, (A), (B))
 
+/**
+ * Build the character type descriptor struct.
+ *
+ * Populates name, make, analyse, read, write, and display callbacks.
+ * Also builds an alist of named character constants (alarm, backspace,
+ * delete, escape, newline, null, return, space, tab) as type data.
+ *
+ * @param p_base  x_obj_t* -- Execution context
+ * @param p_obj   x_obj_t* -- Unused
+ * @return x_obj_t* -- Type descriptor pair list
+ */
 x_obj_t *x_type_char_struct(x_obj_t *p_base, x_obj_t *p_obj)
 {
 	struct x_type_t type = { 0 };
@@ -75,6 +94,13 @@ x_obj_t *x_type_char_struct(x_obj_t *p_base, x_obj_t *p_obj)
 #undef entry
 #undef cons
 
+/**
+ * Register or retrieve the character type on the base context.
+ *
+ * @param p_base  x_obj_t* -- Execution context
+ * @param p_args  x_obj_t* -- Unused
+ * @return x_obj_t* -- Registered type object
+ */
 x_obj_t *x_type_char_register(x_obj_t *p_base, x_obj_t *p_args)
 {
 	x_spair_t args[2] = {
@@ -85,6 +111,16 @@ x_obj_t *x_type_char_register(x_obj_t *p_base, x_obj_t *p_args)
 	return x_type_struct_get(p_base, (x_obj_t *)args);
 }
 
+/**
+ * Type-system make callback for character objects.
+ *
+ * Extracts the character value and optional flags from p_args,
+ * then allocates a heap object via x_obj_make.
+ *
+ * @param p_base  x_obj_t* -- Execution context
+ * @param p_args  x_obj_t* -- (char-value . (flags | nil))
+ * @return x_obj_t* -- New heap-allocated character object
+ */
 x_obj_t *x_type_char_make(x_obj_t *p_base, x_obj_t *p_args)
 {
 	x_obj_t *p_type = x_type_char_register(p_base, p_base),

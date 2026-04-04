@@ -1,13 +1,10 @@
+/** @file io.c
+ *  @brief I/O primitives: read, write, display, string conversion, heap/GC, system, REPL.
+ *  @author Jon Ruttan (jonruttan@gmail.com)
+ *  @copyright 2024 Jon Ruttan
+ *  @license MIT No Attribution (MIT-0)
+ */
 /*
- * # Computational Expressions in C
- *
- * ## x-prim/io.c -- Implementation - Primitives - I/O
- *
- * @description Computational Expressions in C
- * @author [Jon Ruttan](jonruttan@gmail.com)
- * @copyright 2024 Jon Ruttan
- * @license MIT No Attribution (MIT-0)
- *
  *     ., .,
  *     {O,O}
  *     (   )
@@ -31,7 +28,14 @@
 #include "x-type/symbol.h"
 #include "x-obj/prim.h"
 
-/* write: (write obj) -> output s-expression to stdout */
+/** Output an object as an s-expression to stdout.
+ *  x-lang: (write obj)
+ *  @param p_base  Execution context.
+ *  @param p_args  Unevaluated argument list (obj).
+ *  @return NULL.
+ *  @note Fexpr: args unevaluated; x_eargs evaluates obj.
+ *  @see x_prim_display, x_prim_write_to_string
+ */
 static x_obj_t *x_prim_write(x_obj_t *p_base, x_obj_t *p_args)
 {
 	x_obj_t *p_val;
@@ -46,7 +50,15 @@ static x_obj_t *x_prim_write(x_obj_t *p_base, x_obj_t *p_args)
 	return NULL;
 }
 
-/* display: (display obj) -> output human-readable via type system */
+/** Output an object in human-readable form via the type system.
+ *  x-lang: (display obj)
+ *  @param p_base  Execution context.
+ *  @param p_args  Unevaluated argument list (obj).
+ *  @return NULL.
+ *  @note Fexpr: args unevaluated; x_eargs evaluates obj.
+ *  @note Unlike write, display omits quoting (e.g. strings without quotes).
+ *  @see x_prim_write, x_prim_display_to_string
+ */
 static x_obj_t *x_prim_display(x_obj_t *p_base, x_obj_t *p_args)
 {
 	x_obj_t *p_val;
@@ -61,7 +73,13 @@ static x_obj_t *x_prim_display(x_obj_t *p_base, x_obj_t *p_args)
 	return NULL;
 }
 
-/* read: (read) -> read one s-expression from stdin */
+/** Read one s-expression from stdin.
+ *  x-lang: (read)
+ *  @param p_base  Execution context.
+ *  @param p_args  Unused.
+ *  @return Parsed s-expression, or NULL on EOF.
+ *  @see x_prim_read_char
+ */
 static x_obj_t *x_prim_read_expr(x_obj_t *p_base, x_obj_t *p_args)
 {
 	x_obj_t *p_buffer = x_firstobj(x_base_field_buffer(p_base));
@@ -75,7 +93,13 @@ static x_obj_t *x_prim_read_expr(x_obj_t *p_base, x_obj_t *p_args)
 	return x_token_read(p_base, (x_obj_t *)read_args);
 }
 
-/* read-char: (read-char) -> read one character from stdin */
+/** Read one character from stdin.
+ *  x-lang: (read-char)
+ *  @param p_base  Execution context.
+ *  @param p_args  Unused.
+ *  @return Character object, or NULL on EOF.
+ *  @see x_prim_read_expr
+ */
 static x_obj_t *x_prim_read_char(x_obj_t *p_base, x_obj_t *p_args)
 {
 	x_obj_t *p_buffer = x_firstobj(x_base_field_buffer(p_base));
@@ -95,7 +119,15 @@ static x_obj_t *x_prim_read_char(x_obj_t *p_base, x_obj_t *p_args)
 	return x_mkchar(p_base, x_bufferlastchar(p_buffer));
 }
 
-/* to-string helper: capture output of dispatch function into a string */
+/** Capture output of a dispatch function (write or display) into a string.
+ *  @param p_base    Execution context.
+ *  @param p_args    Unevaluated argument list (obj).
+ *  @param dispatch  Output function to redirect (x_token_write or x_token_display).
+ *  @return New string containing the captured output.
+ *  @note Pushes a temporary write buffer onto write_buf_stack, invokes
+ *        dispatch, then pops and converts the buffer to a string.
+ *  @note Returns "()" for nil values.
+ */
 static x_obj_t *x_prim_to_string(x_obj_t *p_base, x_obj_t *p_args,
 	x_obj_t *(*dispatch)(x_obj_t *, x_obj_t *))
 {
@@ -138,20 +170,40 @@ static x_obj_t *x_prim_to_string(x_obj_t *p_base, x_obj_t *p_args,
 	return p_result;
 }
 
-/* write-to-string: (write-to-string obj) -> string representation */
+/** Convert an object to its write (s-expression) string representation.
+ *  x-lang: (write-to-str obj)
+ *  @param p_base  Execution context.
+ *  @param p_args  Unevaluated argument list (obj).
+ *  @return String containing the write representation.
+ *  @note Fexpr: args unevaluated; delegates to x_prim_to_string.
+ *  @see x_prim_display_to_string, x_prim_to_string
+ */
 x_obj_t *x_prim_write_to_string(x_obj_t *p_base, x_obj_t *p_args)
 {
 	return x_prim_to_string(p_base, x_1(p_args), x_token_write);
 }
 
-/* display-to-string: (display-to-string obj) -> display representation */
+/** Convert an object to its display (human-readable) string representation.
+ *  x-lang: (display-to-str obj)
+ *  @param p_base  Execution context.
+ *  @param p_args  Unevaluated argument list (obj).
+ *  @return String containing the display representation.
+ *  @note Fexpr: args unevaluated; delegates to x_prim_to_string.
+ *  @see x_prim_write_to_string, x_prim_to_string
+ */
 static x_obj_t *x_prim_display_to_string(x_obj_t *p_base, x_obj_t *p_args)
 {
 	return x_prim_to_string(p_base, x_1(p_args), x_token_display);
 }
 
 #ifdef X_CLOCK
-/* clock: (clock) -> CPU microseconds since process start */
+/** Return CPU microseconds since process start.
+ *  x-lang: (clock)
+ *  @param p_base  Execution context.
+ *  @param p_args  Unused.
+ *  @return Integer with microseconds elapsed.
+ *  @note Only available when X_CLOCK is defined.
+ */
 static x_obj_t *x_prim_clock(x_obj_t *p_base, x_obj_t *p_args)
 {
 	(void)p_args;
@@ -159,7 +211,15 @@ static x_obj_t *x_prim_clock(x_obj_t *p_base, x_obj_t *p_args)
 }
 #endif /* X_CLOCK */
 
-/* heap-sweep: (heap-sweep) -> sweep unmarked objects from heap */
+/** Sweep unmarked objects from the heap (garbage collection phase 2).
+ *  x-lang: (heap-sweep)
+ *  @param p_base  Execution context.
+ *  @param p_args  Unused.
+ *  @return NULL.
+ *  @note Calls registered free hooks before sweeping.
+ *  @note Increments GC run counter when X_PROFILE is defined.
+ *  @see x_prim_heap_mark, x_prim_heap_count
+ */
 static x_obj_t *x_prim_heap_sweep(x_obj_t *p_base, x_obj_t *p_args)
 {
 	(void)p_args;
@@ -189,7 +249,13 @@ static x_obj_t *x_prim_heap_sweep(x_obj_t *p_base, x_obj_t *p_args)
 	return NULL;
 }
 
-/* heap-count: (heap-count) -> count objects on heap */
+/** Count the number of objects currently on the heap.
+ *  x-lang: (heap-count)
+ *  @param p_base  Execution context.
+ *  @param p_args  Unused.
+ *  @return Integer with the heap object count.
+ *  @see x_prim_heap_mark, x_prim_heap_sweep
+ */
 static x_obj_t *x_prim_heap_count(x_obj_t *p_base, x_obj_t *p_args)
 {
 	x_obj_t *p = x_obj_heap(p_base);
@@ -204,7 +270,16 @@ static x_obj_t *x_prim_heap_count(x_obj_t *p_base, x_obj_t *p_args)
 	return x_mkint(p_base, count);
 }
 
-/* heap-mark: (heap-mark) -> mark reachable objects on heap */
+/** Mark all reachable objects on the heap (garbage collection phase 1).
+ *  x-lang: (heap-mark)
+ *  @param p_base  Execution context.
+ *  @param p_args  Unused.
+ *  @return NULL.
+ *  @note Performs three marking passes: tree mark from base, conservative
+ *        C stack scan, and registered GC root traversal.
+ *  @note Calls registered mark hooks after root marking.
+ *  @see x_prim_heap_sweep, x_prim_heap_count
+ */
 static x_obj_t *x_prim_heap_mark(x_obj_t *p_base, x_obj_t *p_args)
 {
 	(void)p_args;
@@ -244,9 +319,15 @@ static x_obj_t *x_prim_heap_mark(x_obj_t *p_base, x_obj_t *p_args)
 	return NULL;
 }
 
-/* system!: (system! obj) -> recursively mark object and all reachable
- * objects as SYSTEM (immune to GC sweep). Uses the same traversal
- * pattern as x_heap_mark. */
+/** Recursively mark an object and all reachable objects as SYSTEM (GC-immune).
+ *  x-lang: (gc-pin! obj)
+ *  @param p_base  Execution context.
+ *  @param p_args  Unevaluated argument list (obj).
+ *  @return The marked object.
+ *  @note Fexpr: args unevaluated; x_eargs evaluates obj.
+ *  @note Uses X_OBJ_FLAG_SHARED to make objects immune to GC sweep.
+ *  @see x_prim_heap_mark, x_prim_heap_sweep
+ */
 static x_obj_t *x_prim_system_mark(x_obj_t *p_base, x_obj_t *p_args)
 {
 	x_obj_t *p_obj;
@@ -258,8 +339,15 @@ static x_obj_t *x_prim_system_mark(x_obj_t *p_base, x_obj_t *p_args)
 	return p_obj;
 }
 
-/* atomic: (atomic f1 f2 ...) -> call each zero-arg fn with no allocations between.
- * Registered as a wrapped combiner so args are pre-evaluated. */
+/** Call each zero-arg function sequentially with no allocations between.
+ *  x-lang: (applicative f1 f2 ...)
+ *  @param p_base  Execution context.
+ *  @param p_args  Pre-evaluated argument list of callables.
+ *  @return Result of the last callable invoked.
+ *  @note Registered as a wrapped combiner (applicative), so args are
+ *        pre-evaluated before this function is called.
+ *  @note Roots p_args during iteration to protect from GC.
+ */
 static x_obj_t *x_prim_atomic(x_obj_t *p_base, x_obj_t *p_args)
 {
 	x_obj_t *p_result = NULL;
@@ -286,7 +374,14 @@ static x_obj_t *x_prim_atomic(x_obj_t *p_base, x_obj_t *p_args)
 	return p_result;
 }
 
-/* repl: minimal read-eval loop until EOF (no output, no hooks) */
+/** Minimal read-eval loop: reads and evaluates expressions until EOF.
+ *  @param p_base  Execution context.
+ *  @param p_args  Unused.
+ *  @return NULL on EOF.
+ *  @note No output, no prompt, no hooks. Used for C-level bootstrapping;
+ *        the x-lang REPL operative in x-core.x provides the full experience.
+ *  @note Clears shadows after each evaluation.
+ */
 x_obj_t *x_prim_repl(x_obj_t *p_base, x_obj_t *p_args)
 {
 	x_obj_t *p_exp;
@@ -307,6 +402,17 @@ x_obj_t *x_prim_repl(x_obj_t *p_base, x_obj_t *p_args)
 	return NULL;
 }
 
+/** Register I/O primitives into the environment.
+ *
+ *  Binds: write, display, read, read-char, write-to-str, display-to-str,
+ *  heap-mark, heap-sweep, heap-count, gc-pin!.
+ *  Conditionally binds clock (when X_CLOCK defined).
+ *  Also binds "applicative" as a wrapped combiner for atomic execution.
+ *
+ *  @param p_base  Execution context.
+ *  @param p_args  Unused.
+ *  @return The base object.
+ */
 x_obj_t *x_prim_io_register(x_obj_t *p_base, x_obj_t *p_args)
 {
 	static const x_callable_entry_t entries[] = {

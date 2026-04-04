@@ -1,29 +1,23 @@
 #ifndef X_SEXP_ATOM_H
 #define X_SEXP_ATOM_H
 
-/*
- * # Computational Expressions in C
- *
- * ## x-sexp/atom.h -- Header - SExp - Atom
- *
- * @description Computational Expressions in C
- * @author [Jon Ruttan](jonruttan@gmail.com)
+/**
+ * @file atom.h
+ * @brief S-expression writer for opaque atom objects.
+ * @author Jon Ruttan (jonruttan@gmail.com)
  * @copyright 2023 Jon Ruttan
  * @license MIT No Attribution (MIT-0)
- *
+ */
+/*
  *     ., .,
  *     {O,O}
  *     (   )
  *      " "
  */
-/*
- * # Includes
- */
+
 #include "x-obj.h"
 
-/*
- * # Data Structures
- */
+/** Write the external representation of an atom (e.g. @c #<type:0xADDR>). */
 x_obj_t *x_sexp_atom_write(x_obj_t *p_base, x_obj_t *args);
 
-#endif /* X_SEXP_PAIR_H */
+#endif /* X_SEXP_ATOM_H */

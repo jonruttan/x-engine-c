@@ -1,13 +1,10 @@
+/** @file x-base.c
+ *  @brief Base object construction, error handling, and environment/IO management.
+ *  @author Jon Ruttan (jonruttan@gmail.com)
+ *  @copyright 2021 Jon Ruttan
+ *  @license MIT No Attribution (MIT-0)
+ */
 /*
- * # Computational Expressions in C
- *
- * ## x-base.c -- Implementation - Base
- *
- * @description Computational Expressions in C
- * @author [Jon Ruttan](jonruttan@gmail.com)
- * @copyright 2021 Jon Ruttan
- * @license MIT No Attribution (MIT-0)
- *
  *     ., .,
  *     {O,O}
  *     (   )
@@ -43,6 +40,20 @@ static x_satom_t x_type_heap_mark_hook =
 static x_satom_t x_type_heap_free_hook =
 	x_obj_set(NULL, X_OBJ_FLAG_NONE, { .v = (void *)x_type_heap_free });
 
+/**
+ * Create and initialize a full x-lang base object atop x-expr.
+ *
+ * Calls x_base_make (x-expr layer) with default file descriptors and
+ * hooks, then fills in the type-system-specific slots: env-group
+ * (alist, local-boundary, global-tree, shadow-list), ctrl-group
+ * (save-stack, error-handler, TCO slots), io-state (line counter,
+ * boolean caches), extended profile counters, and project extras
+ * (eval-list, token-cache, mark/free hooks, mark-roots).
+ *
+ * @param p_base  x_obj_t* -- Parent base (or NULL for root)
+ * @param p_args  x_obj_t* -- Unused
+ * @return x_obj_t* -- Newly constructed base object
+ */
 x_obj_t *x_base_ts_make(x_obj_t *p_base, x_obj_t *p_args)
 {
 	x_obj_t *p_parent = p_base;
@@ -124,6 +135,21 @@ x_obj_t *x_base_ts_make(x_obj_t *p_base, x_obj_t *p_args)
 #undef pair
 #undef atom
 
+/**
+ * Signal an error with a message and optional object context.
+ *
+ * If an error handler is installed (via @c guard), builds a combined
+ * error string with line number, restores the saved environment, and
+ * longjmps to the handler. Otherwise, writes the error to stderr via
+ * the low-level x_error function.
+ *
+ * @param p_base   x_obj_t* -- Execution context
+ * @param message  x_char_t* -- Error message string
+ * @param p_obj    x_obj_t* -- Object associated with the error (may be NULL)
+ *
+ * @note The combined string is malloc'd and owned by the error handler's
+ *       error slot (freed when the handler unwinds).
+ */
 void x_base_error(x_obj_t *p_base, x_char_t *message, x_obj_t *p_obj)
 {
 	int fd;
@@ -174,6 +200,16 @@ void x_base_error(x_obj_t *p_base, x_char_t *message, x_obj_t *p_obj)
 	x_error(fd, message, symbol);
 }
 
+/**
+ * Add a type struct to the base's type alist.
+ *
+ * Wraps the type struct as a (name . type_struct) pair for alist
+ * keying and prepends it to the type alist.
+ *
+ * @param p_base  x_obj_t* -- Execution context
+ * @param p_args  x_obj_t* -- Type struct to register
+ * @return x_obj_t* -- The new type alist head, or NULL if base is unset
+ */
 x_obj_t *x_base_type_alist_extend(x_obj_t *p_base, x_obj_t *p_args)
 {
 	x_obj_t *p_entry;
@@ -193,6 +229,17 @@ x_obj_t *x_base_type_alist_extend(x_obj_t *p_base, x_obj_t *p_args)
 	return x_firstobj(x_base_field_type_alist(p_base)) = x_alist_extend(p_base, (x_obj_t *)args);
 }
 
+/**
+ * Look up a type struct in the base's type alist by name.
+ *
+ * Searches for a (name . type_struct) entry matching the first element
+ * of @p p_args. Returns the bare type struct (unwrapped from the
+ * alist entry), or NULL if not found.
+ *
+ * @param p_base  x_obj_t* -- Execution context
+ * @param p_args  x_obj_t* -- Pair whose first is the type name to look up
+ * @return x_obj_t* -- Type struct, or NULL
+ */
 x_obj_t *x_base_type_alist_assoc(x_obj_t *p_base, x_obj_t *p_args)
 {
 	x_obj_t *p_result;
@@ -213,6 +260,13 @@ x_obj_t *x_base_type_alist_assoc(x_obj_t *p_base, x_obj_t *p_args)
 	return x_obj_isnil(p_base, p_result) ? NULL : x_restobj(p_result);
 }
 
+/**
+ * Prepend a binding pair to the base's environment alist.
+ *
+ * @param p_base  x_obj_t* -- Execution context
+ * @param p_args  x_obj_t* -- (symbol . value) pair to prepend
+ * @return x_obj_t* -- The new env alist head, or NULL if base is unset
+ */
 x_obj_t *x_base_env_alist_extend(x_obj_t *p_base, x_obj_t *p_args)
 {
 	x_spair_t args = x_obj_set(NULL, X_OBJ_FLAG_NONE, { p_args }, { NULL });
@@ -226,6 +280,13 @@ x_obj_t *x_base_env_alist_extend(x_obj_t *p_base, x_obj_t *p_args)
 	return x_firstobj(x_base_field_env_alist(p_base)) = x_alist_extend(p_base, (x_obj_t *)args);
 }
 
+/**
+ * Push a file descriptor onto the input file stack.
+ *
+ * @param p_base  x_obj_t* -- Execution context
+ * @param fd      x_int_t -- File descriptor to push
+ * @return x_obj_t* -- The new top-of-stack atom
+ */
 x_obj_t *x_base_filein_push(x_obj_t *p_base, x_int_t fd)
 {
 	x_base_field_filein(p_base) = x_mkspair(p_base, X_OBJ_FLAG_NONE,
@@ -233,6 +294,12 @@ x_obj_t *x_base_filein_push(x_obj_t *p_base, x_int_t fd)
 	return x_firstobj(x_base_field_filein(p_base));
 }
 
+/**
+ * Pop the top file descriptor from the input file stack.
+ *
+ * @param p_base  x_obj_t* -- Execution context
+ * @return x_obj_t* -- The popped top-of-stack atom
+ */
 x_obj_t *x_base_filein_pop(x_obj_t *p_base)
 {
 	x_obj_t *p_top = x_firstobj(x_base_field_filein(p_base));
@@ -241,6 +308,13 @@ x_obj_t *x_base_filein_pop(x_obj_t *p_base)
 	return p_top;
 }
 
+/**
+ * Push a buffer onto the buffer stack.
+ *
+ * @param p_base   x_obj_t* -- Execution context
+ * @param p_buffer x_obj_t* -- Buffer object to push
+ * @return x_obj_t* -- The pushed buffer
+ */
 x_obj_t *x_base_buffer_push(x_obj_t *p_base, x_obj_t *p_buffer)
 {
 	x_base_field_buffer(p_base) = x_mkspair(p_base, X_OBJ_FLAG_NONE,
@@ -248,6 +322,12 @@ x_obj_t *x_base_buffer_push(x_obj_t *p_base, x_obj_t *p_buffer)
 	return p_buffer;
 }
 
+/**
+ * Pop the top buffer from the buffer stack.
+ *
+ * @param p_base  x_obj_t* -- Execution context
+ * @return x_obj_t* -- The popped buffer object
+ */
 x_obj_t *x_base_buffer_pop(x_obj_t *p_base)
 {
 	x_obj_t *p_top = x_firstobj(x_base_field_buffer(p_base));
@@ -256,6 +336,16 @@ x_obj_t *x_base_buffer_pop(x_obj_t *p_base)
 	return p_top;
 }
 
+/**
+ * Read and evaluate all expressions from the current buffer.
+ *
+ * Loops calling x_token_read until EOF, evaluating each expression
+ * via x_eval. Returns the result of the last expression.
+ *
+ * @param p_base  x_obj_t* -- Execution context
+ * @param p_args  x_obj_t* -- Unused
+ * @return x_obj_t* -- Result of the last evaluated expression, or NULL
+ */
 x_obj_t *x_base_load(x_obj_t *p_base, x_obj_t *p_args)
 {
 	x_obj_t *p_buffer = x_firstobj(x_base_field_buffer(p_base));
@@ -279,6 +369,17 @@ x_obj_t *x_base_load(x_obj_t *p_base, x_obj_t *p_args)
 	return p_result;
 }
 
+/**
+ * Write a string atom to the base's output file descriptor.
+ *
+ * Extracts the string pointer and optional length from @p p_args,
+ * then delegates to x_base_write. If no length is provided, uses
+ * strlen.
+ *
+ * @param p_base  x_obj_t* -- Execution context
+ * @param p_args  x_obj_t* -- (string-atom . optional-length)
+ * @return x_obj_t* -- Result of x_base_write
+ */
 x_obj_t *x_base_write_str(x_obj_t *p_base, x_obj_t *p_args)
 {
 	x_obj_t *p_atom = x_firstobj(p_args);

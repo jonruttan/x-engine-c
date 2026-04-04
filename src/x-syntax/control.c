@@ -1,14 +1,11 @@
-/*
- * # Computational Expressions in C
- *
- * ## x-syntax/control.c -- Syntax - Control Flow (match, guard, %seq)
- *
- * @description Computational Expressions in C
- * @author [Jon Ruttan](jonruttan@gmail.com)
- * @copyright 2024 Jon Ruttan
- * @license MIT No Attribution (MIT-0)
- *
- *     ., .,
+/** @file control.c
+ *  @brief Syntax - Control Flow (match, guard, error, %seq)
+ *  @author Jon Ruttan (jonruttan@gmail.com)
+ *  @copyright 2024 Jon Ruttan
+ *  @license MIT No Attribution (MIT-0)
+ */
+
+/*     ., .,
  *     {O,O}
  *     (   )
  *      " "
@@ -19,7 +16,18 @@
 #include "x-type/str.h"
 #include <setjmp.h>
 
-/* match: (match (test body)...) -> first truthy test's body (tail-eval) */
+/**
+ * Conditional dispatch form. x-lang: (match (test body) ...)
+ *
+ * Evaluates each test in order (fexpr -- clause structure is not
+ * evaluated, but each test expression is explicitly evaluated).  Returns
+ * the body of the first clause whose test is truthy, via tail-call
+ * evaluation.  Returns nil if no clause matches.
+ *
+ * @param p_base  Execution context.
+ * @param p_args  Unevaluated argument list; expects (caller (test body) ...).
+ * @return NULL; result delivered via TCO expr slot.
+ */
 static x_obj_t *x_prim_match(x_obj_t *p_base, x_obj_t *p_args)
 {
 	x_obj_t *p_clause, *p_test;
@@ -42,7 +50,20 @@ static x_obj_t *x_prim_match(x_obj_t *p_base, x_obj_t *p_args)
 	return NULL;
 }
 
-/* guard: (guard (var handler-body...) body...) -> error recovery */
+/**
+ * Error recovery form. x-lang: (guard (var handler-body ...) body ...)
+ *
+ * Installs an error handler, evaluates body, and catches errors (fexpr --
+ * clause and body forms are not evaluated up front).  On error, restores
+ * the save stack and environment boundary to the guard point, binds the
+ * error value to var, and evaluates handler-body.
+ *
+ * @param p_base  Execution context.
+ * @param p_args  Unevaluated argument list; expects (caller (var handler-body ...) body ...).
+ * @return Result of body on success, or result of handler-body on error.
+ * @note Uses setjmp/longjmp for non-local error transfer.
+ * @see x_prim_error
+ */
 static x_obj_t *x_prim_guard(x_obj_t *p_base, x_obj_t *p_args)
 {
 	jmp_buf jmp;
@@ -87,7 +108,19 @@ static x_obj_t *x_prim_guard(x_obj_t *p_base, x_obj_t *p_args)
 	return p_result;
 }
 
-/* error: (error message) -> signal an error */
+/**
+ * Error signalling form. x-lang: (error message)
+ *
+ * Signals an error with the given message (fexpr -- message is explicitly
+ * evaluated via x_eargs).  If a guard handler is installed, transfers
+ * control to it via longjmp.  Otherwise falls through to a fatal error.
+ *
+ * @param p_base  Execution context.
+ * @param p_args  Unevaluated argument list; expects (caller message).
+ * @return Does not return normally when a handler is installed.
+ * @note Falls through to x_obj_error for fatal output when no handler exists.
+ * @see x_prim_guard
+ */
 static x_obj_t *x_prim_error(x_obj_t *p_base, x_obj_t *p_args)
 {
 	x_obj_t *p_msg, *p_handler = x_firstobj(x_base_field_error_handler(p_base));
@@ -113,7 +146,19 @@ static x_obj_t *x_prim_error(x_obj_t *p_base, x_obj_t *p_args)
 	return NULL;
 }
 
-/* %seq: (%seq a b) -> eval a (blocking), tco-eval b */
+/**
+ * Sequence form. x-lang: (%seq a b)
+ *
+ * Evaluates the first expression for its side effects, then tail-call
+ * evaluates the second (fexpr -- both arguments are explicitly evaluated
+ * internally).  Roots the argument list during evaluation of the first
+ * expression to protect it from GC.
+ *
+ * @param p_base  Execution context.
+ * @param p_args  Unevaluated argument list; expects (caller a b).
+ * @return NULL; result of b delivered via TCO expr slot.
+ * @note Internal primitive; used by the compiler to sequence body forms.
+ */
 static x_obj_t *x_prim_seq(x_obj_t *p_base, x_obj_t *p_args)
 {
 	x_obj_t *p_a, *p_b;
@@ -133,6 +178,15 @@ static x_obj_t *x_prim_seq(x_obj_t *p_base, x_obj_t *p_args)
 	return NULL;
 }
 
+/**
+ * Register control flow syntax primitives.
+ *
+ * Binds: match, guard, error, %seq.
+ *
+ * @param p_base  Execution context.
+ * @param p_args  Unused.
+ * @return p_base.
+ */
 x_obj_t *x_syntax_control_register(x_obj_t *p_base, x_obj_t *p_args)
 {
 	static const x_callable_entry_t entries[] = {

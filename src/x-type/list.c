@@ -1,21 +1,16 @@
+/** @file x-type/list.c
+ *  @brief List type -- construction, indexing/slicing, eval dispatch, and iteration.
+ *  @author Jon Ruttan (jonruttan@gmail.com)
+ *  @copyright 2024 Jon Ruttan
+ *  @license MIT No Attribution (MIT-0)
+ */
 /*
- * # Computational Expressions in C
- *
- * ## x-type/list.c -- Implementation - Type - List
- *
- * @description Computational Expressions in C
- * @author [Jon Ruttan](jonruttan@gmail.com)
- * @copyright 2024 Jon Ruttan
- * @license MIT No Attribution (MIT-0)
- *
  *     ., .,
  *     {O,O}
  *     (   )
  *      " "
  */
-/*
- * # Includes
- */
+
 #include "x-type/list.h"
 #include "x-type/iter.h"
 #include "x-type/prim.h"
@@ -31,6 +26,15 @@ x_satom_t x_type_list_name = x_obj_set(x_type_atom_obj, X_OBJ_FLAG_NONE, { .s = 
 	x_type_list_eval_prim = x_obj_set(x_type_atom_obj, X_OBJ_FLAG_NONE, { (x_obj_t *)&x_type_list_eval }),
 	x_type_list_iter_prim = x_obj_set(x_type_atom_obj, X_OBJ_FLAG_NONE, { .fn = x_type_list_iter });
 
+/**
+ * Allocate a LIST pair with first = @p p1 and rest = @p p2.
+ *
+ * @param p_base  Execution context.
+ * @param flags   Object flags.
+ * @param p1      First element (head).
+ * @param p2      Rest element (tail).
+ * @return Newly allocated LIST object.
+ */
 x_obj_t *x_make_list(x_obj_t *p_base, x_obj_flag_t flags, void *p1, void *p2)
 {
 	x_satom_t o_flags = x_obj_set(NULL, X_OBJ_FLAG_NONE, { .i = flags });
@@ -43,6 +47,16 @@ x_obj_t *x_make_list(x_obj_t *p_base, x_obj_flag_t flags, void *p1, void *p2)
 	return x_type_list_make(p_base, (x_obj_t *)args);
 }
 
+/**
+ * Build the LIST type struct descriptor.
+ *
+ * Populates name, units (pair), make, length, call, eval, analyse,
+ * delimit, read, write, and display hooks.
+ *
+ * @param p_base  Execution context.
+ * @param p_args  Unused.
+ * @return Type struct pair-tree for LIST.
+ */
 x_obj_t *x_type_list_struct(x_obj_t *p_base, x_obj_t *p_args)
 {
 	struct x_type_t type = {
@@ -62,6 +76,13 @@ x_obj_t *x_type_list_struct(x_obj_t *p_base, x_obj_t *p_args)
 	return x_type_struct_make(p_base, type);
 }
 
+/**
+ * Register (or retrieve) the LIST type in the type alist.
+ *
+ * @param p_base  Execution context.
+ * @param p_args  Unused.
+ * @return The registered LIST type object.
+ */
 x_obj_t *x_type_list_register(x_obj_t *p_base, x_obj_t *p_args)
 {
 	x_spair_t args[2] = {
@@ -72,6 +93,16 @@ x_obj_t *x_type_list_register(x_obj_t *p_base, x_obj_t *p_args)
 	return x_type_struct_get(p_base, (x_obj_t *)args);
 }
 
+/**
+ * Type-system make handler for LIST objects.
+ *
+ * Extracts first/rest from the pair in @c p_args[0] and optional flags
+ * from @c p_args[1].
+ *
+ * @param p_base  Execution context.
+ * @param p_args  Argument list: (pair-atom [flags-atom]).
+ * @return Newly allocated LIST object.
+ */
 x_obj_t *x_type_list_make(x_obj_t *p_base, x_obj_t *p_args)
 {
 	x_obj_t *p_type = x_type_list_register(p_base, p_base),
@@ -82,6 +113,13 @@ x_obj_t *x_type_list_make(x_obj_t *p_base, x_obj_t *p_args)
 	return x_obj_make(p_base, p_type, flags, X_OBJ_LENGTH_PAIR, x_0(p_list), x_1(p_list));
 }
 
+/**
+ * Compute the length of a list by walking to its end.
+ *
+ * @param p_base  Execution context.
+ * @param p_args  Argument list whose first element is the list.
+ * @return An satom containing the integer length.
+ */
 x_obj_t *x_type_list_length(x_obj_t *p_base, x_obj_t *p_args)
 {
 	x_obj_t *p_obj = x_firstobj(p_args);
@@ -95,6 +133,18 @@ x_obj_t *x_type_list_length(x_obj_t *p_base, x_obj_t *p_args)
 	return x_mksatom(p_base, X_OBJ_FLAG_NONE, len);
 }
 
+/**
+ * Call handler -- index or slice a list.
+ *
+ * With one argument: @c (list index) returns the element at @p index
+ * (negative indices count from the end).  With two arguments:
+ * @c (list start len) returns a sublist of @p len elements starting
+ * at position @p start.
+ *
+ * @param p_base  Execution context.
+ * @param p_args  Argument list: (list index) or (list start len).
+ * @return The indexed element, the sliced sublist, or NULL.
+ */
 x_obj_t *x_type_list_call(x_obj_t *p_base, x_obj_t *p_args)
 {
 	x_obj_t *proc = x_firstobj(p_args), *vals = x_restobj(p_args);
@@ -164,6 +214,21 @@ x_obj_t *x_type_list_call(x_obj_t *p_base, x_obj_t *p_args)
 	return x_obj_isnil(p_base, proc) ? NULL : x_firstobj(proc);
 }
 
+/**
+ * Eval handler -- resolve operator and dispatch through callable protocol.
+ *
+ * Evaluates the first element (car) of the list expression to obtain a
+ * procedure or operative, then dispatches the rest of the list as
+ * arguments through x_callable_call().  The expression is rooted on the
+ * eval list to protect it from GC during evaluation.
+ *
+ * @param p_base  Execution context.
+ * @param p_args  Eval argument frame containing the list expression.
+ * @return Result of the operator application, or the original expression
+ *         if the operator resolves to nil.
+ *
+ * @see x_callable_call
+ */
 x_obj_t *x_type_list_eval(x_obj_t *p_base, x_obj_t *p_args)
 {
 	x_obj_t *p_exp = x_firstobj(x_eval_arg_exp(p_args)), *p_proc;
@@ -204,6 +269,16 @@ x_obj_t *x_type_list_eval(x_obj_t *p_base, x_obj_t *p_args)
 	}
 }
 
+/**
+ * Iterator step -- advance a list iterator by one element.
+ *
+ * Returns the current element and advances the iterator's internal
+ * cursor to the next cell.  Returns NULL when exhausted.
+ *
+ * @param p_base  Execution context.
+ * @param p_args  Argument list whose first element is the iterator.
+ * @return Current element, or NULL at end of list.
+ */
 x_obj_t *x_type_list_iter(x_obj_t *p_base, x_obj_t *p_args)
 {
 	x_obj_t *p_iter = x_firstobj(p_args), *p_obj;

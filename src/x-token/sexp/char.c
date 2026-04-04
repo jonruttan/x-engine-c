@@ -1,21 +1,17 @@
-/*
- * # Computational Expressions in C
- *
- * ## x-sexp/char.c -- Implementation - SExp - Character
- *
- * @description Computational Expressions in C
- * @author [Jon Ruttan](jonruttan@gmail.com)
+/**
+ * @file char.c
+ * @brief S-expression analyser, reader, and writer for character literals.
+ * @author Jon Ruttan (jonruttan@gmail.com)
  * @copyright 2023 Jon Ruttan
  * @license MIT No Attribution (MIT-0)
- *
+ */
+/*
  *     ., .,
  *     {O,O}
  *     (   )
  *      " "
  */
-/*
- * # Includes
- */
+
 #include "x-base-typesystem.h"
 #include "x-token.h"
 #include "x-type/buffer.h"
@@ -45,11 +41,18 @@ static int is_lower(x_char_t c)
 	return c >= 'a' && c <= 'z';
 }
 
-/* Helper: read next-state from callable state slot, with default fallback */
+/** Read next-state from callable state slot, with default fallback. */
 #define x_next_state(self, dflt) \
 	(x_obj_isnil(p_base, x_callable_state(self)) \
 		? (x_obj_t *)(dflt) : x_callable_state(self))
 
+/**
+ * Analyse state 1: match first character of the @c #\\ prefix.
+ *
+ * @param p_base  Execution context.
+ * @param p_args  Pair of (self, read-args).
+ * @return Next analyser state, or NULL on mismatch.
+ */
 x_obj_t *x_sexp_char_analyse1(x_obj_t *p_base, x_obj_t *p_args)
 {
 	x_obj_t *p_self = x_0(p_args);
@@ -61,6 +64,13 @@ x_obj_t *x_sexp_char_analyse1(x_obj_t *p_base, x_obj_t *p_args)
 	return x_next_state(p_self, &x_sexp_char_analyse2_prim);
 }
 
+/**
+ * Analyse state 2: match second character of the @c #\\ prefix.
+ *
+ * @param p_base  Execution context.
+ * @param p_args  Pair of (self, read-args).
+ * @return Next analyser state, or NULL on mismatch.
+ */
 x_obj_t *x_sexp_char_analyse2(x_obj_t *p_base, x_obj_t *p_args)
 {
 	x_obj_t *p_self = x_0(p_args),
@@ -73,6 +83,16 @@ x_obj_t *x_sexp_char_analyse2(x_obj_t *p_base, x_obj_t *p_args)
 	return x_next_state(p_self, &x_sexp_char_analyse3_prim);
 }
 
+/**
+ * Analyse state 3: classify character after prefix.
+ *
+ * A lowercase letter transitions to the named-character state (analyse4).
+ * Any other character scores immediately as a single-char literal.
+ *
+ * @param p_base  Execution context.
+ * @param p_args  Pair of (self, read-args).
+ * @return Score object on match, next state for named chars, or NULL.
+ */
 x_obj_t *x_sexp_char_analyse3(x_obj_t *p_base, x_obj_t *p_args)
 {
 	x_obj_t *p_self = x_0(p_args),
@@ -89,7 +109,16 @@ x_obj_t *x_sexp_char_analyse3(x_obj_t *p_base, x_obj_t *p_args)
 	return p_score;
 }
 
-/* analyse4: named-character state — keep reading lowercase letters */
+/**
+ * Analyse state 4 (static): named-character continuation.
+ *
+ * Keeps consuming lowercase letters.  On a non-letter delimiter the
+ * read pointer is backed up and the accumulated length is scored.
+ *
+ * @param p_base  Execution context.
+ * @param p_args  Pair of (self, read-args).
+ * @return Self to keep reading, or score on delimiter.
+ */
 static x_obj_t *x_sexp_char_analyse4(x_obj_t *p_base, x_obj_t *p_args)
 {
 	x_obj_t *p_self = x_0(p_args),
@@ -107,6 +136,18 @@ static x_obj_t *x_sexp_char_analyse4(x_obj_t *p_base, x_obj_t *p_args)
 	return p_score;
 }
 
+/**
+ * Read a character literal from the token buffer.
+ *
+ * Handles single-character literals (@c #\\c, length 3) and named
+ * characters (e.g. @c #\\newline) by looking up the name in the
+ * character type's data alist.
+ *
+ * @param p_base  Execution context.
+ * @param p_args  Read-args containing the token buffer.
+ * @return A newly created character object, or NULL on error.
+ * @note Signals an error for unknown character names.
+ */
 x_obj_t *x_sexp_char_read(x_obj_t *p_base, x_obj_t *p_args)
 {
 	x_obj_t *p_buffer = x_token_read_arg_buffer(p_args);
@@ -143,6 +184,17 @@ x_obj_t *x_sexp_char_read(x_obj_t *p_base, x_obj_t *p_args)
 	return NULL;
 }
 
+/**
+ * Write the external representation of a character.
+ *
+ * Outputs the @c #\\ prefix followed by either a named character
+ * (reverse-looked-up from the type data alist) or the raw byte.
+ * Uses stack-allocated temporaries to avoid heap allocation.
+ *
+ * @param p_base  Execution context.
+ * @param p_args  Pair whose first element is the character to write.
+ * @return The character object on success, or NULL on write failure.
+ */
 x_obj_t *x_sexp_char_write(x_obj_t *p_base, x_obj_t *p_args)
 {
 	x_obj_t *p_ret, *p_type, *p_data, *p_entry;
@@ -197,6 +249,16 @@ x_obj_t *x_sexp_char_write(x_obj_t *p_base, x_obj_t *p_args)
 	return NULL;
 }
 
+/**
+ * Display a character as a raw byte (no @c #\\ prefix).
+ *
+ * Writes exactly one byte using an explicit size parameter so that
+ * NUL characters are handled correctly.
+ *
+ * @param p_base  Execution context.
+ * @param p_args  Pair whose first element is the character to display.
+ * @return The character object.
+ */
 x_obj_t *x_sexp_char_display(x_obj_t *p_base, x_obj_t *p_args)
 {
 	x_satom_t str = x_obj_set(x_type_atom_obj, X_OBJ_FLAG_NONE,

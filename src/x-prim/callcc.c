@@ -1,20 +1,14 @@
+/** @file callcc.c
+ *  @brief First-class continuation primitives (call/cc via stack copying).
+ *  @author Jon Ruttan (jonruttan@gmail.com)
+ *  @copyright 2024 Jon Ruttan
+ *  @license MIT No Attribution (MIT-0)
+ */
 /*
- * # Computational Expressions in C
- *
- * ## x-prim/callcc.c -- Implementation - Primitives - First-class Continuations
- *
- * @description Computational Expressions in C
- * @author [Jon Ruttan](jonruttan@gmail.com)
- * @copyright 2024 Jon Ruttan
- * @license MIT No Attribution (MIT-0)
- *
  *     ., .,
  *     {O,O}
  *     (   )
  *      " "
- */
-/*
- * # Includes
  */
 #include "x-prim.h"
 #include "x-base-typesystem.h"
@@ -27,18 +21,18 @@
 #include "x-type/procedure.h"
 #include "x-type/symbol.h"
 
-/*
- * # Continuation Data
+/** @name Continuation Data
+ *  @{
  *
- * Stack-copying continuations: capture the C call stack segment from
- * a known base (set in main) to the current frame. Invocation restores
- * the stack and longjmps back to the capture point.
+ *  Stack-copying continuations: capture the C call stack segment from
+ *  a known base (set in main) to the current frame.  Invocation restores
+ *  the stack and longjmps back to the capture point.
  *
- * Interpreter state (env, save_stack, error_handler) is saved as a
- * GC-visible x-lang list in the continuation procedure's closure env.
+ *  Interpreter state (env, save_stack, error_handler) is saved as a
+ *  GC-visible x-lang list in the continuation procedure's closure env.
  */
 
-/* Stack base pointer, set once at startup via x_callcc_init. */
+/** Stack base pointer, set once at startup via x_callcc_init(). */
 static void *g_stack_base = NULL;
 
 typedef struct {
@@ -55,8 +49,16 @@ typedef struct {
 	x_obj_t    *p_eval_list_stack;
 } x_callcc_cont_t;
 
-/*
- * # Stack Base
+/** @} */
+
+/** Establish the stack base address for continuation capture.
+ *
+ *  Must be called once at interpreter startup, from a frame close to the
+ *  bottom of the C call stack (typically @c main).  The address of a local
+ *  variable is recorded as the upper bound of all future stack captures.
+ *
+ *  @note Uses a volatile local to prevent the compiler from eliminating
+ *        the anchor variable.
  */
 void x_callcc_init(void)
 {
@@ -65,11 +67,14 @@ void x_callcc_init(void)
 	g_stack_base = (void *)&anchor;
 }
 
-/*
- * # Stack Restore
+/** Restore a captured continuation by replacing the current stack.
  *
- * Recursively grow the stack past the captured segment, then
- * memcpy the saved stack back and longjmp to the capture point.
+ *  Recursively grows the C stack (via a 2 KiB pad per frame) until the
+ *  stack pointer is below the lower bound of the captured segment, then
+ *  copies the saved bytes back and longjmps to the capture point.
+ *
+ *  @param cont Continuation whose stack segment and jmp_buf to restore.
+ *  @note This function never returns.
  */
 static void x_callcc_restore(x_callcc_cont_t *cont)
 {
@@ -90,12 +95,18 @@ static void x_callcc_restore(x_callcc_cont_t *cont)
 	longjmp(cont->jmp, 1);
 }
 
-/*
- * # Primitives
+/** Invoke a captured continuation, restoring its stack and interpreter state.
+ *  x-lang: (%cc-invoke ptr state args-list)
+ *
+ *  This is the internal entry point called by the closure @c k that
+ *  @c call/cc hands to its procedure.  @p args-list is the variadic
+ *  argument collector: @c () for zero arguments, @c (val) for one.
+ *
+ *  @param p_base Interpreter base context.
+ *  @param p_args Unevaluated argument list: (%cc-invoke ptr state args-list).
+ *  @return Does not return; transfers control via longjmp.
+ *  @see x_prim_callcc, x_callcc_restore
  */
-
-/* %cc-invoke: (%cc-invoke ptr state args-list) -> restore continuation
- * args-list is from the variadic k: () for 0 args, (val) for 1 arg. */
 static x_obj_t *x_prim_cc_invoke(x_obj_t *p_base, x_obj_t *p_args)
 {
 	x_obj_t *p_ptr, *p_state, *p_args_list, *p_val;
@@ -122,7 +133,23 @@ static x_obj_t *x_prim_cc_invoke(x_obj_t *p_base, x_obj_t *p_args)
 	return NULL; /* unreachable */
 }
 
-/* call/cc: (call/cc proc) -> capture continuation, call (proc k) */
+/** Capture the current continuation and pass it to a procedure.
+ *  x-lang: (call/cc proc)
+ *
+ *  Allocates a continuation struct with a copy of the C stack segment
+ *  from the current frame up to @c g_stack_base, saves interpreter state
+ *  in a GC-visible list, and constructs a variadic closure @c k that
+ *  invokes @c %cc-invoke when called.  Then applies @p proc to @c k.
+ *
+ *  When @c k is later invoked, the saved stack is restored via
+ *  x_callcc_restore() and control returns here through longjmp, yielding
+ *  the value passed to @c k.
+ *
+ *  @param p_base Interpreter base context.
+ *  @param p_args Unevaluated argument list: (call/cc proc).
+ *  @return The result of @p proc, or the value passed to the continuation.
+ *  @see x_prim_cc_invoke, x_callcc_restore
+ */
 static x_obj_t *x_prim_callcc(x_obj_t *p_base, x_obj_t *p_args)
 {
 	x_obj_t *p_proc, *p_ptr, *p_state, *p_k, *p_result;
@@ -230,8 +257,13 @@ static x_obj_t *x_prim_callcc(x_obj_t *p_base, x_obj_t *p_args)
 	return p_result;
 }
 
-/*
- * # Registration
+/** Register continuation primitives.
+ *
+ *  Binds: @c %cc-invoke, @c call/cc.
+ *
+ *  @param p_base Interpreter base context.
+ *  @param p_args Unused.
+ *  @return @p p_base.
  */
 x_obj_t *x_prim_callcc_register(x_obj_t *p_base, x_obj_t *p_args)
 {

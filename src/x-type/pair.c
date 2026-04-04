@@ -1,13 +1,11 @@
-/*
- * # Computational Expressions in C
- *
- * ## x-type/pair.c -- Implementation - Type - Pair
- *
- * @description Computational Expressions in C
- * @author [Jon Ruttan](jonruttan@gmail.com)
+/**
+ * @file pair.c
+ * @brief Pair (cons cell) type implementation.
+ * @author Jon Ruttan (jonruttan@gmail.com)
  * @copyright 2021 Jon Ruttan
  * @license MIT No Attribution (MIT-0)
- *
+ */
+/*
  *     ., .,
  *     {O,O}
  *     (   )
@@ -24,6 +22,18 @@ x_satom_t x_type_pair_name = x_obj_set(x_type_atom_obj, X_OBJ_FLAG_NONE, { .s = 
 	x_type_pair_make_prim = x_obj_set(x_type_atom_obj, X_OBJ_FLAG_NONE, { (x_obj_t *)&x_type_pair_make }),
 	x_type_pair_struct_prim = x_obj_set(x_type_pair_obj, X_OBJ_FLAG_NONE, { (x_obj_t *)&x_type_pair_struct });
 
+/**
+ * Allocate a heap pair from first/rest pointers.
+ *
+ * Wraps p1 and p2 in stack-allocated objects, builds a stack arg list,
+ * and delegates to x_type_pair_make.
+ *
+ * @param p_base  x_obj_t* -- Execution context
+ * @param flags   x_obj_flag_t -- Object flags
+ * @param p1      void* -- First element (car)
+ * @param p2      void* -- Rest element (cdr)
+ * @return x_obj_t* -- New heap-allocated pair
+ */
 x_obj_t *x_make_pair(x_obj_t *p_base, x_obj_flag_t flags, void *p1, void *p2)
 {
 	x_satom_t o_flags = x_obj_set(NULL, X_OBJ_FLAG_NONE, { .i = flags });
@@ -36,6 +46,13 @@ x_obj_t *x_make_pair(x_obj_t *p_base, x_obj_flag_t flags, void *p1, void *p2)
 	return x_type_pair_make(p_base, (x_obj_t *)args);
 }
 
+/**
+ * Compute the length of a pair list by walking rest pointers.
+ *
+ * @param p_base  x_obj_t* -- Execution context
+ * @param p_args  x_obj_t* -- (pair-object . ...)
+ * @return x_obj_t* -- Integer object with list length
+ */
 x_obj_t *x_type_pair_length(x_obj_t *p_base, x_obj_t *p_args)
 {
 	x_obj_t *p_obj = x_firstobj(p_args);
@@ -49,6 +66,15 @@ x_obj_t *x_type_pair_length(x_obj_t *p_base, x_obj_t *p_args)
 	return x_mksatom(p_base, X_OBJ_FLAG_NONE, len);
 }
 
+/**
+ * Build the pair type descriptor struct.
+ *
+ * Populates name, units, make, length, and write callbacks.
+ *
+ * @param p_base  x_obj_t* -- Execution context
+ * @param p_args  x_obj_t* -- Unused
+ * @return x_obj_t* -- Type descriptor pair list
+ */
 x_obj_t *x_type_pair_struct(x_obj_t *p_base, x_obj_t *p_args)
 {
 	struct x_type_t type = {
@@ -62,6 +88,13 @@ x_obj_t *x_type_pair_struct(x_obj_t *p_base, x_obj_t *p_args)
 	return x_type_struct_make(p_base, type);
 }
 
+/**
+ * Register or retrieve the pair type on the base context.
+ *
+ * @param p_base  x_obj_t* -- Execution context
+ * @param p_args  x_obj_t* -- Unused
+ * @return x_obj_t* -- Registered type object
+ */
 x_obj_t *x_type_pair_register(x_obj_t *p_base, x_obj_t *p_args)
 {
 	x_spair_t args[2] = {
@@ -72,6 +105,16 @@ x_obj_t *x_type_pair_register(x_obj_t *p_base, x_obj_t *p_args)
 	return x_type_struct_get(p_base, (x_obj_t *)args);
 }
 
+/**
+ * Type-system make callback for pair objects.
+ *
+ * Extracts first/rest from the pair arg and optional flags,
+ * then allocates a heap pair via x_obj_make.
+ *
+ * @param p_base  x_obj_t* -- Execution context
+ * @param p_args  x_obj_t* -- (pair-value . (flags | nil))
+ * @return x_obj_t* -- New heap-allocated pair object
+ */
 x_obj_t *x_type_pair_make(x_obj_t *p_base, x_obj_t *p_args)
 {
 	x_obj_t *p_type = x_type_pair_register(p_base, p_base),

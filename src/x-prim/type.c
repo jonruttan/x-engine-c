@@ -1,13 +1,18 @@
-/*
- * # Computational Expressions in C
+/**
+ * @file type.c
+ * @brief Type system and sandboxing primitives for x-lang.
  *
- * ## x-prim/type.c -- Implementation - Primitives - Types & Sandboxing
+ * Provides runtime type creation (make-type), type introspection (type-of,
+ * type?, type-name), object allocation (make-obj, make-instance), slot
+ * access (obj-ref, obj-set!), sandboxed interpreter creation (make-base),
+ * cross-base evaluation (base-eval, base-bind), tokenization helpers
+ * (make-token-base, token-read-string, buffer-token), and iteration (iter).
  *
- * @description Computational Expressions in C
- * @author [Jon Ruttan](jonruttan@gmail.com)
+ * @author Jon Ruttan (jonruttan@gmail.com)
  * @copyright 2024 Jon Ruttan
  * @license MIT No Attribution (MIT-0)
- *
+ */
+/*
  *     ., .,
  *     {O,O}
  *     (   )
@@ -37,8 +42,19 @@
 #include "x-type/symbol.h"
 #include "x-type/whitespace.h"
 
-/* Helper: build type struct from handlers alist.
- * p_base is used for symbol lookup and allocation. */
+/**
+ * @brief Build a type struct from a handlers alist.
+ *
+ * Iterates a table of known handler field names (call, eval, write, display,
+ * length, analyse, delimit, read, error, from, to, units, free, mark,
+ * first-chars, iter), looks each up in @p p_handlers via alist association,
+ * and populates the corresponding x_type_t slot.
+ *
+ * @param p_base  Execution context used for symbol lookup and allocation.
+ * @param p_name_atom  Atom for the type name.
+ * @param p_handlers   Alist mapping handler name symbols to closures.
+ * @return Heap-allocated type struct object.
+ */
 static x_obj_t *x_prim_type_build_struct(x_obj_t *p_base,
 	x_obj_t *p_name_atom, x_obj_t *p_handlers)
 {
@@ -86,7 +102,19 @@ static x_obj_t *x_prim_type_build_struct(x_obj_t *p_base,
 	return x_type_struct_make(p_base, type);
 }
 
-/* make-type: (make-type name handlers-alist) -> create and register runtime type */
+/**
+ * @brief Create and register a runtime type.
+ *
+ * x-lang form: @code (make-type name handlers-alist) @endcode
+ *
+ * Duplicates the name string into an owned atom, builds the type struct
+ * from the handlers alist, and prepends it to the base's type alist.
+ *
+ * @param p_base  Execution context.
+ * @param p_args  Unevaluated: (self name-string handlers-alist).
+ * @return The type name atom (handle for type? / make-instance lookups).
+ * @see x_prim_type_build_struct
+ */
 static x_obj_t *x_prim_make_type(x_obj_t *p_base, x_obj_t *p_args)
 {
 	x_obj_t *p_name_str, *p_handlers;
@@ -105,7 +133,21 @@ static x_obj_t *x_prim_make_type(x_obj_t *p_base, x_obj_t *p_args)
 	return p_name_atom;
 }
 
-/* base-make-type: (base-make-type base name handlers) -> register type on target base */
+/**
+ * @brief Create a type on a target base (cross-base type registration).
+ *
+ * x-lang form: @code (base-make-type base name handlers) @endcode
+ *
+ * Like make-type, but registers the type on @p p_target rather than the
+ * calling base. Marks the target base tree as SHARED so the calling
+ * base's GC will not sweep handler closures referenced across bases.
+ *
+ * @param p_base  Calling execution context (used for handler closure allocation).
+ * @param p_args  Unevaluated: (self target-base name-string handlers-alist).
+ * @return The type name atom.
+ * @note Sets X_OBJ_FLAG_SHARED on the target base to prevent cross-base GC.
+ * @see x_prim_make_type
+ */
 static x_obj_t *x_prim_base_make_type(x_obj_t *p_base, x_obj_t *p_args)
 {
 	x_obj_t *p_target, *p_name_str, *p_handlers;
@@ -130,7 +172,18 @@ static x_obj_t *x_prim_base_make_type(x_obj_t *p_base, x_obj_t *p_args)
 	return p_name_atom;
 }
 
-/* make-instance: (make-instance type-handle data) -> create typed instance */
+/**
+ * @brief Create an instance of a runtime-defined type.
+ *
+ * x-lang form: @code (make-instance type-handle data) @endcode
+ *
+ * Looks up the type by its handle atom in the base's type alist and
+ * allocates a pair-sized object of that type with @p p_data as its first slot.
+ *
+ * @param p_base  Execution context.
+ * @param p_args  Unevaluated: (self type-handle data).
+ * @return New typed instance, or NULL if the type handle is not found.
+ */
 static x_obj_t *x_prim_make_instance(x_obj_t *p_base, x_obj_t *p_args)
 {
 	x_obj_t *p_handle, *p_data;
@@ -150,7 +203,17 @@ static x_obj_t *x_prim_make_instance(x_obj_t *p_base, x_obj_t *p_args)
 	return x_obj_make(p_base, p_type, 0, X_OBJ_LENGTH_PAIR, p_data, NULL);
 }
 
-/* type?: (type? obj type-handle) -> t if obj's type matches handle */
+/**
+ * @brief Test whether an object's type matches a given handle.
+ *
+ * x-lang form: @code (type? obj type-handle) @endcode
+ *
+ * Compares the name atom pointer of the object's type against @p p_handle.
+ *
+ * @param p_base  Execution context.
+ * @param p_args  Unevaluated: (self obj type-handle).
+ * @return The @c t symbol if the type matches, @c f otherwise.
+ */
 static x_obj_t *x_prim_typep(x_obj_t *p_base, x_obj_t *p_args)
 {
 	x_obj_t *p_obj, *p_handle;
@@ -165,7 +228,18 @@ static x_obj_t *x_prim_typep(x_obj_t *p_base, x_obj_t *p_args)
 		? x_firstobj(x_base_field_true(p_base)) : x_firstobj(x_base_field_false(p_base));
 }
 
-/* type-of: (type-of obj) -> type handle (name atom) for obj's type */
+/**
+ * @brief Return the type handle (name atom) for an object.
+ *
+ * x-lang form: @code (type-of obj) @endcode
+ *
+ * Delegates to the C-level x_type_prim_type_name to retrieve the type's
+ * name atom, which serves as the canonical handle for type operations.
+ *
+ * @param p_base  Execution context.
+ * @param p_args  Unevaluated: (self obj).
+ * @return Type name atom, or NULL for nil/untyped objects.
+ */
 static x_obj_t *x_prim_type_of(x_obj_t *p_base, x_obj_t *p_args)
 {
 	x_obj_t *p_obj;
@@ -180,7 +254,18 @@ static x_obj_t *x_prim_type_of(x_obj_t *p_base, x_obj_t *p_args)
 	return x_type_prim_type_name(p_base, (x_obj_t *)name_args);
 }
 
-/* type-name: (type-name obj) -> name string of obj's type */
+/**
+ * @brief Return the type name as a string for an object.
+ *
+ * x-lang form: @code (type-name obj) @endcode
+ *
+ * Extracts the name atom from the object's type and converts it to a
+ * heap-allocated string.
+ *
+ * @param p_base  Execution context.
+ * @param p_args  Unevaluated: (self obj).
+ * @return String containing the type name, or NULL for nil/untyped objects.
+ */
 static x_obj_t *x_prim_type_name(x_obj_t *p_base, x_obj_t *p_args)
 {
 	x_obj_t *p_obj, *p_name;
@@ -200,7 +285,20 @@ static x_obj_t *x_prim_type_name(x_obj_t *p_base, x_obj_t *p_args)
 	return x_mkstr(p_base, x_atomstr(p_name));
 }
 
-/* make-token-base: (make-token-base) -> bare base for tokenization */
+/**
+ * @brief Create a bare base suitable for tokenization only.
+ *
+ * x-lang form: @code (make-token-base) @endcode
+ *
+ * Allocates a minimal base with no types or primitives registered,
+ * inheriting only the boolean singletons (t/f) from the calling base.
+ * Used for custom tokenizer type registration on an isolated base.
+ *
+ * @param p_base  Execution context (boolean singletons are inherited).
+ * @param p_args  Unused.
+ * @return New bare base object.
+ * @see x_prim_make_base
+ */
 static x_obj_t *x_prim_make_token_base(x_obj_t *p_base, x_obj_t *p_args)
 {
 	x_obj_t *p_new = x_base_ts_make(NULL, NULL);
@@ -213,7 +311,21 @@ static x_obj_t *x_prim_make_token_base(x_obj_t *p_base, x_obj_t *p_args)
 	return p_new;
 }
 
-/* make-base: (make-base) -> create fresh sandboxed interpreter */
+/**
+ * @brief Create a fully initialized sandboxed interpreter base.
+ *
+ * x-lang form: @code (make-base) @endcode
+ *
+ * Allocates a new base, registers all built-in types (prim, operative,
+ * procedure, symbol, list, int, str, char, whitespace, comment), sets up
+ * a read buffer, and registers all C primitives. The result is a complete
+ * interpreter context that can be evaluated into via base-eval.
+ *
+ * @param p_base  Execution context (unused beyond allocation).
+ * @param p_args  Unused.
+ * @return Fully bootstrapped base object.
+ * @see x_prim_base_eval
+ */
 static x_obj_t *x_prim_make_base(x_obj_t *p_base, x_obj_t *p_args)
 {
 	x_obj_t *p_new_base, *p_buffer;
@@ -246,7 +358,22 @@ static x_obj_t *x_prim_make_base(x_obj_t *p_base, x_obj_t *p_args)
 	return p_new_base;
 }
 
-/* base-eval: (base-eval base expr) -> eval expr in target base */
+/**
+ * @brief Evaluate an expression in a target base's environment.
+ *
+ * x-lang form: @code (base-eval base expr) @endcode
+ *
+ * Pushes a setjmp-based error handler onto the target base's error handler
+ * stack, evaluates @p p_expr in the target, then pops the handler. If an
+ * error occurs in the target, it is caught, the handler is popped, the
+ * environment is restored, and the error is re-signaled to the calling
+ * base's error handler (or printed if none exists).
+ *
+ * @param p_base  Calling execution context.
+ * @param p_args  Unevaluated: (self target-base expr).
+ * @return Result of evaluating @p expr in the target base, or NULL on error.
+ * @note Uses setjmp/longjmp for error propagation across bases.
+ */
 static x_obj_t *x_prim_base_eval(x_obj_t *p_base, x_obj_t *p_args)
 {
 	jmp_buf jmp;
@@ -298,7 +425,18 @@ static x_obj_t *x_prim_base_eval(x_obj_t *p_base, x_obj_t *p_args)
 	return p_result;
 }
 
-/* base-bind: (base-bind base name value) -> bind in target base */
+/**
+ * @brief Bind a name-value pair in a target base's environment.
+ *
+ * x-lang form: @code (base-bind base name value) @endcode
+ *
+ * Creates a (name . value) pair and prepends it to the target base's
+ * environment alist, making it visible to subsequent evaluations.
+ *
+ * @param p_base  Calling execution context.
+ * @param p_args  Unevaluated: (self target-base name value).
+ * @return The bound value.
+ */
 static x_obj_t *x_prim_base_bind(x_obj_t *p_base, x_obj_t *p_args)
 {
 	x_obj_t *p_target, *p_name, *p_val;
@@ -312,7 +450,18 @@ static x_obj_t *x_prim_base_bind(x_obj_t *p_base, x_obj_t *p_args)
 	return p_val;
 }
 
-/* buffer-token: (buffer-token buffer) -> extract consumed portion as string */
+/**
+ * @brief Extract the consumed portion of a buffer as a string.
+ *
+ * x-lang form: @code (buffer-token buffer) @endcode
+ *
+ * Reads the buffer's current length (bytes consumed by the tokenizer)
+ * and duplicates that prefix into a new owned string.
+ *
+ * @param p_base  Execution context.
+ * @param p_args  Unevaluated: (self buffer).
+ * @return New string containing the consumed buffer content.
+ */
 static x_obj_t *x_prim_buffer_token(x_obj_t *p_base, x_obj_t *p_args)
 {
 	x_obj_t *p_buffer;
@@ -326,7 +475,22 @@ static x_obj_t *x_prim_buffer_token(x_obj_t *p_base, x_obj_t *p_args)
 	return x_mkstrown(p_base, str);
 }
 
-/* token-read-string: (token-read-string token-base string) -> list of tokens */
+/**
+ * @brief Tokenize a string using a token base's registered types.
+ *
+ * x-lang form: @code (token-read-string token-base string) @endcode
+ *
+ * Copies the input string into a read-only buffer, then repeatedly calls
+ * x_token_read against the token base to produce a linked list of token
+ * objects. If metadata tracking is active, the buffer is marked with
+ * initial line number 1.
+ *
+ * @param p_base       Calling execution context (tokens allocated here).
+ * @param p_args       Unevaluated: (self token-base string).
+ * @return Linked list of token objects, or NULL for empty input.
+ * @note The token base should have tokenizer types registered via
+ *       make-token-base + base-make-type.
+ */
 static x_obj_t *x_prim_token_read_string(x_obj_t *p_base, x_obj_t *p_args)
 {
 	x_obj_t *p_token_base, *p_str;
@@ -381,7 +545,19 @@ static x_obj_t *x_prim_token_read_string(x_obj_t *p_base, x_obj_t *p_args)
 	return p_result;
 }
 
-/* make-obj: (make-obj type-handle n) -> allocate typed object with n slots */
+/**
+ * @brief Allocate a typed object with n slots, all initialized to NULL.
+ *
+ * x-lang form: @code (make-obj type-handle n) @endcode
+ *
+ * Looks up the type by handle, allocates an object with @p n pointer-sized
+ * slots, and zero-fills all slots. Used for vector-like custom types.
+ *
+ * @param p_base  Execution context.
+ * @param p_args  Unevaluated: (self type-handle n).
+ * @return New object with @p n NULL slots, or NULL if type not found.
+ * @see x_prim_obj_ref, x_prim_obj_set
+ */
 static x_obj_t *x_prim_make_obj(x_obj_t *p_base, x_obj_t *p_args)
 {
 	x_obj_t *p_handle, *p_n;
@@ -410,7 +586,16 @@ static x_obj_t *x_prim_make_obj(x_obj_t *p_base, x_obj_t *p_args)
 	return p_obj;
 }
 
-/* obj-ref: (obj-ref obj i) -> value at slot i */
+/**
+ * @brief Read a slot from a multi-slot object.
+ *
+ * x-lang form: @code (obj-ref obj i) @endcode
+ *
+ * @param p_base  Execution context.
+ * @param p_args  Unevaluated: (self obj i).
+ * @return Value at slot index @p i (zero-based).
+ * @see x_prim_obj_set, x_prim_make_obj
+ */
 static x_obj_t *x_prim_obj_ref(x_obj_t *p_base, x_obj_t *p_args)
 {
 	x_obj_t *p_obj, *p_i;
@@ -420,7 +605,16 @@ static x_obj_t *x_prim_obj_ref(x_obj_t *p_base, x_obj_t *p_args)
 	return (&x_firstobj(p_obj))[x_intval(p_i)];
 }
 
-/* obj-set!: (obj-set! obj i val) -> val */
+/**
+ * @brief Write a value into a slot of a multi-slot object.
+ *
+ * x-lang form: @code (obj-set! obj i val) @endcode
+ *
+ * @param p_base  Execution context.
+ * @param p_args  Unevaluated: (self obj i val).
+ * @return The stored value @p val.
+ * @see x_prim_obj_ref, x_prim_make_obj
+ */
 static x_obj_t *x_prim_obj_set(x_obj_t *p_base, x_obj_t *p_args)
 {
 	x_obj_t *p_obj, *p_i, *p_val;
@@ -432,7 +626,20 @@ static x_obj_t *x_prim_obj_set(x_obj_t *p_base, x_obj_t *p_args)
 	return p_val;
 }
 
-/* iter: (iter obj) -> call type's iter handler to get an iterator */
+/**
+ * @brief Obtain an iterator for an object via its type's iter handler.
+ *
+ * x-lang form: @code (iter obj) @endcode
+ *
+ * Looks up the @c iter handler on the object's type struct and calls it
+ * as @code (iter-fn obj) @endcode. Returns NULL if the type has no iter
+ * handler or the object is untyped.
+ *
+ * @param p_base  Execution context.
+ * @param p_args  Unevaluated: (self obj).
+ * @return Iterator object, or NULL if iteration is unsupported.
+ * @note The iter handler is a type-level closure registered via make-type.
+ */
 static x_obj_t *x_prim_iter(x_obj_t *p_base, x_obj_t *p_args)
 {
 	x_obj_t *p_obj;
@@ -461,6 +668,17 @@ static x_obj_t *x_prim_iter(x_obj_t *p_base, x_obj_t *p_args)
 	}
 }
 
+/**
+ * @brief Register all type-system and sandboxing primitives.
+ *
+ * Binds: make-type, base-make-type, make-instance, make-obj, obj-ref,
+ * obj-set!, type?, type-of, type-name, buffer-token, make-token-base,
+ * make-base, base-eval, base-bind, token-read-string, iter.
+ *
+ * @param p_base  Execution context to bind primitives into.
+ * @param p_args  Unused.
+ * @return @p p_base.
+ */
 x_obj_t *x_prim_type_register(x_obj_t *p_base, x_obj_t *p_args)
 {
 	static const x_callable_entry_t entries[] = {

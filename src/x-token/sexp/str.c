@@ -1,21 +1,17 @@
-/*
- * # Computational Expressions in C
- *
- * ## x-type.c -- Implementation - Type - String
- *
- * @description Computational Expressions in C
- * @author [Jon Ruttan](jonruttan@gmail.com)
+/**
+ * @file str.c
+ * @brief S-expression analyser, reader, writer, and display for string literals.
+ * @author Jon Ruttan (jonruttan@gmail.com)
  * @copyright 2021 Jon Ruttan
  * @license MIT No Attribution (MIT-0)
- *
+ */
+/*
  *     ., .,
  *     {O,O}
  *     (   )
  *      " "
  */
-/*
- * # Includes
- */
+
 #include "x-token/sexp/str.h"
 #include "x-base-typesystem.h"
 #include "x-token.h"
@@ -44,11 +40,18 @@ static int hex_digit(x_char_t c)
 	return -1;
 }
 
-/* Helper: read next-state from callable state slot, with default fallback */
+/** Read next-state from callable state slot, with default fallback. */
 #define x_next_state(self, dflt) \
 	(x_obj_isnil(p_base, x_callable_state(self)) \
 		? (x_obj_t *)(dflt) : x_callable_state(self))
 
+/**
+ * Analyse state 1: match the opening double-quote.
+ *
+ * @param p_base  Execution context.
+ * @param p_args  Pair of (self, read-args).
+ * @return Next analyser state on match, or NULL.
+ */
 x_obj_t *x_sexp_str_analyse1(x_obj_t *p_base, x_obj_t *p_args)
 {
 	x_obj_t *p_self = x_0(p_args),
@@ -61,6 +64,16 @@ x_obj_t *x_sexp_str_analyse1(x_obj_t *p_base, x_obj_t *p_args)
 	return NULL;
 }
 
+/**
+ * Analyse state 2: consume string body characters.
+ *
+ * Detects backslash (transitions to escape state) and closing quote
+ * (scores the full token length).  All other characters loop.
+ *
+ * @param p_base  Execution context.
+ * @param p_args  Pair of (self, read-args).
+ * @return Self, score, or next state.
+ */
 x_obj_t *x_sexp_str_analyse2(x_obj_t *p_base, x_obj_t *p_args)
 {
 	x_obj_t *p_self = x_0(p_args),
@@ -83,7 +96,16 @@ x_obj_t *x_sexp_str_analyse2(x_obj_t *p_base, x_obj_t *p_args)
 	return p_self;
 }
 
-/* analyse3: escape state — consume one character, return to normal reading */
+/**
+ * Analyse state 3: escape state.
+ *
+ * Unconditionally consumes one character after a backslash and returns
+ * to the normal body-reading state (analyse2).
+ *
+ * @param p_base  Execution context.
+ * @param p_args  Pair of (self, read-args).
+ * @return The analyse2 state primitive.
+ */
 x_obj_t *x_sexp_str_analyse3(x_obj_t *p_base, x_obj_t *p_args)
 {
 	x_obj_t *p_self = x_0(p_args);
@@ -91,6 +113,17 @@ x_obj_t *x_sexp_str_analyse3(x_obj_t *p_base, x_obj_t *p_args)
 	return (x_obj_t *)&x_sexp_str_analyse2_prim;
 }
 
+/**
+ * Read a string literal from the token buffer.
+ *
+ * Strips the surrounding quotes and processes escape sequences in-place.
+ * Supported escapes: @c \\", @c \\\\, @c \\n, @c \\t, @c \\r, @c \\0,
+ * and @c \\xHH (two hex digits).  Unknown escapes are preserved literally.
+ *
+ * @param p_base  Execution context.
+ * @param p_args  Read-args containing the token buffer.
+ * @return A newly created owned-string object.
+ */
 x_obj_t *x_sexp_str_read(x_obj_t *p_base, x_obj_t *p_args)
 {
 	x_obj_t *p_buffer = x_token_read_arg_buffer(p_args);
@@ -138,6 +171,18 @@ x_obj_t *x_sexp_str_read(x_obj_t *p_base, x_obj_t *p_args)
 	return x_mkstrown(p_base, s);
 }
 
+/**
+ * Write the external (escaped, quoted) representation of a string.
+ *
+ * Outputs the string surrounded by double quotes, escaping special
+ * characters (@c ", @c \\, @c \\n, @c \\t, @c \\r) and non-printable
+ * bytes as @c \\xHH sequences.  Safe runs are written in bulk for
+ * efficiency.
+ *
+ * @param p_base  Execution context.
+ * @param p_args  Pair whose first element is the string to write.
+ * @return The string object.
+ */
 x_obj_t *x_sexp_str_write(x_obj_t *p_base, x_obj_t *p_args)
 {
 	x_char_t *s = x_firststr(x_firstobj(p_args));
@@ -211,6 +256,13 @@ x_obj_t *x_sexp_str_write(x_obj_t *p_base, x_obj_t *p_args)
 	return x_firstobj(p_args);
 }
 
+/**
+ * Display a string as raw content (no surrounding quotes, no escaping).
+ *
+ * @param p_base  Execution context.
+ * @param p_args  Pair whose first element is the string to display.
+ * @return The string object.
+ */
 x_obj_t *x_sexp_str_display(x_obj_t *p_base, x_obj_t *p_args)
 {
 	x_satom_t str = x_obj_set(x_type_atom_obj, X_OBJ_FLAG_NONE,

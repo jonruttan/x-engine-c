@@ -1,13 +1,10 @@
+/** @file x-cli.c
+ *  @brief Command-line interface, file inclusion, and interpreter entry point
+ *  @author Jon Ruttan (jonruttan@gmail.com)
+ *  @copyright 2024 Jon Ruttan
+ *  @license MIT No Attribution (MIT-0)
+ */
 /*
- * # Computational Expressions in C
- *
- * ## x-cli.c -- Implementation - CLI
- *
- * @description Computational Expressions in C
- * @author [Jon Ruttan](jonruttan@gmail.com)
- * @copyright 2024 Jon Ruttan
- * @license MIT No Attribution (MIT-0)
- *
  *     ., .,
  *     {O,O}
  *     (   )
@@ -41,6 +38,18 @@
 #ifndef TESTS
 
 #ifdef X_SYSCALL
+/**
+ * Raw syscall interface. x-lang: (syscall num arg ...)
+ *
+ * Accepts up to 7 arguments (syscall number + 6 parameters). Each
+ * argument may be an integer or string; strings are passed as their
+ * C pointer. Evaluates arguments and dispatches via the platform
+ * syscall() function.
+ *
+ * @param p_base  x_obj_t* -- Execution context
+ * @param p_args  x_obj_t* -- Unevaluated variadic args
+ * @return x_obj_t* -- Integer syscall return value
+ */
 static x_obj_t *x_prim_syscall(x_obj_t *p_base, x_obj_t *p_args)
 {
 	long i = 0, p[7];
@@ -67,6 +76,19 @@ static x_obj_t *x_prim_syscall(x_obj_t *p_base, x_obj_t *p_args)
 #endif
 
 #ifdef X_INCLUDE
+/**
+ * Load and evaluate a file. x-lang: (include path)
+ *
+ * Opens the file at path, pushes a new input state (fd, line counter,
+ * read buffer) onto the base stacks, evaluates all expressions via
+ * x_base_load, then pops and restores the previous input state.
+ *
+ * @param p_base  x_obj_t* -- Execution context
+ * @param p_args  x_obj_t* -- Unevaluated args; path is a string
+ * @return x_obj_t* -- Result of the last expression in the file
+ *
+ * @note Emits timing info to stderr when X_PROFILE is defined.
+ */
 static x_obj_t *x_prim_include(x_obj_t *p_base, x_obj_t *p_args)
 {
 	x_obj_t *p_path, *p_buffer, *p_result;
@@ -130,6 +152,17 @@ static x_obj_t *x_prim_include(x_obj_t *p_base, x_obj_t *p_args)
 
 #endif /* ! TESTS -- CLI-only helpers above */
 
+/**
+ * Initialize the interpreter.
+ *
+ * Creates the base object, registers all built-in types and primitives,
+ * sets up the read buffer, and optionally binds the syscall and include
+ * primitives (when X_SYSCALL / X_INCLUDE are defined).
+ *
+ * @param p_base   x_obj_t* -- Ignored (always creates a fresh base)
+ * @param buffer   x_char_t* -- Pre-allocated read buffer
+ * @return x_obj_t* -- Newly created base object
+ */
 x_obj_t * init(x_obj_t *p_base, x_char_t *buffer)
 {
 	x_obj_t *p_buffer;
@@ -178,6 +211,18 @@ x_obj_t * init(x_obj_t *p_base, x_char_t *buffer)
 
 #ifndef TESTS
 
+/**
+ * CLI entry point.
+ *
+ * Initializes the interpreter, records the stack base for conservative
+ * GC scanning, binds command-line arguments as the x-lang `args` list,
+ * binds `x-machine` and `x-version` platform constants, then enters
+ * the REPL.
+ *
+ * @param argc  int -- Argument count
+ * @param argv  char*[] -- Argument vector
+ * @return int -- Exit status (0 on success, 1 on init failure)
+ */
 int main(int argc, char *argv[])
 {
 	x_obj_t *p_base;

@@ -1,13 +1,10 @@
+/** @file x-type.c
+ *  @brief Type struct construction, dispatch, and GC hooks for the type system.
+ *  @author Jon Ruttan (jonruttan@gmail.com)
+ *  @copyright 2021 Jon Ruttan
+ *  @license MIT No Attribution (MIT-0)
+ */
 /*
- * # Computational Expressions in C
- *
- * ## x-type.c -- Implementation - Type
- *
- * @description Computational Expressions in C
- * @author [Jon Ruttan](jonruttan@gmail.com)
- * @copyright 2021 Jon Ruttan
- * @license MIT No Attribution (MIT-0)
- *
  *     ., .,
  *     {O,O}
  *     (   )
@@ -26,6 +23,19 @@
 #define pair(X,Y)	(x_mkspair(p_base, X_OBJ_FLAG_NONE, (X), (Y)))
 #define atom(X)		(x_mksatom(p_base, X_OBJ_FLAG_NONE, (X)))
 
+/**
+ * Construct a type struct from a type descriptor.
+ *
+ * Builds the canonical nested-pair structure that represents a type
+ * in the type alist: name-stack, data-stack, heap group (mark, make,
+ * free, clone, units, length), proc group (call, eval), cvt group
+ * (from, to), IO group (analyse, delimit, read, write, display,
+ * error), and iter group.
+ *
+ * @param p_base  x_obj_t* -- Execution context (for allocation)
+ * @param type    struct x_type_t -- Type descriptor with all hook pointers
+ * @return x_obj_t* -- Newly allocated type struct (pair tree)
+ */
 x_obj_t *x_type_struct_make(x_obj_t *p_base, struct x_type_t type)
 {
 	x_obj_t *p_type =
@@ -69,6 +79,17 @@ x_obj_t *x_type_struct_make(x_obj_t *p_base, struct x_type_t type)
 #undef pair
 #undef atom
 
+/**
+ * Retrieve or create a type struct by name.
+ *
+ * First checks the type alist cache. On miss, calls the callable in
+ * rest of @p p_args to construct the type, then caches it in the
+ * type alist for future lookups.
+ *
+ * @param p_base  x_obj_t* -- Execution context
+ * @param p_args  x_obj_t* -- (type-name . constructor-callable)
+ * @return x_obj_t* -- Type struct
+ */
 x_obj_t *x_type_struct_get(x_obj_t *p_base, x_obj_t *p_args)
 {
 	x_obj_t *p_type = NULL;
@@ -89,6 +110,16 @@ x_obj_t *x_type_struct_get(x_obj_t *p_base, x_obj_t *p_args)
 	return p_type;
 }
 
+/**
+ * Dispatch the write hook for a typed object.
+ *
+ * Looks up the type's write function and applies it to the object.
+ * Uses x_callable_apply (not call) to avoid TCO complications.
+ *
+ * @param p_base  x_obj_t* -- Execution context
+ * @param p_args  x_obj_t* -- (object . ...)
+ * @return x_obj_t* -- Write result, or NULL if no write hook
+ */
 x_obj_t *x_type_write(x_obj_t *p_base, x_obj_t *p_args)
 {
 	x_obj_t *p_obj = x_firstobj(p_args),
@@ -108,6 +139,18 @@ x_obj_t *x_type_write(x_obj_t *p_base, x_obj_t *p_args)
 	return NULL;
 }
 
+/**
+ * Dispatch the display hook for a typed object.
+ *
+ * Looks up the type's display function and applies it. Falls back
+ * to x_type_write if no display hook is registered.
+ *
+ * @param p_base  x_obj_t* -- Execution context
+ * @param p_args  x_obj_t* -- (object . ...)
+ * @return x_obj_t* -- Display result
+ *
+ * @see x_type_write
+ */
 x_obj_t *x_type_display(x_obj_t *p_base, x_obj_t *p_args)
 {
 	x_obj_t *p_obj = x_firstobj(p_args),
@@ -125,6 +168,16 @@ x_obj_t *x_type_display(x_obj_t *p_base, x_obj_t *p_args)
 	return x_type_write(p_base, p_args);
 }
 
+/**
+ * Dispatch the error-display hook for a typed object.
+ *
+ * Used to format objects in error messages. Returns NULL if no error
+ * hook is registered on the type.
+ *
+ * @param p_base  x_obj_t* -- Execution context
+ * @param p_args  x_obj_t* -- (object . ...)
+ * @return x_obj_t* -- Error-display result, or NULL
+ */
 x_obj_t *x_type_error(x_obj_t *p_base, x_obj_t *p_args)
 {
 	x_obj_t *p_obj = x_firstobj(p_args),
@@ -141,6 +194,17 @@ x_obj_t *x_type_error(x_obj_t *p_base, x_obj_t *p_args)
 	return NULL;
 }
 
+/**
+ * Return the type name for an object. x-lang: (type-name obj)
+ *
+ * For stack atoms/pairs and untyped objects, returns the raw type
+ * pointer. For heap-typed objects, extracts the name from the type
+ * struct.
+ *
+ * @param p_base  x_obj_t* -- Execution context
+ * @param p_args  x_obj_t* -- (object)
+ * @return x_obj_t* -- Type name object, or NULL
+ */
 x_obj_t *x_type_prim_type_name(x_obj_t *p_base, x_obj_t *p_args)
 {
 	x_obj_t *p_name, *p_obj;
@@ -164,6 +228,16 @@ x_obj_t *x_type_prim_type_name(x_obj_t *p_base, x_obj_t *p_args)
 	return p_name;
 }
 
+/**
+ * Return the unit count for an object. x-lang: (units obj)
+ *
+ * Dispatches to pair or atom unit primitives for built-in types.
+ * For custom types, calls the type's units hook function.
+ *
+ * @param p_base  x_obj_t* -- Execution context
+ * @param p_args  x_obj_t* -- (object)
+ * @return x_obj_t* -- Integer unit count, or NULL
+ */
 x_obj_t *x_type_prim_units(x_obj_t *p_base, x_obj_t *p_args)
 {
 	x_obj_t *p_units, *p_obj;
@@ -189,6 +263,16 @@ x_obj_t *x_type_prim_units(x_obj_t *p_base, x_obj_t *p_args)
 	return (*x_atomfn(p_units))(p_base, p_args);
 }
 
+/**
+ * Return the length for an object. x-lang: (length obj)
+ *
+ * Dispatches to pair or atom length primitives for built-in types.
+ * For custom types, calls the type's length hook function.
+ *
+ * @param p_base  x_obj_t* -- Execution context
+ * @param p_args  x_obj_t* -- (object)
+ * @return x_obj_t* -- Integer length, or NULL
+ */
 x_obj_t *x_type_prim_length(x_obj_t *p_base, x_obj_t *p_args)
 {
 	x_obj_t *p_length, *p_obj;
@@ -214,6 +298,19 @@ x_obj_t *x_type_prim_length(x_obj_t *p_base, x_obj_t *p_args)
 	return (*x_atomfn(p_length))(p_base, p_args);
 }
 
+/**
+ * GC mark hook for typed heap objects.
+ *
+ * For child base objects (type == x_type_base_obj), returns the data
+ * pointer so the GC traverses the base's pair tree. For custom types,
+ * calls the type's mark callback if present. Otherwise falls back to
+ * a generic N-slot traversal using the units count.
+ *
+ * @param p_base  x_obj_t* -- Execution context
+ * @param p_obj   x_obj_t* -- Object being marked
+ * @param flags   x_obj_flag_t -- GC mark flags
+ * @return x_obj_t* -- Data pointer for base objects, or NULL
+ */
 x_obj_t *x_type_heap_mark(x_obj_t *p_base, x_obj_t *p_obj, x_obj_flag_t flags)
 {
 	x_obj_t *p_type = x_obj_type(p_obj);
@@ -270,6 +367,15 @@ x_obj_t *x_type_heap_mark(x_obj_t *p_base, x_obj_t *p_obj, x_obj_flag_t flags)
 	return NULL;
 }
 
+/**
+ * GC free hook for typed heap objects.
+ *
+ * If the object's type has a free callback, invokes it to release
+ * type-specific resources before the heap cell is reclaimed.
+ *
+ * @param p_base  x_obj_t* -- Execution context
+ * @param p_obj   x_obj_t* -- Object being freed
+ */
 void x_type_heap_free(x_obj_t *p_base, x_obj_t *p_obj)
 {
 	x_obj_t *p_type = x_obj_type(p_obj);

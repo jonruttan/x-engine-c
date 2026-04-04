@@ -1,27 +1,30 @@
-/*
- * # Computational Expressions in C
- *
- * ## x-type/operative.c -- Implementation - Type - Operative
- *
- * @description Computational Expressions in C
- * @author [Jon Ruttan](jonruttan@gmail.com)
+/**
+ * @file x-type/operative.c
+ * @brief Operative (fexpr / dynamic-scope combiner) type implementation.
+ * @author Jon Ruttan (jonruttan@gmail.com)
  * @copyright 2024 Jon Ruttan
  * @license MIT No Attribution (MIT-0)
- *
+ */
+/*
  *     ., .,
  *     {O,O}
  *     (   )
  *      " "
- */
-/*
- * # Includes
  */
 #include "x-type/operative.h"
 #include "x-base-typesystem.h"
 #include "x-heap.h"
 #include "x-prim.h"
 
-/* Mark callback: only mark slot 1 (state list), not slot 0 (fn ptr). */
+/**
+ * GC mark callback for operative objects.
+ *
+ * Only marks slot 1 (state list), not slot 0 (fn ptr).
+ *
+ * @param p_base  x_obj_t* -- Execution context
+ * @param p_args  x_obj_t* -- (object . (flags))
+ * @return NULL always
+ */
 static x_obj_t *x_type_operative_mark(x_obj_t *p_base, x_obj_t *p_args)
 {
 	x_obj_t *p_obj = x_firstobj(p_args);
@@ -39,11 +42,23 @@ x_satom_t x_type_operative_name = x_obj_set(x_type_atom_obj, X_OBJ_FLAG_NONE, { 
 	x_type_operative_write_prim = x_obj_set(x_type_atom_obj, X_OBJ_FLAG_NONE, { (x_obj_t *)&x_type_operative_write }),
 	x_type_operative_struct_prim = x_obj_set(x_type_atom_obj, X_OBJ_FLAG_NONE, { (x_obj_t *)&x_type_operative_struct });
 
+/**
+ * Allocate a new operative on the heap.
+ *
+ * Builds the state list (params . (envparam . (body . env))) and stores
+ * it in slot 1 of the two-unit callable layout.
+ *
+ * @param p_base     x_obj_t*    -- Execution context
+ * @param flags      x_obj_flag_t -- Object flags
+ * @param p_params   x_obj_t*    -- Formal parameter tree
+ * @param p_envparam x_obj_t*    -- Environment parameter name (or nil)
+ * @param p_body     x_obj_t*    -- Body expression list
+ * @param p_env      x_obj_t*    -- Captured environment
+ * @return Heap-allocated operative object
+ */
 x_obj_t *x_make_operative(x_obj_t *p_base, x_obj_flag_t flags,
 	x_obj_t *p_params, x_obj_t *p_envparam, x_obj_t *p_body, x_obj_t *p_env)
 {
-	/* Build state list: (params . (envparam . (body . env)))
-	 * GC marks via p_units=2 fallback which walks slot 1 (state). */
 	x_obj_t *p_type = x_type_operative_register(p_base, p_base),
 		*p_s3 = x_mkspair(p_base, X_OBJ_FLAG_NONE, p_body, p_env),
 		*p_s2 = x_mkspair(p_base, X_OBJ_FLAG_NONE, p_envparam, p_s3),
@@ -53,6 +68,13 @@ x_obj_t *x_make_operative(x_obj_t *p_base, x_obj_flag_t flags,
 		(x_fn_t)x_type_operative_call, p_state);
 }
 
+/**
+ * Build the OPERATIVE type struct descriptor.
+ *
+ * @param p_base  x_obj_t* -- Execution context
+ * @param p_args  x_obj_t* -- Unused
+ * @return Type struct pair list
+ */
 x_obj_t *x_type_operative_struct(x_obj_t *p_base, x_obj_t *p_args)
 {
 	struct x_type_t type = {
@@ -67,6 +89,13 @@ x_obj_t *x_type_operative_struct(x_obj_t *p_base, x_obj_t *p_args)
 	return x_type_struct_make(p_base, type);
 }
 
+/**
+ * Register (or retrieve) the OPERATIVE type struct on p_base.
+ *
+ * @param p_base  x_obj_t* -- Execution context
+ * @param p_args  x_obj_t* -- Unused
+ * @return The registered type struct object
+ */
 x_obj_t *x_type_operative_register(x_obj_t *p_base, x_obj_t *p_args)
 {
 	x_spair_t args[2] = {
@@ -77,6 +106,15 @@ x_obj_t *x_type_operative_register(x_obj_t *p_base, x_obj_t *p_args)
 	return x_type_struct_get(p_base, (x_obj_t *)args);
 }
 
+/**
+ * Type-dispatch make callback: construct an operative from x-lang args.
+ *
+ * Expects args: (params envparam body env [flags]).
+ *
+ * @param p_base  x_obj_t* -- Execution context
+ * @param p_args  x_obj_t* -- Construction arguments
+ * @return New operative object
+ */
 x_obj_t *x_type_operative_make(x_obj_t *p_base, x_obj_t *p_args)
 {
 	x_obj_t *p_params = x_0(p_args),
@@ -91,6 +129,17 @@ x_obj_t *x_type_operative_make(x_obj_t *p_base, x_obj_t *p_args)
 		x_firstobj(p_body), x_firstobj(p_env));
 }
 
+/**
+ * Type-dispatch call callback: evaluate an operative application (TCO).
+ *
+ * Operatives use dynamic scoping -- the body runs in the caller's
+ * environment so that def/set naturally affect it.  The env-param
+ * (if non-nil) is bound to the caller's environment.
+ *
+ * @param p_base  x_obj_t* -- Execution context
+ * @param p_args  x_obj_t* -- (operative . unevaluated-args)
+ * @return Result of the operative body
+ */
 x_obj_t *x_type_operative_call(x_obj_t *p_base, x_obj_t *p_args)
 {
 	x_obj_t *p_op = x_firstobj(p_args),
@@ -124,6 +173,13 @@ x_obj_t *x_type_operative_call(x_obj_t *p_base, x_obj_t *p_args)
 	return x_eval_body_tco_simple(p_base, p_body);
 }
 
+/**
+ * Type-dispatch write callback: print "#<op>".
+ *
+ * @param p_base  x_obj_t* -- Execution context
+ * @param p_args  x_obj_t* -- (operative)
+ * @return The operative object (pass-through)
+ */
 x_obj_t *x_type_operative_write(x_obj_t *p_base, x_obj_t *p_args)
 {
 	x_satom_t str = x_obj_set(x_type_atom_obj, X_OBJ_FLAG_NONE,

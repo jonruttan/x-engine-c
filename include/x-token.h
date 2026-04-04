@@ -1,41 +1,57 @@
 #ifndef X_TOKEN_H
 #define X_TOKEN_H
 
-/*
- * # Computational Expressions in C
+/**
+ * @file x-token.h
+ * @brief Tokenization interface.
  *
- * ## x-token.h -- Header - Token
+ * Declares the type-dispatched tokenization pipeline: delimiting,
+ * analysing, reading, writing, and displaying.  Each stage iterates
+ * the registered type alist and delegates to per-type handlers.
  *
- * @description Computational Expressions in C
- * @author [Jon Ruttan](jonruttan@gmail.com)
+ * @author Jon Ruttan (jonruttan@gmail.com)
  * @copyright 2021 Jon Ruttan
  * @license MIT No Attribution (MIT-0)
- *
+ */
+/*
  *     ., .,
  *     {O,O}
  *     (   )
  *      " "
  */
-/*
- * # Includes
- */
+
 #include "x-obj.h"
 
-/*
- * # Defines
- */
-#define x_token_read_arg_prim(X)		x_0((X))
-#define x_token_read_arg_buffer(X)		x_0((X))
-#define x_token_read_arg_score(X)		x_01((X))
-#define x_token_read_arg_char(X)		x_0(x_11((X)))
+/** @name Reader Argument Access Macros
+ *  Decompose the argument list passed to token reader callbacks.
+ *  Layout: @c ((prim/buffer . (score . (... (char . ()) ...)))).
+ *  @{ */
 
-/*
- * # Data Structures
- */
+#define x_token_read_arg_prim(X)		x_0((X))    /**< Reader primitive / buffer object. */
+#define x_token_read_arg_buffer(X)		x_0((X))    /**< Alias -- buffer object for the reader. */
+#define x_token_read_arg_score(X)		x_01((X))   /**< Current best score (integer). */
+#define x_token_read_arg_char(X)		x_0(x_11((X))) /**< Lookahead character. */
+
+/** @} */
+
+/** @name Tokenization Pipeline
+ *  @{ */
+
+/** Check whether @a p_obj delimits the current token for any type. */
 x_obj_t *x_token_delimit(x_obj_t *p_base, x_obj_t *p_obj);
+
+/** Run per-type analysis on a completed token buffer. */
 x_obj_t *x_token_analyse(x_obj_t *p_base, x_obj_t *p_obj);
+
+/** Read a single token from the input stream. */
 x_obj_t *x_token_read(x_obj_t *p_base, x_obj_t *p_obj);
+
+/** Serialise an object to its written (machine-readable) form. */
 x_obj_t *x_token_write(x_obj_t *p_base, x_obj_t *p_obj);
+
+/** Serialise an object to its display (human-readable) form. */
 x_obj_t *x_token_display(x_obj_t *p_base, x_obj_t *p_obj);
+
+/** @} */
 
 #endif /* X_TOKEN_H */

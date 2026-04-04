@@ -1,21 +1,17 @@
-/*
- * # Computational Expressions in C
- *
- * ## whitespace.c -- Implementation - SExp - Whitespace
- *
- * @description Computational Expressions in C
- * @author [Jon Ruttan](jonruttan@gmail.com)
+/**
+ * @file whitespace.c
+ * @brief S-expression analyser and delimiter for whitespace tokens.
+ * @author Jon Ruttan (jonruttan@gmail.com)
  * @copyright 2023 Jon Ruttan
  * @license MIT No Attribution (MIT-0)
- *
+ */
+/*
  *     ., .,
  *     {O,O}
  *     (   )
  *      " "
  */
-/*
- * # Includes
- */
+
 #include "x-token/sexp/whitespace.h"
 #include "x-base-typesystem.h"
 #include "x-token.h"
@@ -26,6 +22,16 @@ x_satom_t x_sexp_whitespace_analyse1_prim = x_obj_set(x_type_atom_obj, X_OBJ_FLA
 	x_sexp_whitespace_analyse2_prim = x_obj_set(x_type_atom_obj, X_OBJ_FLAG_NONE, { .fn = x_sexp_whitespace_analyse2 }),
 	x_sexp_whitespace_delimit_prim = x_obj_set(x_type_atom_obj, X_OBJ_FLAG_NONE, { .fn = x_sexp_whitespace_delimit });
 
+/**
+ * Analyse state 1: detect a whitespace character.
+ *
+ * Checks the last character in the buffer against
+ * @ref X_SEXP_WHITESPACE_CHARS_STR.
+ *
+ * @param p_base  Execution context.
+ * @param p_args  Read-args containing the token buffer.
+ * @return The analyse2 primitive on match, or NULL.
+ */
 x_obj_t *x_sexp_whitespace_analyse1(x_obj_t *p_base, x_obj_t *p_args)
 {
 	x_obj_t *p_buffer = x_token_read_arg_buffer(p_args);
@@ -37,6 +43,18 @@ x_obj_t *x_sexp_whitespace_analyse1(x_obj_t *p_base, x_obj_t *p_args)
 	return NULL;
 }
 
+/**
+ * Analyse state 2: consume additional whitespace and score.
+ *
+ * Re-invokes analyse1 to check for more whitespace.  When a
+ * non-whitespace character is found, scores @c bufferlen-1 (the @c -1
+ * accounts for the extra non-whitespace character that was read to
+ * terminate the run).
+ *
+ * @param p_base  Execution context.
+ * @param p_args  Read-args containing the token buffer and score.
+ * @return Self to keep reading, or score on non-whitespace.
+ */
 x_obj_t *x_sexp_whitespace_analyse2(x_obj_t *p_base, x_obj_t *p_args)
 {
 	x_obj_t *p_buffer = x_token_read_arg_buffer(p_args),
@@ -51,6 +69,16 @@ x_obj_t *x_sexp_whitespace_analyse2(x_obj_t *p_base, x_obj_t *p_args)
 	return x_sexp_whitespace_analyse2_prim;
 }
 
+/**
+ * Delimiter callback for whitespace characters.
+ *
+ * If the current character is whitespace, backs up the read pointer
+ * so the whitespace is not consumed by the current token.
+ *
+ * @param p_base  Execution context.
+ * @param p_args  Read-args containing the token buffer.
+ * @return The buffer on whitespace match, or NULL.
+ */
 x_obj_t *x_sexp_whitespace_delimit(x_obj_t *p_base, x_obj_t *p_args)
 {
 	x_obj_t *p_buffer = x_token_read_arg_buffer(p_args);

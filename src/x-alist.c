@@ -1,13 +1,10 @@
+/** @file x-alist.c
+ *  @brief Association list and persistent BST operations
+ *  @author Jon Ruttan (jonruttan@gmail.com)
+ *  @copyright 2021 Jon Ruttan
+ *  @license MIT No Attribution (MIT-0)
+ */
 /*
- * # Computational Expressions in C
- *
- * ## x-obj.c -- Implementation - Objects
- *
- * @description Computational Expressions in C
- * @author [Jon Ruttan](jonruttan@gmail.com)
- * @copyright 2021 Jon Ruttan
- * @license MIT No Attribution (MIT-0)
- *
  *     ., .,
  *     {O,O}
  *     (   )
@@ -20,6 +17,15 @@
 #include "x-base-typesystem.h"
 #include "x-type/symbol.h"
 
+/**
+ * Prepend an association to an alist.
+ *
+ * Conses p_assoc onto the front of p_alist, returning the new list.
+ *
+ * @param p_base  x_obj_t* -- Execution context
+ * @param p_args  x_obj_t* -- (assoc . alist)
+ * @return x_obj_t* -- New alist with assoc prepended
+ */
 x_obj_t *x_alist_extend(x_obj_t *p_base, x_obj_t *p_args)
 {
 	x_obj_t *p_assoc = x_firstobj(p_args), *p_alist = x_restobj(p_args);
@@ -27,6 +33,16 @@ x_obj_t *x_alist_extend(x_obj_t *p_base, x_obj_t *p_args)
 	return x_mkspair(p_base, X_OBJ_FLAG_NONE, p_assoc, p_alist);
 }
 
+/**
+ * Linear alist lookup by pointer identity on the key's first field.
+ *
+ * Walks the alist front-to-back, comparing (first (first (first entry)))
+ * against (first obj). Returns the first matching entry, or NULL.
+ *
+ * @param p_base  x_obj_t* -- Execution context
+ * @param p_args  x_obj_t* -- (key . (alist))
+ * @return x_obj_t* -- Matching alist entry, or NULL if not found
+ */
 x_obj_t *x_alist_assoc(x_obj_t *p_base, x_obj_t *p_args)
 {
 	x_obj_t *p_obj = x_firstobj(p_args),
@@ -52,10 +68,19 @@ x_obj_t *x_alist_assoc(x_obj_t *p_base, x_obj_t *p_args)
 	return NULL;
 }
 
-/*
- * BST lookup: find an alist entry by symbol pointer.
- * Node structure: (entry . (left . right))
- * Uses pointer equality first, x_lib_strcmp for direction.
+/**
+ * BST lookup by symbol pointer.
+ *
+ * Searches the persistent BST for an entry matching p_sym. Tries
+ * pointer equality first (fast path), then falls back to strcmp
+ * for traversal direction. Node structure: (entry . (left . right)).
+ *
+ * @param p_base  x_obj_t* -- Execution context
+ * @param p_tree  x_obj_t* -- BST root node, or NULL
+ * @param p_sym   x_obj_t* -- Symbol to look up
+ * @return x_obj_t* -- Matching alist entry, or NULL if not found
+ *
+ * @see x_alist_bst_insert
  */
 x_obj_t *x_alist_bst_lookup(x_obj_t *p_base, x_obj_t *p_tree,
 	x_obj_t *p_sym)
@@ -94,9 +119,16 @@ x_obj_t *x_alist_bst_lookup(x_obj_t *p_base, x_obj_t *p_tree,
 	return NULL;
 }
 
-/*
- * Create a SHARED pair (never freed by GC).
- * BST nodes are structural and shared between persistent tree versions.
+/**
+ * Create a SHARED pair immune to GC sweep.
+ *
+ * BST nodes are structural and shared between persistent tree versions,
+ * so they must not be collected.
+ *
+ * @param p_base  x_obj_t* -- Execution context
+ * @param a       x_obj_t* -- First element
+ * @param b       x_obj_t* -- Rest element
+ * @return x_obj_t* -- New pair with X_OBJ_FLAG_SHARED set
  */
 static x_obj_t *bst_pair(x_obj_t *p_base, x_obj_t *a, x_obj_t *b)
 {
@@ -105,12 +137,20 @@ static x_obj_t *bst_pair(x_obj_t *p_base, x_obj_t *a, x_obj_t *b)
 	return p;
 }
 
-/*
- * BST insert: persistent (path-copying) insert.
- * Returns a NEW root without mutating the old tree.
- * On duplicate: new root has updated entry; old root unchanged.
- * Shared subtrees are referenced, not copied.
- * All BST nodes are SHARED (immune to GC sweep).
+/**
+ * Persistent (path-copying) BST insert.
+ *
+ * Returns a new root without mutating the old tree. On duplicate key,
+ * the new root contains the updated entry while the old root is unchanged.
+ * Unaffected subtrees are shared, not copied. All BST nodes carry
+ * X_OBJ_FLAG_SHARED so they are immune to GC sweep.
+ *
+ * @param p_base   x_obj_t* -- Execution context
+ * @param p_tree   x_obj_t* -- Existing BST root, or NULL for empty
+ * @param p_entry  x_obj_t* -- (symbol . value) entry to insert
+ * @return x_obj_t* -- New BST root
+ *
+ * @see x_alist_bst_lookup
  */
 x_obj_t *x_alist_bst_insert(x_obj_t *p_base, x_obj_t *p_tree,
 	x_obj_t *p_entry)

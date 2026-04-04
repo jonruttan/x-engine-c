@@ -1,28 +1,30 @@
-/*
- * # Computational Expressions in C
- *
- * ## x-obj.c -- Implementation - Objects - Primitives
- *
- * @description Computational Expressions in C
- * @author [Jon Ruttan](jonruttan@gmail.com)
+/**
+ * @file x-obj/prim.c
+ * @brief Object-level primitive operations (make, call dispatch).
+ * @author Jon Ruttan (jonruttan@gmail.com)
  * @copyright 2021 Jon Ruttan
  * @license MIT No Attribution (MIT-0)
- *
+ */
+/*
  *     ., .,
  *     {O,O}
  *     (   )
  *      " "
- */
-/*
- * # Includes
  */
 #include "x-obj.h"
 #include "x-type.h"
 #include "x-type/procedure.h"
 
 
-/*
- * # Object Functions
+/**
+ * Construct a new object via its type's make callback.
+ *
+ * Dispatches to the appropriate constructor based on the object's
+ * type (static atom, static pair, or registered type with make handler).
+ *
+ * @param p_base  x_obj_t* -- Execution context
+ * @param p_args  x_obj_t* -- (prototype-obj flags data...)
+ * @return Newly allocated object, or NULL on failure
  */
 x_obj_t *x_obj_prim_make(x_obj_t *p_base, x_obj_t *p_args)
 {
@@ -54,6 +56,17 @@ x_obj_t *x_obj_prim_make(x_obj_t *p_base, x_obj_t *p_args)
 	return (*x_atomfn(p_make))(p_base, x_mkspair(p_base, X_OBJ_FLAG_NONE, p_obj, NULL));
 }
 
+/**
+ * Invoke an object's type-dispatch call handler.
+ *
+ * Looks up the call field on the object's type struct and dispatches.
+ * For procedure-typed call handlers, invokes via x_type_procedure_call
+ * to support closures as type callbacks.
+ *
+ * @param p_base  x_obj_t* -- Execution context
+ * @param p_args  x_obj_t* -- (callable . args)
+ * @return Result of the call, or NULL if no call handler
+ */
 x_obj_t *x_obj_prim_call(x_obj_t *p_base, x_obj_t *p_args)
 {
 	x_obj_t *p_call, *p_obj;

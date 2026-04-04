@@ -1,13 +1,10 @@
+/** @file x-eval.c
+ *  @brief Evaluator with TCO trampoline
+ *  @author Jon Ruttan (jonruttan@gmail.com)
+ *  @copyright 2021 Jon Ruttan
+ *  @license MIT No Attribution (MIT-0)
+ */
 /*
- * # Computational Expressions in C
- *
- * ## x-eval.c -- Implementation - Evaluator
- *
- * @description Computational Expressions in C
- * @author [Jon Ruttan](jonruttan@gmail.com)
- * @copyright 2021 Jon Ruttan
- * @license MIT No Attribution (MIT-0)
- *
  *     ., .,
  *     {O,O}
  *     (   )
@@ -23,6 +20,21 @@
 #include "x-type.h"
 #include "x-type/prim.h"
 
+/**
+ * Evaluate an expression with tail-call optimization.
+ *
+ * Dispatches to the expression's type-level eval handler. If the handler
+ * sets a TCO tail expression on p_base, the trampoline loop re-evaluates
+ * without growing the C stack. On exit, restores the environment from
+ * the saved TCO snapshot.
+ *
+ * @param p_base  x_obj_t* -- Execution context
+ * @param p_args  x_obj_t* -- (expression . env) pair
+ * @return x_obj_t* -- Evaluated result, or NULL for nil
+ *
+ * @note Uses goto-based trampoline; only the outermost x_eval in
+ *       a call chain performs env restoration.
+ */
 x_obj_t *x_eval(x_obj_t *p_base, x_obj_t *p_args)
 {
 	x_obj_t *p_exp;

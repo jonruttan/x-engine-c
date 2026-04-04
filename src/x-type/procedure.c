@@ -1,20 +1,15 @@
-/*
- * # Computational Expressions in C
- *
- * ## x-type/procedure.c -- Implementation - Type - Procedure
- *
- * @description Computational Expressions in C
- * @author [Jon Ruttan](jonruttan@gmail.com)
+/**
+ * @file x-type/procedure.c
+ * @brief Procedure (applicative closure) type implementation.
+ * @author Jon Ruttan (jonruttan@gmail.com)
  * @copyright 2024 Jon Ruttan
  * @license MIT No Attribution (MIT-0)
- *
+ */
+/*
  *     ., .,
  *     {O,O}
  *     (   )
  *      " "
- */
-/*
- * # Includes
  */
 #include "x-type/procedure.h"
 #include "x-base-typesystem.h"
@@ -22,7 +17,15 @@
 #include "x-obj/prim.h"
 #include "x-prim.h"
 
-/* Mark callback: only mark slot 1 (state list), not slot 0 (fn ptr). */
+/**
+ * GC mark callback for procedure objects.
+ *
+ * Only marks slot 1 (state list), not slot 0 (fn ptr).
+ *
+ * @param p_base  x_obj_t* -- Execution context
+ * @param p_args  x_obj_t* -- (object . (flags))
+ * @return NULL always
+ */
 static x_obj_t *x_type_procedure_mark(x_obj_t *p_base, x_obj_t *p_args)
 {
 	x_obj_t *p_obj = x_firstobj(p_args);
@@ -40,11 +43,23 @@ x_satom_t x_type_procedure_name = x_obj_set(x_type_atom_obj, X_OBJ_FLAG_NONE, { 
 	x_type_procedure_write_prim = x_obj_set(x_type_atom_obj, X_OBJ_FLAG_NONE, { (x_obj_t *)&x_type_procedure_write }),
 	x_type_procedure_struct_prim = x_obj_set(x_type_atom_obj, X_OBJ_FLAG_NONE, { (x_obj_t *)&x_type_procedure_struct });
 
+/**
+ * Allocate a new procedure (closure) on the heap.
+ *
+ * Builds the state list (params . (body . (env . bst))) and stores
+ * it in slot 1 of the two-unit callable layout.
+ *
+ * @param p_base   x_obj_t*    -- Execution context
+ * @param flags    x_obj_flag_t -- Object flags (e.g. X_OBJ_FLAG_WRAP)
+ * @param p_params x_obj_t*    -- Formal parameter tree
+ * @param p_body   x_obj_t*    -- Body expression list
+ * @param p_env    x_obj_t*    -- Captured lexical environment
+ * @param p_bst    x_obj_t*    -- Captured global BST
+ * @return Heap-allocated procedure object
+ */
 x_obj_t *x_make_procedure(x_obj_t *p_base, x_obj_flag_t flags,
 	x_obj_t *p_params, x_obj_t *p_body, x_obj_t *p_env, x_obj_t *p_bst)
 {
-	/* Build state list: (params . (body . (env . bst)))
-	 * GC marks via p_units=2 fallback which walks slot 1 (state). */
 	x_obj_t *p_type = x_type_procedure_register(p_base, p_base),
 		*p_s3 = x_mkspair(p_base, X_OBJ_FLAG_NONE, p_env, p_bst),
 		*p_s2 = x_mkspair(p_base, X_OBJ_FLAG_NONE, p_body, p_s3),
@@ -54,6 +69,13 @@ x_obj_t *x_make_procedure(x_obj_t *p_base, x_obj_flag_t flags,
 		(x_fn_t)x_type_procedure_call, p_state);
 }
 
+/**
+ * Build the PROCEDURE type struct descriptor.
+ *
+ * @param p_base  x_obj_t* -- Execution context
+ * @param p_args  x_obj_t* -- Unused
+ * @return Type struct pair list
+ */
 x_obj_t *x_type_procedure_struct(x_obj_t *p_base, x_obj_t *p_args)
 {
 	struct x_type_t type = {
@@ -68,6 +90,13 @@ x_obj_t *x_type_procedure_struct(x_obj_t *p_base, x_obj_t *p_args)
 	return x_type_struct_make(p_base, type);
 }
 
+/**
+ * Register (or retrieve) the PROCEDURE type struct on p_base.
+ *
+ * @param p_base  x_obj_t* -- Execution context
+ * @param p_args  x_obj_t* -- Unused
+ * @return The registered type struct object
+ */
 x_obj_t *x_type_procedure_register(x_obj_t *p_base, x_obj_t *p_args)
 {
 	x_spair_t args[2] = {
@@ -78,6 +107,15 @@ x_obj_t *x_type_procedure_register(x_obj_t *p_base, x_obj_t *p_args)
 	return x_type_struct_get(p_base, (x_obj_t *)args);
 }
 
+/**
+ * Type-dispatch make callback: construct a procedure from x-lang args.
+ *
+ * Expects args: (params body env bst [flags]).
+ *
+ * @param p_base  x_obj_t* -- Execution context
+ * @param p_args  x_obj_t* -- Construction arguments
+ * @return New procedure object
+ */
 x_obj_t *x_type_procedure_make(x_obj_t *p_base, x_obj_t *p_args)
 {
 	x_obj_t *p_params = x_0(p_args),
@@ -92,6 +130,18 @@ x_obj_t *x_type_procedure_make(x_obj_t *p_base, x_obj_t *p_args)
 		x_firstobj(p_env), x_firstobj(p_bst));
 }
 
+/**
+ * Type-dispatch call callback: evaluate a procedure application (TCO).
+ *
+ * For wrapped combiners (applicatives), dispatches to the underlying
+ * combiner with evaluated arguments.  For plain closures, extends the
+ * environment, pushes a save-stack frame, and enters the body via TCO.
+ *
+ * @param p_base  x_obj_t* -- Execution context
+ * @param p_args  x_obj_t* -- (procedure . unevaluated-args)
+ * @return Result of the procedure body
+ * @see x_type_procedure_apply
+ */
 x_obj_t *x_type_procedure_call(x_obj_t *p_base, x_obj_t *p_args)
 {
 	x_obj_t *p_proc = x_firstobj(p_args),
@@ -138,7 +188,17 @@ x_obj_t *x_type_procedure_call(x_obj_t *p_base, x_obj_t *p_args)
 	}
 }
 
-/* Non-TCO apply path: args already evaluated, used by (apply f args) */
+/**
+ * Non-TCO apply path for (apply f args).
+ *
+ * Arguments are already evaluated.  Saves and restores the full
+ * environment state around body evaluation.
+ *
+ * @param p_base  x_obj_t* -- Execution context
+ * @param p_args  x_obj_t* -- (procedure . evaluated-args)
+ * @return Result of the procedure body
+ * @see x_type_procedure_call
+ */
 x_obj_t *x_type_procedure_apply(x_obj_t *p_base, x_obj_t *p_args)
 {
 	x_obj_t *p_proc = x_firstobj(p_args),
@@ -172,6 +232,13 @@ x_obj_t *x_type_procedure_apply(x_obj_t *p_base, x_obj_t *p_args)
 	return p_result;
 }
 
+/**
+ * Type-dispatch write callback: print "#<fn>".
+ *
+ * @param p_base  x_obj_t* -- Execution context
+ * @param p_args  x_obj_t* -- (procedure)
+ * @return The procedure object (pass-through)
+ */
 x_obj_t *x_type_procedure_write(x_obj_t *p_base, x_obj_t *p_args)
 {
 	x_satom_t str = x_obj_set(x_type_atom_obj, X_OBJ_FLAG_NONE,
