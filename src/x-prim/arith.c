@@ -19,7 +19,13 @@
 #include "x-prim.h"
 #include "x-type/int.h"
 
-/* +: (+ a b) -> binary addition */
+/**
+ * Binary integer addition. x-lang: (+ a b)
+ *
+ * @param p_base  x_obj_t* -- Execution context
+ * @param p_args  x_obj_t* -- Unevaluated args, evaluated via x_eargs
+ * @return x_obj_t* -- New integer object
+ */
 static x_obj_t *x_prim_sum(x_obj_t *p_base, x_obj_t *p_args)
 {
 	x_obj_t *a, *b;
@@ -28,7 +34,17 @@ static x_obj_t *x_prim_sum(x_obj_t *p_base, x_obj_t *p_args)
 	return x_mkint(p_base, x_intval(a) + x_intval(b));
 }
 
-/* -: (- a) -> negate; (- a b) -> subtract */
+/**
+ * Integer subtraction or negation. x-lang: (- a b) or (- a)
+ *
+ * With one argument, returns the negation. With two, returns
+ * the difference. The second argument is evaluated lazily
+ * (only if present).
+ *
+ * @param p_base  x_obj_t* -- Execution context
+ * @param p_args  x_obj_t* -- Unevaluated args (1 or 2)
+ * @return x_obj_t* -- New integer object
+ */
 static x_obj_t *x_prim_sub(x_obj_t *p_base, x_obj_t *p_args)
 {
 	x_obj_t *a;
@@ -41,7 +57,13 @@ static x_obj_t *x_prim_sub(x_obj_t *p_base, x_obj_t *p_args)
 		x_intval(a) - x_intval(x_eval_arg(p_base, x_011(p_args))));
 }
 
-/* *: (* a b) -> binary multiplication */
+/**
+ * Binary integer multiplication. x-lang: (* a b)
+ *
+ * @param p_base  x_obj_t* -- Execution context
+ * @param p_args  x_obj_t* -- Unevaluated args, evaluated via x_eargs
+ * @return x_obj_t* -- New integer object
+ */
 static x_obj_t *x_prim_prod(x_obj_t *p_base, x_obj_t *p_args)
 {
 	x_obj_t *a, *b;
@@ -50,7 +72,13 @@ static x_obj_t *x_prim_prod(x_obj_t *p_base, x_obj_t *p_args)
 	return x_mkint(p_base, x_intval(a) * x_intval(b));
 }
 
-/* /: (/ a b) -> binary integer division */
+/**
+ * Binary integer division (truncates toward zero). x-lang: (/ a b)
+ *
+ * @param p_base  x_obj_t* -- Execution context
+ * @param p_args  x_obj_t* -- Unevaluated args, evaluated via x_eargs
+ * @return x_obj_t* -- New integer object
+ */
 static x_obj_t *x_prim_div(x_obj_t *p_base, x_obj_t *p_args)
 {
 	x_obj_t *a, *b;
@@ -59,7 +87,13 @@ static x_obj_t *x_prim_div(x_obj_t *p_base, x_obj_t *p_args)
 	return x_mkint(p_base, x_intval(a) / x_intval(b));
 }
 
-/* %: (% a b) -> binary integer modulo */
+/**
+ * Binary integer modulo. x-lang: (% a b)
+ *
+ * @param p_base  x_obj_t* -- Execution context
+ * @param p_args  x_obj_t* -- Unevaluated args, evaluated via x_eargs
+ * @return x_obj_t* -- New integer object
+ */
 static x_obj_t *x_prim_mod(x_obj_t *p_base, x_obj_t *p_args)
 {
 	x_obj_t *a, *b;
@@ -68,7 +102,13 @@ static x_obj_t *x_prim_mod(x_obj_t *p_base, x_obj_t *p_args)
 	return x_mkint(p_base, x_intval(a) % x_intval(b));
 }
 
-/* ~: (~ n) -> bitwise NOT */
+/**
+ * Bitwise NOT. x-lang: (~ n)
+ *
+ * @param p_base  x_obj_t* -- Execution context
+ * @param p_args  x_obj_t* -- Unevaluated args, evaluated via x_eargs
+ * @return x_obj_t* -- New integer object
+ */
 static x_obj_t *x_prim_bitnot(x_obj_t *p_base, x_obj_t *p_args)
 {
 	x_obj_t *a;
@@ -77,7 +117,13 @@ static x_obj_t *x_prim_bitnot(x_obj_t *p_base, x_obj_t *p_args)
 	return x_mkint(p_base, ~x_intval(a));
 }
 
-/* &: (& a b) -> bitwise AND */
+/**
+ * Bitwise AND. x-lang: (& a b)
+ *
+ * @param p_base  x_obj_t* -- Execution context
+ * @param p_args  x_obj_t* -- Unevaluated args, evaluated via x_eargs
+ * @return x_obj_t* -- New integer object
+ */
 static x_obj_t *x_prim_bitand(x_obj_t *p_base, x_obj_t *p_args)
 {
 	x_obj_t *a, *b;
@@ -86,7 +132,13 @@ static x_obj_t *x_prim_bitand(x_obj_t *p_base, x_obj_t *p_args)
 	return x_mkint(p_base, x_intval(a) & x_intval(b));
 }
 
-/* |: (| a b) -> bitwise OR */
+/**
+ * Bitwise OR. x-lang: (| a b)
+ *
+ * @param p_base  x_obj_t* -- Execution context
+ * @param p_args  x_obj_t* -- Unevaluated args, evaluated via x_eargs
+ * @return x_obj_t* -- New integer object
+ */
 static x_obj_t *x_prim_bitor(x_obj_t *p_base, x_obj_t *p_args)
 {
 	x_obj_t *a, *b;
@@ -95,7 +147,13 @@ static x_obj_t *x_prim_bitor(x_obj_t *p_base, x_obj_t *p_args)
 	return x_mkint(p_base, x_intval(a) | x_intval(b));
 }
 
-/* ^: (^ a b) -> bitwise XOR */
+/**
+ * Bitwise XOR. x-lang: (^ a b)
+ *
+ * @param p_base  x_obj_t* -- Execution context
+ * @param p_args  x_obj_t* -- Unevaluated args, evaluated via x_eargs
+ * @return x_obj_t* -- New integer object
+ */
 static x_obj_t *x_prim_bitxor(x_obj_t *p_base, x_obj_t *p_args)
 {
 	x_obj_t *a, *b;
@@ -104,7 +162,15 @@ static x_obj_t *x_prim_bitxor(x_obj_t *p_base, x_obj_t *p_args)
 	return x_mkint(p_base, x_intval(a) ^ x_intval(b));
 }
 
-/* <<: (<< a b) -> shift left */
+/**
+ * Left shift. x-lang: (<< a b)
+ *
+ * @param p_base  x_obj_t* -- Execution context
+ * @param p_args  x_obj_t* -- Unevaluated args, evaluated via x_eargs
+ * @return x_obj_t* -- New integer object
+ *
+ * @see x_prim_shr
+ */
 static x_obj_t *x_prim_shl(x_obj_t *p_base, x_obj_t *p_args)
 {
 	x_obj_t *a, *b;
@@ -113,7 +179,15 @@ static x_obj_t *x_prim_shl(x_obj_t *p_base, x_obj_t *p_args)
 	return x_mkint(p_base, x_intval(a) << x_intval(b));
 }
 
-/* >>: (>> a b) -> shift right */
+/**
+ * Right shift. x-lang: (>> a b)
+ *
+ * @param p_base  x_obj_t* -- Execution context
+ * @param p_args  x_obj_t* -- Unevaluated args, evaluated via x_eargs
+ * @return x_obj_t* -- New integer object
+ *
+ * @see x_prim_shl
+ */
 static x_obj_t *x_prim_shr(x_obj_t *p_base, x_obj_t *p_args)
 {
 	x_obj_t *a, *b;
@@ -122,6 +196,15 @@ static x_obj_t *x_prim_shr(x_obj_t *p_base, x_obj_t *p_args)
 	return x_mkint(p_base, x_intval(a) >> x_intval(b));
 }
 
+/**
+ * Register arithmetic primitives into the environment.
+ *
+ * Binds: +, -, *, /, %, ~, &, |, ^, <<, >>
+ *
+ * @param p_base  x_obj_t* -- Execution context
+ * @param p_args  x_obj_t* -- Unused
+ * @return x_obj_t* -- p_base
+ */
 x_obj_t *x_prim_arith_register(x_obj_t *p_base, x_obj_t *p_args)
 {
 	static const x_callable_entry_t entries[] = {
