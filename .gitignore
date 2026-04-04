@@ -74,3 +74,5 @@ tmp/
 /x-profile
 core
 *.core
+docs/ref/c/
+docs/ref/x/

@@ -262,6 +262,22 @@ fmt-check-x: $(EXECUTABLE) ## Check x-lang formatting
 	done; [ "$$FAIL" -eq 0 ]
 .PHONY: fmt-check-x
 
+doc-c: ## Generate C reference documentation (HTML + man pages)
+	/opt/homebrew/bin/doxygen Doxyfile
+.PHONY: doc-c
+
+doc-x: $(EXECUTABLE) ## Generate x-lang documentation
+	@mkdir -p docs/ref/x
+	@for f in lib/x-core.x lib/x/*.x lib/x/**/*.x; do \
+		out="docs/ref/x/$$(basename $$f .x).md"; \
+		sh tools/doc.sh "$$f" > "$$out" 2>/dev/null && \
+		printf '  %s\n' "$$out"; \
+	done
+.PHONY: doc-x
+
+doc: doc-c doc-x ## Generate all documentation
+.PHONY: doc
+
 valgrind: ## Run Valgrind
 	$(CC) $(CFLAGS) -g -Wall $(SOURCES) && valgrind -v --leak-check=full ./a.out && rm a.out
 .PHONY: valgrind
