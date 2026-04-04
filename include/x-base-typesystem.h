@@ -8,31 +8,60 @@
  * Extends x-expr's base object with environment, control flow, I/O, and
  * metadata fields.  Every leaf field is a stack: @c (current-value . saved-values).
  *
- * The base-data pair tree layout:
+ * The base-data pair tree layout (S = stack-wrapped, D = direct value):
  * @code
  * base-data
  * +-- first: hot (env + ctrl)               [x-expr: nil, filled here]
  * |   +-- first: env-group
- * |   |   +-- first: env-alist
- * |   |   +-- rest: (env-local-boundary . (env-global-tree . shadow-list))
+ * |   |   +-- first: env-alist              [S] (current . saved)
+ * |   |   +-- rest: env-aux
+ * |   |       +-- first: env-local-boundary [D] direct pointer
+ * |   |       +-- rest: env-bst
+ * |   |           +-- first: env-global-tree [D] direct pointer
+ * |   |           +-- rest: shadow-list      [D] direct list
  * |   +-- rest: ctrl-group
- * |       +-- first: (save-stack . error-handler)
- * |       +-- rest: (tco-expr . tco-env)
+ * |       +-- first: ctrl-head
+ * |       |   +-- first: save-stack         [D] direct stack (push/pop)
+ * |       |   +-- rest: error-handler       [S] (current . saved)
+ * |       +-- rest: tco
+ * |           +-- first: tco-expr           [S] (current . saved)
+ * |           +-- rest: tco-env             [S] (current . saved)
  * +-- rest: cold (io + meta)                [x-expr skeleton]
  *     +-- first: io-group
- *     |   +-- first: (type-alist . files)   [files from x-expr]
+ *     |   +-- first: io-head
+ *     |   |   +-- first: type-alist         [S] (current . saved)
+ *     |   |   +-- rest: files               [from x-expr, all S]
+ *     |   |       +-- filein, fileout, fileerr, write-buf, buffer
  *     |   +-- rest: io-state                [x-expr: nil, filled here]
- *     |       +-- first: line
- *     |       +-- rest: (true . false)
+ *     |       +-- first: line               [S] (current . saved)
+ *     |       +-- rest: booleans
+ *     |           +-- first: true           [S] (current . saved)
+ *     |           +-- rest: false           [S] (current . saved)
  *     +-- rest: meta-group
- *         +-- first: (profile . hooks)      [hooks from x-expr]
- *         +-- rest:
- *             +-- first: heap-group         [from x-expr]
+ *         +-- first: meta-head
+ *         |   +-- first: profile            [list of S counter cells]
+ *         |   +-- rest: hooks               [from x-expr, all S]
+ *         +-- rest: meta-rest
+ *             +-- first: heap-group         [from x-expr, all S]
  *             +-- rest: x-project-extras
- *                 +-- first: eval-list
- *                 +-- rest: (token-cache . (mark-hooks .
- *                     (free-hooks . mark-roots)))
+ *                 +-- first: eval-list      [S] (current . saved)
+ *                 +-- rest:
+ *                     +-- first: token-cache [S] (current . saved)
+ *                     +-- rest: gc-hooks
+ *                         +-- first: mark-hooks  [S]
+ *                         +-- rest:
+ *                             +-- first: free-hooks  [S]
+ *                             +-- rest: mark-roots   [S]
  * @endcode
+ *
+ * Stack-wrapped fields [S] hold @c (current-value . saved-values).
+ * Use @c x_firstobj() to read the current value, push with
+ * @c x_mkspair(), pop with @c x_restobj().
+ *
+ * Direct-value fields [D] hold the value itself. Read/write directly.
+ * @c save_stack is a direct stack (push/pop without wrapping).
+ * @c env_local_boundary, @c env_global_tree, @c shadow_list are
+ * direct pointers managed by save/restore in procedure calls.
  *
  * Error handler is a pair tree:
  * @c (jmp-ptr (saved-env . saved-boundary) error-value)

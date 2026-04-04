@@ -11,18 +11,36 @@
  * returning the full @c (current . saved) cell, and a bare variant
  * returning the current value.
  *
- * Type descriptor pair-tree layout:
+ * Type descriptor pair-tree layout (all leaf fields are stack-wrapped):
  * @code
  * '(
- *    name
- *    data
- *    (mark make free clone units length)
- *    (call eval)
- *    (from to)
- *    (analyse delimit read write display error)
- *    (iter)
+ *    name          [S] type name symbol
+ *    data          [S] arbitrary type-specific data
+ *    (mark         [S] GC mark callback
+ *     make         [S] constructor
+ *     free         [S] destructor
+ *     clone        [S] clone callback
+ *     units        [S] element count (for GC traversal)
+ *     length)      [S] length callback
+ *    (call         [S] call handler (for callable types)
+ *     eval)        [S] eval handler (for self-evaluating types)
+ *    (from         [S] inbound conversion alist
+ *     to)          [S] outbound conversion alist
+ *    (analyse      [S] tokenizer scoring callback
+ *     delimit      [S] delimiter predicate
+ *     read         [S] reader (token -> object)
+ *     write        [S] writer (s-expression output)
+ *     display      [S] display (human-readable output)
+ *     error)       [S] error formatter
+ *    (iter)        [S] iterator constructor
  * )
  * @endcode
+ *
+ * Every field is stack-wrapped: stored as @c (current . saved).
+ * The @c _stack macros return the cell, the bare macros return
+ * @c x_firstobj(cell) (the current value).  Stack-wrapping enables
+ * @c type-push-write / @c type-pop-write to temporarily override
+ * handlers (e.g. for write-to-str capture).
  *
  * @author Jon Ruttan (jonruttan@gmail.com)
  * @copyright 2021 Jon Ruttan
