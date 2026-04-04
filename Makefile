@@ -267,12 +267,18 @@ doc-c: ## Generate C reference documentation (HTML + man pages)
 .PHONY: doc-c
 
 doc-x: $(EXECUTABLE) ## Generate x-lang documentation
-	@mkdir -p docs/ref/x
+	@mkdir -p docs/ref/x/boot docs/ref/x/core docs/ref/x/type \
+		docs/ref/x/sys docs/ref/x/num docs/ref/x/doc docs/ref/x/tool \
+		docs/ref/x/platform
 	@for f in lib/x-core.x lib/x/*.x lib/x/**/*.x; do \
-		out="docs/ref/x/$$(basename $$f .x).md"; \
-		sh tools/doc.sh "$$f" > "$$out" 2>/dev/null && \
+		rel=$$(echo "$$f" | sed 's|^lib/x/||; s|^lib/||; s|\.x$$||'); \
+		out="docs/ref/x/$${rel}.md"; \
+		mkdir -p "$$(dirname $$out)"; \
+		sh tools/doc.sh "$$f" > "$$out" 2>/dev/null; \
 		printf '  %s\n' "$$out"; \
 	done
+	@sh tools/doc-index.sh > docs/ref/x/index.md 2>/dev/null; \
+		printf '  %s\n' "docs/ref/x/index.md"
 .PHONY: doc-x
 
 doc: doc-c doc-x ## Generate all documentation
