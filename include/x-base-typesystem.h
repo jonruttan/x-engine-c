@@ -88,10 +88,10 @@
  * @c (jmp-ptr (saved-env . saved-boundary) error-value)
  * @{
  */
-#define x_error_handler_jmp(H)				x_ptrval(x_firstobj(H))           /**< Jump buffer pointer. */
-#define x_error_handler_saved_env(H)		x_firstobj(x_firstobj(x_restobj(H))) /**< Saved environment alist. */
-#define x_error_handler_saved_boundary(H)	x_restobj(x_firstobj(x_restobj(H)))  /**< Saved local boundary. */
-#define x_error_handler_error(H)			x_firstobj(x_restobj(x_restobj(H)))  /**< Error value. */
+#define x_error_handler_jmp(H)				x_ptrval(x_firstobj(H))           /**< [D] Jump buffer pointer. */
+#define x_error_handler_saved_env(H)		x_firstobj(x_firstobj(x_restobj(H))) /**< [D] Saved environment alist. */
+#define x_error_handler_saved_boundary(H)	x_restobj(x_firstobj(x_restobj(H)))  /**< [D] Saved local boundary. */
+#define x_error_handler_error(H)			x_firstobj(x_restobj(x_restobj(H)))  /**< [D] Error value. */
 /** @} */
 
 /**
@@ -110,77 +110,77 @@
 /** @name Hot Path -- Environment + Control
  *  Fields that x-expr leaves nil and this layer fills.
  * @{ */
-#define x_base_hot(X)						x_firstobj(x_base(X))              /**< Hot group (env + ctrl). */
+#define x_base_hot(X)						x_firstobj(x_base(X))              /**< [D] Hot group (env + ctrl). */
 
-#define x_base_env_group(X)					x_firstobj(x_base_hot(X))          /**< Environment group (first of hot). */
-#define x_base_field_env_alist(X)			x_firstobj(x_base_env_group(X))    /**< Environment alist stack. */
-#define x_base_env_aux(X)					x_restobj(x_base_env_group(X))     /**< Auxiliary env fields. */
-#define x_base_field_env_local_boundary(X)	x_firstobj(x_base_env_aux(X))      /**< Local boundary stack. */
-#define x_base_env_bst(X)					x_restobj(x_base_env_aux(X))       /**< BST subgroup. */
-#define x_base_field_env_global_tree(X)		x_firstobj(x_base_env_bst(X))      /**< Global BST stack. */
+#define x_base_env_group(X)					x_firstobj(x_base_hot(X))          /**< [D] Environment group (first of hot). */
+#define x_base_field_env_alist(X)			x_firstobj(x_base_env_group(X))    /**< [S] Current environment alist. */
+#define x_base_env_aux(X)					x_restobj(x_base_env_group(X))     /**< [D] Auxiliary env fields. */
+#define x_base_field_env_local_boundary(X)	x_firstobj(x_base_env_aux(X))      /**< [D] Direct pointer, not stack-wrapped. */
+#define x_base_env_bst(X)					x_restobj(x_base_env_aux(X))       /**< [D] BST subgroup. */
+#define x_base_field_env_global_tree(X)		x_firstobj(x_base_env_bst(X))      /**< [D] Direct pointer, not stack-wrapped. */
 
 /** Shadow flag: symbol shadows a global BST binding. */
 #define X_OBJ_FLAG_SHADOW					X_OBJ_FLAG_1
-#define x_base_field_shadow_list(X)			x_restobj(x_base_env_bst(X))       /**< Shadow list stack. */
+#define x_base_field_shadow_list(X)			x_restobj(x_base_env_bst(X))       /**< [D] Direct list of shadowed symbols. */
 
 /** Coverage flag: marks expressions that have been evaluated. */
 #define X_OBJ_FLAG_COV						X_OBJ_FLAG_2
 
-#define x_base_ctrl_group(X)				x_restobj(x_base_hot(X))           /**< Control group (rest of hot). */
-#define x_base_ctrl_head(X)					x_firstobj(x_base_ctrl_group(X))   /**< Control head (save-stack . error-handler). */
-#define x_base_field_save_stack(X)			x_firstobj(x_base_ctrl_head(X))    /**< Save stack. */
-#define x_base_field_error_handler(X)		x_restobj(x_base_ctrl_head(X))     /**< Error handler pair tree. */
-#define x_base_tco(X)						x_restobj(x_base_ctrl_group(X))    /**< TCO subgroup. */
-#define x_base_field_tco_expr(X)			x_firstobj(x_base_tco(X))          /**< TCO pending expression. */
-#define x_base_field_tco_env(X)				x_restobj(x_base_tco(X))           /**< TCO pending environment. */
+#define x_base_ctrl_group(X)				x_restobj(x_base_hot(X))           /**< [D] Control group (rest of hot). */
+#define x_base_ctrl_head(X)					x_firstobj(x_base_ctrl_group(X))   /**< [D] Control head (save-stack . error-handler). */
+#define x_base_field_save_stack(X)			x_firstobj(x_base_ctrl_head(X))    /**< [D] Direct stack (push/pop without wrapping). */
+#define x_base_field_error_handler(X)		x_restobj(x_base_ctrl_head(X))     /**< [S] Error handler pair tree. */
+#define x_base_tco(X)						x_restobj(x_base_ctrl_group(X))    /**< [D] TCO subgroup. */
+#define x_base_field_tco_expr(X)			x_firstobj(x_base_tco(X))          /**< [S] TCO pending expression. */
+#define x_base_field_tco_env(X)				x_restobj(x_base_tco(X))           /**< [S] TCO pending environment. */
 /** @} */
 
 /** @name Cold Path -- I/O + Metadata
  *  Fields from x-expr's skeleton, extended here.
  * @{ */
-#define x_base_cold(X)						x_restobj(x_base(X))               /**< Cold group (io + meta). */
+#define x_base_cold(X)						x_restobj(x_base(X))               /**< [D] Cold group (io + meta). */
 
-#define x_base_field_type_alist(X)			x_firstobj(x_firstobj(x_base_field_io_group(X))) /**< Type alist stack. */
-#define x_base_io_state(X)					x_restobj(x_base_field_io_group(X))               /**< I/O state subgroup. */
-#define x_base_field_line(X)				x_firstobj(x_base_io_state(X))     /**< Current line number stack. */
-#define x_base_booleans(X)					x_restobj(x_base_io_state(X))      /**< Boolean constants pair. */
-#define x_base_field_true(X)				x_firstobj(x_base_booleans(X))     /**< Canonical true value. */
-#define x_base_field_false(X)				x_restobj(x_base_booleans(X))      /**< Canonical false value. */
+#define x_base_field_type_alist(X)			x_firstobj(x_firstobj(x_base_field_io_group(X))) /**< [S] Type alist stack. */
+#define x_base_io_state(X)					x_restobj(x_base_field_io_group(X))               /**< [D] I/O state subgroup. */
+#define x_base_field_line(X)				x_firstobj(x_base_io_state(X))     /**< [S] Current line number stack. */
+#define x_base_booleans(X)					x_restobj(x_base_io_state(X))      /**< [D] Boolean constants pair. */
+#define x_base_field_true(X)				x_firstobj(x_base_booleans(X))     /**< [S] Canonical true value. */
+#define x_base_field_false(X)				x_restobj(x_base_booleans(X))      /**< [S] Canonical false value. */
 /** @} */
 
 /** @name Meta Extensions
  *  Extends x-expr's profile, hooks, and heap-group.
  * @{ */
-#define x_base_meta_head(X)					x_firstobj(x_base_field_meta_group(X)) /**< Meta head. */
+#define x_base_meta_head(X)					x_firstobj(x_base_field_meta_group(X)) /**< [D] Meta head. */
 /** @} */
 
 /** @name Profile Counters
  *  Each counter is @c pair(atom(N), nil).  Use
  *  @c x_atomint(x_firstobj(x_base_field_profile_*(X))) to read.
  * @{ */
-#define x_base_field_profile_evals(X)			x_firstobj(x_restobj(x_base_field_profile(X)))                                                                           /**< Eval call count. */
-#define x_base_field_profile_tco(X)				x_firstobj(x_restobj(x_restobj(x_base_field_profile(X))))                                                                /**< TCO trampoline count. */
-#define x_base_field_profile_assoc_calls(X)		x_firstobj(x_restobj(x_restobj(x_restobj(x_base_field_profile(X)))))                                                     /**< Assoc call count. */
-#define x_base_field_profile_assoc_steps(X)		x_firstobj(x_restobj(x_restobj(x_restobj(x_restobj(x_base_field_profile(X))))))                                          /**< Assoc step count. */
-#define x_base_field_profile_sym_find_calls(X)	x_firstobj(x_restobj(x_restobj(x_restobj(x_restobj(x_restobj(x_base_field_profile(X)))))))                               /**< Symbol find call count. */
-#define x_base_field_profile_sym_find_steps(X)	x_firstobj(x_restobj(x_restobj(x_restobj(x_restobj(x_restobj(x_restobj(x_base_field_profile(X))))))))                    /**< Symbol find step count. */
-#define x_base_field_profile_gc_runs(X)			x_firstobj(x_restobj(x_restobj(x_restobj(x_restobj(x_restobj(x_restobj(x_restobj(x_base_field_profile(X)))))))))         /**< GC run count. */
-#define x_base_field_profile_bst_hits(X)		x_firstobj(x_restobj(x_restobj(x_restobj(x_restobj(x_restobj(x_restobj(x_restobj(x_restobj(x_base_field_profile(X)))))))))) /**< BST cache hits. */
-#define x_base_field_profile_bst_misses(X)		x_firstobj(x_restobj(x_restobj(x_restobj(x_restobj(x_restobj(x_restobj(x_restobj(x_restobj(x_restobj(x_base_field_profile(X))))))))))) /**< BST cache misses. */
+#define x_base_field_profile_evals(X)			x_firstobj(x_restobj(x_base_field_profile(X)))                                                                           /**< [S] Eval call count. */
+#define x_base_field_profile_tco(X)				x_firstobj(x_restobj(x_restobj(x_base_field_profile(X))))                                                                /**< [S] TCO trampoline count. */
+#define x_base_field_profile_assoc_calls(X)		x_firstobj(x_restobj(x_restobj(x_restobj(x_base_field_profile(X)))))                                                     /**< [S] Assoc call count. */
+#define x_base_field_profile_assoc_steps(X)		x_firstobj(x_restobj(x_restobj(x_restobj(x_restobj(x_base_field_profile(X))))))                                          /**< [S] Assoc step count. */
+#define x_base_field_profile_sym_find_calls(X)	x_firstobj(x_restobj(x_restobj(x_restobj(x_restobj(x_restobj(x_base_field_profile(X)))))))                               /**< [S] Symbol find call count. */
+#define x_base_field_profile_sym_find_steps(X)	x_firstobj(x_restobj(x_restobj(x_restobj(x_restobj(x_restobj(x_restobj(x_base_field_profile(X))))))))                    /**< [S] Symbol find step count. */
+#define x_base_field_profile_gc_runs(X)			x_firstobj(x_restobj(x_restobj(x_restobj(x_restobj(x_restobj(x_restobj(x_restobj(x_base_field_profile(X)))))))))         /**< [S] GC run count. */
+#define x_base_field_profile_bst_hits(X)		x_firstobj(x_restobj(x_restobj(x_restobj(x_restobj(x_restobj(x_restobj(x_restobj(x_restobj(x_base_field_profile(X)))))))))) /**< [S] BST cache hits. */
+#define x_base_field_profile_bst_misses(X)		x_firstobj(x_restobj(x_restobj(x_restobj(x_restobj(x_restobj(x_restobj(x_restobj(x_restobj(x_restobj(x_base_field_profile(X))))))))))) /**< [S] BST cache misses. */
 /** @} */
 
 /** @name Project Extras
  *  Additional fields appended after heap-group in meta-rest.
  * @{ */
-#define x_base_extras(X)					x_restobj(x_restobj(x_base_field_meta_group(X))) /**< Extras subgroup. */
-#define x_base_field_eval_list(X)			x_firstobj(x_base_extras(X))       /**< Eval list stack. */
-#define x_base_extras_more(X)				x_restobj(x_base_extras(X))        /**< Remaining extras. */
-#define x_base_field_token_cache(X)			x_firstobj(x_base_extras_more(X))  /**< Token cache stack. */
-#define x_base_gc_hooks(X)					x_restobj(x_base_extras_more(X))   /**< GC hooks subgroup. */
-#define x_base_field_heap_mark_hooks(X)		x_firstobj(x_base_gc_hooks(X))     /**< Heap mark hooks list. */
-#define x_base_gc_hooks_rest(X)				x_restobj(x_base_gc_hooks(X))      /**< Remaining GC hooks. */
-#define x_base_field_heap_free_hooks(X)		x_firstobj(x_base_gc_hooks_rest(X)) /**< Heap free hooks list. */
-#define x_base_field_heap_mark_roots(X)		x_restobj(x_base_gc_hooks_rest(X)) /**< Heap mark roots list. */
+#define x_base_extras(X)					x_restobj(x_restobj(x_base_field_meta_group(X))) /**< [D] Extras subgroup. */
+#define x_base_field_eval_list(X)			x_firstobj(x_base_extras(X))       /**< [S] Eval list stack. */
+#define x_base_extras_more(X)				x_restobj(x_base_extras(X))        /**< [D] Remaining extras. */
+#define x_base_field_token_cache(X)			x_firstobj(x_base_extras_more(X))  /**< [S] Token cache stack. */
+#define x_base_gc_hooks(X)					x_restobj(x_base_extras_more(X))   /**< [D] GC hooks subgroup. */
+#define x_base_field_heap_mark_hooks(X)		x_firstobj(x_base_gc_hooks(X))     /**< [S] Heap mark hooks list. */
+#define x_base_gc_hooks_rest(X)				x_restobj(x_base_gc_hooks(X))      /**< [D] Remaining GC hooks. */
+#define x_base_field_heap_free_hooks(X)		x_firstobj(x_base_gc_hooks_rest(X)) /**< [S] Heap free hooks list. */
+#define x_base_field_heap_mark_roots(X)		x_restobj(x_base_gc_hooks_rest(X)) /**< [S] Heap mark roots list. */
 /** @} */
 
 /** @} */ /* end base_field */

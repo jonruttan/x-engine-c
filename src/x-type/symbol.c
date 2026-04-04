@@ -191,11 +191,25 @@ x_obj_t *x_type_symbol_register(x_obj_t *p_base, x_obj_t *p_args)
  * intern list, and inserts it into the BST.  Ownership of the source
  * string is transferred when the source has @c X_OBJ_FLAG_OWN set.
  *
+ * @details
+ * Interning sequence:
+ * 1. Calls x_type_symbol_find which does a BST lookup (O(log n)) on the
+ *    type's intern BST.  If the symbol already exists, the existing
+ *    heap-allocated symbol object is returned immediately -- no allocation.
+ * 2. On miss, allocates a new symbol atom via x_obj_make, prepends it to
+ *    the linear intern list (x_symbol_data_list), and inserts it into the
+ *    intern BST (x_symbol_bst) for future lookups.
+ * 3. String ownership: if the source atom has X_OBJ_FLAG_OWN, that flag
+ *    is transferred to the new symbol and cleared on the source, ensuring
+ *    exactly one owner for the malloc'd string.
+ *
  * @param p_base  Execution context.
  * @param p_args  Argument list: (name-atom [flags-atom]).
  * @return Interned SYMBOL object.
  *
  * @note TODO: allow the symbol list to be optionally supplied by argument.
+ * @see x_type_symbol_find for the BST lookup path
+ * @see sym_bst_insert for the intern BST insertion (mutating, not path-copying)
  */
 x_obj_t *x_type_symbol_make(x_obj_t *p_base, x_obj_t *p_args)
 {
@@ -260,11 +274,45 @@ x_obj_t *x_type_symbol_find(x_obj_t *p_base, x_obj_t *p_args)
  *
  * Raises an "Unbound SYMBOL" error if the symbol is not found.
  *
+ * @details
+ * The 3-step design optimizes for the common case where most lookups
+ * hit either a local binding (step 1) or a global (step 2):
+ *
+ * @code
+ *   env alist:  [local0] -> [local1] -> [boundary] -> [enclosing...]
+ *                  ^                        ^
+ *                  |                        |
+ *              Step 1: walk here        Step 3: walk from here
+ *              (2-3 entries typical)    (rare: nested closure vars)
+ *
+ *   BST:           [m]
+ *                 /   \
+ *              [d]     [s]         Step 2: O(log n) global lookup
+ *             / \     / \          (skipped if X_OBJ_FLAG_SHADOW set)
+ *           ...  ... ...  ...
+ * @endcode
+ *
+ * **Step 1** walks from the alist head up to AND INCLUDING the local
+ * boundary pointer.  This is the closure's captured env -- locals bound
+ * by @c let, @c fn params, or @c def within the current scope.  Typically
+ * only 2-3 entries deep.
+ *
+ * **Step 2** performs a BST lookup on the global tree for O(log n) access
+ * to top-level definitions.  This step is SKIPPED when the symbol has
+ * X_OBJ_FLAG_SHADOW set, meaning a local @c def has shadowed the global
+ * binding and the alist walk in step 3 must find it instead.
+ *
+ * **Step 3** continues the linear alist walk from after the boundary.
+ * This catches bindings from enclosing closures in nested scope chains.
+ * Only reached when steps 1 and 2 both miss.
+ *
  * @param p_base  Execution context.
  * @param p_args  Eval argument frame containing the symbol expression.
  * @return The bound value, or NULL on error.
  *
- * @see x_alist_bst_lookup
+ * @see x_alist_bst_lookup for the BST search used in step 2
+ * @see X_OBJ_FLAG_SHADOW for the shadow flag that bypasses BST lookup
+ * @see x_base_field_env_local_boundary for the boundary pointer
  */
 x_obj_t *x_type_symbol_eval(x_obj_t *p_base, x_obj_t *p_args)
 {

@@ -27,7 +27,38 @@
  * @param p_base  Execution context.
  * @param p_args  Unevaluated argument list; expects (caller name value).
  * @return The evaluated value.
- * @see x_prim_set
+ *
+ * @details **Eval-before-extend.**  The value expression is evaluated
+ *          BEFORE the name is bound in the environment.  This means the
+ *          value expression cannot reference the binding being created
+ *          (no implicit self-reference).  For recursive definitions,
+ *          x-lang uses a forward-declare pattern: @c (def name ())
+ *          followed by @c (set! name (fn ...)).
+ *
+ * @details **Top-level vs closure scope.**  The save_stack depth
+ *          distinguishes the two cases:
+ *          - **Empty save_stack (top-level):** The (symbol . value) pair
+ *            is inserted into the global BST via x_alist_bst_insert and
+ *            the local-boundary is advanced to the new alist head.  This
+ *            makes the binding permanently available via O(log n) BST
+ *            lookup.
+ *          - **Non-empty save_stack (inside closure):** No BST insertion.
+ *            If the symbol already exists in the BST (a global with the
+ *            same name), X_OBJ_FLAG_SHADOW is set on the symbol and it
+ *            is pushed onto the shadow list.  This forces alist linear
+ *            scan for that symbol, finding the local binding first.  The
+ *            shadow flag is cleared when the closure scope unwinds via
+ *            x_prim_clear_shadows_to.
+ *
+ * @note The shadow flag is set on the interned symbol object itself,
+ *       not on the binding pair.  Since symbols are interned (shared),
+ *       this globally affects all lookups for that name until the flag
+ *       is cleared.
+ *
+ * @see x_prim_set              -- mutation form (does not create new bindings)
+ * @see x_env_extend            -- parameter binding with the same shadow protocol
+ * @see x_prim_clear_shadows_to -- unwinds shadow flags on scope exit
+ * @see x_callable_bind         -- C-level equivalent for primitive registration
  */
 static x_obj_t *x_prim_define(x_obj_t *p_base, x_obj_t *p_args)
 {

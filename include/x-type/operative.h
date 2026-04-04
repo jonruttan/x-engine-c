@@ -7,6 +7,31 @@
  * @author Jon Ruttan (jonruttan@gmail.com)
  * @copyright 2024 Jon Ruttan
  * @license MIT No Attribution (MIT-0)
+ *
+ * @details
+ * An operative is a two-unit heap object with callable layout:
+ * @code
+ *   slot 0              slot 1 (state_list)
+ *   +-----------------+ +------------------------------------------+
+ *   | fn_ptr          | | (params . (envparam . (body . env)))     |
+ *   | (x_type_        | |                                          |
+ *   |  operative_call)| |  params ---- formal parameter tree       |
+ *   +-----------------+ |  envparam -- symbol bound to caller env  |
+ *                       |  body ------ list of body expressions    |
+ *                       |  env ------- captured lexical env alist  |
+ *                       +------------------------------------------+
+ * @endcode
+ *
+ * @note Unlike procedures, the operative state list has NO BST field.
+ *       Operatives receive unevaluated arguments and the caller's
+ *       dynamic environment, so they do not need a captured BST snapshot.
+ *
+ * @note Slot 0 holds a raw C function pointer, NOT a heap object.
+ *       The GC mark callback (x_type_operative_mark) must skip slot 0
+ *       and only traverse slot 1 (the state list).
+ *
+ * @see x_type_operative_mark in operative.c
+ * @see x_type_operative_call for the TCO call path
  */
 /*
  *     ., .,

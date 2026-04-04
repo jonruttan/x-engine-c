@@ -52,7 +52,24 @@ void x_prim_clear_shadows(x_obj_t *p_base)
  * @param p_base  x_obj_t* -- Execution context
  * @param p_old   x_obj_t* -- Previous shadow-list head to restore to
  *
+ * @details Paired with x_env_extend: every time x_env_extend flags a
+ *          symbol with X_OBJ_FLAG_SHADOW and pushes it onto the shadow
+ *          list, a corresponding call to this function (or
+ *          x_prim_clear_shadows) must eventually unflag it.  Callers
+ *          save the shadow-list head before extending the env, then pass
+ *          that saved head here when unwinding (TCO restore, closure
+ *          exit, guard catch).  Failure to call this leaves stale shadow
+ *          flags on interned symbols, causing BST lookups to skip them
+ *          permanently.
+ *
+ * @note The walk stops when it reaches @p p_old by pointer identity.
+ *       If @p p_old is NULL, all shadow entries are cleared (equivalent
+ *       to x_prim_clear_shadows).
+ *
  * @see x_prim_clear_shadows
+ * @see x_env_extend          -- sets X_OBJ_FLAG_SHADOW on symbols
+ * @see x_eval                -- calls this during outermost env restore
+ * @see x_eval_body_tco       -- calls this on early-exit restore
  */
 void x_prim_clear_shadows_to(x_obj_t *p_base, x_obj_t *p_old)
 {
@@ -93,6 +110,23 @@ x_obj_t *x_eval_arg(x_obj_t *p_base, x_obj_t *p_arg)
  * @param p_base  x_obj_t* -- Execution context
  * @param p_args  x_obj_t* -- List of unevaluated expressions
  * @return x_obj_t* -- New list of evaluated results, or NULL if empty
+ *
+ * @details **GC rooting protocol.**  Before evaluating the current
+ *          element, the entire remaining arg list is pushed onto
+ *          eval_list (a GC root on p_base) as a stack-allocated pair.
+ *          This prevents the collector from freeing the rest of the
+ *          list while x_eval_arg runs (which may trigger GC).  After
+ *          evaluation, the root is popped.  The push/pop is O(1) per
+ *          element, but the recursion itself is O(n) in C stack depth
+ *          -- one frame per list element.  This is acceptable for
+ *          argument lists (typically short) but would overflow on
+ *          very long lists.
+ *
+ * @note Returns NULL for nil input (empty arg list), which is the
+ *       identity for list construction.
+ *
+ * @see x_eval_arg  -- evaluates a single expression
+ * @see x_eval_body -- iterative body evaluator (same GC rooting pattern)
  */
 x_obj_t *x_eval_list(x_obj_t *p_base, x_obj_t *p_args)
 {
@@ -130,7 +164,29 @@ x_obj_t *x_eval_list(x_obj_t *p_base, x_obj_t *p_args)
  * @param p_env    x_obj_t* -- Current environment alist
  * @param p_params x_obj_t* -- Parameter list (or single symbol for variadic)
  * @param p_vals   x_obj_t* -- Value list
- * @return x_obj_t* -- Extended environment alist
+ * @return x_obj_t* -- Extended environment alist (newly consed pairs)
+ *
+ * @details **No in-place mutation.**  Each binding creates a new
+ *          (symbol . value) pair and a new alist cons cell prepended
+ *          to @p p_env.  The original environment is never modified,
+ *          which is essential for the TCO env-restore protocol: the
+ *          saved env snapshot remains valid even after extension.
+ *
+ * @details **Shadow flagging.**  When a parameter name already exists
+ *          in the global BST (checked via x_alist_bst_lookup), the
+ *          symbol object itself is flagged X_OBJ_FLAG_SHADOW and pushed
+ *          onto the shadow list.  This causes x_alist_lookup to skip
+ *          BST fast-path for that symbol, forcing a linear alist walk
+ *          that finds the local binding first.  The flag is cleared
+ *          later by x_prim_clear_shadows_to when the scope unwinds.
+ *
+ * @note The variadic case (bare symbol for p_params) binds the ENTIRE
+ *       remaining value list, not just one value.  This implements
+ *       rest-parameter semantics: @c (fn (a . rest) ...).
+ *
+ * @see x_prim_clear_shadows_to -- unwinds shadow flags on scope exit
+ * @see x_prim_define           -- uses the same shadow flagging for def inside closures
+ * @see x_eval_body_tco         -- saves/restores env around extended scopes
  */
 x_obj_t *x_env_extend(x_obj_t *p_base, x_obj_t *p_env,
 	x_obj_t *p_params, x_obj_t *p_vals)
@@ -237,8 +293,35 @@ x_obj_t *x_eval_body(x_obj_t *p_base, x_obj_t *p_body)
  * @return x_obj_t* -- Result of non-tail expressions, or NULL when
  *                      tail expression is deferred to the trampoline
  *
+ * @details **Save-stack protocol.**  The caller (fn/let dispatch)
+ *          pushes a compound pair onto save_stack BEFORE calling this
+ *          function.  The compound has the shape:
+ *          @code
+ *          ((env-alist . local-boundary) . (global-bst . shadow-head))
+ *          @endcode
+ *          This captures the full env state prior to extension so it
+ *          can be restored after the tail call completes.
+ *
+ * @details **tco_env capture.**  When the tail expression is reached
+ *          (last element of body), this function checks whether
+ *          tco_env is still nil.  If so, it copies the save-stack top
+ *          into tco_env, providing the env snapshot that x_eval's
+ *          trampoline will use for restoration.  If tco_env is already
+ *          set (by a prior TCO iteration), the existing value is kept.
+ *
+ * @details **Save-stack pop.**  After capturing tco_env (or on early
+ *          exit), the save-stack is popped.  On the normal tail-call
+ *          path this is a simple pop (the trampoline in x_eval handles
+ *          restore).  On early exit (nil tail or empty body), this
+ *          function does a full restore from the popped frame before
+ *          returning, since no trampoline iteration will follow.
+ *
  * @note When X_COV is defined, marks each body cell with X_OBJ_FLAG_COV.
- * @see x_eval_tco_trampoline
+ *
+ * @see x_eval                  -- outermost trampoline that consumes tco_expr/tco_env
+ * @see x_eval_tco_trampoline   -- standalone trampoline for closure call paths
+ * @see x_eval_body_tco_simple  -- lightweight variant without save-stack management
+ * @see x_prim_clear_shadows_to -- called during early-exit restore
  */
 x_obj_t *x_eval_body_tco(x_obj_t *p_base, x_obj_t *p_body)
 {
@@ -404,7 +487,24 @@ x_obj_t *x_eval_tco_trampoline(x_obj_t *p_base, x_obj_t *p_result)
  * @param name    x_char_t* -- Symbol name to bind
  * @param fn      x_fn_t -- C function pointer
  *
- * @see x_callable_bind_table
+ * @details **Symbol interning.**  x_make_symbol interns the name so
+ *          that all references to the same name share a single symbol
+ *          object.  This enables O(1) pointer-identity comparison in
+ *          alist and BST lookups.
+ *
+ * @details **Dual-index insertion.**  The (symbol . prim) pair is
+ *          prepended to the env alist AND inserted into the global BST.
+ *          The BST provides O(log n) lookup for global bindings; the
+ *          alist provides the authoritative ordered list.  The
+ *          local-boundary pointer is advanced to the new alist head,
+ *          marking all prior entries as global (below the boundary).
+ *
+ * @note Called during interpreter bootstrap (x_prim_register) and
+ *       by FFI registration.  All bindings created here are permanent
+ *       globals that survive scope changes.
+ *
+ * @see x_callable_bind_table -- batch registration of multiple primitives
+ * @see x_prim_define         -- x-lang-level def with similar BST insertion
  */
 void x_callable_bind(x_obj_t *p_base, x_char_t *name, x_fn_t fn)
 {

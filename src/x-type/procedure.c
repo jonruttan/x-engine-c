@@ -22,9 +22,22 @@
  *
  * Only marks slot 1 (state list), not slot 0 (fn ptr).
  *
+ * @details
+ * Procedure heap layout has two data slots:
+ * @code
+ *   x_obj_data_i(p_obj, 0)  =  fn_ptr   (raw C pointer, NOT a heap obj)
+ *   x_obj_data_i(p_obj, 1)  =  state    (pair tree -- must be marked)
+ * @endcode
+ * Slot 0 is skipped because it holds a raw x_fn_t cast to x_obj_t*.
+ * Passing it to x_heap_tree_mark would chase an invalid heap pointer
+ * and corrupt the mark bitmap or segfault.  Only slot 1 (the state
+ * pair list) contains GC-managed objects that need marking.
+ *
  * @param p_base  x_obj_t* -- Execution context
  * @param p_args  x_obj_t* -- (object . (flags))
  * @return NULL always
+ *
+ * @see x_type_procedure_call for the callable stored in slot 0
  */
 static x_obj_t *x_type_procedure_mark(x_obj_t *p_base, x_obj_t *p_args)
 {
@@ -137,10 +150,34 @@ x_obj_t *x_type_procedure_make(x_obj_t *p_base, x_obj_t *p_args)
  * combiner with evaluated arguments.  For plain closures, extends the
  * environment, pushes a save-stack frame, and enters the body via TCO.
  *
+ * @details
+ * Two dispatch paths based on X_OBJ_FLAG_WRAP:
+ *
+ * **Wrapped applicative** (WRAP flag set): The procedure is a thin
+ * wrapper around another combiner stored in the @c env slot.  Args are
+ * evaluated, then the underlying combiner is called via x_obj_prim_call.
+ * This is how @c (wrap op) creates an applicative from an operative.
+ *
+ * **Plain closure** (no WRAP flag): Pushes a compound save-stack tuple
+ * and enters the body via TCO trampoline.
+ * @code
+ *   save_stack entry = ((env . boundary) . (bst . shadow_head))
+ *                          |       |          |        |
+ *                          |       |          |        +-- shadow list head
+ *                          |       |          +-- global BST root
+ *                          |       +-- local env boundary pointer
+ *                          +-- current env alist
+ * @endcode
+ * After pushing, the closure's captured env becomes the local boundary,
+ * the closure's BST becomes the global tree, and env is extended with
+ * param bindings.  Body is entered via x_eval_body_tco for tail-call
+ * optimization -- the trampoline loop in x_eval restores the save-stack
+ * frame when the TCO chain completes.
+ *
  * @param p_base  x_obj_t* -- Execution context
  * @param p_args  x_obj_t* -- (procedure . unevaluated-args)
  * @return Result of the procedure body
- * @see x_type_procedure_apply
+ * @see x_type_procedure_apply for the non-TCO path
  */
 x_obj_t *x_type_procedure_call(x_obj_t *p_base, x_obj_t *p_args)
 {
@@ -194,10 +231,29 @@ x_obj_t *x_type_procedure_call(x_obj_t *p_base, x_obj_t *p_args)
  * Arguments are already evaluated.  Saves and restores the full
  * environment state around body evaluation.
  *
+ * @details
+ * Unlike x_type_procedure_call, this path does NOT use the TCO
+ * trampoline.  It calls x_eval_body (not x_eval_body_tco), which
+ * means the C call stack grows with each nested apply.  This is
+ * necessary because @c apply is called from contexts where the
+ * caller needs the result immediately (e.g. map, fold, for-each).
+ *
+ * The four environment components are saved to local variables
+ * before body evaluation and explicitly restored afterward:
+ * - env alist (current bindings)
+ * - local boundary (closure env pointer)
+ * - global BST root
+ * - shadow list (cleared back via x_prim_clear_shadows_to)
+ *
+ * @note Shadow list cleanup uses x_prim_clear_shadows_to which
+ *       walks the shadow list and clears X_OBJ_FLAG_SHADOW from
+ *       each symbol back to the saved head, ensuring BST lookups
+ *       are not incorrectly bypassed after the apply returns.
+ *
  * @param p_base  x_obj_t* -- Execution context
  * @param p_args  x_obj_t* -- (procedure . evaluated-args)
  * @return Result of the procedure body
- * @see x_type_procedure_call
+ * @see x_type_procedure_call for the TCO path
  */
 x_obj_t *x_type_procedure_apply(x_obj_t *p_base, x_obj_t *p_args)
 {

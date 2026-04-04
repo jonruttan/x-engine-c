@@ -32,8 +32,49 @@
  * @param p_args  x_obj_t* -- (expression . env) pair
  * @return x_obj_t* -- Evaluated result, or NULL for nil
  *
+ * @details **Outermost detection.**  The local @c trampolining flag starts
+ *          at 0.  When a TCO tail expression is first detected on p_base,
+ *          this x_eval instance sets @c trampolining = 1, claiming
+ *          ownership of the trampoline loop.  Any nested x_eval called
+ *          during handler dispatch will see tco_expr as cleared (this
+ *          instance clears it before goto) and will therefore NOT enter
+ *          the trampoline -- it returns normally and its result is
+ *          discarded in favor of the deferred tail expression.
+ *
+ * @details **tco_expr / tco_env lifecycle.**
+ *          - **Set by:** x_eval_body_tco (full TCO) stores the tail
+ *            expression in tco_expr and the compound env snapshot in
+ *            tco_env.  x_eval_body_tco_simple and x_prim_match store
+ *            only tco_expr (tco_env stays nil -- no env change needed).
+ *          - **Consumed by:** This function's trampoline loop.  On each
+ *            iteration it copies tco_expr into the eval args, clears
+ *            tco_expr on p_base, and jumps to eval_start.
+ *          - **tco_env cleared:** Each iteration clears tco_env on p_base
+ *            after snapshotting it into the local p_tco_env_save.  This
+ *            prevents nested x_eval calls from seeing stale env state.
+ *
+ * @details **p_tco_env_save snapshot.**
+ *          - Captured on first trampoline entry from tco_env on p_base.
+ *          - On later iterations, if the initial snapshot was nil (set by
+ *            simple forms like if/do/match) but an inner form (fn/let)
+ *            now provides a non-nil tco_env, the snapshot is upgraded.
+ *          - Used only at exit: the outermost x_eval restores env-alist,
+ *            local-boundary, global-BST, and shadow-list from the
+ *            compound pair ((env . boundary) . (bst . shadow_head)).
+ *
+ * @details **Nested x_eval calls do NOT restore env.**  Only the
+ *          instance where @c trampolining == 1 executes the env restore
+ *          block.  This is critical: a recursive x_eval (e.g. from
+ *          evaluating a sub-expression inside a primitive) must not
+ *          interfere with the outer trampoline's env management.
+ *
  * @note Uses goto-based trampoline; only the outermost x_eval in
  *       a call chain performs env restoration.
+ *
+ * @see x_eval_body_tco      -- full TCO body evaluator (sets tco_expr + tco_env)
+ * @see x_eval_body_tco_simple -- lightweight TCO (sets tco_expr only)
+ * @see x_eval_tco_trampoline -- standalone trampoline used by closure call paths
+ * @see x_prim_clear_shadows_to -- called during env restore to unwind shadow flags
  */
 x_obj_t *x_eval(x_obj_t *p_base, x_obj_t *p_args)
 {

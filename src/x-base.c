@@ -53,6 +53,44 @@ static x_satom_t x_type_heap_free_hook =
  * @param p_base  x_obj_t* -- Parent base (or NULL for root)
  * @param p_args  x_obj_t* -- Unused
  * @return x_obj_t* -- Newly constructed base object
+ *
+ * @details **x-expr vs x-lang layers.**  x_base_make (x-expr) allocates
+ *          the base tree skeleton: heap group (pools, GC state), file
+ *          descriptors, buffer stack, type-alist slot, profile head
+ *          (1 counter for GC cycles), and hook slots.  It leaves env,
+ *          ctrl, io-state, and extras as nil.  This function fills all
+ *          of those in, giving the base its full evaluator personality.
+ *
+ * @details **Base tree nodes carry X_OBJ_FLAG_SHARED** (set by x-expr's
+ *          x_base_make).  The SHARED flag tells the GC mark phase that
+ *          these spine nodes are allocated from the base's own pool and
+ *          must be marked but never freed -- they are structurally
+ *          permanent for the lifetime of the base.
+ *
+ * @details **Env-group layout:**
+ *          @code
+ *          (env-alist . (local-boundary . (global-tree . shadow-list)))
+ *          @endcode
+ *          - env-alist: linear list of (symbol . value) bindings
+ *          - local-boundary: pointer into alist separating locals from globals
+ *          - global-tree: BST index over global bindings for O(log n) lookup
+ *          - shadow-list: symbols with X_OBJ_FLAG_SHADOW for scope unwinding
+ *
+ * @details **Ctrl-group layout:**
+ *          @code
+ *          ((save-stack . (error-handler-slot . nil)) .
+ *           ((tco-expr-slot . nil) . (tco-env-slot . nil)))
+ *          @endcode
+ *
+ * @details **Profile counters** (9 additional beyond x-expr's GC counter):
+ *          evals, TCO hits, lookups, BST lookups, and internal metrics.
+ *
+ * @note When @p p_base is non-NULL (child base), boolean caches (#t/#f)
+ *       are inherited from the parent so all bases in a tree share the
+ *       same singleton boolean objects.
+ *
+ * @see x_base_error  -- uses the error-handler from ctrl-group
+ * @see x_eval        -- uses tco-expr/tco-env from ctrl-group
  */
 x_obj_t *x_base_ts_make(x_obj_t *p_base, x_obj_t *p_args)
 {
@@ -147,8 +185,33 @@ x_obj_t *x_base_ts_make(x_obj_t *p_base, x_obj_t *p_args)
  * @param message  x_char_t* -- Error message string
  * @param p_obj    x_obj_t* -- Object associated with the error (may be NULL)
  *
+ * @details **Error string construction.**  When a handler is installed,
+ *          the message is combined with the optional symbol name and the
+ *          current source line number into the format:
+ *          @code
+ *          message 'symbol (line N)
+ *          @endcode
+ *          The combined string is malloc'd via x_sys_malloc and wrapped
+ *          with x_mkstrown so the GC will free it when the error object
+ *          is collected.
+ *
+ * @details **longjmp protocol.**  The error value is stored in the
+ *          handler's error slot, then the env-alist and local-boundary
+ *          are restored from the handler's saved copies (captured at
+ *          guard installation time).  Finally, longjmp transfers control
+ *          to the setjmp site in x_prim_guard.  This unwinds all C
+ *          frames between the error site and the guard -- any local
+ *          state in those frames is lost.
+ *
+ * @note When no handler is installed, falls through to x_error which
+ *       writes to stderr and is typically fatal.  The interpreter does
+ *       NOT abort; the caller may continue if x_error returns.
+ *
  * @note The combined string is malloc'd and owned by the error handler's
  *       error slot (freed when the handler unwinds).
+ *
+ * @see x_prim_guard  -- installs the handler and setjmp site
+ * @see x_prim_error  -- x-lang (error msg) primitive that calls this
  */
 void x_base_error(x_obj_t *p_base, x_char_t *message, x_obj_t *p_obj)
 {
@@ -345,6 +408,27 @@ x_obj_t *x_base_buffer_pop(x_obj_t *p_base)
  * @param p_base  x_obj_t* -- Execution context
  * @param p_args  x_obj_t* -- Unused
  * @return x_obj_t* -- Result of the last evaluated expression, or NULL
+ *
+ * @details Reads from the buffer at the top of the buffer stack
+ *          (x_base_field_buffer).  The caller is responsible for
+ *          pushing the desired buffer before calling this function
+ *          (via x_base_buffer_push) and popping it afterward.  Each
+ *          read expression is wrapped in a stack-allocated (atom . nil)
+ *          eval-args pair and passed to x_eval, which runs the full
+ *          evaluator including the TCO trampoline.  The result of each
+ *          expression is discarded except the last.
+ *
+ * @note This is the primary entry point for loading library files.
+ *       The shell driver pipes library source via stdin:
+ *       @code
+ *       cat lib/x.x - | ./x
+ *       @endcode
+ *       There is no file I/O in the C interpreter; all loading goes
+ *       through the buffer/fd mechanism.
+ *
+ * @see x_base_buffer_push -- push buffer before calling
+ * @see x_base_buffer_pop  -- pop buffer after calling
+ * @see x_eval             -- evaluator called for each expression
  */
 x_obj_t *x_base_load(x_obj_t *p_base, x_obj_t *p_args)
 {

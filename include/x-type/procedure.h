@@ -7,6 +7,33 @@
  * @author Jon Ruttan (jonruttan@gmail.com)
  * @copyright 2024 Jon Ruttan
  * @license MIT No Attribution (MIT-0)
+ *
+ * @details
+ * A procedure is a two-unit heap object with callable layout:
+ * @code
+ *   slot 0              slot 1 (state_list)
+ *   +-----------------+ +------------------------------------------+
+ *   | fn_ptr          | | (params . (body . (env . bst)))          |
+ *   | (x_type_        | |                                          |
+ *   |  procedure_call)| |  params ---- formal parameter tree       |
+ *   +-----------------+ |  body ------ list of body expressions    |
+ *                       |  env ------- captured lexical env alist  |
+ *                       |  bst ------- captured global BST root    |
+ *                       +------------------------------------------+
+ * @endcode
+ *
+ * @note Slot 0 holds a raw C function pointer, NOT a heap object.
+ *       The GC mark callback (x_type_procedure_mark) must skip slot 0
+ *       and only traverse slot 1 (the state list).  Marking slot 0
+ *       as a heap pointer would corrupt the GC free-list.
+ *
+ * When X_OBJ_FLAG_WRAP is set, the procedure is a wrapped applicative:
+ * @c env holds the underlying combiner instead of a closure environment,
+ * and @c call dispatches to that combiner after evaluating args.
+ *
+ * @see x_type_procedure_mark in procedure.c
+ * @see x_type_procedure_call for the TCO call path
+ * @see x_type_procedure_apply for the non-TCO apply path
  */
 /*
  *     ., .,

@@ -27,6 +27,21 @@
  * @param p_base  Execution context.
  * @param p_args  Unevaluated argument list; expects (caller (test body) ...).
  * @return NULL; result delivered via TCO expr slot.
+ *
+ * @details **Tail position.**  The matching clause's body expression is
+ *          stored in tco_expr rather than evaluated directly.  This
+ *          makes the last clause a proper tail call -- x_eval's
+ *          trampoline will pick it up and evaluate it without growing
+ *          the C stack.  Because match does not alter the environment,
+ *          tco_env is left nil (simple TCO); the trampoline skips env
+ *          restore.
+ *
+ * @note Only the body of the FIRST matching clause is deferred.
+ *       Subsequent clauses are never evaluated.  If no clause matches,
+ *       tco_expr remains nil and x_eval returns NULL.
+ *
+ * @see x_eval                 -- trampoline that consumes tco_expr
+ * @see x_eval_body_tco_simple -- similar simple-TCO pattern used by if/do
  */
 static x_obj_t *x_prim_match(x_obj_t *p_base, x_obj_t *p_args)
 {
@@ -61,8 +76,47 @@ static x_obj_t *x_prim_match(x_obj_t *p_base, x_obj_t *p_args)
  * @param p_base  Execution context.
  * @param p_args  Unevaluated argument list; expects (caller (var handler-body ...) body ...).
  * @return Result of body on success, or result of handler-body on error.
- * @note Uses setjmp/longjmp for non-local error transfer.
- * @see x_prim_error
+ *
+ * @details **Handler pair tree structure.**  The handler object is a
+ *          nested pair tree:
+ *          @code
+ *          (jmp-ptr . ((saved-env . saved-boundary) . (error-value . nil)))
+ *          @endcode
+ *          - jmp-ptr: x_ptr wrapping a jmp_buf on the C stack
+ *          - saved-env: env-alist snapshot at guard installation
+ *          - saved-boundary: local-boundary snapshot at guard installation
+ *          - error-value: initially nil, filled by x_base_error or
+ *            x_prim_error before longjmp
+ *
+ * @details **Handler stack.**  The handler is pushed onto
+ *          error_handler (a single-slot stack on p_base) and the
+ *          previous handler is saved in p_prev_handler.  On exit
+ *          (normal or error), the previous handler is restored.  This
+ *          provides nested guard support -- inner guards catch first.
+ *
+ * @details **setjmp/longjmp protocol.**  setjmp(jmp) returns 0 on
+ *          installation (normal path: evaluate body).  When
+ *          x_base_error or x_prim_error calls longjmp, setjmp returns
+ *          non-zero (error path).  On the error path:
+ *          1. save_stack is restored to the guard point (unwinding
+ *             any fn/let frames entered since guard)
+ *          2. error value is bound to var in the current env
+ *          3. handler-body is evaluated via x_eval_body (no TCO --
+ *             the guard frame must remain on the C stack)
+ *          4. env-alist and local-boundary are restored from the
+ *             handler's saved copies
+ *
+ * @note Uses setjmp/longjmp for non-local error transfer.  The jmp_buf
+ *       lives on this C frame, so the handler is only valid while this
+ *       function is on the call stack.  Capturing and invoking it after
+ *       return would be undefined behavior.
+ *
+ * @note The body is evaluated with x_eval_body (no TCO), not
+ *       x_eval_body_tco.  This ensures the guard's C frame (and its
+ *       jmp_buf) remains valid throughout body execution.
+ *
+ * @see x_base_error   -- C-level error that longjmps to this handler
+ * @see x_prim_error   -- x-lang (error msg) that longjmps to this handler
  */
 static x_obj_t *x_prim_guard(x_obj_t *p_base, x_obj_t *p_args)
 {

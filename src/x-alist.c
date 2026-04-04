@@ -145,12 +145,38 @@ static x_obj_t *bst_pair(x_obj_t *p_base, x_obj_t *a, x_obj_t *b)
  * Unaffected subtrees are shared, not copied. All BST nodes carry
  * X_OBJ_FLAG_SHARED so they are immune to GC sweep.
  *
+ * @details
+ * Path-copying creates new nodes only along the root-to-insertion path.
+ * Siblings and their subtrees are shared by pointer with the old root.
+ *
+ * @code
+ *  Old tree          Insert "d"          New tree (returned)
+ *
+ *     [c]               [c']  <-- new copy
+ *    /   \              /   \
+ *  [a]   [e]  -->    [a]   [e']  <-- new copy (right child changed)
+ *        /                  /
+ *      [d]               [d]  <-- new leaf
+ *
+ *  [a] and its subtree are SHARED between old and new roots.
+ *  [c] and [e] in the old tree are untouched.
+ * @endcode
+ *
+ * @note All new BST nodes are allocated via bst_pair() which sets
+ *       X_OBJ_FLAG_SHARED on every node.  Shared objects are immune
+ *       to GC sweep -- they persist until the entire tree is abandoned.
+ *
+ * @note Shared subtrees (unchanged children) are never copied.  Only
+ *       ancestor nodes along the insertion path are freshly allocated.
+ *       This makes insert O(log n) in both time and allocation.
+ *
  * @param p_base   x_obj_t* -- Execution context
  * @param p_tree   x_obj_t* -- Existing BST root, or NULL for empty
  * @param p_entry  x_obj_t* -- (symbol . value) entry to insert
  * @return x_obj_t* -- New BST root
  *
  * @see x_alist_bst_lookup
+ * @see x_base_field_env_global_tree
  */
 x_obj_t *x_alist_bst_insert(x_obj_t *p_base, x_obj_t *p_tree,
 	x_obj_t *p_entry)
