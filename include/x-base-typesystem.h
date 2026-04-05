@@ -80,6 +80,9 @@
 
 #include "x-base.h"
 
+/** Type descriptor for the base object. */
+extern x_satom_t x_type_base_obj;
+
 /**
  * @defgroup error_handler Error Handler Macros
  * @brief Navigate the error handler pair tree.
