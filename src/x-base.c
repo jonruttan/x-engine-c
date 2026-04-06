@@ -185,15 +185,13 @@ x_obj_t *x_base_ts_make(x_obj_t *p_base, x_obj_t *p_args)
  * @param message  x_char_t* -- Error message string
  * @param p_obj    x_obj_t* -- Object associated with the error (may be NULL)
  *
- * @details **Error string construction.**  When a handler is installed,
- *          the message is combined with the optional symbol name and the
- *          current source line number into the format:
- *          @code
- *          message 'symbol (line N)
- *          @endcode
- *          The combined string is malloc'd via x_sys_malloc and wrapped
- *          with x_mkstrown so the GC will free it when the error object
- *          is collected.
+ * @details **Zero-allocation error path.**  When a handler is installed,
+ *          the message string pointer is stored directly in a static
+ *          atom (no malloc, no x_mkstrown).  Message strings from C
+ *          callers are always string literals (static storage), so they
+ *          survive the longjmp.  The guard handler in x-lang receives
+ *          the bare message; x-lang code can add line/symbol context
+ *          via (%base) if needed.
  *
  * @details **longjmp protocol.**  The error value is stored in the
  *          handler's error slot, then the env-alist and local-boundary
@@ -207,14 +205,12 @@ x_obj_t *x_base_ts_make(x_obj_t *p_base, x_obj_t *p_args)
  *       writes to stderr and is typically fatal.  The interpreter does
  *       NOT abort; the caller may continue if x_error returns.
  *
- * @note The combined string is malloc'd and owned by the error handler's
- *       error slot (freed when the handler unwinds).
- *
  * @see x_prim_guard  -- installs the handler and setjmp site
  * @see x_prim_error  -- x-lang (error msg) primitive that calls this
  */
 void x_base_error(x_obj_t *p_base, x_char_t *message, x_obj_t *p_obj)
 {
+	static x_satom_t err_str = x_obj_set(x_type_atom_obj, X_OBJ_FLAG_NONE, { .s = NULL });
 	int fd;
 	x_char_t *symbol = NULL;
 
@@ -223,34 +219,15 @@ void x_base_error(x_obj_t *p_base, x_char_t *message, x_obj_t *p_obj)
 		symbol = x_atomstr(p_obj);
 	}
 
-	/* If an error handler is installed, build error string and longjmp. */
+	/* If an error handler is installed, store message and longjmp. */
 	if (x_base_isset(p_base)
 		&& ! x_obj_isnil(p_base, x_firstobj(x_base_field_error_handler(p_base)))) {
 		x_obj_t *p_handler = x_firstobj(x_base_field_error_handler(p_base));
-		x_int_t line = x_atomint(x_firstobj(x_base_field_line(p_base)));
-		x_char_t line_buf[24], *line_str;
-		size_t msg_len = x_lib_strlen(message);
-		size_t sym_len = symbol ? x_lib_strlen(symbol) : 0;
-		size_t line_len, total;
-		x_char_t *combined, *p;
 
-		line_str = x_lib_inttostr(line, line_buf, 10);
-		line_len = x_lib_strlen(line_str);
-		/* "message ['symbol] (line N)\0" */
-		total = msg_len + (symbol ? 2 + sym_len : 0) + 7 + line_len + 1 + 1;
-		combined = (x_char_t *)x_sys_malloc(total);
-		p = combined;
+		/* Store message in static atom — zero allocation */
+		x_atomstr(err_str) = message;
+		x_error_handler_error(p_handler) = (x_obj_t *)err_str;
 
-		x_lib_memcpy(p, message, msg_len); p += msg_len;
-		if (symbol) {
-			*p++ = ' '; *p++ = '\'';
-			x_lib_memcpy(p, symbol, sym_len); p += sym_len;
-		}
-		x_lib_memcpy(p, " (line ", 7); p += 7;
-		x_lib_memcpy(p, line_str, line_len); p += line_len;
-		*p++ = ')'; *p = '\0';
-
-		x_error_handler_error(p_handler) = x_mkstrown(p_base, combined);
 		x_firstobj(x_base_field_env_alist(p_base))
 			= x_error_handler_saved_env(p_handler);
 		x_base_field_env_local_boundary(p_base)

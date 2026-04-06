@@ -358,8 +358,7 @@ static x_obj_t *x_prim_atomic(x_obj_t *p_base, x_obj_t *p_args)
 	call_args[0][X_OBJ_META_FLAGS].i = X_OBJ_FLAG_NONE;
 
 	/* Root p_args so mark+sweep inside the loop doesn't free them */
-	x_base_field_eval_list(p_base) = x_mkspair(p_base, X_OBJ_FLAG_NONE,
-		p_args, x_base_field_eval_list(p_base));
+	x_obj_push_field(p_base, &x_base_field_eval_list(p_base), p_args, X_OBJ_FLAG_NONE);
 
 	while ( ! x_obj_isnil(p_base, p_args)) {
 		x_firstobj((x_obj_t *)call_args) = x_firstobj(p_args);
@@ -368,8 +367,7 @@ static x_obj_t *x_prim_atomic(x_obj_t *p_base, x_obj_t *p_args)
 		p_args = x_restobj(p_args);
 	}
 
-	x_base_field_eval_list(p_base)
-		= x_restobj(x_base_field_eval_list(p_base));
+	x_obj_pop_field(p_base, &x_base_field_eval_list(p_base));
 
 	return p_result;
 }

@@ -219,15 +219,13 @@ static x_obj_t *x_prim_seq(x_obj_t *p_base, x_obj_t *p_args)
 	x_args(p_args, 3, NULL, &p_a, &p_b);
 
 	/* Root args so GC doesn't free them during eval of first arg */
-	x_base_field_eval_list(p_base) = x_mkspair(p_base, X_OBJ_FLAG_NONE,
-		x_1(p_args), x_base_field_eval_list(p_base));
+	x_obj_push_field(p_base, &x_base_field_eval_list(p_base), x_1(p_args), X_OBJ_FLAG_NONE);
 
 	x_eval_arg(p_base, p_a);
 	x_firstobj(x_base_field_tco_expr(p_base)) = p_b;
 
 	/* Unroot */
-	x_base_field_eval_list(p_base)
-		= x_restobj(x_base_field_eval_list(p_base));
+	x_obj_pop_field(p_base, &x_base_field_eval_list(p_base));
 
 	return NULL;
 }

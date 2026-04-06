@@ -14,6 +14,7 @@
 
 #include "x-type/list.h"
 #include "x-type/buffer.h"
+#include "x-base-typesystem.h"
 #include "x-token.h"
 #include "x-token.h"
 #include "x-token/sexp/list.h"
@@ -121,10 +122,17 @@ x_obj_t *x_sexp_list_read(x_obj_t *p_base, x_obj_t *p_args)
 
 			if (x_obj_isnil(p_base, head)) {
 				head = pair;
+				/* Root head so GC can reach the list under construction */
+				x_obj_push_field(p_base, &x_base_field_eval_list(p_base), head, X_OBJ_FLAG_NONE);
 			} else {
 				x_restobj(tail) = pair;
 			}
 			tail = pair;
+		}
+
+		/* Unroot if we rooted */
+		if ( ! x_obj_isnil(p_base, head)) {
+			x_obj_pop_field(p_base, &x_base_field_eval_list(p_base));
 		}
 
 		return head;

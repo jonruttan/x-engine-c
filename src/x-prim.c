@@ -137,13 +137,11 @@ x_obj_t *x_eval_list(x_obj_t *p_base, x_obj_t *p_args)
 	}
 
 	/* Root p_args so GC doesn't free rest while evaluating first */
-	x_base_field_eval_list(p_base) = x_mkspair(p_base, X_OBJ_FLAG_NONE,
-		p_args, x_base_field_eval_list(p_base));
+	x_obj_push_field(p_base, &x_base_field_eval_list(p_base), p_args, X_OBJ_FLAG_NONE);
 
 	p_val = x_eval_arg(p_base, x_firstobj(p_args));
 
-	x_base_field_eval_list(p_base)
-		= x_restobj(x_base_field_eval_list(p_base));
+	x_obj_pop_field(p_base, &x_base_field_eval_list(p_base));
 
 	return x_mklist(p_base, p_val,
 		x_eval_list(p_base, x_restobj(p_args)));
@@ -263,13 +261,11 @@ x_obj_t *x_eval_body(x_obj_t *p_base, x_obj_t *p_body)
 		x_obj_flags(p_body) |= X_OBJ_FLAG_COV;
 #endif
 		/* Root body so GC doesn't free remaining exprs */
-		x_base_field_eval_list(p_base) = x_mkspair(p_base, X_OBJ_FLAG_NONE,
-			p_body, x_base_field_eval_list(p_base));
+		x_obj_push_field(p_base, &x_base_field_eval_list(p_base), p_body, X_OBJ_FLAG_NONE);
 
 		p_result = x_eval_arg(p_base, x_firstobj(p_body));
 
-		x_base_field_eval_list(p_base)
-			= x_restobj(x_base_field_eval_list(p_base));
+		x_obj_pop_field(p_base, &x_base_field_eval_list(p_base));
 
 		p_body = x_restobj(p_body);
 	}
@@ -367,13 +363,11 @@ x_obj_t *x_eval_body_tco(x_obj_t *p_base, x_obj_t *p_body)
 		}
 
 		/* Root body so GC doesn't free remaining exprs */
-		x_base_field_eval_list(p_base) = x_mkspair(p_base, X_OBJ_FLAG_NONE,
-			p_body, x_base_field_eval_list(p_base));
+		x_obj_push_field(p_base, &x_base_field_eval_list(p_base), p_body, X_OBJ_FLAG_NONE);
 
 		p_result = x_eval_arg(p_base, x_firstobj(p_body));
 
-		x_base_field_eval_list(p_base)
-			= x_restobj(x_base_field_eval_list(p_base));
+		x_obj_pop_field(p_base, &x_base_field_eval_list(p_base));
 
 		p_body = x_restobj(p_body);
 	}

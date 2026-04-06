@@ -101,9 +101,8 @@ static x_obj_t *x_prim_apply(x_obj_t *p_base, x_obj_t *p_args)
 	}
 
 	/* Root p_fn and p_vals so GC doesn't free them during procedure setup */
-	x_base_field_eval_list(p_base) = x_mkspair(p_base, X_OBJ_FLAG_NONE,
-		p_fn, x_mkspair(p_base, X_OBJ_FLAG_NONE,
-			p_vals, x_base_field_eval_list(p_base)));
+	x_obj_push_field(p_base, &x_base_field_eval_list(p_base), p_vals, X_OBJ_FLAG_NONE);
+	x_obj_push_field(p_base, &x_base_field_eval_list(p_base), p_fn, X_OBJ_FLAG_NONE);
 
 	/* Procedure: bind params, eval body with TCO for eval trampoline. */
 	if (x_obj_type_isprocedure(p_base, p_fn)) {
@@ -125,8 +124,8 @@ static x_obj_t *x_prim_apply(x_obj_t *p_base, x_obj_t *p_args)
 			p_base, x_procenv(p_fn), x_procparams(p_fn), p_vals);
 
 		/* Unroot */
-		x_base_field_eval_list(p_base)
-			= x_restobj(x_restobj(x_base_field_eval_list(p_base)));
+		x_obj_pop_field(p_base, &x_base_field_eval_list(p_base));
+		x_obj_pop_field(p_base, &x_base_field_eval_list(p_base));
 
 		return x_eval_body_tco(p_base, x_procbody(p_fn));
 	}
@@ -139,8 +138,8 @@ static x_obj_t *x_prim_apply(x_obj_t *p_base, x_obj_t *p_args)
 		x_obj_t *p_result = x_callable_apply(p_base, (x_obj_t *)apply_args);
 
 		/* Unroot */
-		x_base_field_eval_list(p_base)
-			= x_restobj(x_restobj(x_base_field_eval_list(p_base)));
+		x_obj_pop_field(p_base, &x_base_field_eval_list(p_base));
+		x_obj_pop_field(p_base, &x_base_field_eval_list(p_base));
 
 		return p_result;
 	}
@@ -286,13 +285,11 @@ static x_obj_t *x_prim_atomic(x_obj_t *p_base, x_obj_t *p_args)
 
 	while ( ! x_obj_isnil(p_base, p_args)) {
 		/* Root remaining args so GC doesn't free them */
-		x_base_field_eval_list(p_base) = x_mkspair(p_base, X_OBJ_FLAG_NONE,
-			p_args, x_base_field_eval_list(p_base));
+		x_obj_push_field(p_base, &x_base_field_eval_list(p_base), p_args, X_OBJ_FLAG_NONE);
 
 		p_result = x_eval_arg(p_base, x_firstobj(p_args));
 
-		x_base_field_eval_list(p_base)
-			= x_restobj(x_base_field_eval_list(p_base));
+		x_obj_pop_field(p_base, &x_base_field_eval_list(p_base));
 
 		p_args = x_restobj(p_args);
 	}
