@@ -429,10 +429,6 @@ static char *test_type_ptr_make(void)
 		x_obj_type(p_obj[0]) == x_obj_type(p_obj[1])
 	);
 
-	x_sys_free(p_obj[1]);
-	x_sys_free(p_obj[0]);
-	x_sys_free(p_args);
-	x_sys_free(p_ptr);
 	test_cleanup(p_base);
 
 
@@ -456,10 +452,6 @@ static char *test_type_ptr_make(void)
 		x_obj_type(p_obj[0]) == x_obj_type(p_obj[1])
 	);
 
-	x_sys_free(p_obj[1]);
-	x_sys_free(p_obj[0]);
-	x_sys_free(p_args);
-	x_sys_free(p_ptr);
 	test_cleanup(p_base);
 
 
