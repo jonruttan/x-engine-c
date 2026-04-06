@@ -159,7 +159,6 @@ static char *test_mksymbol(void)
 		&& 0 == strcmp(X_TEST_SYMBOL_VALUE, x_symbolval(p_obj))
 	);
 
-	x_sys_free(p_obj);
 
 
 	p_base = x_base_ts_make(NULL, NULL);
@@ -189,7 +188,6 @@ static char *test_mkfsymbol(void)
 		&& 0 == strcmp(X_TEST_SYMBOL_VALUE, x_symbolval(p_obj))
 	);
 
-	x_sys_free(p_obj);
 
 
 	p_base = x_base_ts_make(NULL, NULL);
@@ -217,7 +215,6 @@ static char *test_mksymbolown(void)
 		&& 0 == strcmp(X_TEST_SYMBOL_VALUE, x_symbolval(p_obj))
 	);
 
-	x_sys_free(p_obj);
 
 
 	p_base = x_base_ts_make(NULL, NULL);
@@ -248,7 +245,6 @@ static char *test_mkfsymbolown(void)
 		&& 0 == strcmp(X_TEST_SYMBOL_VALUE, x_symbolval(p_obj))
 	);
 
-	x_sys_free(p_obj);
 
 
 	p_base = x_base_ts_make(NULL, NULL);
@@ -279,7 +275,6 @@ static char *test_make_symbol(void)
 		&& 0 == strcmp(X_TEST_SYMBOL_VALUE, x_symbolval(p_obj))
 	);
 
-	x_sys_free(p_obj);
 
 
 	p_base = x_base_ts_make(NULL, NULL);
@@ -489,7 +484,6 @@ static char *test_type_symbol_make(void)
 		&& 0 == strcmp(x_strval(p_str), x_symbolval(p_obj[0]))
 	);
 
-	x_sys_free(p_args);
 
 
 	p_args = x_mkspair(p_base, X_OBJ_FLAG_NONE, p_str, NULL);

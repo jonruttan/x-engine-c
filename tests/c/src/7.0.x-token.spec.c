@@ -273,6 +273,21 @@ x_obj_t *test_token_read_analyse_autoscore(x_obj_t *p_base, x_obj_t *p_args)
 }
 
 
+/* Static handler atoms — must use x_type_atom_obj for x_callable_apply dispatch */
+static x_satom_t
+	analyse_whitespace_prim = x_obj_set(x_type_atom_obj, X_OBJ_FLAG_NONE, { .fn = test_token_read_analyse_whitespace }),
+	delimit_whitespace_prim = x_obj_set(x_type_atom_obj, X_OBJ_FLAG_NONE, { .fn = test_token_read_delimit_whitespace }),
+	read_whitespace_prim = x_obj_set(x_type_atom_obj, X_OBJ_FLAG_NONE, { .fn = test_token_read_read_whitespace }),
+	analyse1_prim = x_obj_set(x_type_atom_obj, X_OBJ_FLAG_NONE, { .fn = test_token_read_analyse1 }),
+	analyse_catchall_prim = x_obj_set(x_type_atom_obj, X_OBJ_FLAG_NONE, { .fn = test_token_read_analyse_catchall }),
+	read_catchall_prim = x_obj_set(x_type_atom_obj, X_OBJ_FLAG_NONE, { .fn = test_token_read_read_catchall }),
+	read1_prim = x_obj_set(x_type_atom_obj, X_OBJ_FLAG_NONE, { .fn = test_token_read_read1 }),
+	analyse2_1_prim = x_obj_set(x_type_atom_obj, X_OBJ_FLAG_NONE, { .fn = test_token_read_analyse2_1 }),
+	read2_prim = x_obj_set(x_type_atom_obj, X_OBJ_FLAG_NONE, { .fn = test_token_read_read2 }),
+	analyse_null_prim = x_obj_set(x_type_atom_obj, X_OBJ_FLAG_NONE, { .fn = test_token_read_analyse_null }),
+	read_null_prim = x_obj_set(x_type_atom_obj, X_OBJ_FLAG_NONE, { .fn = test_token_read_read_null }),
+	analyse_autoscore_prim = x_obj_set(x_type_atom_obj, X_OBJ_FLAG_NONE, { .fn = test_token_read_analyse_autoscore });
+
 /*
  * ## Test Runners
  */
@@ -284,11 +299,11 @@ static char *test_token_delimit(void)
 	x_char_t buffer[32];
 	struct x_type_t type_whitespace = {
 		.p_name = x_mkatom(p_base, (void *)"WHITESPACE"),
-		.p_analyse = x_mkatom(p_base, test_token_read_analyse_whitespace),
-		.p_delimit = x_mkatom(p_base, test_token_read_delimit_whitespace)
+		.p_analyse = (x_obj_t *)analyse_whitespace_prim,
+		.p_delimit = (x_obj_t *)delimit_whitespace_prim
 	}, type1 = {
 		.p_name = x_mkatom(p_base, (void *)"TYPE1"),
-		.p_analyse = x_mkatom(p_base, test_token_read_analyse1)
+		.p_analyse = (x_obj_t *)analyse1_prim
 	};
 
 	p_type = x_type_struct_make(p_base, type_whitespace);
@@ -341,20 +356,20 @@ static char *test_token_read(void)
 	x_char_t *s, buffer[32];
 	struct x_type_t type_whitespace = {
 		.p_name = x_mkatom(p_base, (void *)"WHITESPACE"),
-		.p_analyse = x_mkatom(p_base, test_token_read_analyse_whitespace),
-		.p_delimit = x_mkatom(p_base, test_token_read_delimit_whitespace)
+		.p_analyse = (x_obj_t *)analyse_whitespace_prim,
+		.p_delimit = (x_obj_t *)delimit_whitespace_prim
 	}, type_catchall = {
 		.p_name = x_mkatom(p_base, (void *)"CATCHALL"),
-		.p_analyse = x_mkatom(p_base, test_token_read_analyse_catchall),
-		.p_read = x_mkatom(p_base, test_token_read_read_catchall)
+		.p_analyse = (x_obj_t *)analyse_catchall_prim,
+		.p_read = (x_obj_t *)read_catchall_prim
 	}, type1 = {
 		.p_name = x_mkatom(p_base, (void *)"TYPE1"),
-		.p_analyse = x_mkatom(p_base, test_token_read_analyse1),
-		.p_read = x_mkatom(p_base, test_token_read_read1)
+		.p_analyse = (x_obj_t *)analyse1_prim,
+		.p_read = (x_obj_t *)read1_prim
 	}, type2 = {
 		.p_name = x_mkatom(p_base, (void *)"TYPE2"),
-		.p_analyse = x_mkatom(p_base, test_token_read_analyse2_1),
-		.p_read = x_mkatom(p_base, test_token_read_read2)
+		.p_analyse = (x_obj_t *)analyse2_1_prim,
+		.p_read = (x_obj_t *)read2_prim
 	};
 
 	s = "@AAB  @AA ";
@@ -407,8 +422,8 @@ static char *test_token_read_eof(void)
 	x_char_t buffer[32];
 	struct x_type_t type_catchall = {
 		.p_name = x_mkatom(p_base, (void *)"CATCHALL"),
-		.p_analyse = x_mkatom(p_base, test_token_read_analyse_catchall),
-		.p_read = x_mkatom(p_base, test_token_read_read_catchall)
+		.p_analyse = (x_obj_t *)analyse_catchall_prim,
+		.p_read = (x_obj_t *)read_catchall_prim
 	};
 
 	p_type = x_type_struct_make(p_base, type_catchall);
@@ -505,8 +520,8 @@ static char *test_token_read_null_reader(void)
 	x_char_t buffer[32];
 	struct x_type_t type_null = {
 		.p_name = x_mkatom(p_base, (void *)"NULL_READER"),
-		.p_analyse = x_mkatom(p_base, test_token_read_analyse_null),
-		.p_read = x_mkatom(p_base, test_token_read_read_null)
+		.p_analyse = (x_obj_t *)analyse_null_prim,
+		.p_read = (x_obj_t *)read_null_prim
 	};
 
 	p_type = x_type_struct_make(p_base, type_null);
@@ -540,8 +555,8 @@ static char *test_token_read_ro_eof(void)
 	x_obj_t *p_ro_buffer;
 	struct x_type_t type_autoscore = {
 		.p_name = x_mkatom(p_base, (void *)"AUTOSCORE"),
-		.p_analyse = x_mkatom(p_base, test_token_read_analyse_autoscore),
-		.p_read = x_mkatom(p_base, test_token_read_read_catchall)
+		.p_analyse = (x_obj_t *)analyse_autoscore_prim,
+		.p_read = (x_obj_t *)read_catchall_prim
 	};
 
 	/* AutoScore type: sets reader via side-effect, returns continue.
