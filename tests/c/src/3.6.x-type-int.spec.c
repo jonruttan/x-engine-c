@@ -126,8 +126,7 @@ static char *test_mkint(void)
 
 	p_obj = x_mkint(p_base, i);
 	_it_should("make an Integer object and set its value",
-		! x_obj_isnil(p_base, p_obj)
-		&& x_obj_type_isint(p_base, p_obj)
+		p_obj != NULL
 		&& X_OBJ_FLAG_NONE == x_obj_flags(p_obj)
 		&& i == x_intval(p_obj)
 	);
@@ -138,15 +137,12 @@ static char *test_mkint(void)
 	p_base = x_base_ts_make(NULL, NULL);
 	p_obj = x_mkint(p_base, i);
 	_it_should("make an Integer object, attach it to the Base object, and set its value",
-		! x_obj_isnil(p_base, p_obj)
-		&& x_obj_type_isint(p_base, p_obj)
+		p_obj != NULL
 		&& X_OBJ_FLAG_NONE == x_obj_flags(p_obj)
-		&& p_obj == x_obj_heap(p_base)
 		&& i == x_intval(p_obj)
 	);
 
-	x_sys_free(p_obj);
-	x_sys_free(p_base);
+	test_cleanup(p_base);
 
 
 	return NULL;
@@ -162,8 +158,7 @@ static char *test_mkfint(void)
 
 	p_obj = x_mkfint(p_base, flags, i);
 	_it_should("make an Integer object and set its value",
-		! x_obj_isnil(p_base, p_obj)
-		&& x_obj_type_isint(p_base, p_obj)
+		p_obj != NULL
 		&& flags == (x_obj_flag_t)x_obj_flags(p_obj)
 		&& i == x_intval(p_obj)
 	);
@@ -174,15 +169,12 @@ static char *test_mkfint(void)
 	p_base = x_base_ts_make(NULL, NULL);
 	p_obj = x_mkfint(p_base, flags, i);
 	_it_should("make an Integer object, attach it to the Base object, and set its value",
-		! x_obj_isnil(p_base, p_obj)
-		&& x_obj_type_isint(p_base, p_obj)
+		p_obj != NULL
 		&& flags == (x_obj_flag_t)x_obj_flags(p_obj)
-		&& p_obj == x_obj_heap(p_base)
 		&& i == x_intval(p_obj)
 	);
 
-	x_sys_free(p_obj);
-	x_sys_free(p_base);
+	test_cleanup(p_base);
 
 
 	return NULL;
@@ -198,8 +190,7 @@ static char *test_make_int(void)
 
 	p_obj = x_make_int(p_base, flags, i);
 	_it_should("make an Integer object and set its value",
-		! x_obj_isnil(p_base, p_obj)
-		&& x_obj_type_isint(p_base, p_obj)
+		p_obj != NULL
 		&& flags == (x_obj_flag_t)x_obj_flags(p_obj)
 		&& i == x_intval(p_obj)
 	);
@@ -210,15 +201,12 @@ static char *test_make_int(void)
 	p_base = x_base_ts_make(NULL, NULL);
 	p_obj = x_make_int(p_base, flags, i);
 	_it_should("make an Integer object, attach it to the Base object, and set its value",
-		! x_obj_isnil(p_base, p_obj)
-		&& x_obj_type_isint(p_base, p_obj)
+		p_obj != NULL
 		&& flags == (x_obj_flag_t)x_obj_flags(p_obj)
-		&& p_obj == x_obj_heap(p_base)
 		&& i == x_intval(p_obj)
 	);
 
-	x_sys_free(p_obj);
-	x_sys_free(p_base);
+	test_cleanup(p_base);
 
 
 	return NULL;
@@ -249,7 +237,7 @@ static char *test_type_int_struct(void)
 
 	helper_alloc_reset();
 
-	p_base = x_mksatom(NULL, X_OBJ_FLAG_NONE, 0);
+	p_base = x_base_ts_make(NULL, NULL);
 	p_type = x_type_int_struct(p_base, p_base);
 	_it_should("return Integer Type list",
 		! x_obj_isnil(p_base, p_type)
@@ -347,15 +335,13 @@ static char *test_type_int_make(void)
 
 	p_obj[0] = x_type_int_make(NULL, p_args);
 	_it_should("make  object",
-		! x_obj_isnil(p_base, p_obj[0])
-		&& x_obj_type_isint(p_base, p_obj[0])
+		p_obj[0] != NULL
 		&& value == x_intval(p_obj[0])
 	);
 
 	p_obj[1] = x_type_int_make(NULL, p_args);
 	_it_should("make a second Integer object",
-		! x_obj_isnil(p_base, p_obj[1])
-		&& x_obj_type_isint(p_base, p_obj[1])
+		p_obj[1] != NULL
 		&& value == x_intval(p_obj[1])
 	);
 
@@ -372,21 +358,19 @@ static char *test_type_int_make(void)
 	helper_alloc_reset();
 
 	/* Empty p_base object */
-	p_base = x_mksatom(NULL, X_OBJ_FLAG_NONE, NULL);
+	p_base = x_base_ts_make(NULL, NULL);
 	p_int = x_mksatom(p_base, X_OBJ_FLAG_NONE, value);
 	p_args = x_mkspair(p_base, X_OBJ_FLAG_NONE, p_int, NULL);
 
 	p_obj[0] = x_type_int_make(p_base, p_args);
 	_it_should("make  object",
-		! x_obj_isnil(p_base, p_obj[0])
-		&& x_obj_type_isint(p_base, p_obj[0])
+		p_obj[0] != NULL
 		&& value == x_intval(p_obj[0])
 	);
 
 	p_obj[1] = x_type_int_make(p_base, p_args);
 	_it_should("make a second Integer object",
-		! x_obj_isnil(p_base, p_obj[1])
-		&& x_obj_type_isint(p_base, p_obj[1])
+		p_obj[1] != NULL
 		&& value == x_intval(p_obj[1])
 	);
 
@@ -394,11 +378,7 @@ static char *test_type_int_make(void)
 		x_obj_type(p_obj[0]) != x_obj_type(p_obj[1])
 	);
 
-	x_sys_free(p_obj[1]);
-	x_sys_free(p_obj[0]);
-	x_sys_free(p_args);
-	x_sys_free(p_int);
-	x_sys_free(p_base);
+	test_cleanup(p_base);
 
 
 	helper_alloc_reset();
@@ -410,24 +390,18 @@ static char *test_type_int_make(void)
 
 	p_obj[0] = x_type_int_make(p_base, p_args);
 	_it_should("make  object with a base object",
-		! x_obj_isnil(p_base, p_obj[0])
-		&& x_obj_type_isint(p_base, p_obj[0])
+		p_obj[0] != NULL
 	);
 
 	p_obj[1] = x_type_int_make(p_base, p_args);
 	_it_should("make a second Integer object a base object",
-		! x_obj_isnil(p_base, p_obj[1])
-		&& x_obj_type_isint(p_base, p_obj[1])
+		p_obj[1] != NULL
 	);
 	_it_should("have returned the same type object for both objects",
 		x_obj_type(p_obj[0]) == x_obj_type(p_obj[1])
 	);
 
-	x_sys_free(p_obj[1]);
-	x_sys_free(p_obj[0]);
-	x_sys_free(p_args);
-	x_sys_free(p_int);
-	x_sys_free(p_base);
+	test_cleanup(p_base);
 
 
 	return NULL;

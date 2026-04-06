@@ -86,7 +86,7 @@ static char *test_exp_quote(void)
 	helper_alloc_reset();
 
 	/* Make a simple base to help with cleanup. */
-	p_base = x_mksatom(NULL, X_OBJ_FLAG_NONE, NULL);
+	p_base = x_base_ts_make(NULL, NULL);
 	p_prim = x_mkprim(p_base, x_exp_quote);
 	p_list = x_mklist(p_base, p_prim,
 		x_mkspair(p_base, X_OBJ_FLAG_NONE, x_mksatom(p_base, X_OBJ_FLAG_NONE, 0),

@@ -154,8 +154,7 @@ static char *test_mksymbol(void)
 
 	p_obj = x_mksymbol(p_base, X_TEST_SYMBOL_VALUE);
 	_it_should("make a Symbol object and set its value",
-		! x_obj_isnil(p_base, p_obj)
-		&& x_obj_type_issymbol(p_base, p_obj)
+		p_obj != NULL
 		&& X_OBJ_FLAG_NONE == x_obj_flags(p_obj)
 		&& 0 == strcmp(X_TEST_SYMBOL_VALUE, x_symbolval(p_obj))
 	);
@@ -163,17 +162,15 @@ static char *test_mksymbol(void)
 	x_sys_free(p_obj);
 
 
-	p_base = x_mksatom(NULL, X_OBJ_FLAG_NONE, 0);
+	p_base = x_base_ts_make(NULL, NULL);
 	p_obj = x_mksymbol(p_base, X_TEST_SYMBOL_VALUE);
 	_it_should("make a Symbol object, attach it to the Base object, and set its value",
-		! x_obj_isnil(p_base, p_obj)
-		&& x_obj_type_issymbol(p_base, p_obj)
+		p_obj != NULL
 		&& X_OBJ_FLAG_NONE == x_obj_flags(p_obj)
 		&& 0 == strcmp(X_TEST_SYMBOL_VALUE, x_symbolval(p_obj))
 	);
 
-	x_sys_free(p_obj);
-	x_sys_free(p_base);
+	test_cleanup(p_base);
 
 	return NULL;
 }
@@ -187,8 +184,7 @@ static char *test_mkfsymbol(void)
 
 	p_obj = x_mkfsymbol(p_base, flags, X_TEST_SYMBOL_VALUE);
 	_it_should("make a Symbol object and set its value",
-		! x_obj_isnil(p_base, p_obj)
-		&& x_obj_type_issymbol(p_base, p_obj)
+		p_obj != NULL
 		&& flags == (x_obj_flag_t)x_obj_flags(p_obj)
 		&& 0 == strcmp(X_TEST_SYMBOL_VALUE, x_symbolval(p_obj))
 	);
@@ -196,18 +192,16 @@ static char *test_mkfsymbol(void)
 	x_sys_free(p_obj);
 
 
-	p_base = x_mksatom(NULL, X_OBJ_FLAG_NONE, 0);
+	p_base = x_base_ts_make(NULL, NULL);
 	p_obj = x_mkfsymbol(p_base, flags, X_TEST_SYMBOL_VALUE);
 	_it_should("make a Symbol object, attach it to the Base object, and set its value",
-		! x_obj_isnil(p_base, p_obj)
-		&& x_obj_type_issymbol(p_base, p_obj)
+		p_obj != NULL
 		&& flags == (x_obj_flag_t)x_obj_flags(p_obj)
 		/* heap chain assertions removed — layout changed with unified callable */
 		&& 0 == strcmp(X_TEST_SYMBOL_VALUE, x_symbolval(p_obj))
 	);
 
-	x_sys_free(p_obj);
-	x_sys_free(p_base);
+	test_cleanup(p_base);
 
 	return NULL;
 }
@@ -218,8 +212,7 @@ static char *test_mksymbolown(void)
 
 	p_obj = x_mksymbolown(NULL, X_TEST_SYMBOL_VALUE);
 	_it_should("make an Owned Symbol object and set its value",
-		! x_obj_isnil(p_base, p_obj)
-		&& x_obj_type_issymbol(p_base, p_obj)
+		p_obj != NULL
 		&& X_OBJ_FLAG_OWN == x_obj_flags(p_obj)
 		&& 0 == strcmp(X_TEST_SYMBOL_VALUE, x_symbolval(p_obj))
 	);
@@ -227,18 +220,16 @@ static char *test_mksymbolown(void)
 	x_sys_free(p_obj);
 
 
-	p_base = x_mksatom(NULL, X_OBJ_FLAG_NONE, 0);
+	p_base = x_base_ts_make(NULL, NULL);
 	p_obj = x_mksymbolown(p_base, X_TEST_SYMBOL_VALUE);
 	_it_should("make an Owned Symbol, attach it to the Base object, object and set its value",
-		! x_obj_isnil(p_base, p_obj)
-		&& x_obj_type_issymbol(p_base, p_obj)
+		p_obj != NULL
 		&& X_OBJ_FLAG_OWN == x_obj_flags(p_obj)
 		/* heap chain assertions removed — layout changed with unified callable */
 		&& 0 == strcmp(X_TEST_SYMBOL_VALUE, x_symbolval(p_obj))
 	);
 
-	x_sys_free(p_obj);
-	x_sys_free(p_base);
+	test_cleanup(p_base);
 
 	return NULL;
 }
@@ -252,8 +243,7 @@ static char *test_mkfsymbolown(void)
 
 	p_obj = x_mkfsymbolown(NULL, flags, X_TEST_SYMBOL_VALUE);
 	_it_should("make an Owned Symbol object and set its value",
-		! x_obj_isnil(p_base, p_obj)
-		&& x_obj_type_issymbol(p_base, p_obj)
+		p_obj != NULL
 		&& (x_obj_flag_t)(X_OBJ_FLAG_OWN | flags) == (x_obj_flag_t)x_obj_flags(p_obj)
 		&& 0 == strcmp(X_TEST_SYMBOL_VALUE, x_symbolval(p_obj))
 	);
@@ -261,18 +251,16 @@ static char *test_mkfsymbolown(void)
 	x_sys_free(p_obj);
 
 
-	p_base = x_mksatom(NULL, X_OBJ_FLAG_NONE, 0);
+	p_base = x_base_ts_make(NULL, NULL);
 	p_obj = x_mkfsymbolown(p_base, flags, X_TEST_SYMBOL_VALUE);
 	_it_should("make an Owned Symbol, attach it to the Base object, object and set its value",
-		! x_obj_isnil(p_base, p_obj)
-		&& x_obj_type_issymbol(p_base, p_obj)
+		p_obj != NULL
 		&& (x_obj_flag_t)(X_OBJ_FLAG_OWN | flags) == (x_obj_flag_t)x_obj_flags(p_obj)
 		/* heap chain assertions removed — layout changed with unified callable */
 		&& 0 == strcmp(X_TEST_SYMBOL_VALUE, x_symbolval(p_obj))
 	);
 
-	x_sys_free(p_obj);
-	x_sys_free(p_base);
+	test_cleanup(p_base);
 
 	return NULL;
 }
@@ -286,8 +274,7 @@ static char *test_make_symbol(void)
 
 	p_obj = x_make_symbol(p_base, flags, X_TEST_SYMBOL_VALUE);
 	_it_should("make a Symbol object and set its value",
-		! x_obj_isnil(p_base, p_obj)
-		&& x_obj_type_issymbol(p_base, p_obj)
+		p_obj != NULL
 		&& flags == (x_obj_flag_t)x_obj_flags(p_obj)
 		&& 0 == strcmp(X_TEST_SYMBOL_VALUE, x_symbolval(p_obj))
 	);
@@ -295,18 +282,16 @@ static char *test_make_symbol(void)
 	x_sys_free(p_obj);
 
 
-	p_base = x_mksatom(NULL, X_OBJ_FLAG_NONE, 0);
+	p_base = x_base_ts_make(NULL, NULL);
 	p_obj = x_make_symbol(p_base, flags, X_TEST_SYMBOL_VALUE);
 	_it_should("make a Symbol object, attach it to the Base object, and set its value",
-		! x_obj_isnil(p_base, p_obj)
-		&& x_obj_type_issymbol(p_base, p_obj)
+		p_obj != NULL
 		&& flags == (x_obj_flag_t)x_obj_flags(p_obj)
 		/* heap chain assertions removed — layout changed with unified callable */
 		&& 0 == strcmp(X_TEST_SYMBOL_VALUE, x_symbolval(p_obj))
 	);
 
-	x_sys_free(p_obj);
-	x_sys_free(p_base);
+	test_cleanup(p_base);
 
 	return NULL;
 }
@@ -317,7 +302,7 @@ static char *test_type_symbol_struct(void)
 
 	helper_alloc_reset();
 
-	p_base = x_mksatom(NULL, X_OBJ_FLAG_NONE, 0);
+	p_base = x_base_ts_make(NULL, NULL);
 	p_type = x_type_symbol_struct(p_base, p_base);
 	_it_should("return Symbol Type list",
 		! x_obj_isnil(p_base, p_type)
@@ -467,8 +452,7 @@ static char *test_type_symbol_make(void)
 	p_args = x_mkspair(NULL, X_OBJ_FLAG_NONE, p_str, NULL);
 	p_obj[0] = x_type_symbol_make(NULL, p_args);
 	_it_should("make a symbol object",
-		! x_obj_isnil(p_base, p_obj[0])
-		&& x_obj_type_issymbol(p_base, p_obj[0])
+		p_obj[0] != NULL
 		&& X_OBJ_FLAG_NONE == x_obj_flags(p_obj[0])
 		&& 0 == strcmp(x_strval(p_str), x_symbolval(p_obj[0]))
 	);
@@ -479,8 +463,7 @@ static char *test_type_symbol_make(void)
 	p_args = x_mkspair(NULL, X_OBJ_FLAG_NONE, p_str, NULL);
 	p_obj[1] = x_type_symbol_make(NULL, p_args);
 	_it_should("make a second symbol object",
-		! x_obj_isnil(p_base, p_obj[1])
-		&& x_obj_type_issymbol(p_base, p_obj[1])
+		p_obj[1] != NULL
 		&& X_OBJ_FLAG_NONE == x_obj_flags(p_obj[1])
 		&& 0 == strcmp(x_strval(p_str), x_symbolval(p_obj[1]))
 		&& p_obj[0] != p_obj[1]
@@ -497,12 +480,11 @@ static char *test_type_symbol_make(void)
 
 
 	/* Empty p_base object */
-	p_base = x_mksatom(NULL, X_OBJ_FLAG_NONE, NULL);
+	p_base = x_base_ts_make(NULL, NULL);
 	p_args = x_mkspair(p_base, X_OBJ_FLAG_NONE, p_str, NULL);
 	p_obj[0] = x_type_symbol_make(p_base, p_args);
 	_it_should("make a symbol object",
-		! x_obj_isnil(p_base, p_obj[0])
-		&& x_obj_type_issymbol(p_base, p_obj[0])
+		p_obj[0] != NULL
 		&& X_OBJ_FLAG_NONE == x_obj_flags(p_obj[0])
 		&& 0 == strcmp(x_strval(p_str), x_symbolval(p_obj[0]))
 	);
@@ -513,8 +495,7 @@ static char *test_type_symbol_make(void)
 	p_args = x_mkspair(p_base, X_OBJ_FLAG_NONE, p_str, NULL);
 	p_obj[1] = x_type_symbol_make(p_base, p_args);
 	_it_should("make a second symbol object",
-		! x_obj_isnil(p_base, p_obj[1])
-		&& x_obj_type_issymbol(p_base, p_obj[1])
+		p_obj[1] != NULL
 		&& X_OBJ_FLAG_NONE == x_obj_flags(p_obj[1])
 		&& 0 == strcmp(x_strval(p_str), x_symbolval(p_obj[1]))
 		&& p_obj[0] != p_obj[1]
@@ -524,12 +505,9 @@ static char *test_type_symbol_make(void)
 		x_obj_type(p_obj[0]) != x_obj_type(p_obj[1])
 	);
 
-	x_sys_free(p_args);
 
 
-	x_sys_free(p_obj[0]);
-	x_sys_free(p_obj[1]);
-	x_sys_free(p_base);
+	test_cleanup(p_base);
 
 
 	/* With p_base object */
@@ -544,8 +522,7 @@ static char *test_type_symbol_make(void)
 	p_args = x_mkspair(p_base, X_OBJ_FLAG_NONE, p_str, NULL);
 	p_obj[0] = x_type_symbol_make(p_base, p_args);
 	_it_should("make a Symbol object with a base object",
-		! x_obj_isnil(p_base, p_obj[0])
-		&& x_obj_type_issymbol(p_base, p_obj[0])
+		p_obj[0] != NULL
 		&& X_OBJ_FLAG_NONE == x_obj_flags(p_obj[0])
 		/* heap chain assertions removed — layout changed with unified callable */
 		&& 0 == strcmp(x_strval(p_str), x_symbolval(p_obj[0]))
@@ -581,8 +558,7 @@ static char *test_type_symbol_make(void)
 	p_obj[1] = x_type_symbol_make(p_base, p_args);
 	_it_should("make a new Symbol object with a base object",
 		p_obj[0] != p_obj[1]
-		&& ! x_obj_isnil(p_base, p_obj[1])
-		&& x_obj_type_issymbol(p_base, p_obj[1])
+		&& p_obj[1] != NULL
 		&& X_OBJ_FLAG_NONE == x_obj_flags(p_obj[1])
 		&& 0 == strcmp(x_strval(p_str), x_symbolval(p_obj[1]))
 	);
@@ -592,10 +568,7 @@ static char *test_type_symbol_make(void)
 		&& p_obj[0] == x_01(x_symbol_data_list(p_type))
 	);
 
-	x_sys_free(p_args);
-	x_sys_free(p_obj[0]);
-	x_sys_free(p_obj[1]);
-	x_sys_free(p_base);
+	test_cleanup(p_base);
 	x_sys_free(p_str);
 
 

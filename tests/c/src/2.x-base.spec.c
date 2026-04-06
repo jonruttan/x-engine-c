@@ -86,7 +86,7 @@ static char *test_base_make(void)
 		! x_base_isset(p_base)
 	);
 
-	p_base = x_mksatom(NULL, X_OBJ_FLAG_NONE, NULL);
+	p_base = x_base_ts_make(NULL, NULL);
 	_it_should("return that the Base object is not set",
 		! x_base_isset(p_base)
 	);
@@ -185,7 +185,7 @@ static char *test_base_type_alist_extend(void)
 	);
 
 
-	p_base = x_mksatom(NULL, X_OBJ_FLAG_NONE, NULL);
+	p_base = x_base_ts_make(NULL, NULL);
 	p_args = x_mkspair(p_base, X_OBJ_FLAG_NONE, NULL, NULL);
 	p_alist = x_base_type_alist_extend(p_base, p_args);
 	_it_should("return nil when base is not set",
@@ -248,7 +248,7 @@ static char *test_base_type_alist_assoc(void)
 		NULL == p_obj[0]
 	);
 
-	p_base = x_mksatom(NULL, X_OBJ_FLAG_NONE, NULL);
+	p_base = x_base_ts_make(NULL, NULL);
 	p_obj[0] = x_base_type_alist_assoc(p_base, p_args);
 	_it_should("return nil when base is not set",
 		NULL == p_obj[0]
@@ -322,7 +322,7 @@ static char *test_base_env_alist_extend(void)
 	);
 
 
-	p_base = x_mksatom(NULL, X_OBJ_FLAG_NONE, NULL);
+	p_base = x_base_ts_make(NULL, NULL);
 	p_args = x_mkspair(p_base, X_OBJ_FLAG_NONE, p_atoms[0], p_atoms[1]);
 	p_alist = x_base_env_alist_extend(p_base, p_args);
 	_it_should("return nil when base is not set",

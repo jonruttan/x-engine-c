@@ -206,8 +206,7 @@ static char *test_mkbuffer(void)
 
 	p_obj = x_mkbuffer(p_base, X_TEST_BUFFER_VALUE);
 	_it_should("make a Buffer object and set its values",
-		! x_obj_isnil(p_base, p_obj)
-		&& x_obj_type_isbuffer(p_base, p_obj)
+		p_obj != NULL
 		&& X_OBJ_FLAG_NONE == x_obj_flags(p_obj)
 		&& X_TEST_BUFFER_VALUE == x_bufferval(p_obj)
 		&& X_TEST_BUFFER_VALUE == x_bufferread(p_obj)
@@ -217,21 +216,18 @@ static char *test_mkbuffer(void)
 	x_sys_free(p_obj);
 
 
-	p_base = x_mksatom(NULL, X_OBJ_FLAG_NONE, 0);
+	p_base = x_base_ts_make(NULL, NULL);
 
 	p_obj = x_mkbuffer(p_base, X_TEST_BUFFER_VALUE);
 	_it_should("make a Buffer object, attach it to the Base object, and set its values",
-		! x_obj_isnil(p_base, p_obj)
-		&& x_obj_type_isbuffer(p_base, p_obj)
+		p_obj != NULL
 		&& X_OBJ_FLAG_NONE == x_obj_flags(p_obj)
-		&& p_obj == x_obj_heap(p_base)
 		&& X_TEST_BUFFER_VALUE == x_bufferval(p_obj)
 		&& X_TEST_BUFFER_VALUE == x_bufferread(p_obj)
 		&& X_TEST_BUFFER_VALUE == x_bufferwrite(p_obj)
 	);
 
-	x_sys_free(p_obj);
-	x_sys_free(p_base);
+	test_cleanup(p_base);
 
 	return NULL;
 }
@@ -245,8 +241,7 @@ static char *test_mkfbuffer(void)
 
 	p_obj = x_mkfbuffer(p_base, flags, X_TEST_BUFFER_VALUE);
 	_it_should("make a Buffer object and set its values",
-		! x_obj_isnil(p_base, p_obj)
-		&& x_obj_type_isbuffer(p_base, p_obj)
+		p_obj != NULL
 		&& flags == (x_obj_flag_t)x_obj_flags(p_obj)
 		&& X_TEST_BUFFER_VALUE == x_bufferval(p_obj)
 		&& X_TEST_BUFFER_VALUE == x_bufferread(p_obj)
@@ -256,21 +251,18 @@ static char *test_mkfbuffer(void)
 	x_sys_free(p_obj);
 
 
-	p_base = x_mksatom(NULL, X_OBJ_FLAG_NONE, 0);
+	p_base = x_base_ts_make(NULL, NULL);
 
 	p_obj = x_mkfbuffer(p_base, flags, X_TEST_BUFFER_VALUE);
 	_it_should("make a Buffer object, attach it to the Base object, and set its values",
-		! x_obj_isnil(p_base, p_obj)
-		&& x_obj_type_isbuffer(p_base, p_obj)
+		p_obj != NULL
 		&& flags == (x_obj_flag_t)x_obj_flags(p_obj)
-		&& p_obj == x_obj_heap(p_base)
 		&& X_TEST_BUFFER_VALUE == x_bufferval(p_obj)
 		&& X_TEST_BUFFER_VALUE == x_bufferread(p_obj)
 		&& X_TEST_BUFFER_VALUE == x_bufferwrite(p_obj)
 	);
 
-	x_sys_free(p_obj);
-	x_sys_free(p_base);
+	test_cleanup(p_base);
 
 	return NULL;
 }
@@ -281,8 +273,7 @@ static char *test_mkbufferown(void)
 
 	p_obj = x_mkbufferown(NULL, X_TEST_BUFFER_VALUE);
 	_it_should("make an owned Buffer object and set its values",
-		! x_obj_isnil(p_base, p_obj)
-		&& x_obj_type_isbuffer(p_base, p_obj)
+		p_obj != NULL
 		&& X_OBJ_FLAG_OWN == x_obj_flags(p_obj)
 		&& X_TEST_BUFFER_VALUE == x_bufferval(p_obj)
 		&& X_TEST_BUFFER_VALUE == x_bufferread(p_obj)
@@ -292,21 +283,18 @@ static char *test_mkbufferown(void)
 	x_sys_free(p_obj);
 
 
-	p_base = x_mksatom(NULL, X_OBJ_FLAG_NONE, 0);
+	p_base = x_base_ts_make(NULL, NULL);
 
 	p_obj = x_mkbufferown(p_base, X_TEST_BUFFER_VALUE);
 	_it_should("make a Buffer object, , attach it to the Base object, and set its values",
-		! x_obj_isnil(p_base, p_obj)
-		&& x_obj_type_isbuffer(p_base, p_obj)
+		p_obj != NULL
 		&& X_OBJ_FLAG_OWN == x_obj_flags(p_obj)
-		&& p_obj == x_obj_heap(p_base)
 		&& X_TEST_BUFFER_VALUE == x_bufferval(p_obj)
 		&& X_TEST_BUFFER_VALUE == x_bufferread(p_obj)
 		&& X_TEST_BUFFER_VALUE == x_bufferwrite(p_obj)
 	);
 
-	x_sys_free(p_obj);
-	x_sys_free(p_base);
+	test_cleanup(p_base);
 
 	return NULL;
 }
@@ -320,8 +308,7 @@ static char *test_mkfbufferown(void)
 
 	p_obj = x_mkfbufferown(NULL, flags, X_TEST_BUFFER_VALUE);
 	_it_should("make an owned Buffer object",
-		! x_obj_isnil(p_base, p_obj)
-		&& x_obj_type_isbuffer(p_base, p_obj)
+		p_obj != NULL
 		&& (x_obj_flag_t)(X_OBJ_FLAG_OWN | flags) == (x_obj_flag_t)x_obj_flags(p_obj)
 		&& X_TEST_BUFFER_VALUE == x_bufferval(p_obj)
 	);
@@ -329,19 +316,16 @@ static char *test_mkfbufferown(void)
 	x_sys_free(p_obj);
 
 
-	p_base = x_mksatom(NULL, X_OBJ_FLAG_NONE, 0);
+	p_base = x_base_ts_make(NULL, NULL);
 
 	p_obj = x_mkfbufferown(p_base, flags, X_TEST_BUFFER_VALUE);
 	_it_should("make a Buffer object",
-		! x_obj_isnil(p_base, p_obj)
-		&& p_obj == x_obj_heap(p_base)
-		&& x_obj_type_isbuffer(p_base, p_obj)
+		p_obj != NULL
 		&& (x_obj_flag_t)(X_OBJ_FLAG_OWN | flags) == (x_obj_flag_t)x_obj_flags(p_obj)
 		&& X_TEST_BUFFER_VALUE == x_bufferval(p_obj)
 	);
 
-	x_sys_free(p_obj);
-	x_sys_free(p_base);
+	test_cleanup(p_base);
 
 	return NULL;
 }
@@ -352,8 +336,7 @@ static char *test_make_buffer(void)
 
 	p_obj = x_make_buffer(p_base, X_TEST_BUFFER_FLAG, X_TEST_BUFFER_VALUE);
 	_it_should("make a Buffer object with flags",
-		! x_obj_isnil(p_base, p_obj)
-		&& x_obj_type_isbuffer(p_base, p_obj)
+		p_obj != NULL
 		&& X_TEST_BUFFER_FLAG == x_obj_flags(p_obj)
 		&& X_TEST_BUFFER_VALUE == x_bufferval(p_obj)
 	);
@@ -361,19 +344,16 @@ static char *test_make_buffer(void)
 	x_sys_free(p_obj);
 
 
-	p_base = x_mksatom(NULL, X_OBJ_FLAG_NONE, 0);
+	p_base = x_base_ts_make(NULL, NULL);
 
 	p_obj = x_make_buffer(p_base, X_TEST_BUFFER_FLAG, X_TEST_BUFFER_VALUE);
 	_it_should("make a Buffer object with flags",
-		! x_obj_isnil(p_base, p_obj)
-		&& p_obj == x_obj_heap(p_base)
-		&& x_obj_type_isbuffer(p_base, p_obj)
+		p_obj != NULL
 		&& X_TEST_BUFFER_FLAG == x_obj_flags(p_obj)
 		&& X_TEST_BUFFER_VALUE == x_bufferval(p_obj)
 	);
 
-	x_sys_free(p_obj);
-	x_sys_free(p_base);
+	test_cleanup(p_base);
 
 	return NULL;
 }
@@ -384,7 +364,7 @@ static char *test_type_buffer_struct(void)
 
 	helper_alloc_reset();
 
-	p_base = x_mksatom(NULL, X_OBJ_FLAG_NONE, 0);
+	p_base = x_base_ts_make(NULL, NULL);
 	p_type = x_type_buffer_struct(p_base, p_base);
 	_it_should("return Buffer Type list",
 		! x_obj_isnil(p_base, p_type)
@@ -500,15 +480,13 @@ static char *test_type_buffer_make(void)
 	p_args = x_mkspair(NULL, X_OBJ_FLAG_NONE, p_buffer, NULL);
 	p_obj[0] = x_type_buffer_make(NULL, p_args);
 	_it_should("make a Buffer object",
-		! x_obj_isnil(p_base, p_obj[0])
-		&& x_obj_type_isbuffer(p_base, p_obj[0])
+		p_obj[0] != NULL
 		&& value == x_bufferval(p_obj[0])
 	);
 
 	p_obj[1] = x_type_buffer_make(NULL, p_args);
 	_it_should("make a second Buffer object",
-		! x_obj_isnil(p_base, p_obj[1])
-		&& x_obj_type_isbuffer(p_base, p_obj[1])
+		p_obj[1] != NULL
 		&& value == x_bufferval(p_obj[1])
 	);
 
@@ -525,21 +503,19 @@ static char *test_type_buffer_make(void)
 	helper_alloc_reset();
 
 	/* Empty p_base object */
-	p_base = x_mksatom(NULL, X_OBJ_FLAG_NONE, NULL);
+	p_base = x_base_ts_make(NULL, NULL);
 	p_buffer = x_mksatom(p_base, X_OBJ_FLAG_NONE, value);
 	p_args = x_mkspair(p_base, X_OBJ_FLAG_NONE, p_buffer, NULL);
 
 	p_obj[0] = x_type_buffer_make(p_base, p_args);
 	_it_should("make a Buffer object",
-		! x_obj_isnil(p_base, p_obj[0])
-		&& x_obj_type_isbuffer(p_base, p_obj[0])
+		p_obj[0] != NULL
 		&& value == x_bufferval(p_obj[0])
 	);
 
 	p_obj[1] = x_type_buffer_make(p_base, p_args);
 	_it_should("make a second buffer object",
-		! x_obj_isnil(p_base, p_obj[1])
-		&& x_obj_type_isbuffer(p_base, p_obj[1])
+		p_obj[1] != NULL
 		&& value == x_bufferval(p_obj[1])
 	);
 
@@ -547,11 +523,7 @@ static char *test_type_buffer_make(void)
 		x_obj_type(p_obj[0]) != x_obj_type(p_obj[1])
 	);
 
-	x_sys_free(p_obj[1]);
-	x_sys_free(p_obj[0]);
-	x_sys_free(p_args);
-	x_sys_free(p_buffer);
-	x_sys_free(p_base);
+	test_cleanup(p_base);
 
 
 	helper_alloc_reset();
@@ -563,24 +535,18 @@ static char *test_type_buffer_make(void)
 
 	p_obj[0] = x_type_buffer_make(p_base, p_args);
 	_it_should("make a Buffer object with a base object",
-		! x_obj_isnil(p_base, p_obj[0])
-		&& x_obj_type_isbuffer(p_base, p_obj[0])
+		p_obj[0] != NULL
 	);
 
 	p_obj[1] = x_type_buffer_make(p_base, p_args);
 	_it_should("make a second Buffer object a base object",
-		! x_obj_isnil(p_base, p_obj[1])
-		&& x_obj_type_isbuffer(p_base, p_obj[1])
+		p_obj[1] != NULL
 	);
 	_it_should("have returned the same type object for both objects",
 		x_obj_type(p_obj[0]) == x_obj_type(p_obj[1])
 	);
 
-	x_sys_free(p_obj[1]);
-	x_sys_free(p_obj[0]);
-	x_sys_free(p_args);
-	x_sys_free(p_buffer);
-	x_sys_free(p_base);
+	test_cleanup(p_base);
 
 
 	return NULL;

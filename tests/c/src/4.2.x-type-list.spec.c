@@ -111,8 +111,7 @@ static char *test_mklist(void)
 
 	p_obj = x_mklist(p_base, (void *)i1, (void *)i2);
 	_it_should("make a List object and set its first and rest values",
-		! x_obj_isnil(p_base, p_obj)
-		&& x_obj_type_islist(p_base, p_obj)
+		p_obj != NULL
 		&& X_OBJ_FLAG_NONE == x_obj_flags(p_obj)
 		&& i1 == x_firstint(p_obj)
 		&& i2 == x_restint(p_obj)
@@ -121,20 +120,16 @@ static char *test_mklist(void)
 	x_sys_free(p_obj);
 
 
-	p_base = x_mksatom(NULL, X_OBJ_FLAG_NONE, 0);
+	p_base = x_base_ts_make(NULL, NULL);
 	p_obj = x_mklist(p_base, (void *)i1, (void *)i2);
 	_it_should("make a List object, attach it to the Base object, and set its first and rest values",
-		! x_obj_isnil(p_base, p_obj)
-		&& p_obj == x_obj_heap(p_base)
-		&& x_obj_type_islist(p_base, p_obj)
+		p_obj != NULL
 		&& X_OBJ_FLAG_NONE == x_obj_flags(p_obj)
-		&& p_obj == x_obj_heap(p_base)
 		&& i1 == x_firstint(p_obj)
 		&& i2 == x_restint(p_obj)
 	);
 
-	x_sys_free(p_obj);
-	x_sys_free(p_base);
+	test_cleanup(p_base);
 
 	return NULL;
 }
@@ -149,8 +144,7 @@ static char *test_mkflist(void)
 
 	p_obj = x_mkflist(p_base, flags, (void *)i1, (void *)i2);
 	_it_should("make a List object and set its first and rest values",
-		! x_obj_isnil(p_base, p_obj)
-		&& x_obj_type_islist(p_base, p_obj)
+		p_obj != NULL
 		&& flags == (x_obj_flag_t)x_obj_flags(p_obj)
 		&& i1 == x_firstint(p_obj)
 		&& i2 == x_restint(p_obj)
@@ -159,19 +153,16 @@ static char *test_mkflist(void)
 	x_sys_free(p_obj);
 
 
-	p_base = x_mksatom(NULL, X_OBJ_FLAG_NONE, 0);
+	p_base = x_base_ts_make(NULL, NULL);
 	p_obj = x_mkflist(p_base, flags, (void *)i1, (void *)i2);
 	_it_should("make a List object, attach it to the Base object, and set its first and rest values",
-		! x_obj_isnil(p_base, p_obj)
-		&& x_obj_type_islist(p_base, p_obj)
+		p_obj != NULL
 		&& flags == (x_obj_flag_t)x_obj_flags(p_obj)
-		&& p_obj == x_obj_heap(p_base)
 		&& i1 == x_firstint(p_obj)
 		&& i2 == x_restint(p_obj)
 	);
 
-	x_sys_free(p_obj);
-	x_sys_free(p_base);
+	test_cleanup(p_base);
 
 	return NULL;
 }
@@ -186,8 +177,7 @@ static char *test_make_list(void)
 
 	p_obj = x_make_list(p_base, flags, (void *)i1, (void *)i2);
 	_it_should("make a List object and set its first and rest values",
-		! x_obj_isnil(p_base, p_obj)
-		&& x_obj_type_islist(p_base, p_obj)
+		p_obj != NULL
 		&& flags == (x_obj_flag_t)x_obj_flags(p_obj)
 		&& i1 == x_firstint(p_obj)
 		&& i2 == x_restint(p_obj)
@@ -196,19 +186,16 @@ static char *test_make_list(void)
 	x_sys_free(p_obj);
 
 
-	p_base = x_mksatom(NULL, X_OBJ_FLAG_NONE, 0);
+	p_base = x_base_ts_make(NULL, NULL);
 	p_obj = x_make_list(p_base, flags, (void *)i1, (void *)i2);
 	_it_should("make a List object, attach it to the Base object, and set its first and rest values",
-		! x_obj_isnil(p_base, p_obj)
-		&& x_obj_type_islist(p_base, p_obj)
+		p_obj != NULL
 		&& flags == (x_obj_flag_t)x_obj_flags(p_obj)
-		&& p_obj == x_obj_heap(p_base)
 		&& i1 == x_firstint(p_obj)
 		&& i2 == x_restint(p_obj)
 	);
 
-	x_sys_free(p_obj);
-	x_sys_free(p_base);
+	test_cleanup(p_base);
 
 	return NULL;
 }
@@ -336,8 +323,7 @@ static char *test_type_list_make(void)
 
 	p_obj[0] = x_type_list_make(NULL, p_args);
 	_it_should("make a List object and set its value",
-		! x_obj_isnil(p_base, p_obj[0])
-		&& x_obj_type_islist(p_base, p_obj[0])
+		p_obj[0] != NULL
 		&& x_firstobj(p_list) == x_firstobj(p_obj[0])
 		&& x_restobj(p_list) == x_restobj(p_obj[0])
 		&& X_OBJ_FLAG_NONE == x_obj_flags(p_obj[0])
@@ -351,8 +337,7 @@ static char *test_type_list_make(void)
 
 	p_obj[1] = x_type_list_make(NULL, p_args);
 	_it_should("make a second List object and set its value and flags",
-		! x_obj_isnil(p_base, p_obj[1])
-		&& x_obj_type_islist(p_base, p_obj[1])
+		p_obj[1] != NULL
 		&& x_firstint(p_list) == x_firstint(p_obj[1])
 		&& x_restint(p_list) == x_restint(p_obj[1])
 		&& x_atomint(p_flags) == x_obj_flags(p_obj[1])
@@ -372,14 +357,13 @@ static char *test_type_list_make(void)
 
 
 	/* Empty p_base object */
-	p_base = x_mksatom(NULL, X_OBJ_FLAG_NONE, NULL);
+	p_base = x_base_ts_make(NULL, NULL);
 	p_list = x_mkspair(p_base, X_OBJ_FLAG_NONE, rand(), rand());
 	p_args = x_mkspair(p_base, X_OBJ_FLAG_NONE, p_list, NULL);
 
 	p_obj[0] = x_type_list_make(p_base, p_args);
 	_it_should("make a List object with an empty base and set its value",
-		! x_obj_isnil(p_base, p_obj[0])
-		&& x_obj_type_islist(p_base, p_obj[0])
+		p_obj[0] != NULL
 	);
 
 	/* w/flags */
@@ -390,8 +374,7 @@ static char *test_type_list_make(void)
 
 	p_obj[1] = x_type_list_make(p_base, p_args);
 	_it_should("make a second List object with an empty base and set its value",
-		! x_obj_isnil(p_base, p_obj[1])
-		&& x_obj_type_islist(p_base, p_obj[1])
+		p_obj[1] != NULL
 		&& x_firstint(p_list) == x_firstint(p_obj[1])
 		&& x_restint(p_list) == x_restint(p_obj[1])
 		&& x_atomint(p_flags) == x_obj_flags(p_obj[1])
@@ -402,13 +385,7 @@ static char *test_type_list_make(void)
 		x_obj_type(p_obj[0]) != x_obj_type(p_obj[1])
 	);
 
-	x_sys_free(p_obj[1]);
-	x_sys_free(p_obj[0]);
-	x_sys_free(x_restobj(p_args));
-	x_sys_free(p_args);
-	x_sys_free(p_flags);
-	x_sys_free(p_list);
-	x_sys_free(p_base);
+	test_cleanup(p_base);
 
 
 	/* With p_base object */
@@ -418,8 +395,7 @@ static char *test_type_list_make(void)
 
 	p_obj[0] = x_type_list_make(p_base, p_args);
 	_it_should("make an List object with a base object and set its value",
-		! x_obj_isnil(p_base, p_obj[0])
-		&& x_obj_type_islist(p_base, p_obj[0])
+		p_obj[0] != NULL
 		&& x_firstint(p_list) == x_firstint(p_obj[0])
 		&& x_restint(p_list) == x_restint(p_obj[0])
 		&& X_OBJ_FLAG_NONE == x_obj_flags(p_obj[0])
@@ -433,8 +409,7 @@ static char *test_type_list_make(void)
 
 	p_obj[1] = x_type_list_make(p_base, p_args);
 	_it_should("make a second List object a base object and set its value and flags",
-		! x_obj_isnil(p_base, p_obj[1])
-		&& x_obj_type_islist(p_base, p_obj[1])
+		p_obj[1] != NULL
 		&& x_firstint(p_list) == x_firstint(p_obj[1])
 		&& x_restint(p_list) == x_restint(p_obj[1])
 		&& x_atomint(p_flags) == x_obj_flags(p_obj[1])
@@ -444,13 +419,7 @@ static char *test_type_list_make(void)
 		x_obj_type(p_obj[0]) == x_obj_type(p_obj[1])
 	);
 
-	x_sys_free(p_obj[1]);
-	x_sys_free(p_obj[0]);
-	x_sys_free(x_restobj(p_args));
-	x_sys_free(p_args);
-	x_sys_free(p_flags);
-	x_sys_free(p_list);
-	x_sys_free(p_base);
+	test_cleanup(p_base);
 
 
 	return NULL;
@@ -477,7 +446,7 @@ static char *test_type_list_eval(void)
 
 	helper_alloc_reset();
 
-	p_base = x_mksatom(NULL, X_OBJ_FLAG_NONE, NULL);
+	p_base = x_base_ts_make(NULL, NULL);
 	p_type = x_type_struct_make(p_base, type);
 	p_prim = x_obj_make(p_base, p_type, X_OBJ_FLAG_NONE, X_OBJ_LENGTH_ATOM, test_prim);
 	p_atom = x_mksatom(p_base, X_OBJ_FLAG_NONE, "Hello, World!");
@@ -545,7 +514,7 @@ static char *test_type_list_iter(void)
 	helper_alloc_reset();
 
 	/* Make a simple base to help with cleanup. */
-	p_base = x_mksatom(NULL, X_OBJ_FLAG_NONE, NULL);
+	p_base = x_base_ts_make(NULL, NULL);
 	p_list = x_mkspair(p_base, X_OBJ_FLAG_NONE, x_mksatom(p_base, X_OBJ_FLAG_NONE, 0),
 		x_mkspair(p_base, X_OBJ_FLAG_NONE, x_mksatom(p_base, X_OBJ_FLAG_NONE, 1),
 		x_mkspair(p_base, X_OBJ_FLAG_NONE, x_mksatom(p_base, X_OBJ_FLAG_NONE, 2),

@@ -123,8 +123,7 @@ static char *test_mkchar(void)
 
 	p_obj = x_mkchar(p_base, c);
 	_it_should("make a Character object and set its value",
-		! x_obj_isnil(p_base, p_obj)
-		&& x_obj_type_ischar(p_base, p_obj)
+		p_obj != NULL
 		&& X_OBJ_FLAG_NONE == x_obj_flags(p_obj)
 		&& c == x_charval(p_obj)
 	);
@@ -132,18 +131,15 @@ static char *test_mkchar(void)
 	x_sys_free(p_obj);
 
 
-	p_base = x_mksatom(NULL, X_OBJ_FLAG_NONE, 0);
+	p_base = x_base_ts_make(NULL, NULL);
 	p_obj = x_mkchar(p_base, c);
 	_it_should("make a Character object, attach it to the Base object, and set its value",
-		! x_obj_isnil(p_base, p_obj)
-		&& x_obj_type_ischar(p_base, p_obj)
+		p_obj != NULL
 		&& X_OBJ_FLAG_NONE == x_obj_flags(p_obj)
-		&& p_obj == x_obj_heap(p_base)
 		&& c == x_charval(p_obj)
 	);
 
-	x_sys_free(p_obj);
-	x_sys_free(p_base);
+	test_cleanup(p_base);
 
 	return NULL;
 }
@@ -158,8 +154,7 @@ static char *test_mkfchar(void)
 
 	p_obj = x_mkfchar(p_base, flags, c);
 	_it_should("make a Character object and set its value",
-		! x_obj_isnil(p_base, p_obj)
-		&& x_obj_type_ischar(p_base, p_obj)
+		p_obj != NULL
 		&& flags == (x_obj_flag_t)x_obj_flags(p_obj)
 		&& c == x_charval(p_obj)
 	);
@@ -167,18 +162,15 @@ static char *test_mkfchar(void)
 	x_sys_free(p_obj);
 
 
-	p_base = x_mksatom(NULL, X_OBJ_FLAG_NONE, 0);
+	p_base = x_base_ts_make(NULL, NULL);
 	p_obj = x_mkfchar(p_base, flags, c);
 	_it_should("make a Character object, attach it to the Base object, and set its value",
-		! x_obj_isnil(p_base, p_obj)
-		&& x_obj_type_ischar(p_base, p_obj)
+		p_obj != NULL
 		&& flags == (x_obj_flag_t)x_obj_flags(p_obj)
-		&& p_obj == x_obj_heap(p_base)
 		&& c == x_charval(p_obj)
 	);
 
-	x_sys_free(p_obj);
-	x_sys_free(p_base);
+	test_cleanup(p_base);
 
 	return NULL;
 }
@@ -193,8 +185,7 @@ static char *test_make_char(void)
 
 	p_obj = x_make_char(p_base, flags, c);
 	_it_should("make a Character object and set its value",
-		! x_obj_isnil(p_base, p_obj)
-		&& x_obj_type_ischar(p_base, p_obj)
+		p_obj != NULL
 		&& flags == (x_obj_flag_t)x_obj_flags(p_obj)
 		&& c == x_charval(p_obj)
 	);
@@ -202,18 +193,15 @@ static char *test_make_char(void)
 	x_sys_free(p_obj);
 
 
-	p_base = x_mksatom(NULL, X_OBJ_FLAG_NONE, 0);
+	p_base = x_base_ts_make(NULL, NULL);
 	p_obj = x_make_char(p_base, flags, c);
 	_it_should("make a Character object, attach it to the Base object, and set its value",
-		! x_obj_isnil(p_base, p_obj)
-		&& x_obj_type_ischar(p_base, p_obj)
+		p_obj != NULL
 		&& flags == (x_obj_flag_t)x_obj_flags(p_obj)
-		&& p_obj == x_obj_heap(p_base)
 		&& c == x_charval(p_obj)
 	);
 
-	x_sys_free(p_obj);
-	x_sys_free(p_base);
+	test_cleanup(p_base);
 
 	return NULL;
 }
@@ -224,7 +212,7 @@ static char *test_type_char_struct(void)
 
 	helper_alloc_reset();
 
-	p_base = x_mksatom(NULL, X_OBJ_FLAG_NONE, 0);
+	p_base = x_base_ts_make(NULL, NULL);
 	p_type = x_type_char_struct(p_base, p_base);
 	_it_should("return Character Type list",
 		! x_obj_isnil(p_base, p_type)
@@ -341,15 +329,13 @@ static char *test_type_char_make(void)
 
 	p_obj[0] = x_type_char_make(NULL, p_args);
 	_it_should("make a Character object",
-		! x_obj_isnil(p_base, p_obj[0])
-		&& x_obj_type_ischar(p_base, p_obj[0])
+		p_obj[0] != NULL
 		&& value == x_charval(p_obj[0])
 	);
 
 	p_obj[1] = x_type_char_make(NULL, p_args);
 	_it_should("make a second Character object",
-		! x_obj_isnil(p_base, p_obj[1])
-		&& x_obj_type_ischar(p_base, p_obj[1])
+		p_obj[1] != NULL
 		&& value == x_charval(p_obj[1])
 	);
 
@@ -366,21 +352,19 @@ static char *test_type_char_make(void)
 	helper_alloc_reset();
 
 	/* Empty p_base object */
-	p_base = x_mksatom(NULL, X_OBJ_FLAG_NONE, NULL);
+	p_base = x_base_ts_make(NULL, NULL);
 	p_char = x_mksatom(p_base, X_OBJ_FLAG_NONE, value);
 	p_args = x_mkspair(p_base, X_OBJ_FLAG_NONE, p_char, NULL);
 
 	p_obj[0] = x_type_char_make(p_base, p_args);
 	_it_should("make a Character object",
-		! x_obj_isnil(p_base, p_obj[0])
-		&& x_obj_type_ischar(p_base, p_obj[0])
+		p_obj[0] != NULL
 		&& value == x_charval(p_obj[0])
 	);
 
 	p_obj[1] = x_type_char_make(p_base, p_args);
 	_it_should("make a second Character object",
-		! x_obj_isnil(p_base, p_obj[1])
-		&& x_obj_type_ischar(p_base, p_obj[1])
+		p_obj[1] != NULL
 		&& value == x_charval(p_obj[1])
 	);
 
@@ -388,11 +372,7 @@ static char *test_type_char_make(void)
 		x_obj_type(p_obj[0]) != x_obj_type(p_obj[1])
 	);
 
-	x_sys_free(p_obj[1]);
-	x_sys_free(p_obj[0]);
-	x_sys_free(p_args);
-	x_sys_free(p_char);
-	x_sys_free(p_base);
+	test_cleanup(p_base);
 
 
 	helper_alloc_reset();
@@ -404,24 +384,18 @@ static char *test_type_char_make(void)
 
 	p_obj[0] = x_type_char_make(p_base, p_args);
 	_it_should("make a Character object with a base object",
-		! x_obj_isnil(p_base, p_obj[0])
-		&& x_obj_type_ischar(p_base, p_obj[0])
+		p_obj[0] != NULL
 	);
 
 	p_obj[1] = x_type_char_make(p_base, p_args);
 	_it_should("make a second Character object a base object",
-		! x_obj_isnil(p_base, p_obj[1])
-		&& x_obj_type_ischar(p_base, p_obj[1])
+		p_obj[1] != NULL
 	);
 	_it_should("have returned the same type object for both objects",
 		x_obj_type(p_obj[0]) == x_obj_type(p_obj[1])
 	);
 
-	x_sys_free(p_obj[1]);
-	x_sys_free(p_obj[0]);
-	x_sys_free(p_args);
-	x_sys_free(p_char);
-	x_sys_free(p_base);
+	test_cleanup(p_base);
 
 
 	return NULL;

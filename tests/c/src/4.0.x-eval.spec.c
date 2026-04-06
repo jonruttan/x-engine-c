@@ -120,7 +120,7 @@ static char *test_eval(void)
 	x_sys_free(p_args);
 
 
-	p_base = x_mksatom(NULL, X_OBJ_FLAG_NONE, NULL);
+	p_base = x_base_ts_make(NULL, NULL);
 	p_obj = x_mksatom(p_base, X_OBJ_FLAG_NONE, i);
 	p_args = x_mkpair(p_base, x_mkpair(p_base, p_obj, p_base), p_base);
 	p_ret = x_eval(p_base, p_args);
@@ -132,7 +132,7 @@ static char *test_eval(void)
 	test_cleanup(p_base);
 
 
-	p_base = x_mksatom(NULL, X_OBJ_FLAG_NONE, NULL);
+	p_base = x_base_ts_make(NULL, NULL);
 	p_type = x_type_struct_make(p_base, types[0]);
 	p_obj = x_obj_make(p_base, p_type, X_OBJ_FLAG_NONE, X_OBJ_LENGTH_ATOM, i);
 	p_args = x_mkpair(p_base, x_mkpair(p_base, p_obj, p_base), p_base);
@@ -145,7 +145,7 @@ static char *test_eval(void)
 	test_cleanup(p_base);
 
 
-	p_base = x_mksatom(NULL, X_OBJ_FLAG_NONE, NULL);
+	p_base = x_base_ts_make(NULL, NULL);
 	p_type = x_type_struct_make(p_base, types[1]);
 	p_obj = x_obj_make(p_base, p_type, X_OBJ_FLAG_NONE, X_OBJ_LENGTH_ATOM, i);
 	p_args = x_mkpair(p_base, x_mkpair(p_base, p_obj, p_base), p_base);
@@ -158,7 +158,7 @@ static char *test_eval(void)
 	test_cleanup(p_base);
 
 
-	p_base = x_mksatom(NULL, X_OBJ_FLAG_NONE, NULL);
+	p_base = x_base_ts_make(NULL, NULL);
 	p_type = x_type_struct_make(p_base, types[2]);
 	p_obj = x_mksatom(p_base, X_OBJ_FLAG_NONE, i);
 	p_args = x_mkpair(p_base,
@@ -177,7 +177,7 @@ static char *test_eval(void)
 	test_cleanup(p_base);
 
 
-	p_base = x_mksatom(NULL, X_OBJ_FLAG_NONE, NULL);
+	p_base = x_base_ts_make(NULL, NULL);
 	p_obj = x_mksatom(p_base, X_OBJ_FLAG_NONE, i);
 	p_args = x_mkpair(p_base, x_mkpair(p_base, p_obj, p_base), p_base);
 	p_ret = x_eval(p_base, p_args);

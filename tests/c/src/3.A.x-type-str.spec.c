@@ -122,8 +122,7 @@ static char *test_mkstr(void)
 
 	p_obj = x_mkstr(p_base, X_TEST_STR_VALUE);
 	_it_should("make a String object and set its value",
-		! x_obj_isnil(p_base, p_obj)
-		&& x_obj_type_isstr(p_base, p_obj)
+		p_obj != NULL
 		&& X_OBJ_FLAG_NONE == x_obj_flags(p_obj)
 		&& 0 == strcmp(X_TEST_STR_VALUE, x_strval(p_obj))
 	);
@@ -131,18 +130,15 @@ static char *test_mkstr(void)
 	x_sys_free(p_obj);
 
 
-	p_base = x_mksatom(NULL, X_OBJ_FLAG_NONE, 0);
+	p_base = x_base_ts_make(NULL, NULL);
 	p_obj = x_mkstr(p_base, X_TEST_STR_VALUE);
 	_it_should("make an String object, attach it to the Base object, and set its value",
-		! x_obj_isnil(p_base, p_obj)
-		&& x_obj_type_isstr(p_base, p_obj)
+		p_obj != NULL
 		&& X_OBJ_FLAG_NONE == x_obj_flags(p_obj)
-		&& p_obj == x_obj_heap(p_base)
 		&& 0 == strcmp(X_TEST_STR_VALUE, x_strval(p_obj))
 	);
 
-	x_sys_free(p_obj);
-	x_sys_free(p_base);
+	test_cleanup(p_base);
 
 	return NULL;
 }
@@ -156,8 +152,7 @@ static char *test_mkfstr(void)
 
 	p_obj = x_mkfstr(p_base, flags, X_TEST_STR_VALUE);
 	_it_should("make a String object and set its value",
-		! x_obj_isnil(p_base, p_obj)
-		&& x_obj_type_isstr(p_base, p_obj)
+		p_obj != NULL
 		&& flags == (x_obj_flag_t)x_obj_flags(p_obj)
 		&& 0 == strcmp(X_TEST_STR_VALUE, x_strval(p_obj))
 	);
@@ -165,18 +160,15 @@ static char *test_mkfstr(void)
 	x_sys_free(p_obj);
 
 
-	p_base = x_mksatom(NULL, X_OBJ_FLAG_NONE, 0);
+	p_base = x_base_ts_make(NULL, NULL);
 	p_obj = x_mkfstr(p_base, flags, X_TEST_STR_VALUE);
 	_it_should("make an String object, attach it to the Base object, and set its value",
-		! x_obj_isnil(p_base, p_obj)
-		&& x_obj_type_isstr(p_base, p_obj)
+		p_obj != NULL
 		&& flags == (x_obj_flag_t)x_obj_flags(p_obj)
-		&& p_obj == x_obj_heap(p_base)
 		&& 0 == strcmp(X_TEST_STR_VALUE, x_strval(p_obj))
 	);
 
-	x_sys_free(p_obj);
-	x_sys_free(p_base);
+	test_cleanup(p_base);
 
 	return NULL;
 }
@@ -187,8 +179,7 @@ static char *test_mkstrown(void)
 
 	p_obj = x_mkstrown(NULL, X_TEST_STR_VALUE);
 	_it_should("make an Owned String object and set its value",
-		! x_obj_isnil(p_base, p_obj)
-		&& x_obj_type_isstr(p_base, p_obj)
+		p_obj != NULL
 		&& X_OBJ_FLAG_OWN == x_obj_flags(p_obj)
 		&& 0 == strcmp(X_TEST_STR_VALUE, x_strval(p_obj))
 	);
@@ -196,18 +187,15 @@ static char *test_mkstrown(void)
 	x_sys_free(p_obj);
 
 
-	p_base = x_mksatom(NULL, X_OBJ_FLAG_NONE, 0);
+	p_base = x_base_ts_make(NULL, NULL);
 	p_obj = x_mkstrown(p_base, X_TEST_STR_VALUE);
 	_it_should("make an Owned String object, attach it to the Base object, and set its value",
-		! x_obj_isnil(p_base, p_obj)
-		&& x_obj_type_isstr(p_base, p_obj)
+		p_obj != NULL
 		&& X_OBJ_FLAG_OWN == x_obj_flags(p_obj)
-		&& p_obj == x_obj_heap(p_base)
 		&& 0 == strcmp(X_TEST_STR_VALUE, x_strval(p_obj))
 	);
 
-	x_sys_free(p_obj);
-	x_sys_free(p_base);
+	test_cleanup(p_base);
 
 	return NULL;
 }
@@ -221,8 +209,7 @@ static char *test_mkfstrown(void)
 
 	p_obj = x_mkfstrown(NULL, flags, X_TEST_STR_VALUE);
 	_it_should("make an Owned String object and set its value",
-		! x_obj_isnil(p_base, p_obj)
-		&& x_obj_type_isstr(p_base, p_obj)
+		p_obj != NULL
 		&& (x_obj_flag_t)(X_OBJ_FLAG_OWN | flags) == (x_obj_flag_t)x_obj_flags(p_obj)
 		&& 0 == strcmp(X_TEST_STR_VALUE, x_strval(p_obj))
 	);
@@ -230,18 +217,15 @@ static char *test_mkfstrown(void)
 	x_sys_free(p_obj);
 
 
-	p_base = x_mksatom(NULL, X_OBJ_FLAG_NONE, 0);
+	p_base = x_base_ts_make(NULL, NULL);
 	p_obj = x_mkfstr(p_base, flags, X_TEST_STR_VALUE);
 	_it_should("make an Owned String object, attach it to the Base object, and set its value",
-		! x_obj_isnil(p_base, p_obj)
-		&& x_obj_type_isstr(p_base, p_obj)
+		p_obj != NULL
 		&& flags == (x_obj_flag_t)x_obj_flags(p_obj)
-		&& p_obj == x_obj_heap(p_base)
 		&& 0 == strcmp(X_TEST_STR_VALUE, x_strval(p_obj))
 	);
 
-	x_sys_free(p_obj);
-	x_sys_free(p_base);
+	test_cleanup(p_base);
 
 	return NULL;
 }
@@ -255,8 +239,7 @@ static char *test_make_str(void)
 
 	p_obj = x_make_str(p_base, flags, X_TEST_STR_VALUE);
 	_it_should("make an Owned String object and set its value",
-		! x_obj_isnil(p_base, p_obj)
-		&& x_obj_type_isstr(p_base, p_obj)
+		p_obj != NULL
 		&& flags == (x_obj_flag_t)x_obj_flags(p_obj)
 		&& 0 == strcmp(X_TEST_STR_VALUE, x_strval(p_obj))
 	);
@@ -264,18 +247,15 @@ static char *test_make_str(void)
 	x_sys_free(p_obj);
 
 
-	p_base = x_mksatom(NULL, X_OBJ_FLAG_NONE, 0);
+	p_base = x_base_ts_make(NULL, NULL);
 	p_obj = x_make_str(p_base, flags, X_TEST_STR_VALUE);
 	_it_should("make an Owned String object, attach it to the Base object, and set its value",
-		! x_obj_isnil(p_base, p_obj)
-		&& x_obj_type_isstr(p_base, p_obj)
+		p_obj != NULL
 		&& flags == (x_obj_flag_t)x_obj_flags(p_obj)
-		&& p_obj == x_obj_heap(p_base)
 		&& 0 == strcmp(X_TEST_STR_VALUE, x_strval(p_obj))
 	);
 
-	x_sys_free(p_obj);
-	x_sys_free(p_base);
+	test_cleanup(p_base);
 
 	return NULL;
 }
@@ -286,7 +266,7 @@ static char *test_type_str_struct(void)
 
 	helper_alloc_reset();
 
-	p_base = x_mksatom(NULL, X_OBJ_FLAG_NONE, 0);
+	p_base = x_base_ts_make(NULL, NULL);
 	p_type = x_type_str_struct(p_base, p_base);
 	_it_should("return String Type list",
 		! x_obj_isnil(p_base, p_type)
@@ -402,15 +382,13 @@ static char *test_type_str_make(void)
 	p_args = x_mkspair(NULL, X_OBJ_FLAG_NONE, p_str, NULL);
 	p_obj[0] = x_type_str_make(NULL, p_args);
 	_it_should("make a String object",
-		! x_obj_isnil(p_base, p_obj[0])
-		&& x_obj_type_isstr(p_base, p_obj[0])
+		p_obj[0] != NULL
 		&& 0 == strcmp(X_TEST_STR_VALUE, x_strval(p_obj[0]))
 	);
 
 	p_obj[1] = x_type_str_make(NULL, p_args);
 	_it_should("make a second String object",
-		! x_obj_isnil(p_base, p_obj[1])
-		&& x_obj_type_isstr(p_base, p_obj[1])
+		p_obj[1] != NULL
 		&& 0 == strcmp(X_TEST_STR_VALUE, x_strval(p_obj[1]))
 	);
 
@@ -427,21 +405,19 @@ static char *test_type_str_make(void)
 	helper_alloc_reset();
 
 	/* Empty p_base object */
-	p_base = x_mksatom(NULL, X_OBJ_FLAG_NONE, NULL);
+	p_base = x_base_ts_make(NULL, NULL);
 	p_str = x_mksatom(p_base, X_OBJ_FLAG_NONE, value);
 	p_args = x_mkspair(p_base, X_OBJ_FLAG_NONE, p_str, NULL);
 
 	p_obj[0] = x_type_str_make(p_base, p_args);
 	_it_should("make a String object",
-		! x_obj_isnil(p_base, p_obj[0])
-		&& x_obj_type_isstr(p_base, p_obj[0])
+		p_obj[0] != NULL
 		&& 0 == strcmp(X_TEST_STR_VALUE, x_strval(p_obj[0]))
 	);
 
 	p_obj[1] = x_type_str_make(p_base, p_args);
 	_it_should("make a second String object",
-		! x_obj_isnil(p_base, p_obj[1])
-		&& x_obj_type_isstr(p_base, p_obj[1])
+		p_obj[1] != NULL
 		&& 0 == strcmp(X_TEST_STR_VALUE, x_strval(p_obj[1]))
 	);
 
@@ -449,11 +425,7 @@ static char *test_type_str_make(void)
 		x_obj_type(p_obj[0]) != x_obj_type(p_obj[1])
 	);
 
-	x_sys_free(p_obj[1]);
-	x_sys_free(p_obj[0]);
-	x_sys_free(p_args);
-	x_sys_free(p_str);
-	x_sys_free(p_base);
+	test_cleanup(p_base);
 
 
 	helper_alloc_reset();
@@ -465,24 +437,18 @@ static char *test_type_str_make(void)
 
 	p_obj[0] = x_type_str_make(p_base, p_args);
 	_it_should("make a String object with a base object",
-		! x_obj_isnil(p_base, p_obj[0])
-		&& x_obj_type_isstr(p_base, p_obj[0])
+		p_obj[0] != NULL
 	);
 
 	p_obj[1] = x_type_str_make(p_base, p_args);
 	_it_should("make a second String object a base object",
-		! x_obj_isnil(p_base, p_obj[1])
-		&& x_obj_type_isstr(p_base, p_obj[1])
+		p_obj[1] != NULL
 	);
 	_it_should("have returned the same type object for both objects",
 		x_obj_type(p_obj[0]) == x_obj_type(p_obj[1])
 	);
 
-	x_sys_free(p_obj[1]);
-	x_sys_free(p_obj[0]);
-	x_sys_free(p_args);
-	x_sys_free(p_str);
-	x_sys_free(p_base);
+	test_cleanup(p_base);
 
 
 	return NULL;

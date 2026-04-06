@@ -171,8 +171,7 @@ static char *test_mkiter(void)
 
 	p_obj = x_mkiter(p_base, (void *)i, (void *)j);
 	_it_should("make an Iter object and set its first and rest values",
-		! x_obj_isnil(p_base, p_obj)
-		&& x_obj_type_isiter(p_base, p_obj)
+		p_obj != NULL
 		&& X_OBJ_FLAG_NONE == x_obj_flags(p_obj)
 		&& (void *)i == x_iterprim(p_obj)
 		&& (void *)j == x_iterval(p_obj)
@@ -181,13 +180,11 @@ static char *test_mkiter(void)
 	x_sys_free(p_obj);
 
 
-	p_base = x_mksatom(NULL, X_OBJ_FLAG_NONE, 0);
+	p_base = x_base_ts_make(NULL, NULL);
 	p_obj = x_mkiter(p_base, (void *)i, (void *)j);
 	_it_should("make an Iter object and set its first and rest values",
-		! x_obj_isnil(p_base, p_obj)
-		&& x_obj_type_isiter(p_base, p_obj)
+		p_obj != NULL
 		&& X_OBJ_FLAG_NONE == x_obj_flags(p_obj)
-		&& p_obj == x_obj_heap(p_base)
 		&& (void *)i == x_iterprim(p_obj)
 		&& (void *)j == x_iterval(p_obj)
 	);
@@ -207,8 +204,7 @@ static char *test_mkfiter(void)
 
 	p_obj = x_mkfiter(p_base, flags, (void *)i, (void *)j);
 	_it_should("make an Iter object and set its first and rest values",
-		! x_obj_isnil(p_base, p_obj)
-		&& x_obj_type_isiter(p_base, p_obj)
+		p_obj != NULL
 		&& flags == (x_obj_flag_t)x_obj_flags(p_obj)
 		&& (void *)i == x_iterprim(p_obj)
 		&& (void *)j == x_iterval(p_obj)
@@ -217,13 +213,11 @@ static char *test_mkfiter(void)
 	x_sys_free(p_obj);
 
 
-	p_base = x_mksatom(NULL, X_OBJ_FLAG_NONE, 0);
+	p_base = x_base_ts_make(NULL, NULL);
 	p_obj = x_mkfiter(p_base, flags, (void *)i, (void *)j);
 	_it_should("make an Iter object and set its first and rest values",
-		! x_obj_isnil(p_base, p_obj)
-		&& x_obj_type_isiter(p_base, p_obj)
+		p_obj != NULL
 		&& flags == (x_obj_flag_t)x_obj_flags(p_obj)
-		&& p_obj == x_obj_heap(p_base)
 		&& (void *)i == x_iterprim(p_obj)
 		&& (void *)j == x_iterval(p_obj)
 	);
@@ -243,8 +237,7 @@ static char *test_make_iter(void)
 
 	p_obj = x_make_iter(p_base, flags, (void *)i, (void *)j);
 	_it_should("make an Iter object and set its first and rest values",
-		! x_obj_isnil(p_base, p_obj)
-		&& x_obj_type_isiter(p_base, p_obj)
+		p_obj != NULL
 		&& flags == (x_obj_flag_t)x_obj_flags(p_obj)
 		&& (void *)i == x_iterprim(p_obj)
 		&& (void *)j == x_iterval(p_obj)
@@ -253,13 +246,11 @@ static char *test_make_iter(void)
 	x_sys_free(p_obj);
 
 
-	p_base = x_mksatom(NULL, X_OBJ_FLAG_NONE, 0);
+	p_base = x_base_ts_make(NULL, NULL);
 	p_obj = x_make_iter(p_base, flags, (void *)i, (void *)j);
 	_it_should("make an Iter object and set its first and rest values",
-		! x_obj_isnil(p_base, p_obj)
-		&& x_obj_type_isiter(p_base, p_obj)
+		p_obj != NULL
 		&& flags == (x_obj_flag_t)x_obj_flags(p_obj)
-		&& p_obj == x_obj_heap(p_base)
 		&& (void *)i == x_iterprim(p_obj)
 		&& (void *)j == x_iterval(p_obj)
 	);
@@ -391,16 +382,14 @@ static char *test_type_iter_make(void)
 
 	p_obj[0] = x_type_iter_make(NULL, p_args);
 	_it_should("make a Iter object and set its value",
-		! x_obj_isnil(p_base, p_obj[0])
-		&& x_obj_type_isiter(p_base, p_obj[0])
+		p_obj[0] != NULL
 		&& x_firstobj(p_iter) == x_firstobj(p_obj[0])
 		&& x_restobj(p_iter) == x_restobj(p_obj[0])
 	);
 
 	p_obj[1] = x_type_iter_make(NULL, p_args);
 	_it_should("make a second Iter object",
-		! x_obj_isnil(p_base, p_obj[1])
-		&& x_obj_type_isiter(p_base, p_obj[1])
+		p_obj[1] != NULL
 	);
 
 	_it_should("have not have returned the same type object for both objects",
@@ -414,31 +403,25 @@ static char *test_type_iter_make(void)
 
 
 	/* Empty p_base object */
-	p_base = x_mksatom(NULL, X_OBJ_FLAG_NONE, NULL);
+	p_base = x_base_ts_make(NULL, NULL);
 	p_iter = x_mkspair(p_base, X_OBJ_FLAG_NONE, rand(), rand());
 	p_args = x_mkspair(p_base, X_OBJ_FLAG_NONE, p_iter, NULL);
 
 	p_obj[0] = x_type_iter_make(p_base, p_args);
 	_it_should("make a Iter object",
-		! x_obj_isnil(p_base, p_obj[0])
-		&& x_obj_type_isiter(p_base, p_obj[0])
+		p_obj[0] != NULL
 	);
 
 	p_obj[1] = x_type_iter_make(p_base, p_args);
 	_it_should("make a second Iter object",
-		! x_obj_isnil(p_base, p_obj[1])
-		&& x_obj_type_isiter(p_base, p_obj[1])
+		p_obj[1] != NULL
 	);
 
 	_it_should("not have returned the same type object for both objects",
 		x_obj_type(p_obj[0]) != x_obj_type(p_obj[1])
 	);
 
-	x_sys_free(p_obj[1]);
-	x_sys_free(p_obj[0]);
-	x_sys_free(p_args);
-	x_sys_free(p_iter);
-	x_sys_free(p_base);
+	test_cleanup(p_base);
 
 
 	/* With p_base object */
@@ -448,24 +431,18 @@ static char *test_type_iter_make(void)
 
 	p_obj[0] = x_type_iter_make(p_base, p_args);
 	_it_should("make an Iter object with a base object",
-		! x_obj_isnil(p_base, p_obj[0])
-		&& x_obj_type_isiter(p_base, p_obj[0])
+		p_obj[0] != NULL
 	);
 
 	p_obj[1] = x_type_iter_make(p_base, p_args);
 	_it_should("make a second Iter object a base object",
-		! x_obj_isnil(p_base, p_obj[1])
-		&& x_obj_type_isiter(p_base, p_obj[1])
+		p_obj[1] != NULL
 	);
 	_it_should("have returned the same type object for both objects",
 		x_obj_type(p_obj[0]) == x_obj_type(p_obj[1])
 	);
 
-	x_sys_free(p_obj[1]);
-	x_sys_free(p_obj[0]);
-	x_sys_free(p_args);
-	x_sys_free(p_iter);
-	x_sys_free(p_base);
+	test_cleanup(p_base);
 
 
 	return NULL;

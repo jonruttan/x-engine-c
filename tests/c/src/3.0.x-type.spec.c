@@ -285,7 +285,7 @@ static char *test_type_struct_get(void)
 	x_sys_free(p_args);
 
 
-	p_base = x_mksatom(NULL, X_OBJ_FLAG_NONE, NULL);
+	p_base = x_base_ts_make(NULL, NULL);
 	p_obj[3] = x_mksatom(p_base, X_OBJ_FLAG_NONE, mock_fn);
 	p_obj[2] = x_mksatom(p_base, X_OBJ_FLAG_NONE, mock_str);
 	p_obj[1] = x_mkspair(p_base, X_OBJ_FLAG_NONE, p_obj[3], p_base);
