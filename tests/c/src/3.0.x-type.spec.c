@@ -690,8 +690,8 @@ static char *test_type_heap_mark(void)
 			p_slot0, p_slot1);
 
 		p_ret = x_type_heap_mark(p_base, p_obj, 0);
-		_it_should("generic traversal: returns last slot",
-			p_ret == p_slot1);
+		_it_should("generic traversal: returns NULL after marking all slots",
+			p_ret == NULL);
 
 		test_cleanup(p_base);
 	}
