@@ -103,7 +103,7 @@ static char *test_type_types(void)
 {
 	x_obj_t *p_base, *p_obj;
 
-	p_base = x_mksatom(NULL, X_OBJ_FLAG_NONE, -1);
+	p_base = x_mksatom(NULL, X_OBJ_FLAG_NONE, 0);
 	p_obj = x_mksatom(p_base, X_OBJ_FLAG_NONE, 0);
 
 	x_type_settypes(p_base, p_obj);
@@ -121,7 +121,7 @@ static char *test_type_units(void)
 	x_obj_t *p_base, *p_obj;
 	x_int_t units;
 
-	p_base = x_mksatom(NULL, X_OBJ_FLAG_NONE, -1);
+	p_base = x_mksatom(NULL, X_OBJ_FLAG_NONE, 0);
 
 /*	x_atomobj(p_base) = pair(
 		pair(nil, nil),
