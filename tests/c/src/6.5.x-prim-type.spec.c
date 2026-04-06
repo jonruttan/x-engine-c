@@ -133,7 +133,7 @@ static char *test_type_typep(void)
 		x_mkspair(p_base, X_OBJ_FLAG_NONE, x_mksymbol(p_base, "inthandle"), NULL)));
 	p_result = x_prim_typep(p_base, p_args);
 	_it_should("type? matches correct type",
-		p_result == x_base_field_true(p_base));
+		p_result == x_firstobj(x_base_field_true(p_base)));
 
 	/* (type? nil inthandle) -> #f */
 	p_args = x_mkspair(p_base, X_OBJ_FLAG_NONE, NULL,
@@ -141,7 +141,7 @@ static char *test_type_typep(void)
 		x_mkspair(p_base, X_OBJ_FLAG_NONE, x_mksymbol(p_base, "inthandle"), NULL)));
 	p_result = x_prim_typep(p_base, p_args);
 	_it_should("type? nil returns #f",
-		p_result == x_base_field_false(p_base));
+		p_result == x_firstobj(x_base_field_false(p_base)));
 
 	test_cleanup(p_base);
 	return NULL;

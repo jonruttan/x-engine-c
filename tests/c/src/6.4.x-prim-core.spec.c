@@ -261,7 +261,7 @@ static char *test_core_eval(void)
 			x_mkspair(p_base, X_OBJ_FLAG_NONE, p_sym, NULL));
 		x_prim_eval(p_base, p_args);
 		_it_should("eval without env sets tco_expr",
-			x_base_field_tco_expr(p_base) != NULL);
+			x_firstobj(x_base_field_tco_expr(p_base)) != NULL);
 	}
 
 	test_cleanup(p_base);
@@ -311,11 +311,11 @@ static char *test_core_match(void)
 			NULL)));
 	x_prim_match(p_base, p_args);
 	_it_should("match sets tco_expr to matched body",
-		x_base_field_tco_expr(p_base) != NULL
-		&& x_atomint(x_base_field_tco_expr(p_base)) == 42);
+		x_firstobj(x_base_field_tco_expr(p_base)) != NULL
+		&& x_atomint(x_firstobj(x_base_field_tco_expr(p_base))) == 42);
 
 	/* (match (nil 1)) -> no match, tco_expr unchanged from above, returns nil */
-	x_base_field_tco_expr(p_base) = NULL;
+	x_firstobj(x_base_field_tco_expr(p_base)) = NULL;
 	p_args = x_mkspair(p_base, X_OBJ_FLAG_NONE, NULL,
 		x_mkspair(p_base, X_OBJ_FLAG_NONE,
 		x_mkspair(p_base, X_OBJ_FLAG_NONE, NULL,
@@ -323,7 +323,7 @@ static char *test_core_match(void)
 		NULL));
 	x_prim_match(p_base, p_args);
 	_it_should("match with no truthy test leaves tco_expr nil",
-		x_base_field_tco_expr(p_base) == NULL);
+		x_firstobj(x_base_field_tco_expr(p_base)) == NULL);
 
 	test_cleanup(p_base);
 	return NULL;
@@ -348,7 +348,7 @@ static char *test_core_guard(void)
 	_it_should("guard returns body result when no error",
 		x_atomint(p_result) == 42);
 	_it_should("guard pops handler",
-		x_base_field_error_handler(p_base) == NULL);
+		x_firstobj(x_base_field_error_handler(p_base)) == NULL);
 
 	test_cleanup(p_base);
 	return NULL;
@@ -423,7 +423,7 @@ static char *test_core_seq(void)
 		x_mkspair(p_base, X_OBJ_FLAG_NONE, p_body_form, NULL)));
 	x_prim_seq(p_base, p_args);
 	_it_should("seq sets tco_expr to second arg",
-		x_base_field_tco_expr(p_base) == p_body_form);
+		x_firstobj(x_base_field_tco_expr(p_base)) == p_body_form);
 
 	test_cleanup(p_base);
 	return NULL;
@@ -455,7 +455,7 @@ static char *test_core_tail_eval(void)
 		x_mkspair(p_base, X_OBJ_FLAG_NONE, x_mksymbol(p_base, "tenv"), NULL)));
 	x_prim_tail_eval(p_base, p_args);
 	_it_should("tail-eval sets tco_expr",
-		x_base_field_tco_expr(p_base) == p_expr);
+		x_firstobj(x_base_field_tco_expr(p_base)) == p_expr);
 	_it_should("tail-eval sets env",
 		x_base_field_env_alist(p_base) == p_env);
 
@@ -556,13 +556,13 @@ static char *test_core_apply(void)
 
 	/* (apply idfn args) — single trailing list, procedure path.
 	 * apply + procedure uses TCO: sets tco_expr = x, returns NULL. */
-	x_base_field_tco_expr(p_base) = NULL;
+	x_firstobj(x_base_field_tco_expr(p_base)) = NULL;
 	p_args = x_mkspair(p_base, X_OBJ_FLAG_NONE, NULL,
 		x_mkspair(p_base, X_OBJ_FLAG_NONE, x_mksymbol(p_base, "idfn"),
 		x_mkspair(p_base, X_OBJ_FLAG_NONE, x_mksymbol(p_base, "args"), NULL)));
 	x_prim_apply(p_base, p_args);
 	_it_should("apply single-arg sets tco_expr for TCO",
-		! x_obj_isnil(p_base, x_base_field_tco_expr(p_base)));
+		! x_obj_isnil(p_base, x_firstobj(x_base_field_tco_expr(p_base))));
 
 	/* Test apply with prefix + tail: create (fn (a b) a) */
 	{
@@ -587,14 +587,14 @@ static char *test_core_apply(void)
 		 * evlis on (100 tl) -> (100 (200)), walk to second-to-last (100),
 		 * splice: rest(100-node) = first(rest(100-node)) = (200)
 		 * -> p_vals = (100 200) */
-		x_base_field_tco_expr(p_base) = NULL;
+		x_firstobj(x_base_field_tco_expr(p_base)) = NULL;
 		p_args = x_mkspair(p_base, X_OBJ_FLAG_NONE, NULL,
 			x_mkspair(p_base, X_OBJ_FLAG_NONE, x_mksymbol(p_base, "fn2"),
 			x_mkspair(p_base, X_OBJ_FLAG_NONE, x_mksatom(p_base, X_OBJ_FLAG_NONE, (x_int_t)100),
 			x_mkspair(p_base, X_OBJ_FLAG_NONE, x_mksymbol(p_base, "tl"), NULL))));
 		x_prim_apply(p_base, p_args);
 		_it_should("apply prefix+tail sets tco_expr",
-			! x_obj_isnil(p_base, x_base_field_tco_expr(p_base)));
+			! x_obj_isnil(p_base, x_firstobj(x_base_field_tco_expr(p_base))));
 	}
 
 	/* Test apply with 3 prefix args + tail: walk loop (line 124) */
@@ -618,7 +618,7 @@ static char *test_core_apply(void)
 			x_mkspair(p_base, X_OBJ_FLAG_NONE, x_mksymbol(p_base, "tl3"), p_tl));
 
 		/* (apply fn3 100 200 tl3) — 3 args total: 2 prefix + tail */
-		x_base_field_tco_expr(p_base) = NULL;
+		x_firstobj(x_base_field_tco_expr(p_base)) = NULL;
 		p_args = x_mkspair(p_base, X_OBJ_FLAG_NONE, NULL,
 			x_mkspair(p_base, X_OBJ_FLAG_NONE, x_mksymbol(p_base, "fn3"),
 			x_mkspair(p_base, X_OBJ_FLAG_NONE, x_mksatom(p_base, X_OBJ_FLAG_NONE, (x_int_t)100),
@@ -626,7 +626,7 @@ static char *test_core_apply(void)
 			x_mkspair(p_base, X_OBJ_FLAG_NONE, x_mksymbol(p_base, "tl3"), NULL)))));
 		x_prim_apply(p_base, p_args);
 		_it_should("apply 3-prefix+tail sets tco_expr",
-			! x_obj_isnil(p_base, x_base_field_tco_expr(p_base)));
+			! x_obj_isnil(p_base, x_firstobj(x_base_field_tco_expr(p_base))));
 	}
 
 	test_cleanup(p_base);
@@ -718,7 +718,7 @@ static char *test_core_error_guard_catch(void)
 		_it_should("guard handler receives error value",
 			x_atomint(p_result) == 42);
 		_it_should("guard pops handler after catch",
-			x_base_field_error_handler(p_base) == NULL);
+			x_firstobj(x_base_field_error_handler(p_base)) == NULL);
 	}
 
 	test_cleanup(p_base);

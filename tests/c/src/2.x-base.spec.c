@@ -86,8 +86,8 @@ static char *test_base_make(void)
 		! x_base_isset(p_base)
 	);
 
-	p_base = x_base_ts_make(NULL, NULL);
-	_it_should("return that the Base object is not set",
+	p_base = x_mksatom(NULL, X_OBJ_FLAG_NONE, 0);
+	_it_should("return that the Base object is not set for a bare atom",
 		! x_base_isset(p_base)
 	);
 

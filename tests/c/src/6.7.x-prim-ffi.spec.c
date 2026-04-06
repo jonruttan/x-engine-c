@@ -227,7 +227,7 @@ static char *test_ffi_compare(void)
 		NULL)))));
 	p_result = x_prim_ffi_call(p_base, p_args);
 	_it_should("d<d: 1.0 < 2.0 is true",
-		p_result == x_base_field_true(p_base));
+		p_result == x_firstobj(x_base_field_true(p_base)));
 
 	/* d<d: 2.0 < 1.0 -> #f */
 	p_args = x_mkspair(p_base, X_OBJ_FLAG_NONE, NULL,
@@ -238,7 +238,7 @@ static char *test_ffi_compare(void)
 		NULL)))));
 	p_result = x_prim_ffi_call(p_base, p_args);
 	_it_should("d<d: 2.0 < 1.0 is false",
-		p_result == x_base_field_false(p_base));
+		p_result == x_firstobj(x_base_field_false(p_base)));
 
 	/* d=d: 5.0 = 5.0 -> t */
 	p_args = x_mkspair(p_base, X_OBJ_FLAG_NONE, NULL,
@@ -249,7 +249,7 @@ static char *test_ffi_compare(void)
 		NULL)))));
 	p_result = x_prim_ffi_call(p_base, p_args);
 	_it_should("d=d: 5.0 = 5.0 is true",
-		p_result == x_base_field_true(p_base));
+		p_result == x_firstobj(x_base_field_true(p_base)));
 
 	/* d>=d: 3.0 >= 3.0 -> t */
 	p_args = x_mkspair(p_base, X_OBJ_FLAG_NONE, NULL,
@@ -260,7 +260,7 @@ static char *test_ffi_compare(void)
 		NULL)))));
 	p_result = x_prim_ffi_call(p_base, p_args);
 	_it_should("d>=d: 3.0 >= 3.0 is true",
-		p_result == x_base_field_true(p_base));
+		p_result == x_firstobj(x_base_field_true(p_base)));
 
 	test_cleanup(p_base);
 	return NULL;
@@ -544,7 +544,7 @@ static char *test_ffi_compare_gt_le(void)
 		NULL)))));
 	p_result = x_prim_ffi_call(p_base, p_args);
 	_it_should("d>d: 5.0 > 3.0 is true",
-		p_result == x_base_field_true(p_base));
+		p_result == x_firstobj(x_base_field_true(p_base)));
 
 	/* d>d: 1.0 > 2.0 -> #f */
 	p_args = x_mkspair(p_base, X_OBJ_FLAG_NONE, NULL,
@@ -555,7 +555,7 @@ static char *test_ffi_compare_gt_le(void)
 		NULL)))));
 	p_result = x_prim_ffi_call(p_base, p_args);
 	_it_should("d>d: 1.0 > 2.0 is false",
-		p_result == x_base_field_false(p_base));
+		p_result == x_firstobj(x_base_field_false(p_base)));
 
 	/* d<=d: 3.0 <= 3.0 -> t */
 	p_args = x_mkspair(p_base, X_OBJ_FLAG_NONE, NULL,
@@ -566,7 +566,7 @@ static char *test_ffi_compare_gt_le(void)
 		NULL)))));
 	p_result = x_prim_ffi_call(p_base, p_args);
 	_it_should("d<=d: 3.0 <= 3.0 is true",
-		p_result == x_base_field_true(p_base));
+		p_result == x_firstobj(x_base_field_true(p_base)));
 
 	/* d<=d: 5.0 <= 3.0 -> #f */
 	p_args = x_mkspair(p_base, X_OBJ_FLAG_NONE, NULL,
@@ -577,7 +577,7 @@ static char *test_ffi_compare_gt_le(void)
 		NULL)))));
 	p_result = x_prim_ffi_call(p_base, p_args);
 	_it_should("d<=d: 5.0 <= 3.0 is false",
-		p_result == x_base_field_false(p_base));
+		p_result == x_firstobj(x_base_field_false(p_base)));
 
 	test_cleanup(p_base);
 	return NULL;
