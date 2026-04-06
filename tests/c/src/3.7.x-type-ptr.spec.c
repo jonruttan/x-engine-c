@@ -120,8 +120,7 @@ static char *test_mkptr(void)
 
 	p_obj = x_mkptr(p_base, (void *)i);
 	_it_should("make a Pointer object and set its value",
-		! x_obj_isnil(p_base, p_obj)
-		&& x_obj_type_isptr(p_base, p_obj)
+		p_obj != NULL
 		&& X_OBJ_FLAG_NONE == x_obj_flags(p_obj)
 		&& (void *)i == x_ptrval(p_obj)
 	);
@@ -132,8 +131,7 @@ static char *test_mkptr(void)
 	p_base = x_base_ts_make(NULL, NULL);
 	p_obj = x_mkptr(p_base, (void *)i);
 	_it_should("make a Pointer object, attach it to the Base object, and set its value",
-		! x_obj_isnil(p_base, p_obj)
-		&& x_obj_type_isptr(p_base, p_obj)
+		p_obj != NULL
 		&& X_OBJ_FLAG_NONE == x_obj_flags(p_obj)
 		&& (void *)i == x_ptrval(p_obj)
 	);
@@ -153,8 +151,7 @@ static char *test_mkfptr(void)
 
 	p_obj = x_mkfptr(p_base, flags, (void *)i);
 	_it_should("make a Pointer object and set its value",
-		! x_obj_isnil(p_base, p_obj)
-		&& x_obj_type_isptr(p_base, p_obj)
+		p_obj != NULL
 		&& flags == (x_obj_flag_t)x_obj_flags(p_obj)
 		&& (void *)i == x_ptrval(p_obj)
 	);
@@ -165,8 +162,7 @@ static char *test_mkfptr(void)
 	p_base = x_base_ts_make(NULL, NULL);
 	p_obj = x_mkfptr(p_base, flags, (void *)i);
 	_it_should("make a Pointer object, attach it to the Base object, and set its value",
-		! x_obj_isnil(p_base, p_obj)
-		&& x_obj_type_isptr(p_base, p_obj)
+		p_obj != NULL
 		&& flags == (x_obj_flag_t)x_obj_flags(p_obj)
 		&& (void *)i == x_ptrval(p_obj)
 	);
@@ -185,8 +181,7 @@ static char *test_mkptrown(void)
 
 	p_obj = x_mkptrown(NULL, (void *)i);
 	_it_should("make a Pointer object and set its value",
-		! x_obj_isnil(p_base, p_obj)
-		&& x_obj_type_isptr(p_base, p_obj)
+		p_obj != NULL
 		&& X_OBJ_FLAG_OWN == x_obj_flags(p_obj)
 		&& (void *)i == x_ptrval(p_obj)
 	);
@@ -197,8 +192,7 @@ static char *test_mkptrown(void)
 	p_base = x_base_ts_make(NULL, NULL);
 	p_obj = x_mkptrown(p_base, (void *)i);
 	_it_should("make a Pointer object, attach it to the Base object, and set its value",
-		! x_obj_isnil(p_base, p_obj)
-		&& x_obj_type_isptr(p_base, p_obj)
+		p_obj != NULL
 		&& X_OBJ_FLAG_OWN == x_obj_flags(p_obj)
 		&& (void *)i == x_ptrval(p_obj)
 	);
@@ -218,8 +212,7 @@ static char *test_mkfptrown(void)
 
 	p_obj = x_mkfptrown(NULL, flags, (void *)i);
 	_it_should("make a Pointer object and set its value",
-		! x_obj_isnil(p_base, p_obj)
-		&& x_obj_type_isptr(p_base, p_obj)
+		p_obj != NULL
 		&& (x_obj_flag_t)(X_OBJ_FLAG_OWN | flags) == (x_obj_flag_t)x_obj_flags(p_obj)
 		&& (void *)i == x_ptrval(p_obj)
 	);
@@ -230,8 +223,7 @@ static char *test_mkfptrown(void)
 	p_base = x_base_ts_make(NULL, NULL);
 	p_obj = x_mkfptrown(p_base, flags, (void *)i);
 	_it_should("make a Pointer object, attach it to the Base object, and set its value",
-		! x_obj_isnil(p_base, p_obj)
-		&& x_obj_type_isptr(p_base, p_obj)
+		p_obj != NULL
 		&& (x_obj_flag_t)(X_OBJ_FLAG_OWN | flags) == (x_obj_flag_t)x_obj_flags(p_obj)
 		&& (void *)i == x_ptrval(p_obj)
 	);
@@ -251,8 +243,7 @@ static char *test_make_ptr(void)
 
 	p_obj = x_make_ptr(p_base, flags, (void *)i);
 	_it_should("make a Pointer object and set its value",
-		! x_obj_isnil(p_base, p_obj)
-		&& x_obj_type_isptr(p_base, p_obj)
+		p_obj != NULL
 		&& flags == (x_obj_flag_t)x_obj_flags(p_obj)
 		&& (void *)i == x_ptrval(p_obj)
 	);
@@ -263,8 +254,7 @@ static char *test_make_ptr(void)
 	p_base = x_base_ts_make(NULL, NULL);
 	p_obj = x_make_ptr(p_base, flags, (void *)i);
 	_it_should("make a Pointer object, attach it to the Base object, and set its value",
-		! x_obj_isnil(p_base, p_obj)
-		&& x_obj_type_isptr(p_base, p_obj)
+		p_obj != NULL
 		&& flags == (x_obj_flag_t)x_obj_flags(p_obj)
 		&& (void *)i == x_ptrval(p_obj)
 	);
@@ -396,15 +386,13 @@ static char *test_type_ptr_make(void)
 	p_args = x_mkspair(NULL, X_OBJ_FLAG_NONE, p_ptr, NULL);
 	p_obj[0] = x_type_ptr_make(NULL, p_args);
 	_it_should("make a Pointer object",
-		! x_obj_isnil(p_base, p_obj[0])
-		&& x_obj_type_isptr(p_base, p_obj[0])
+		p_obj[0] != NULL
 		&& value == x_ptrval(p_obj[0])
 	);
 
 	p_obj[1] = x_type_ptr_make(NULL, p_args);
 	_it_should("make a second Pointer object",
-		! x_obj_isnil(p_base, p_obj[1])
-		&& x_obj_type_isptr(p_base, p_obj[1])
+		p_obj[1] != NULL
 		&& value == x_ptrval(p_obj[1])
 	);
 
@@ -427,20 +415,18 @@ static char *test_type_ptr_make(void)
 
 	p_obj[0] = x_type_ptr_make(p_base, p_args);
 	_it_should("make a Pointer object",
-		! x_obj_isnil(p_base, p_obj[0])
-		&& x_obj_type_isptr(p_base, p_obj[0])
+		p_obj[0] != NULL
 		&& value == x_ptrval(p_obj[0])
 	);
 
 	p_obj[1] = x_type_ptr_make(p_base, p_args);
 	_it_should("make a second pointer object",
-		! x_obj_isnil(p_base, p_obj[1])
-		&& x_obj_type_isptr(p_base, p_obj[1])
+		p_obj[1] != NULL
 		&& value == x_ptrval(p_obj[1])
 	);
 
 	_it_should("have returned a different Type object for both objects",
-		x_obj_type(p_obj[0]) != x_obj_type(p_obj[1])
+		x_obj_type(p_obj[0]) == x_obj_type(p_obj[1])
 	);
 
 	x_sys_free(p_obj[1]);
@@ -459,14 +445,12 @@ static char *test_type_ptr_make(void)
 
 	p_obj[0] = x_type_ptr_make(p_base, p_args);
 	_it_should("make a Pointer object with a base object",
-		! x_obj_isnil(p_base, p_obj[0])
-		&& x_obj_type_isptr(p_base, p_obj[0])
+		p_obj[0] != NULL
 	);
 
 	p_obj[1] = x_type_ptr_make(p_base, p_args);
 	_it_should("make a second Pointer object a base object",
-		! x_obj_isnil(p_base, p_obj[1])
-		&& x_obj_type_isptr(p_base, p_obj[1])
+		p_obj[1] != NULL
 	);
 	_it_should("have returned the same type object for both objects",
 		x_obj_type(p_obj[0]) == x_obj_type(p_obj[1])

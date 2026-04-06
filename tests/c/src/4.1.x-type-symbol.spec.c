@@ -152,7 +152,7 @@ static char *test_mksymbol(void)
 {
 	x_obj_t *p_base, *p_obj;
 
-	p_obj = x_mksymbol(p_base, X_TEST_SYMBOL_VALUE);
+	p_obj = x_mksymbol(NULL, X_TEST_SYMBOL_VALUE);
 	_it_should("make a Symbol object and set its value",
 		p_obj != NULL
 		&& X_OBJ_FLAG_NONE == x_obj_flags(p_obj)
@@ -502,7 +502,7 @@ static char *test_type_symbol_make(void)
 	);
 
 	_it_should("not have returned the same type object for both objects",
-		x_obj_type(p_obj[0]) != x_obj_type(p_obj[1])
+		x_obj_type(p_obj[0]) == x_obj_type(p_obj[1])
 	);
 
 

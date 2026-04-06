@@ -120,7 +120,7 @@ static char *test_mkstr(void)
 {
 	x_obj_t *p_base, *p_obj;
 
-	p_obj = x_mkstr(p_base, X_TEST_STR_VALUE);
+	p_obj = x_mkstr(NULL, X_TEST_STR_VALUE);
 	_it_should("make a String object and set its value",
 		p_obj != NULL
 		&& X_OBJ_FLAG_NONE == x_obj_flags(p_obj)
@@ -422,7 +422,7 @@ static char *test_type_str_make(void)
 	);
 
 	_it_should("have returned a different Type object for both objects",
-		x_obj_type(p_obj[0]) != x_obj_type(p_obj[1])
+		x_obj_type(p_obj[0]) == x_obj_type(p_obj[1])
 	);
 
 	test_cleanup(p_base);

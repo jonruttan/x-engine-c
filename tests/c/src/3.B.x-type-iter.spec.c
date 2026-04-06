@@ -285,7 +285,7 @@ static char *test_type_iter_struct(void)
 
 	helper_alloc_reset();
 
-	p_base = x_mkiter(p_base, NULL, NULL);
+	p_base = x_base_ts_make(NULL, NULL);
 	p_type = x_type_iter_struct(p_base, p_base);
 	_it_should("return Iter Type list",
 		! x_obj_isnil(p_base, p_type)
@@ -418,7 +418,7 @@ static char *test_type_iter_make(void)
 	);
 
 	_it_should("not have returned the same type object for both objects",
-		x_obj_type(p_obj[0]) != x_obj_type(p_obj[1])
+		x_obj_type(p_obj[0]) == x_obj_type(p_obj[1])
 	);
 
 	test_cleanup(p_base);

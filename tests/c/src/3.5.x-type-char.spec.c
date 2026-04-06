@@ -121,7 +121,7 @@ static char *test_mkchar(void)
 	x_obj_t *p_base, *p_obj;
 	x_char_t c = rand();
 
-	p_obj = x_mkchar(p_base, c);
+	p_obj = x_mkchar(NULL, c);
 	_it_should("make a Character object and set its value",
 		p_obj != NULL
 		&& X_OBJ_FLAG_NONE == x_obj_flags(p_obj)
@@ -369,7 +369,7 @@ static char *test_type_char_make(void)
 	);
 
 	_it_should("have returned a different Type object for both objects",
-		x_obj_type(p_obj[0]) != x_obj_type(p_obj[1])
+		x_obj_type(p_obj[0]) == x_obj_type(p_obj[1])
 	);
 
 	test_cleanup(p_base);

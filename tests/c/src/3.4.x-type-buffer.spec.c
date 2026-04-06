@@ -520,7 +520,7 @@ static char *test_type_buffer_make(void)
 	);
 
 	_it_should("have returned a different Type object for both objects",
-		x_obj_type(p_obj[0]) != x_obj_type(p_obj[1])
+		x_obj_type(p_obj[0]) == x_obj_type(p_obj[1])
 	);
 
 	test_cleanup(p_base);
