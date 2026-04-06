@@ -27,6 +27,9 @@
 static void _setup(void)
 {
 	helper_set_alloc(MEM_GUARANTEED);
+	helper_sys_funcs.exit = mock_exit;
+	helper_sys_funcs.malloc = helper_malloc;
+	helper_sys_funcs.free = helper_free;
 	_buffer_index = -1;
 }
 
@@ -63,12 +66,15 @@ x_obj_t *_test_make_type(x_obj_t *p_base)
 		/* cvt: (from to) */
 		pair(pair(pair(atom(NULL), NULL), pair(pair(atom(NULL), NULL),
 			NULL)),
-		/* io: (analyse delimit write display error) */
+		/* io: (analyse delimit read write display error) */
 		pair(pair(pair(atom(NULL), NULL), pair(pair(atom(NULL), NULL),
 			pair(pair(atom(NULL), NULL), pair(pair(atom(NULL), NULL),
-			pair(pair(atom(NULL), NULL),
-			NULL))))),
-		NULL))))));
+			pair(pair(atom(NULL), NULL), pair(pair(atom(NULL), NULL),
+			NULL)))))),
+		/* iter: (iter) */
+		pair(pair(pair(atom(NULL), NULL),
+			NULL),
+		NULL)))))));
 }
 
 static char *test_obj_prim_make(void)
