@@ -397,7 +397,7 @@ static char *test_type_symbol_register(void)
 		0 == x_lib_strcmp(X_TYPE_SYMBOL_NAME, x_strval(x_type_field_name(p_type)))
 	);
 	_it_should("add the Symbol type to the Type alist",
-		p_type == x_restobj(x_firstobj(x_base_field_type_alist(p_base)))
+		p_type == x_restobj(x_firstobj(x_firstobj(x_base_field_type_alist(p_base))))
 	);
 	_it_should("create the Symbol data structure",
 		x_obj_type_isspair(x_symbol_data(p_type))

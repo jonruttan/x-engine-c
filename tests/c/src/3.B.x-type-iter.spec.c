@@ -280,7 +280,7 @@ static char *test_type_iter_register(void)
 		0 == x_lib_strcmp(X_TYPE_ITER_NAME, x_atomstr(x_type_field_name(p_type)))
 	);
 	_it_should("add the Iter type to the Type alist",
-		p_type == x_restobj(x_firstobj(x_base_field_type_alist(p_base)))
+		p_type == x_restobj(x_firstobj(x_firstobj(x_base_field_type_alist(p_base))))
 	);
 
 	test_cleanup(p_base);
