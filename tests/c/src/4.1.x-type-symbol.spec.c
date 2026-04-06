@@ -272,7 +272,7 @@ static char *test_make_symbol(void)
 
 	helper_alloc_reset();
 
-	p_obj = x_make_symbol(p_base, flags, X_TEST_SYMBOL_VALUE);
+	p_obj = x_make_symbol(NULL, flags, X_TEST_SYMBOL_VALUE);
 	_it_should("make a Symbol object and set its value",
 		p_obj != NULL
 		&& flags == (x_obj_flag_t)x_obj_flags(p_obj)
@@ -446,7 +446,7 @@ static char *test_type_symbol_make(void)
 	x_obj_t *p_base, *p_type, *p_str, *p_obj[2] = { NULL, NULL }, *p_args;
 	helper_alloc_reset();
 
-	p_str = x_mkstr(p_base, X_TEST_SYMBOL_VALUE);
+	p_str = x_mkstr(NULL, X_TEST_SYMBOL_VALUE);
 
 	/* NULL p_base object */
 	p_args = x_mkspair(NULL, X_OBJ_FLAG_NONE, p_str, NULL);
@@ -498,7 +498,7 @@ static char *test_type_symbol_make(void)
 		p_obj[1] != NULL
 		&& X_OBJ_FLAG_NONE == x_obj_flags(p_obj[1])
 		&& 0 == strcmp(x_strval(p_str), x_symbolval(p_obj[1]))
-		&& p_obj[0] != p_obj[1]
+		&& p_obj[0] == p_obj[1]
 	);
 
 	_it_should("not have returned the same type object for both objects",

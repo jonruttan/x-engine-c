@@ -204,7 +204,7 @@ static char *test_mkbuffer(void)
 {
 	x_obj_t *p_base, *p_obj;
 
-	p_obj = x_mkbuffer(p_base, X_TEST_BUFFER_VALUE);
+	p_obj = x_mkbuffer(NULL, X_TEST_BUFFER_VALUE);
 	_it_should("make a Buffer object and set its values",
 		p_obj != NULL
 		&& X_OBJ_FLAG_NONE == x_obj_flags(p_obj)
