@@ -129,10 +129,9 @@ static char *test_mkprim(void)
 {
 	x_obj_t *p_base, *p_obj;
 
-	p_obj = x_mkprim(p_base, test_prim_fn);
+	p_obj = x_mkprim(NULL, test_prim_fn);
 	_it_should("make a Primitive object and set its value",
-		! x_obj_isnil(p_base, p_obj)
-		&& x_obj_type_isprim(p_base, p_obj)
+		p_obj != NULL
 		&& X_OBJ_FLAG_NONE == x_obj_flags(p_obj)
 		&& test_prim_fn == x_primval(p_obj)
 	);
@@ -140,18 +139,16 @@ static char *test_mkprim(void)
 	x_sys_free(p_obj);
 
 
-	p_base = x_mksatom(NULL, X_OBJ_FLAG_NONE, 0);
+	p_base = x_base_ts_make(NULL, NULL);
 	p_obj = x_mkprim(p_base, test_prim_fn);
 	_it_should("make a Primitive object, attach it to the Base object, and set its value",
 		! x_obj_isnil(p_base, p_obj)
 		&& x_obj_type_isprim(p_base, p_obj)
 		&& X_OBJ_FLAG_NONE == x_obj_flags(p_obj)
-		&& p_obj == x_obj_heap(p_base)
 		&& test_prim_fn == x_primval(p_obj)
 	);
 
-	x_sys_free(p_obj);
-	x_sys_free(p_base);
+	test_cleanup(p_base);
 
 	return NULL;
 }
@@ -174,18 +171,16 @@ static char *test_mkfprim(void)
 	x_sys_free(p_obj);
 
 
-	p_base = x_mksatom(NULL, X_OBJ_FLAG_NONE, 0);
+	p_base = x_base_ts_make(NULL, NULL);
 	p_obj = x_mkfprim(p_base, flags, test_prim_fn);
 	_it_should("make a Primitive object, attach it to the Base object, and set its value",
 		! x_obj_isnil(p_base, p_obj)
 		&& x_obj_type_isprim(p_base, p_obj)
 		&& flags == (x_obj_flag_t)x_obj_flags(p_obj)
-		&& p_obj == x_obj_heap(p_base)
 		&& test_prim_fn == x_primval(p_obj)
 	);
 
-	x_sys_free(p_obj);
-	x_sys_free(p_base);
+	test_cleanup(p_base);
 
 	return NULL;
 }
@@ -208,18 +203,16 @@ static char *test_make_prim(void)
 	x_sys_free(p_obj);
 
 
-	p_base = x_mksatom(NULL, X_OBJ_FLAG_NONE, 0);
+	p_base = x_base_ts_make(NULL, NULL);
 	p_obj = x_make_prim(p_base, flags, test_prim_fn);
 	_it_should("make a Primitive object, attach it to the Base object, and set its value",
 		! x_obj_isnil(p_base, p_obj)
 		&& x_obj_type_isprim(p_base, p_obj)
 		&& flags == (x_obj_flag_t)x_obj_flags(p_obj)
-		&& p_obj == x_obj_heap(p_base)
 		&& test_prim_fn == x_primval(p_obj)
 	);
 
-	x_sys_free(p_obj);
-	x_sys_free(p_base);
+	test_cleanup(p_base);
 
 	return NULL;
 }
@@ -235,7 +228,7 @@ static char *test_type_prim_register(void)
 		0 == x_lib_strcmp(X_TYPE_PRIM_NAME, x_strval(x_type_field_name(p_type)))
 	);
 	_it_should("add the Primitive type to the Type alist",
-		p_type == x_restobj(x_firstobj(x_base_field_type_alist(p_base)))
+		p_type == x_restobj(x_firstobj(x_firstobj(x_base_field_type_alist(p_base))))
 	);
 
 	x_sys_free(p_base);
@@ -249,7 +242,7 @@ static char *test_type_prim_struct(void)
 
 	helper_alloc_reset();
 
-	p_base = x_mksatom(NULL, X_OBJ_FLAG_NONE, 0);
+	p_base = x_base_ts_make(NULL, NULL);
 	p_type = x_type_prim_struct(p_base, p_base);
 	_it_should("return Primitive Type list",
 		! x_obj_isnil(p_base, p_type)
@@ -346,18 +339,16 @@ static char *test_type_prim_make(void)
 
 	p_obj[0] = x_type_prim_make(NULL, p_args);
 	_it_should("make a Primitive object and set its value",
-		! x_obj_isnil(p_base, p_obj[0])
-		&& x_obj_type_isprim(p_base, p_obj[0])
+		p_obj[0] != NULL
 		&& test_prim_fn == x_primval(p_obj[0])
 	);
 
 	p_obj[1] = x_type_prim_make(NULL, p_args);
 	_it_should("make a second Primitive object",
-		! x_obj_isnil(p_base, p_obj[1])
-		&& x_obj_type_isprim(p_base, p_obj[1])
+		p_obj[1] != NULL
 	);
 
-	_it_should("have not have returned the same type object for both objects",
+	_it_should("have not returned the same type object for both objects (no base)",
 		x_obj_type(p_obj[0]) != x_obj_type(p_obj[1])
 	);
 
@@ -367,32 +358,27 @@ static char *test_type_prim_make(void)
 	x_sys_free(p_fn);
 
 
-	/* Empty p_base object */
-	p_base = x_mksatom(NULL, X_OBJ_FLAG_NONE, NULL);
+	/* Real base object */
+	p_base = x_base_ts_make(NULL, NULL);
 	p_fn = x_mksatom(p_base, X_OBJ_FLAG_NONE, test_prim_fn);
 	p_args = x_mkspair(p_base, X_OBJ_FLAG_NONE, p_fn, NULL);
 
 	p_obj[0] = x_type_prim_make(p_base, p_args);
-	_it_should("make a Primitive object",
+	_it_should("make a Primitive object with a real base",
 		! x_obj_isnil(p_base, p_obj[0])
 		&& x_obj_type_isprim(p_base, p_obj[0])
 	);
 
 	p_obj[1] = x_type_prim_make(p_base, p_args);
-	_it_should("make a second Primitive object",
+	_it_should("make a second Primitive object with a real base",
 		! x_obj_isnil(p_base, p_obj[1])
 		&& x_obj_type_isprim(p_base, p_obj[1])
 	);
 
-	_it_should("not have returned the same type object for both objects",
-		x_obj_type(p_obj[0]) != x_obj_type(p_obj[1])
+	_it_should("have returned the same registered type for both objects",
+		x_obj_type(p_obj[0]) == x_obj_type(p_obj[1])
 	);
-
-	x_sys_free(p_obj[1]);
-	x_sys_free(p_obj[0]);
-	x_sys_free(p_args);
-	x_sys_free(p_fn);
-	x_sys_free(p_base);
+	test_cleanup(p_base);
 
 
 	/* With p_base object */
