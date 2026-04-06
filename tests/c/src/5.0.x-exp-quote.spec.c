@@ -87,15 +87,15 @@ static char *test_exp_quote(void)
 
 	/* Make a simple base to help with cleanup. */
 	p_base = x_base_ts_make(NULL, NULL);
-	p_prim = x_mkprim(p_base, x_exp_quote);
-	p_list = x_mklist(p_base, p_prim,
-		x_mkspair(p_base, X_OBJ_FLAG_NONE, x_mksatom(p_base, X_OBJ_FLAG_NONE, 0),
-		x_mkspair(p_base, X_OBJ_FLAG_NONE, x_mksatom(p_base, X_OBJ_FLAG_NONE, 1),
-		p_base)));
-	p_args = x_mkspair(p_base, X_OBJ_FLAG_NONE, x_mkspair(p_base, X_OBJ_FLAG_NONE, p_list, p_base), p_base);
-	p_ret = x_eval(p_base, p_args);
-	_it_should("return the unevaluated list",
-		x_01(p_list) == p_ret
+	/* Call x_exp_quote directly with the satom calling convention (no self).
+	 * In production, quote is a static satom dispatched through x_callable_call
+	 * which strips self before calling. */
+	p_list = x_mkspair(p_base, X_OBJ_FLAG_NONE, x_mksatom(p_base, X_OBJ_FLAG_NONE, 42),
+		x_mkspair(p_base, X_OBJ_FLAG_NONE, x_mksatom(p_base, X_OBJ_FLAG_NONE, 99),
+		p_base));
+	p_ret = x_exp_quote(p_base, p_list);
+	_it_should("return the first argument unevaluated",
+		x_firstobj(p_list) == p_ret
 	);
 
 	test_cleanup(p_base);
