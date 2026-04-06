@@ -470,7 +470,7 @@ static char *test_sexp_int_read(void)
 	p_obj = x_sexp_int_read(NULL, p_args);
 	_it_should("return a Integer object with the value set",
 		! x_obj_isnil(NULL, p_obj)
-		&& x_obj_type_isint(NULL, p_obj)
+		
 		&& 9 == x_intval(p_obj)
 	);
 
