@@ -10,6 +10,8 @@
 #define X_GC
 #endif /* X_GC */
 
+#include "ext/x-expr/tests/src/test-helper-system.c"
+
 #include "ext/x-expr/src/x-sys.c"
 #include "ext/x-expr/src/x-lib.c"
 #include "ext/x-expr/src/x.c"
@@ -40,7 +42,6 @@
 #define STUB_X_PROCEDURE_APPLY
 #include "helper-stubs.c"
 
-#include "ext/x-expr/tests/src/test-helper-system.c"
 
 /*
  * ## Test Overhead
@@ -49,6 +50,9 @@
 static void _setup(void)
 {
 	helper_set_alloc(MEM_GUARANTEED);
+	helper_sys_funcs.exit = mock_exit;
+	helper_sys_funcs.malloc = helper_malloc;
+	helper_sys_funcs.free = helper_free;
 }
 
 static void _teardown(void)
@@ -78,21 +82,21 @@ void test_cleanup(x_obj_t *p_base)
 
 static char *test_obj_type_ischar(void)
 {
-	x_obj_t *p_obj;
+	x_obj_t *p_base, *p_obj;
 
-	helper_alloc_reset();
+	p_base = x_base_ts_make(NULL, NULL);
 
-	p_obj = x_mkchar(NULL, 0);
+	p_obj = x_mkchar(p_base, 0);
 	_it_should("return true when object is a char",
-		1 == x_obj_type_ischar(NULL, p_obj)
+		1 == x_obj_type_ischar(p_base, p_obj)
 	);
-	x_obj_free(NULL, p_obj);
 
-	p_obj = x_mksatom(NULL, X_OBJ_FLAG_NONE, 0);
+	p_obj = x_mksatom(p_base, X_OBJ_FLAG_NONE, 0);
 	_it_should("return false when object is not a char",
-		0 == x_obj_type_ischar(NULL, p_obj)
+		0 == x_obj_type_ischar(p_base, p_obj)
 	);
-	x_obj_free(NULL, p_obj);
+
+	test_cleanup(p_base);
 
 	return NULL;
 }
@@ -117,10 +121,10 @@ static char *test_mkchar(void)
 	x_obj_t *p_base, *p_obj;
 	x_char_t c = rand();
 
-	p_obj = x_mkchar(NULL, c);
+	p_obj = x_mkchar(p_base, c);
 	_it_should("make a Character object and set its value",
-		! x_obj_isnil(NULL, p_obj)
-		&& x_obj_type_ischar(NULL, p_obj)
+		! x_obj_isnil(p_base, p_obj)
+		&& x_obj_type_ischar(p_base, p_obj)
 		&& X_OBJ_FLAG_NONE == x_obj_flags(p_obj)
 		&& c == x_charval(p_obj)
 	);
@@ -150,10 +154,12 @@ static char *test_mkfchar(void)
 	x_char_t c = rand();
 	x_obj_flag_t flags = rand();
 
-	p_obj = x_mkfchar(NULL, flags, c);
+	p_base = x_base_ts_make(NULL, NULL);
+
+	p_obj = x_mkfchar(p_base, flags, c);
 	_it_should("make a Character object and set its value",
-		! x_obj_isnil(NULL, p_obj)
-		&& x_obj_type_ischar(NULL, p_obj)
+		! x_obj_isnil(p_base, p_obj)
+		&& x_obj_type_ischar(p_base, p_obj)
 		&& flags == (x_obj_flag_t)x_obj_flags(p_obj)
 		&& c == x_charval(p_obj)
 	);
@@ -183,10 +189,12 @@ static char *test_make_char(void)
 	x_char_t c = rand();
 	x_obj_flag_t flags = rand();
 
-	p_obj = x_make_char(NULL, flags, c);
+	p_base = x_base_ts_make(NULL, NULL);
+
+	p_obj = x_make_char(p_base, flags, c);
 	_it_should("make a Character object and set its value",
-		! x_obj_isnil(NULL, p_obj)
-		&& x_obj_type_ischar(NULL, p_obj)
+		! x_obj_isnil(p_base, p_obj)
+		&& x_obj_type_ischar(p_base, p_obj)
 		&& flags == (x_obj_flag_t)x_obj_flags(p_obj)
 		&& c == x_charval(p_obj)
 	);
@@ -333,15 +341,15 @@ static char *test_type_char_make(void)
 
 	p_obj[0] = x_type_char_make(NULL, p_args);
 	_it_should("make a Character object",
-		! x_obj_isnil(NULL, p_obj[0])
-		&& x_obj_type_ischar(NULL, p_obj[0])
+		! x_obj_isnil(p_base, p_obj[0])
+		&& x_obj_type_ischar(p_base, p_obj[0])
 		&& value == x_charval(p_obj[0])
 	);
 
 	p_obj[1] = x_type_char_make(NULL, p_args);
 	_it_should("make a second Character object",
-		! x_obj_isnil(NULL, p_obj[1])
-		&& x_obj_type_ischar(NULL, p_obj[1])
+		! x_obj_isnil(p_base, p_obj[1])
+		&& x_obj_type_ischar(p_base, p_obj[1])
 		&& value == x_charval(p_obj[1])
 	);
 
@@ -364,7 +372,7 @@ static char *test_type_char_make(void)
 
 	p_obj[0] = x_type_char_make(p_base, p_args);
 	_it_should("make a Character object",
-		! x_obj_isnil(NULL, p_obj[0])
+		! x_obj_isnil(p_base, p_obj[0])
 		&& x_obj_type_ischar(p_base, p_obj[0])
 		&& value == x_charval(p_obj[0])
 	);

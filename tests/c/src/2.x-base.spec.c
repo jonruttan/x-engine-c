@@ -9,6 +9,8 @@
 #define X_GC
 #endif /* X_GC */
 
+#include "ext/x-expr/tests/src/test-helper-system.c"
+
 #include "ext/x-expr/src/x-sys.c"
 #include "ext/x-expr/src/x-lib.c"
 #include "ext/x-expr/src/x-obj.c"
@@ -27,7 +29,8 @@
 #define STUB_X_TYPE_PRIM
 #include "helper-stubs.c"
 
-
+x_obj_t *x_type_heap_mark(x_obj_t *p_base, x_obj_t *p_obj, x_obj_flag_t flags) { return NULL; }
+void x_type_heap_free(x_obj_t *p_base, x_obj_t *p_obj) {}
 
 /*
  * Controllable stubs for x_token_read/write and x_eval.
@@ -56,7 +59,6 @@ x_obj_t *x_eval(x_obj_t *p_base, x_obj_t *p_args)
 	return _eval_last;
 }
 
-#include "ext/x-expr/tests/src/test-helper-system.c"
 
 
 /*
@@ -66,6 +68,9 @@ x_obj_t *x_eval(x_obj_t *p_base, x_obj_t *p_args)
 static void _setup(void)
 {
 	helper_set_alloc(MEM_GUARANTEED);
+	helper_sys_funcs.exit = mock_exit;
+	helper_sys_funcs.malloc = helper_malloc;
+	helper_sys_funcs.free = helper_free;
 	_buffer_index = -1;
 }
 
@@ -116,49 +121,46 @@ static char *test_base_make(void)
 		&& x_obj_type_isspair(p_obj)
 	);
 
-	p_obj = x_base_field_filein(p_base);
+	p_obj = x_firstobj(x_base_field_filein(p_base));
 	_it_should("return the Base object input file descriptor",
 		! x_obj_isnil(p_base, p_obj)
-		&& x_obj_type_issatom(p_obj)
 		&& x_atomint(p_obj) == STDIN_FILENO
 	);
 
-	p_obj = x_base_field_fileout(p_base);
+	p_obj = x_firstobj(x_base_field_fileout(p_base));
 	_it_should("return the Base object output file descriptor",
 		! x_obj_isnil(p_base, p_obj)
-		&& x_obj_type_issatom(p_obj)
 		&& x_atomint(p_obj) == STDOUT_FILENO
 	);
 
-	p_obj = x_base_field_fileerr(p_base);
+	p_obj = x_firstobj(x_base_field_fileerr(p_base));
 	_it_should("return the Base object error file descriptor",
 		! x_obj_isnil(p_base, p_obj)
-		&& x_obj_type_issatom(p_obj)
 		&& x_atomint(p_obj) == STDERR_FILENO
 	);
 
 
-	p_obj = x_base_field_env_alist(p_base);
+	p_obj = x_firstobj(x_base_field_env_alist(p_base));
 	_it_should("return the Base object environment list (initially nil)",
 		x_obj_isnil(p_base, p_obj)
 	);
 
-	p_obj = x_base_field_eval_list(p_base);
+	p_obj = x_firstobj(x_base_field_eval_list(p_base));
 	_it_should("return the Base object expression list (initially nil)",
 		x_obj_isnil(p_base, p_obj)
 	);
 
-	p_obj = x_base_field_buffer(p_base);
+	p_obj = x_firstobj(x_base_field_buffer(p_base));
 	_it_should("return the Base object buffer",
 		x_obj_isnil(p_base, p_obj)
 	);
 
-	p_obj = x_base_field_token_cache(p_base);
+	p_obj = x_firstobj(x_base_field_token_cache(p_base));
 	_it_should("return the Base object token cache",
 		x_obj_isnil(p_base, p_obj)
 	);
 
-	p_obj = x_base_field_write_buf(p_base);
+	p_obj = x_firstobj(x_base_field_write_buf(p_base));
 	_it_should("return the Base object write-buf (initially nil)",
 		x_obj_isnil(p_base, p_obj)
 	);

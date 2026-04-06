@@ -10,6 +10,8 @@
 #define X_GC
 #endif /* X_GC */
 
+#include "ext/x-expr/tests/src/test-helper-system.c"
+
 #include "ext/x-expr/src/x-sys.c"
 #include "ext/x-expr/src/x-lib.c"
 #include "ext/x-expr/src/x.c"
@@ -60,7 +62,6 @@ x_obj_t *x_make_symbol(x_obj_t *p_base, x_obj_flag_t flags, x_char_t *s)
 		x_lib_strndup(s, x_lib_strlen(s)));
 }
 
-#include "ext/x-expr/tests/src/test-helper-system.c"
 
 /*
  * ## Test Overhead
@@ -70,6 +71,9 @@ static void _setup(void)
 {
 	helper_alloc_reset();
 	helper_set_alloc(MEM_GUARANTEED);
+	helper_sys_funcs.exit = mock_exit;
+	helper_sys_funcs.malloc = helper_malloc;
+	helper_sys_funcs.free = helper_free;
 }
 
 static void _teardown(void)

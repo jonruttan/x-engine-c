@@ -10,6 +10,8 @@
 #define X_GC
 #endif /* X_GC */
 
+#include "ext/x-expr/tests/src/test-helper-system.c"
+
 #include "ext/x-expr/src/x-sys.c"
 #include "ext/x-expr/src/x-lib.c"
 #include "ext/x-expr/src/x.c"
@@ -41,7 +43,6 @@
 #define STUB_X_PROCEDURE_APPLY
 #include "helper-stubs.c"
 
-#include "ext/x-expr/tests/src/test-helper-system.c"
 
 /*
  * ## Test Overhead
@@ -50,6 +51,9 @@
 static void _setup(void)
 {
 	helper_set_alloc(MEM_GUARANTEED);
+	helper_sys_funcs.exit = mock_exit;
+	helper_sys_funcs.malloc = helper_malloc;
+	helper_sys_funcs.free = helper_free;
 }
 
 static void _teardown(void)
@@ -112,10 +116,12 @@ static char *test_mkptr(void)
 	x_obj_t *p_base, *p_obj;
 	x_int_t i = rand();
 
-	p_obj = x_mkptr(NULL, (void *)i);
+	p_base = x_base_ts_make(NULL, NULL);
+
+	p_obj = x_mkptr(p_base, (void *)i);
 	_it_should("make a Pointer object and set its value",
-		! x_obj_isnil(NULL, p_obj)
-		&& x_obj_type_isptr(NULL, p_obj)
+		! x_obj_isnil(p_base, p_obj)
+		&& x_obj_type_isptr(p_base, p_obj)
 		&& X_OBJ_FLAG_NONE == x_obj_flags(p_obj)
 		&& (void *)i == x_ptrval(p_obj)
 	);
@@ -124,10 +130,10 @@ static char *test_mkptr(void)
 
 
 	p_base = x_mksatom(NULL, X_OBJ_FLAG_NONE, 0);
-	p_obj = x_mkptr(NULL, (void *)i);
+	p_obj = x_mkptr(p_base, (void *)i);
 	_it_should("make a Pointer object, attach it to the Base object, and set its value",
-		! x_obj_isnil(NULL, p_obj)
-		&& x_obj_type_isptr(NULL, p_obj)
+		! x_obj_isnil(p_base, p_obj)
+		&& x_obj_type_isptr(p_base, p_obj)
 		&& X_OBJ_FLAG_NONE == x_obj_flags(p_obj)
 		&& (void *)i == x_ptrval(p_obj)
 	);
@@ -144,10 +150,12 @@ static char *test_mkfptr(void)
 	x_int_t i = rand();
 	x_obj_flag_t flags = rand();
 
-	p_obj = x_mkfptr(NULL, flags, (void *)i);
+	p_base = x_base_ts_make(NULL, NULL);
+
+	p_obj = x_mkfptr(p_base, flags, (void *)i);
 	_it_should("make a Pointer object and set its value",
-		! x_obj_isnil(NULL, p_obj)
-		&& x_obj_type_isptr(NULL, p_obj)
+		! x_obj_isnil(p_base, p_obj)
+		&& x_obj_type_isptr(p_base, p_obj)
 		&& flags == (x_obj_flag_t)x_obj_flags(p_obj)
 		&& (void *)i == x_ptrval(p_obj)
 	);
@@ -175,10 +183,12 @@ static char *test_mkptrown(void)
 	x_obj_t *p_base, *p_obj;
 	x_int_t i = rand();
 
+	p_base = x_base_ts_make(NULL, NULL);
+
 	p_obj = x_mkptrown(NULL, (void *)i);
 	_it_should("make a Pointer object and set its value",
-		! x_obj_isnil(NULL, p_obj)
-		&& x_obj_type_isptr(NULL, p_obj)
+		! x_obj_isnil(p_base, p_obj)
+		&& x_obj_type_isptr(p_base, p_obj)
 		&& X_OBJ_FLAG_OWN == x_obj_flags(p_obj)
 		&& (void *)i == x_ptrval(p_obj)
 	);
@@ -206,10 +216,12 @@ static char *test_mkfptrown(void)
 	x_int_t i = rand();
 	x_obj_flag_t flags = rand();
 
+	p_base = x_base_ts_make(NULL, NULL);
+
 	p_obj = x_mkfptrown(NULL, flags, (void *)i);
 	_it_should("make a Pointer object and set its value",
-		! x_obj_isnil(NULL, p_obj)
-		&& x_obj_type_isptr(NULL, p_obj)
+		! x_obj_isnil(p_base, p_obj)
+		&& x_obj_type_isptr(p_base, p_obj)
 		&& (x_obj_flag_t)(X_OBJ_FLAG_OWN | flags) == (x_obj_flag_t)x_obj_flags(p_obj)
 		&& (void *)i == x_ptrval(p_obj)
 	);
@@ -237,10 +249,12 @@ static char *test_make_ptr(void)
 	x_int_t i = rand();
 	x_obj_flag_t flags = rand();
 
-	p_obj = x_make_ptr(NULL, flags, (void *)i);
+	p_base = x_base_ts_make(NULL, NULL);
+
+	p_obj = x_make_ptr(p_base, flags, (void *)i);
 	_it_should("make a Pointer object and set its value",
-		! x_obj_isnil(NULL, p_obj)
-		&& x_obj_type_isptr(NULL, p_obj)
+		! x_obj_isnil(p_base, p_obj)
+		&& x_obj_type_isptr(p_base, p_obj)
 		&& flags == (x_obj_flag_t)x_obj_flags(p_obj)
 		&& (void *)i == x_ptrval(p_obj)
 	);
@@ -384,15 +398,15 @@ static char *test_type_ptr_make(void)
 	p_args = x_mkspair(NULL, X_OBJ_FLAG_NONE, p_ptr, NULL);
 	p_obj[0] = x_type_ptr_make(NULL, p_args);
 	_it_should("make a Pointer object",
-		! x_obj_isnil(NULL, p_obj[0])
-		&& x_obj_type_isptr(NULL, p_obj[0])
+		! x_obj_isnil(p_base, p_obj[0])
+		&& x_obj_type_isptr(p_base, p_obj[0])
 		&& value == x_ptrval(p_obj[0])
 	);
 
 	p_obj[1] = x_type_ptr_make(NULL, p_args);
 	_it_should("make a second Pointer object",
-		! x_obj_isnil(NULL, p_obj[1])
-		&& x_obj_type_isptr(NULL, p_obj[1])
+		! x_obj_isnil(p_base, p_obj[1])
+		&& x_obj_type_isptr(p_base, p_obj[1])
 		&& value == x_ptrval(p_obj[1])
 	);
 
@@ -415,7 +429,7 @@ static char *test_type_ptr_make(void)
 
 	p_obj[0] = x_type_ptr_make(p_base, p_args);
 	_it_should("make a Pointer object",
-		! x_obj_isnil(NULL, p_obj[0])
+		! x_obj_isnil(p_base, p_obj[0])
 		&& x_obj_type_isptr(p_base, p_obj[0])
 		&& value == x_ptrval(p_obj[0])
 	);

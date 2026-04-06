@@ -10,6 +10,9 @@
 #define X_GC
 #endif /* X_GC */
 
+
+#include "ext/x-expr/tests/src/test-helper-system.c"
+
 #include "ext/x-expr/src/x-sys.c"
 #include "ext/x-expr/src/x-lib.c"
 #include "ext/x-expr/src/x.c"
@@ -18,8 +21,6 @@
 
 #define STUB_X_PROCEDURE
 #include "helper-stubs.c"
-
-#include "ext/x-expr/tests/src/test-helper-system.c"
 
 /*
  * ## Test Overhead

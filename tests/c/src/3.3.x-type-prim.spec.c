@@ -10,6 +10,8 @@
 #define X_GC
 #endif /* X_GC */
 
+#include "ext/x-expr/tests/src/test-helper-system.c"
+
 #include "ext/x-expr/src/x-sys.c"
 #include "ext/x-expr/src/x-lib.c"
 #include "ext/x-expr/src/x.c"
@@ -42,7 +44,6 @@
 #define STUB_X_PROCEDURE_APPLY
 #include "helper-stubs.c"
 
-#include "ext/x-expr/tests/src/test-helper-system.c"
 
 /*
  * ## Test Overhead
@@ -51,6 +52,9 @@
 static void _setup(void)
 {
 	helper_set_alloc(MEM_GUARANTEED);
+	helper_sys_funcs.exit = mock_exit;
+	helper_sys_funcs.malloc = helper_malloc;
+	helper_sys_funcs.free = helper_free;
 }
 
 static void _teardown(void)
@@ -87,21 +91,21 @@ x_obj_t *test_prim_fn(x_obj_t *p_base, x_obj_t *p_args)
 
 static char *test_obj_type_isprim(void)
 {
-	x_obj_t *p_obj;
+	x_obj_t *p_base, *p_obj;
 
-	helper_alloc_reset();
+	p_base = x_base_ts_make(NULL, NULL);
 
-	p_obj = x_mkprim(NULL, 0);
+	p_obj = x_mkprim(p_base, 0);
 	_it_should("return true when object is a primitive",
-		1 == x_obj_type_isprim(NULL, p_obj)
+		1 == x_obj_type_isprim(p_base, p_obj)
 	);
-	x_obj_free(NULL, p_obj);
 
-	p_obj = x_mkatom(NULL, 0);
+	p_obj = x_mkatom(p_base, 0);
 	_it_should("return false when object is not a primative",
-		0 == x_obj_type_isprim(NULL, p_obj)
+		0 == x_obj_type_isprim(p_base, p_obj)
 	);
-	x_obj_free(NULL, p_obj);
+
+	test_cleanup(p_base);
 
 	return NULL;
 }
@@ -125,10 +129,10 @@ static char *test_mkprim(void)
 {
 	x_obj_t *p_base, *p_obj;
 
-	p_obj = x_mkprim(NULL, test_prim_fn);
+	p_obj = x_mkprim(p_base, test_prim_fn);
 	_it_should("make a Primitive object and set its value",
-		! x_obj_isnil(NULL, p_obj)
-		&& x_obj_type_isprim(NULL, p_obj)
+		! x_obj_isnil(p_base, p_obj)
+		&& x_obj_type_isprim(p_base, p_obj)
 		&& X_OBJ_FLAG_NONE == x_obj_flags(p_obj)
 		&& test_prim_fn == x_primval(p_obj)
 	);
@@ -157,10 +161,12 @@ static char *test_mkfprim(void)
 	x_obj_t *p_base, *p_obj;
 	x_obj_flag_t flags = rand();
 
-	p_obj = x_mkfprim(NULL, flags, test_prim_fn);
+	p_base = x_base_ts_make(NULL, NULL);
+
+	p_obj = x_mkfprim(p_base, flags, test_prim_fn);
 	_it_should("make a Primitive object and set its value",
-		! x_obj_isnil(NULL, p_obj)
-		&& x_obj_type_isprim(NULL, p_obj)
+		! x_obj_isnil(p_base, p_obj)
+		&& x_obj_type_isprim(p_base, p_obj)
 		&& flags == (x_obj_flag_t)x_obj_flags(p_obj)
 		&& test_prim_fn == x_primval(p_obj)
 	);
@@ -189,10 +195,12 @@ static char *test_make_prim(void)
 	x_obj_t *p_base, *p_obj;
 	x_obj_flag_t flags = rand();
 
-	p_obj = x_make_prim(NULL, flags, test_prim_fn);
+	p_base = x_base_ts_make(NULL, NULL);
+
+	p_obj = x_make_prim(p_base, flags, test_prim_fn);
 	_it_should("make a Primitive object and set its value",
-		! x_obj_isnil(NULL, p_obj)
-		&& x_obj_type_isprim(NULL, p_obj)
+		! x_obj_isnil(p_base, p_obj)
+		&& x_obj_type_isprim(p_base, p_obj)
 		&& flags == (x_obj_flag_t)x_obj_flags(p_obj)
 		&& test_prim_fn == x_primval(p_obj)
 	);
@@ -338,15 +346,15 @@ static char *test_type_prim_make(void)
 
 	p_obj[0] = x_type_prim_make(NULL, p_args);
 	_it_should("make a Primitive object and set its value",
-		! x_obj_isnil(NULL, p_obj[0])
-		&& x_obj_type_isprim(NULL, p_obj[0])
+		! x_obj_isnil(p_base, p_obj[0])
+		&& x_obj_type_isprim(p_base, p_obj[0])
 		&& test_prim_fn == x_primval(p_obj[0])
 	);
 
 	p_obj[1] = x_type_prim_make(NULL, p_args);
 	_it_should("make a second Primitive object",
-		! x_obj_isnil(NULL, p_obj[1])
-		&& x_obj_type_isprim(NULL, p_obj[1])
+		! x_obj_isnil(p_base, p_obj[1])
+		&& x_obj_type_isprim(p_base, p_obj[1])
 	);
 
 	_it_should("have not have returned the same type object for both objects",
@@ -366,7 +374,7 @@ static char *test_type_prim_make(void)
 
 	p_obj[0] = x_type_prim_make(p_base, p_args);
 	_it_should("make a Primitive object",
-		! x_obj_isnil(NULL, p_obj[0])
+		! x_obj_isnil(p_base, p_obj[0])
 		&& x_obj_type_isprim(p_base, p_obj[0])
 	);
 
@@ -394,7 +402,7 @@ static char *test_type_prim_make(void)
 
 	p_obj[0] = x_type_prim_make(p_base, p_args);
 	_it_should("make a Primitive object with a base object",
-		! x_obj_isnil(NULL, p_obj[0])
+		! x_obj_isnil(p_base, p_obj[0])
 		&& x_obj_type_isprim(p_base, p_obj[0])
 	);
 

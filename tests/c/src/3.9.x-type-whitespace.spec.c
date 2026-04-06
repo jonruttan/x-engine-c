@@ -10,6 +10,8 @@
 #define X_GC
 #endif /* X_GC */
 
+#include "ext/x-expr/tests/src/test-helper-system.c"
+
 #include "ext/x-expr/src/x-sys.c"
 #include "ext/x-expr/src/x-lib.c"
 #include "ext/x-expr/src/x.c"
@@ -42,7 +44,6 @@
 #define STUB_X_PROCEDURE_APPLY
 #include "helper-stubs.c"
 
-#include "ext/x-expr/tests/src/test-helper-system.c"
 
 /*
  * ## Test Overhead
@@ -51,6 +52,9 @@
 static void _setup(void)
 {
 	helper_set_alloc(MEM_GUARANTEED);
+	helper_sys_funcs.exit = mock_exit;
+	helper_sys_funcs.malloc = helper_malloc;
+	helper_sys_funcs.free = helper_free;
 }
 
 static void _teardown(void)
@@ -80,23 +84,23 @@ void test_cleanup(x_obj_t *p_base)
 
 static char *test_obj_type_iswhitespace(void)
 {
-	x_obj_t *p_obj, *p_type;
+	x_obj_t *p_base, *p_obj, *p_type;
 
-	helper_alloc_reset();
+	p_base = x_base_ts_make(NULL, NULL);
 
-	p_type = x_type_whitespace_register(NULL, NULL);
-	p_obj = x_obj_make(NULL, p_type, X_OBJ_FLAG_NONE, X_OBJ_LENGTH_ATOM, NULL);
+	p_type = x_type_whitespace_register(p_base, p_base);
+	p_obj = x_obj_make(p_base, p_type, X_OBJ_FLAG_NONE, X_OBJ_LENGTH_ATOM, NULL);
 
 	_it_should("return true when object is Whitespace",
-		1 == x_obj_type_iswhitespace(NULL, p_obj)
+		1 == x_obj_type_iswhitespace(p_base, p_obj)
 	);
-	x_obj_free(NULL, p_obj);
 
-	p_obj = x_mksatom(NULL, X_OBJ_FLAG_NONE, 0);
+	p_obj = x_mksatom(p_base, X_OBJ_FLAG_NONE, 0);
 	_it_should("return false when object is not Whitespace",
-		0 == x_obj_type_iswhitespace(NULL, p_obj)
+		0 == x_obj_type_iswhitespace(p_base, p_obj)
 	);
-	x_obj_free(NULL, p_obj);
+
+	test_cleanup(p_base);
 
 	return NULL;
 }

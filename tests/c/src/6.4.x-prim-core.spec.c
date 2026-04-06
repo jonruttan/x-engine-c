@@ -9,6 +9,8 @@
 #define X_GC
 #endif /* X_GC */
 
+#include "ext/x-expr/tests/src/test-helper-system.c"
+
 #include "ext/x-expr/src/x-sys.c"
 #include "ext/x-expr/src/x-lib.c"
 #include "ext/x-expr/src/x-obj.c"
@@ -62,7 +64,6 @@ x_obj_t *x_prim_type_register(x_obj_t *p_base, x_obj_t *p_args) { return p_base;
 x_obj_t *x_prim_ffi_register(x_obj_t *p_base, x_obj_t *p_args) { return p_base; }
 x_obj_t *x_prim_callcc_register(x_obj_t *p_base, x_obj_t *p_args) { return p_base; }
 
-#include "ext/x-expr/tests/src/test-helper-system.c"
 
 
 /*
@@ -73,6 +74,9 @@ static void _setup(void)
 {
 	_buffer_index = -1;
 	helper_set_alloc(MEM_GUARANTEED);
+	helper_sys_funcs.exit = mock_exit;
+	helper_sys_funcs.malloc = helper_malloc;
+	helper_sys_funcs.free = helper_free;
 }
 
 static void _teardown(void)

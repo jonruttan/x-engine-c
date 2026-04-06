@@ -12,6 +12,8 @@
 #define X_GC
 #endif /* X_GC */
 
+#include "ext/x-expr/tests/src/test-helper-system.c"
+
 #include "ext/x-expr/src/x-sys.c"
 #include "ext/x-expr/src/x-lib.c"
 #include "ext/x-expr/src/x.c"
@@ -65,7 +67,6 @@ x_obj_t *x_syntax_closure_register(x_obj_t *p_base, x_obj_t *p_args) { return p_
 x_obj_t *x_syntax_control_register(x_obj_t *p_base, x_obj_t *p_args) { return p_base; }
 x_obj_t *x_syntax_quote_register(x_obj_t *p_base, x_obj_t *p_args) { return p_base; }
 
-#include "ext/x-expr/tests/src/test-helper-system.c"
 
 
 /*
@@ -76,6 +77,9 @@ static void _setup(void)
 {
 	helper_alloc_reset();
 	helper_set_alloc(MEM_GUARANTEED);
+	helper_sys_funcs.exit = mock_exit;
+	helper_sys_funcs.malloc = helper_malloc;
+	helper_sys_funcs.free = helper_free;
 }
 
 static void _teardown(void)

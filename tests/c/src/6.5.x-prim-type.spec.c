@@ -9,6 +9,8 @@
 #define X_GC
 #endif /* X_GC */
 
+#include "ext/x-expr/tests/src/test-helper-system.c"
+
 #include "ext/x-expr/src/x-sys.c"
 #include "ext/x-expr/src/x-lib.c"
 #include "ext/x-expr/src/x-obj.c"
@@ -68,7 +70,6 @@ x_obj_t *x_syntax_quote_register(x_obj_t *p_base, x_obj_t *p_args) { return p_ba
 #define PCALL0(fn, base) \
 	fn((base), x_mkspair((base), X_OBJ_FLAG_NONE, NULL, NULL))
 
-#include "ext/x-expr/tests/src/test-helper-system.c"
 
 
 /*
@@ -82,6 +83,9 @@ static void _setup(void)
 	 * than the 1024-slot guaranteed pool can handle when registering
 	 * prims on multiple bases. */
 	helper_set_alloc(MEM_SYSTEM);
+	helper_sys_funcs.exit = mock_exit;
+	helper_sys_funcs.malloc = helper_malloc;
+	helper_sys_funcs.free = helper_free;
 }
 
 static void _teardown(void)
