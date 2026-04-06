@@ -140,7 +140,7 @@ static char *test_base_make(void)
 	);
 
 
-	p_obj = x_firstobj(x_firstobj(x_base_field_env_alist(p_base)));
+	p_obj = x_firstobj(x_base_field_env_alist(p_base)));
 	_it_should("return the Base object environment list (initially nil)",
 		x_obj_isnil(p_base, p_obj)
 	);
@@ -150,7 +150,7 @@ static char *test_base_make(void)
 		x_obj_isnil(p_base, p_obj)
 	);
 
-	p_obj = x_firstobj(x_firstobj(x_base_field_buffer(p_base)));
+	p_obj = x_firstobj(x_base_field_buffer(p_base)));
 	_it_should("return the Base object buffer",
 		x_obj_isnil(p_base, p_obj)
 	);
@@ -160,7 +160,7 @@ static char *test_base_make(void)
 		x_obj_isnil(p_base, p_obj)
 	);
 
-	p_obj = x_firstobj(x_firstobj(x_base_field_write_buf(p_base)));
+	p_obj = x_firstobj(x_base_field_write_buf(p_base)));
 	_it_should("return the Base object write-buf (initially nil)",
 		x_obj_isnil(p_base, p_obj)
 	);
