@@ -270,7 +270,7 @@ static char *test_eval_tco(void)
 	_it_should("call eval fn once (bounce resolves to self-eval)",
 		1 == tco_eval_calls);
 
-	tco_count = x_atomint(x_base_field_profile_tco(p_base));
+	tco_count = x_atomint(x_firstobj(x_base_field_profile_tco(p_base)));
 	_it_should("increment TCO profile counter",
 		tco_count == 1);
 
