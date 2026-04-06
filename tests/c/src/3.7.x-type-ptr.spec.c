@@ -129,7 +129,7 @@ static char *test_mkptr(void)
 	x_sys_free(p_obj);
 
 
-	p_base = x_mksatom(NULL, X_OBJ_FLAG_NONE, 0);
+	p_base = x_base_ts_make(NULL, NULL);
 	p_obj = x_mkptr(p_base, (void *)i);
 	_it_should("make a Pointer object, attach it to the Base object, and set its value",
 		! x_obj_isnil(p_base, p_obj)
@@ -138,8 +138,7 @@ static char *test_mkptr(void)
 		&& (void *)i == x_ptrval(p_obj)
 	);
 
-	x_sys_free(p_obj);
-	x_sys_free(p_base);
+	test_cleanup(p_base);
 
 	return NULL;
 }
@@ -163,7 +162,7 @@ static char *test_mkfptr(void)
 	x_sys_free(p_obj);
 
 
-	p_base = x_mksatom(NULL, X_OBJ_FLAG_NONE, 0);
+	p_base = x_base_ts_make(NULL, NULL);
 	p_obj = x_mkfptr(p_base, flags, (void *)i);
 	_it_should("make a Pointer object, attach it to the Base object, and set its value",
 		! x_obj_isnil(p_base, p_obj)
@@ -173,7 +172,6 @@ static char *test_mkfptr(void)
 	);
 
 	x_sys_free(p_obj);
-	x_sys_free(p_base);
 
 	return NULL;
 }
@@ -196,7 +194,7 @@ static char *test_mkptrown(void)
 	x_sys_free(p_obj);
 
 
-	p_base = x_mksatom(NULL, X_OBJ_FLAG_NONE, 0);
+	p_base = x_base_ts_make(NULL, NULL);
 	p_obj = x_mkptrown(p_base, (void *)i);
 	_it_should("make a Pointer object, attach it to the Base object, and set its value",
 		! x_obj_isnil(p_base, p_obj)
@@ -229,7 +227,7 @@ static char *test_mkfptrown(void)
 	x_sys_free(p_obj);
 
 
-	p_base = x_mksatom(NULL, X_OBJ_FLAG_NONE, 0);
+	p_base = x_base_ts_make(NULL, NULL);
 	p_obj = x_mkfptrown(p_base, flags, (void *)i);
 	_it_should("make a Pointer object, attach it to the Base object, and set its value",
 		! x_obj_isnil(p_base, p_obj)
@@ -262,7 +260,7 @@ static char *test_make_ptr(void)
 	x_sys_free(p_obj);
 
 
-	p_base = x_mksatom(NULL, X_OBJ_FLAG_NONE, 0);
+	p_base = x_base_ts_make(NULL, NULL);
 	p_obj = x_make_ptr(p_base, flags, (void *)i);
 	_it_should("make a Pointer object, attach it to the Base object, and set its value",
 		! x_obj_isnil(p_base, p_obj)
@@ -282,7 +280,7 @@ static char *test_type_ptr_struct(void)
 
 	helper_alloc_reset();
 
-	p_base = x_mksatom(NULL, X_OBJ_FLAG_NONE, 0);
+	p_base = x_base_ts_make(NULL, NULL);
 	p_type = x_type_ptr_struct(p_base, p_base);
 	_it_should("return Pointer Type list",
 		! x_obj_isnil(p_base, p_type)
@@ -449,7 +447,7 @@ static char *test_type_ptr_make(void)
 	x_sys_free(p_obj[0]);
 	x_sys_free(p_args);
 	x_sys_free(p_ptr);
-	x_sys_free(p_base);
+	test_cleanup(p_base);
 
 
 	helper_alloc_reset();
@@ -478,7 +476,7 @@ static char *test_type_ptr_make(void)
 	x_sys_free(p_obj[0]);
 	x_sys_free(p_args);
 	x_sys_free(p_ptr);
-	x_sys_free(p_base);
+	test_cleanup(p_base);
 
 
 	return NULL;
