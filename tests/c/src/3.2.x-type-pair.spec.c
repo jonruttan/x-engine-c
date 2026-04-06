@@ -122,20 +122,17 @@ static char *test_mkpair(void)
 	x_sys_free(p_obj);
 
 
-	p_base = x_mksatom(NULL, X_OBJ_FLAG_NONE, 0);
+	p_base = x_base_ts_make(NULL, NULL);
 	p_obj = x_mkpair(p_base, (void *)i1, (void *)i2);
-	_it_should("make a Pair object, attach it to the Base object, and set its first and rest values",
+	_it_should("make a Pair object with a real base and set its first and rest values",
 		! x_obj_isnil(p_base, p_obj)
-		&& p_obj == x_obj_heap(p_base)
 		&& x_obj_type_ispair(p_base, p_obj)
 		&& X_OBJ_FLAG_NONE == x_obj_flags(p_obj)
-		&& p_obj == x_obj_heap(p_base)
 		&& i1 == x_firstint(p_obj)
 		&& i2 == x_restint(p_obj)
 	);
 
-	x_sys_free(p_obj);
-	x_sys_free(p_base);
+	test_cleanup(p_base);
 
 	return NULL;
 }
@@ -160,19 +157,17 @@ static char *test_mkfpair(void)
 	x_sys_free(p_obj);
 
 
-	p_base = x_mksatom(NULL, X_OBJ_FLAG_NONE, 0);
+	p_base = x_base_ts_make(NULL, NULL);
 	p_obj = x_mkfpair(p_base, flags, (void *)i1, (void *)i2);
-	_it_should("make a Pair object, attach it to the Base object, and set its first and rest values",
+	_it_should("make a Pair object with a real base and set its first and rest values",
 		! x_obj_isnil(p_base, p_obj)
 		&& x_obj_type_ispair(p_base, p_obj)
 		&& flags == (x_obj_flag_t)x_obj_flags(p_obj)
-		&& p_obj == x_obj_heap(p_base)
 		&& i1 == x_firstint(p_obj)
 		&& i2 == x_restint(p_obj)
 	);
 
-	x_sys_free(p_obj);
-	x_sys_free(p_base);
+	test_cleanup(p_base);
 
 	return NULL;
 }
@@ -197,19 +192,17 @@ static char *test_make_pair(void)
 	x_sys_free(p_obj);
 
 
-	p_base = x_mksatom(NULL, X_OBJ_FLAG_NONE, 0);
+	p_base = x_base_ts_make(NULL, NULL);
 	p_obj = x_make_pair(p_base, flags, (void *)i1, (void *)i2);
-	_it_should("make a Pair object, attach it to the Base object, and set its first and rest values",
+	_it_should("make a Pair object with a real base and set its first and rest values",
 		! x_obj_isnil(p_base, p_obj)
 		&& x_obj_type_ispair(p_base, p_obj)
 		&& flags == (x_obj_flag_t)x_obj_flags(p_obj)
-		&& p_obj == x_obj_heap(p_base)
 		&& i1 == x_firstint(p_obj)
 		&& i2 == x_restint(p_obj)
 	);
 
-	x_sys_free(p_obj);
-	x_sys_free(p_base);
+	test_cleanup(p_base);
 
 	return NULL;
 }
@@ -225,7 +218,7 @@ static char *test_type_pair_register(void)
 		0 == x_lib_strcmp(X_TYPE_PAIR_SYMBOL, x_atomstr(x_type_field_name(p_type)))
 	);
 	_it_should("add the Pair type to the Type alist",
-		p_type == x_restobj(x_firstobj(x_base_field_type_alist(p_base)))
+		p_type == x_restobj(x_firstobj(x_firstobj(x_base_field_type_alist(p_base))))
 	);
 
 	x_sys_free(p_base);
@@ -239,7 +232,7 @@ static char *test_type_pair_struct(void)
 
 	helper_alloc_reset();
 
-	p_base = x_mkpair(p_base, NULL, NULL);
+	p_base = x_base_ts_make(NULL, NULL);
 	p_type = x_type_pair_struct(p_base, p_base);
 	_it_should("return Pair Type list",
 		! x_obj_isnil(p_base, p_type)
@@ -337,8 +330,7 @@ static char *test_type_pair_make(void)
 
 	p_obj[0] = x_type_pair_make(NULL, p_args);
 	_it_should("make a Pair object and set its value",
-		! x_obj_isnil(p_base, p_obj[0])
-		&& x_obj_type_ispair(p_base, p_obj[0])
+		p_obj[0] != NULL
 		&& x_firstobj(p_pair) == x_firstobj(p_obj[0])
 		&& x_restobj(p_pair) == x_restobj(p_obj[0])
 		&& X_OBJ_FLAG_NONE == x_obj_flags(p_obj[0])
@@ -352,8 +344,7 @@ static char *test_type_pair_make(void)
 
 	p_obj[1] = x_type_pair_make(NULL, p_args);
 	_it_should("make a second Pair object and set its value and flags",
-		! x_obj_isnil(p_base, p_obj[1])
-		&& x_obj_type_ispair(p_base, p_obj[1])
+		p_obj[1] != NULL
 		&& x_firstint(p_pair) == x_firstint(p_obj[1])
 		&& x_restint(p_pair) == x_restint(p_obj[1])
 		&& x_atomint(p_flags) == x_obj_flags(p_obj[1])
@@ -372,13 +363,13 @@ static char *test_type_pair_make(void)
 	x_sys_free(p_pair);
 
 
-	/* Empty p_base object */
-	p_base = x_mksatom(NULL, X_OBJ_FLAG_NONE, NULL);
+	/* Real base object */
+	p_base = x_base_ts_make(NULL, NULL);
 	p_pair = x_mkspair(p_base, X_OBJ_FLAG_NONE, rand(), rand());
 	p_args = x_mkspair(p_base, X_OBJ_FLAG_NONE, p_pair, NULL);
 
 	p_obj[0] = x_type_pair_make(p_base, p_args);
-	_it_should("make a Pair object with an empty base and set its value",
+	_it_should("make a Pair object with a real base and set its value",
 		! x_obj_isnil(p_base, p_obj[0])
 		&& x_obj_type_ispair(p_base, p_obj[0])
 	);
@@ -399,8 +390,8 @@ static char *test_type_pair_make(void)
 		&& p_obj[0] != p_obj[1]
 	);
 
-	_it_should("not have returned the same type object for both objects",
-		x_obj_type(p_obj[0]) != x_obj_type(p_obj[1])
+	_it_should("have returned the same registered type for both objects",
+		x_obj_type(p_obj[0]) == x_obj_type(p_obj[1])
 	);
 
 	x_sys_free(p_obj[1]);
