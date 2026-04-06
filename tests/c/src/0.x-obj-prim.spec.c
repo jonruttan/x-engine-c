@@ -19,7 +19,7 @@
 #define STUB_X_PROCEDURE
 #include "helper-stubs.c"
 
-#include "ext/x-expr/tests/src/helper-system-functions.c"
+#include "ext/x-expr/tests/src/test-helper-system.c"
 
 /*
  * ## Test Overhead
@@ -97,13 +97,13 @@ static char *test_obj_prim_make(void)
 		&& x_atomint(p_flags) == x_obj_flags(p_ret)
 		&& x_atomint(p_vals[0]) == x_atomint(p_ret)
 	);
-	x_obj_free(p_obj);
-	x_obj_free(p_flags);
-	x_obj_free(p_vals[0]);
-	x_obj_free(p_args[2]);
-	x_obj_free(p_args[1]);
-	x_obj_free(p_args[0]);
-	x_obj_free(p_ret);
+	x_obj_free(NULL, p_obj);
+	x_obj_free(NULL, p_flags);
+	x_obj_free(NULL, p_vals[0]);
+	x_obj_free(NULL, p_args[2]);
+	x_obj_free(NULL, p_args[1]);
+	x_obj_free(NULL, p_args[0]);
+	x_obj_free(NULL, p_ret);
 
 	p_obj = x_mkspair(NULL, X_OBJ_FLAG_NONE, 0, 0);
 	p_flags = x_mksatom(NULL, X_OBJ_FLAG_NONE, 0xf0);
@@ -122,15 +122,15 @@ static char *test_obj_prim_make(void)
 		&& x_atomint(p_vals[0]) == x_firstint(p_ret)
 		&& x_atomint(p_vals[1]) == x_restint(p_ret)
 	);
-	x_obj_free(p_obj);
-	x_obj_free(p_flags);
-	x_obj_free(p_vals[1]);
-	x_obj_free(p_vals[0]);
-	x_obj_free(p_args[3]);
-	x_obj_free(p_args[2]);
-	x_obj_free(p_args[1]);
-	x_obj_free(p_args[0]);
-	x_obj_free(p_ret);
+	x_obj_free(NULL, p_obj);
+	x_obj_free(NULL, p_flags);
+	x_obj_free(NULL, p_vals[1]);
+	x_obj_free(NULL, p_vals[0]);
+	x_obj_free(NULL, p_args[3]);
+	x_obj_free(NULL, p_args[2]);
+	x_obj_free(NULL, p_args[1]);
+	x_obj_free(NULL, p_args[0]);
+	x_obj_free(NULL, p_ret);
 
 
 	p_base = x_mksatom(NULL, X_OBJ_FLAG_NONE, 0);
@@ -149,14 +149,14 @@ static char *test_obj_prim_make(void)
 		&& x_atomint(p_flags) == x_obj_flags(p_ret)
 		&& x_atomint(p_vals[0]) == x_atomint(p_ret)
 	);
-	x_obj_free(p_obj);
-	x_obj_free(p_flags);
-	x_obj_free(p_vals[0]);
-	x_obj_free(p_args[2]);
-	x_obj_free(p_args[1]);
-	x_obj_free(p_args[0]);
-	x_obj_free(p_ret);
-	x_obj_free(p_base);
+	x_obj_free(NULL, p_obj);
+	x_obj_free(NULL, p_flags);
+	x_obj_free(NULL, p_vals[0]);
+	x_obj_free(NULL, p_args[2]);
+	x_obj_free(NULL, p_args[1]);
+	x_obj_free(NULL, p_args[0]);
+	x_obj_free(NULL, p_ret);
+	x_obj_free(NULL, p_base);
 
 	p_base = x_mksatom(NULL, X_OBJ_FLAG_NONE, 0);
 	p_obj = x_mkspair(NULL, X_OBJ_FLAG_NONE, 0, 0);
@@ -176,16 +176,16 @@ static char *test_obj_prim_make(void)
 		&& x_atomint(p_vals[0]) == x_firstint(p_ret)
 		&& x_atomint(p_vals[1]) == x_restint(p_ret)
 	);
-	x_obj_free(p_obj);
-	x_obj_free(p_flags);
-	x_obj_free(p_vals[1]);
-	x_obj_free(p_vals[0]);
-	x_obj_free(p_args[3]);
-	x_obj_free(p_args[2]);
-	x_obj_free(p_args[1]);
-	x_obj_free(p_args[0]);
-	x_obj_free(p_ret);
-	x_obj_free(p_base);
+	x_obj_free(NULL, p_obj);
+	x_obj_free(NULL, p_flags);
+	x_obj_free(NULL, p_vals[1]);
+	x_obj_free(NULL, p_vals[0]);
+	x_obj_free(NULL, p_args[3]);
+	x_obj_free(NULL, p_args[2]);
+	x_obj_free(NULL, p_args[1]);
+	x_obj_free(NULL, p_args[0]);
+	x_obj_free(NULL, p_ret);
+	x_obj_free(NULL, p_base);
 
 	return NULL;
 }
@@ -203,8 +203,8 @@ static char *test_obj_prim_make_null_type(void)
 	p_ret = x_obj_prim_make(NULL, p_args);
 	_it_should("return NULL when object type is nil",
 		NULL == p_ret);
-	x_obj_free(p_args);
-	x_obj_free(p_obj);
+	x_obj_free(NULL, p_args);
+	x_obj_free(NULL, p_obj);
 
 	return NULL;
 }
@@ -359,7 +359,6 @@ static char *test_obj_prim_units_typed(void)
 
 	{
 		x_spair_t args = x_obj_set(NULL, X_OBJ_FLAG_NONE, { p_obj }, { p_base });
-		/* Typed object — goes through x_obj_hook_units */
 		p_ret = x_obj_prim_units(p_base, (x_obj_t *)args);
 		(void)p_ret;
 		_it_should("prim_units with typed obj exercises hook path", 1);
@@ -451,7 +450,6 @@ static char *test_obj_prim_length_typed(void)
 
 	{
 		x_spair_t args = x_obj_set(NULL, X_OBJ_FLAG_NONE, { p_obj }, { p_base });
-		/* Typed object — goes through x_obj_hook_length */
 		p_ret = x_obj_prim_length(p_base, (x_obj_t *)args);
 		(void)p_ret;
 		_it_should("prim_length with typed obj exercises hook path", 1);

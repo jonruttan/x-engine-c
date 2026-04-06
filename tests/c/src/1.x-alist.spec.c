@@ -18,7 +18,7 @@
 #define STUB_X_BASE_ERROR
 #include "helper-stubs.c"
 
-#include "ext/x-expr/tests/src/helper-system-functions.c"
+#include "ext/x-expr/tests/src/test-helper-system.c"
 
 /*
  * ## Test Overhead

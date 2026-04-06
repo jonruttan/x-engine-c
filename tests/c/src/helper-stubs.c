@@ -22,7 +22,7 @@ x_obj_t *x_eval_body(x_obj_t *p_base, x_obj_t *p_body) { return NULL; }
 x_obj_t *x_eval_body_tco(x_obj_t *p_base, x_obj_t *p_body) { return NULL; }
 x_obj_t *x_eval_body_tco_simple(x_obj_t *p_base, x_obj_t *p_body) { return NULL; }
 x_obj_t *x_eval_tco_trampoline(x_obj_t *p_base, x_obj_t *p_result) { return p_result; }
-void x_callable_bind(x_obj_t *p_base, x_char_t *name, x_callable_fn fn) {}
+void x_callable_bind(x_obj_t *p_base, x_char_t *name, x_fn_t fn) {}
 #endif
 
 #ifdef STUB_X_PROCEDURE

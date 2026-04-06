@@ -15,8 +15,10 @@
 #include "ext/x-expr/src/x.c"
 #include "ext/x-expr/src/x-obj.c"
 #include "src/x-alist.c"
+#include "ext/x-expr/src/x-base.c"
 #include "src/x-base.c"
 #include "src/x-eval.c"
+#include "ext/x-expr/src/x-heap.c"
 #include "src/x-type.c"
 #include "src/x-type/buffer.c"
 #include "src/x-type/iter.c"
@@ -38,7 +40,7 @@
 #define STUB_X_PROCEDURE_APPLY
 #include "helper-stubs.c"
 
-#include "ext/x-expr/tests/src/helper-system-functions.c"
+#include "ext/x-expr/tests/src/test-helper-system.c"
 
 /*
  * ## Test Overhead

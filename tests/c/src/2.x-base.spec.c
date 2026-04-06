@@ -14,6 +14,7 @@
 #include "ext/x-expr/src/x-obj.c"
 #include "ext/x-expr/src/x.c"
 #include "src/x-alist.c"
+#include "ext/x-expr/src/x-base.c"
 #include "src/x-base.c"
 
 #define STUB_X_PRIM
@@ -55,7 +56,7 @@ x_obj_t *x_eval(x_obj_t *p_base, x_obj_t *p_args)
 	return _eval_last;
 }
 
-#include "ext/x-expr/tests/src/helper-system-functions.c"
+#include "ext/x-expr/tests/src/test-helper-system.c"
 
 
 /*
@@ -85,10 +86,10 @@ static char *test_base_make(void)
 		! x_base_isset(p_base)
 	);
 
-	x_obj_free(p_base);
+	x_obj_free(NULL, p_base);
 
 
-	p_base = x_base_make(NULL, NULL);
+	p_base = x_base_ts_make(NULL, NULL);
 	_it_should("return a new Base object",
 		NULL != p_base
 	);
@@ -192,7 +193,7 @@ static char *test_base_type_alist_extend(void)
 	x_sys_free(p_base);
 
 
-	p_base = x_base_make(NULL, NULL);
+	p_base = x_base_ts_make(NULL, NULL);
 
 	/* Build mock type struct with name stack: ((name . nil) . nil) */
 	p_name0 = x_mksatom(p_base, X_OBJ_FLAG_NONE, "type0");
@@ -254,7 +255,7 @@ static char *test_base_type_alist_assoc(void)
 	x_sys_free(p_base);
 
 
-	p_base = x_base_make(NULL, NULL);
+	p_base = x_base_ts_make(NULL, NULL);
 
 	p_args = x_mkspair(p_base, X_OBJ_FLAG_NONE, x_mksatom(p_base, X_OBJ_FLAG_NONE, s[0]), NULL);
 	p_obj[0] = x_base_type_alist_assoc(p_base, p_args);
@@ -329,7 +330,7 @@ static char *test_base_env_alist_extend(void)
 	x_sys_free(p_base);
 
 
-	p_base = x_base_make(NULL, NULL);
+	p_base = x_base_ts_make(NULL, NULL);
 	p_args = x_mkspair(p_base, X_OBJ_FLAG_NONE, p_atoms[0], p_atoms[1]);
 	p_alist = x_base_env_alist_extend(p_base, p_args);
 	_it_should("extend alist with (#<0x1:0x0> . #<0x1:0x1>)",
@@ -458,7 +459,7 @@ static char *test_base_error_no_handler(void)
 		s[0] != '\0');
 
 	/* With base, no handler — writes to base's stderr fd */
-	p_base = x_base_make(NULL, NULL);
+	p_base = x_base_ts_make(NULL, NULL);
 
 	helper_file_buffer_ptr[TEST_HELPER_FILE_STDERR] = s;
 	helper_file_buffer_length[TEST_HELPER_FILE_STDERR] = 64;
@@ -490,7 +491,7 @@ static char *test_base_error_with_handler(void)
 	jmp_buf jmp;
 	int caught;
 
-	p_base = x_base_make(NULL, NULL);
+	p_base = x_base_ts_make(NULL, NULL);
 
 	/* Build handler: (jmp-ptr (saved-env . saved-boundary) error-value) */
 	p_handler = x_mkspair(p_base, X_OBJ_FLAG_NONE,
@@ -545,7 +546,7 @@ static char *test_base_write_buf(void)
 			{ .v = buf }, { (x_obj_t *)&buf_pos })
 	};
 
-	p_base = x_base_make(NULL, NULL);
+	p_base = x_base_ts_make(NULL, NULL);
 
 	/* Install write-buffer on base */
 	x_base_field_write_buf(p_base) = (x_obj_t *)buf_obj;
@@ -600,7 +601,7 @@ static char *test_base_load(void)
 	x_obj_t *p_base, *p_ret;
 	x_obj_t *tokens[3];
 
-	p_base = x_base_make(NULL, NULL);
+	p_base = x_base_ts_make(NULL, NULL);
 	/* x_base_load reads x_base_field_buffer but our stubbed x_token_read
 	 * ignores it — just push a non-NULL dummy. */
 	x_base_buffer_push(p_base, x_mkspair(p_base, X_OBJ_FLAG_NONE, NULL, NULL));
