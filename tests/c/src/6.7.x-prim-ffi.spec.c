@@ -427,7 +427,7 @@ static char *test_ffi_register(void)
 	p_base = x_base_ts_make(NULL, NULL);
 	x_prim_register(p_base, NULL);
 
-	p_env = x_base_field_env_alist(p_base);
+	p_env = x_firstobj(x_base_field_env_alist(p_base));
 	_it_should("env is not empty after register",
 		p_env != NULL);
 

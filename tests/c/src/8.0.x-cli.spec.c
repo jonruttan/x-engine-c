@@ -115,7 +115,7 @@ static char *test_cli_init(void)
 	_it_should("init sets buffer on base",
 		x_firstobj(x_base_field_buffer(p_base)) != NULL);
 	_it_should("init registers primitives (eval is bound)",
-		!x_obj_isnil(p_base, x_base_field_env_alist(p_base)));
+		!x_obj_isnil(p_base, x_firstobj(x_base_field_env_alist(p_base))));
 
 	test_cleanup(p_base);
 	return NULL;

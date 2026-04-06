@@ -286,7 +286,7 @@ static char *test_type_register(void)
 	p_base = x_base_ts_make(NULL, NULL);
 	x_prim_register(p_base, NULL);
 
-	p_env = x_base_field_env_alist(p_base);
+	p_env = x_firstobj(x_base_field_env_alist(p_base));
 	_it_should("env is not empty after register",
 		p_env != NULL);
 
@@ -525,7 +525,7 @@ static char *test_type_base_eval_error(void)
 	p_handler = x_mkspair(p_base, X_OBJ_FLAG_NONE,
 		x_mkptr(p_base, &jmp),
 		x_mkspair(p_base, X_OBJ_FLAG_NONE,
-			x_base_field_env_alist(p_base),
+			x_firstobj(x_base_field_env_alist(p_base)),
 			x_mkspair(p_base, X_OBJ_FLAG_NONE, NULL, NULL)));
 	x_firstobj(x_base_field_error_handler(p_base)) = p_handler;
 

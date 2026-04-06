@@ -368,7 +368,7 @@ static char *test_core_wrap_unwrap(void)
 	p_op = x_mkop(p_base,
 		x_mksymbol(p_base, "args"), NULL,
 		x_mkspair(p_base, X_OBJ_FLAG_NONE, x_mksatom(p_base, X_OBJ_FLAG_NONE, (x_int_t)1), NULL),
-		x_base_field_env_alist(p_base));
+		x_firstobj(x_base_field_env_alist(p_base)));
 
 	x_base_env_alist_extend(p_base,
 		x_mkspair(p_base, X_OBJ_FLAG_NONE, x_mksymbol(p_base, "myop"), p_op));
@@ -437,7 +437,7 @@ static char *test_core_tail_eval(void)
 	x_prim_register(p_base, NULL);
 
 	p_expr = x_mksatom(p_base, X_OBJ_FLAG_NONE, (x_int_t)42);
-	p_env = x_base_field_env_alist(p_base);
+	p_env = x_firstobj(x_base_field_env_alist(p_base));
 
 	/* Bind expr and env */
 	p_args = x_mkspair(p_base, X_OBJ_FLAG_NONE, NULL,
@@ -457,7 +457,7 @@ static char *test_core_tail_eval(void)
 	_it_should("tail-eval sets tco_expr",
 		x_firstobj(x_base_field_tco_expr(p_base)) == p_expr);
 	_it_should("tail-eval sets env",
-		x_base_field_env_alist(p_base) == p_env);
+		x_firstobj(x_base_field_env_alist(p_base)) == p_env);
 
 	test_cleanup(p_base);
 	return NULL;
@@ -502,7 +502,7 @@ static char *test_core_eval_with_env(void)
 
 	/* Create a custom env with binding: z -> 123 */
 	p_sym = x_mksymbol(p_base, "z");
-	p_env = x_base_field_env_alist(p_base);
+	p_env = x_firstobj(x_base_field_env_alist(p_base));
 	p_env = x_mklist(p_base,
 		x_mkspair(p_base, X_OBJ_FLAG_NONE, p_sym, x_mksatom(p_base, X_OBJ_FLAG_NONE, (x_int_t)123)),
 		p_env);
@@ -525,7 +525,7 @@ static char *test_core_eval_with_env(void)
 
 	/* Verify original env is restored */
 	_it_should("eval with env restores original env",
-		x_base_field_env_alist(p_base) != p_env);
+		x_firstobj(x_base_field_env_alist(p_base)) != p_env);
 
 	test_cleanup(p_base);
 	return NULL;
@@ -741,7 +741,7 @@ static char *test_core_set_unbound(void)
 		p_handler = x_mkspair(p_base, X_OBJ_FLAG_NONE,
 			x_mkptr(p_base, &jmp),
 			x_mkspair(p_base, X_OBJ_FLAG_NONE,
-				x_base_field_env_alist(p_base),
+				x_firstobj(x_base_field_env_alist(p_base)),
 				x_mkspair(p_base, X_OBJ_FLAG_NONE, NULL, NULL)));
 		x_firstobj(x_base_field_error_handler(p_base)) = p_handler;
 
