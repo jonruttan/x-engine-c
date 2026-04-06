@@ -203,7 +203,7 @@ x_obj_t *test_type_tco_eval(x_obj_t *p_base, x_obj_t *p_args)
 
 	/* Set a self-evaluating satom as the TCO bounce target */
 	test_tco_result = x_mksatom(p_base, X_OBJ_FLAG_NONE, 999);
-	x_base_field_tco_expr(p_base) = test_tco_result;
+	x_firstobj(x_base_field_tco_expr(p_base)) = test_tco_result;
 
 	return p_obj;
 }
@@ -219,7 +219,7 @@ x_obj_t *test_type_tco_eval_two_bounce(x_obj_t *p_base, x_obj_t *p_args)
 
 	if (tco_eval_calls == 1) {
 		/* First bounce: leave tco_env nil */
-		x_base_field_tco_expr(p_base) = p_obj;
+		x_firstobj(x_base_field_tco_expr(p_base)) = p_obj;
 		return p_obj;
 	}
 
@@ -227,11 +227,11 @@ x_obj_t *test_type_tco_eval_two_bounce(x_obj_t *p_base, x_obj_t *p_args)
 		/* Second bounce: set tco_env for env restore.
 		 * tco_env holds compound ((env . boundary) . bst). */
 		if (test_tco_env_to_set != NULL) {
-			x_base_field_tco_env(p_base) = x_mkspair(p_base, X_OBJ_FLAG_NONE,
+			x_firstobj(x_base_field_tco_env(p_base)) = x_mkspair(p_base, X_OBJ_FLAG_NONE,
 				x_mkspair(p_base, X_OBJ_FLAG_NONE, test_tco_env_to_set, NULL),
 				NULL);
 		}
-		x_base_field_tco_expr(p_base) = p_obj;
+		x_firstobj(x_base_field_tco_expr(p_base)) = p_obj;
 		return p_obj;
 	}
 
@@ -292,12 +292,12 @@ static char *test_eval_tco(void)
 				x_mksatom(p_base, X_OBJ_FLAG_NONE, "val")),
 			NULL);
 
-		x_base_field_tco_env(p_base) = x_mkspair(p_base, X_OBJ_FLAG_NONE,
+		x_firstobj(x_base_field_tco_env(p_base)) = x_mkspair(p_base, X_OBJ_FLAG_NONE,
 			x_mkspair(p_base, X_OBJ_FLAG_NONE, p_saved_env, NULL),
 			NULL);
 
 		/* Modify env to something else */
-		x_base_field_env_alist(p_base) = x_mkspair(p_base, X_OBJ_FLAG_NONE,
+		x_firstobj(x_base_field_env_alist(p_base)) = x_mkspair(p_base, X_OBJ_FLAG_NONE,
 			x_mkspair(p_base, X_OBJ_FLAG_NONE,
 				x_mksatom(p_base, X_OBJ_FLAG_NONE, "other"),
 				x_mksatom(p_base, X_OBJ_FLAG_NONE, "env")),
@@ -369,7 +369,7 @@ static char *test_eval_tco_env_restore(void)
 	_it_should("called eval fn three times",
 		3 == tco_eval_calls);
 	_it_should("restore env from later tco_env",
-		x_base_field_env_alist(p_base) == p_restore_env);
+		x_firstobj(x_base_field_env_alist(p_base)) == p_restore_env);
 
 	test_tco_env_to_set = NULL;
 	test_cleanup(p_base);

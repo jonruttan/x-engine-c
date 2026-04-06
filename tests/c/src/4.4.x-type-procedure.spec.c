@@ -179,7 +179,7 @@ static char *test_procedure_call(void)
 	 * Procedure evaluates args before binding, unlike operative. */
 	p_params = x_mkspair(p_base, X_OBJ_FLAG_NONE, x_mksymbol(p_base, "x"), NULL);
 	p_body = x_mkspair(p_base, X_OBJ_FLAG_NONE, x_mksymbol(p_base, "x"), NULL);
-	p_env = x_base_field_env_alist(p_base);
+	p_env = x_firstobj(x_base_field_env_alist(p_base));
 
 	p_proc = x_make_procedure(p_base, X_OBJ_FLAG_NONE,
 		p_params, p_body, p_env,
@@ -193,7 +193,7 @@ static char *test_procedure_call(void)
 
 	/* body_eval_tco sets tco_expr for tail form */
 	_it_should("set tco_expr for tail call",
-		x_base_field_tco_expr(p_base) != NULL);
+		x_firstobj(x_base_field_tco_expr(p_base)) != NULL);
 
 	test_cleanup(p_base);
 
@@ -211,7 +211,7 @@ static char *test_procedure_call_wrapped(void)
 	/* Create an operative that returns 77 */
 	p_body = x_mkspair(p_base, X_OBJ_FLAG_NONE, x_mksatom(p_base, X_OBJ_FLAG_NONE, 77), NULL);
 	p_op = x_make_operative(p_base, X_OBJ_FLAG_NONE,
-		NULL, NULL, p_body, x_base_field_env_alist(p_base));
+		NULL, NULL, p_body, x_firstobj(x_base_field_env_alist(p_base)));
 
 	/* Wrap the operative in a procedure (applicative wrapper). */
 	p_proc = x_make_procedure(p_base, X_OBJ_FLAG_WRAP,
@@ -225,8 +225,8 @@ static char *test_procedure_call_wrapped(void)
 	/* The wrapped path calls x_obj_prim_call on the combiner,
 	 * which calls operative_call, which sets tco_expr = 77 */
 	_it_should("wrapped combiner dispatches to operative",
-		x_base_field_tco_expr(p_base) != NULL
-		&& x_atomint(x_base_field_tco_expr(p_base)) == 77);
+		x_firstobj(x_base_field_tco_expr(p_base)) != NULL
+		&& x_atomint(x_firstobj(x_base_field_tco_expr(p_base))) == 77);
 
 	test_cleanup(p_base);
 

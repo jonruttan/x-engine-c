@@ -113,7 +113,7 @@ static char *test_cli_init(void)
 	_it_should("init returns non-NULL base",
 		p_base != NULL);
 	_it_should("init sets buffer on base",
-		x_base_field_buffer(p_base) != NULL);
+		x_firstobj(x_base_field_buffer(p_base)) != NULL);
 	_it_should("init registers primitives (eval is bound)",
 		!x_obj_isnil(p_base, x_base_field_env_alist(p_base)));
 

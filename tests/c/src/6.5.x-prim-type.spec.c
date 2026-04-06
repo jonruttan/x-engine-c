@@ -527,7 +527,7 @@ static char *test_type_base_eval_error(void)
 		x_mkspair(p_base, X_OBJ_FLAG_NONE,
 			x_base_field_env_alist(p_base),
 			x_mkspair(p_base, X_OBJ_FLAG_NONE, NULL, NULL)));
-	x_base_field_error_handler(p_base) = p_handler;
+	x_firstobj(x_base_field_error_handler(p_base)) = p_handler;
 
 	if (setjmp(jmp) == 0) {
 		p_args = x_mkspair(p_base, X_OBJ_FLAG_NONE, NULL,
@@ -542,7 +542,7 @@ static char *test_type_base_eval_error(void)
 			p_result != NULL);
 	}
 
-	x_base_field_error_handler(p_base) = NULL;
+	x_firstobj(x_base_field_error_handler(p_base)) = NULL;
 	test_cleanup(p_base);
 	return NULL;
 }
@@ -1077,7 +1077,7 @@ static char *test_type_base_eval_error_no_parent(void)
 	/* Hook passes first error to x_base_error (longjmp in target),
 	 * intercepts second error (parent has no handler, line 292). */
 	test_error_hook_called_type = 0;
-	x_base_field_error_handler(p_base) = NULL;
+	x_firstobj(x_base_field_error_handler(p_base)) = NULL;
 
 	p_args = x_mkspair(p_base, X_OBJ_FLAG_NONE, NULL,
 		x_mkspair(p_base, X_OBJ_FLAG_NONE,

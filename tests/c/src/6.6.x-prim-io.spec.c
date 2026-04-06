@@ -241,7 +241,7 @@ static char *test_io_write_to_string(void)
 
 	/* write-buf is restored after write-to-string */
 	_it_should("write-buf restored to nil after write-to-string",
-		x_obj_isnil(p_base, x_firstobj(x_base_field_write_buf(p_base))));
+		x_obj_isnil(p_base, x_firstobj(x_firstobj(x_base_field_write_buf(p_base)))));
 
 	test_cleanup(p_base);
 	helper_set_alloc(MEM_GUARANTEED);

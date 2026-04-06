@@ -140,7 +140,7 @@ static char *test_base_make(void)
 	);
 
 
-	p_obj = x_firstobj(x_base_field_env_alist(p_base));
+	p_obj = x_firstobj(x_firstobj(x_base_field_env_alist(p_base)));
 	_it_should("return the Base object environment list (initially nil)",
 		x_obj_isnil(p_base, p_obj)
 	);
@@ -150,7 +150,7 @@ static char *test_base_make(void)
 		x_obj_isnil(p_base, p_obj)
 	);
 
-	p_obj = x_firstobj(x_base_field_buffer(p_base));
+	p_obj = x_firstobj(x_firstobj(x_base_field_buffer(p_base)));
 	_it_should("return the Base object buffer",
 		x_obj_isnil(p_base, p_obj)
 	);
@@ -160,7 +160,7 @@ static char *test_base_make(void)
 		x_obj_isnil(p_base, p_obj)
 	);
 
-	p_obj = x_firstobj(x_base_field_write_buf(p_base));
+	p_obj = x_firstobj(x_firstobj(x_base_field_write_buf(p_base)));
 	_it_should("return the Base object write-buf (initially nil)",
 		x_obj_isnil(p_base, p_obj)
 	);
@@ -500,10 +500,10 @@ static char *test_base_error_with_handler(void)
 		x_mksatom(p_base, X_OBJ_FLAG_NONE, &jmp),
 		x_mkspair(p_base, X_OBJ_FLAG_NONE,
 			x_mkspair(p_base, X_OBJ_FLAG_NONE,
-				x_base_field_env_alist(p_base),
+				x_firstobj(x_base_field_env_alist(p_base)),
 				x_base_field_env_local_boundary(p_base)),
 			x_mkspair(p_base, X_OBJ_FLAG_NONE, NULL, NULL)));
-	x_base_field_error_handler(p_base) = p_handler;
+	x_firstobj(x_base_field_error_handler(p_base)) = p_handler;
 
 	caught = 0;
 	if (setjmp(jmp) == 0) {
@@ -520,7 +520,7 @@ static char *test_base_error_with_handler(void)
 		x_error_handler_error(p_handler) == NULL);
 
 	/* Test with symbol */
-	x_base_field_error_handler(p_base) = p_handler;
+	x_firstobj(x_base_field_error_handler(p_base)) = p_handler;
 	x_error_handler_error(p_handler) = NULL;
 
 	caught = 0;
@@ -551,7 +551,7 @@ static char *test_base_write_buf(void)
 	p_base = x_base_ts_make(NULL, NULL);
 
 	/* Install write-buffer on base */
-	x_base_field_write_buf(p_base) = (x_obj_t *)buf_obj;
+	x_firstobj(x_base_field_write_buf(p_base)) = (x_obj_t *)buf_obj;
 
 	p_args = x_mkspair(p_base, X_OBJ_FLAG_NONE,
 		x_mksatom(p_base, X_OBJ_FLAG_NONE, "hello"),
@@ -575,7 +575,7 @@ static char *test_base_write_buf(void)
 		0 == strncmp(buf, "hello!", 6));
 
 	/* Remove write-buffer, verify fallback to fd */
-	x_base_field_write_buf(p_base) = NULL;
+	x_firstobj(x_base_field_write_buf(p_base)) = NULL;
 	{
 		x_char_t out[8];
 

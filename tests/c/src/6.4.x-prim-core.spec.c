@@ -348,7 +348,7 @@ static char *test_core_guard(void)
 	_it_should("guard returns body result when no error",
 		x_atomint(p_result) == 42);
 	_it_should("guard pops handler",
-		x_firstobj(x_base_field_error_handler(p_base)) == NULL);
+		x_firstobj(x_firstobj(x_base_field_error_handler(p_base))) == NULL);
 
 	test_cleanup(p_base);
 	return NULL;
@@ -718,7 +718,7 @@ static char *test_core_error_guard_catch(void)
 		_it_should("guard handler receives error value",
 			x_atomint(p_result) == 42);
 		_it_should("guard pops handler after catch",
-			x_firstobj(x_base_field_error_handler(p_base)) == NULL);
+			x_firstobj(x_firstobj(x_base_field_error_handler(p_base))) == NULL);
 	}
 
 	test_cleanup(p_base);
@@ -743,7 +743,7 @@ static char *test_core_set_unbound(void)
 			x_mkspair(p_base, X_OBJ_FLAG_NONE,
 				x_base_field_env_alist(p_base),
 				x_mkspair(p_base, X_OBJ_FLAG_NONE, NULL, NULL)));
-		x_base_field_error_handler(p_base) = p_handler;
+		x_firstobj(x_base_field_error_handler(p_base)) = p_handler;
 
 		if (setjmp(jmp) == 0) {
 			p_args = x_mkspair(p_base, X_OBJ_FLAG_NONE, NULL,
@@ -759,7 +759,7 @@ static char *test_core_set_unbound(void)
 				p_result != NULL);
 		}
 
-		x_base_field_error_handler(p_base) = NULL;
+		x_firstobj(x_base_field_error_handler(p_base)) = NULL;
 	}
 
 	test_cleanup(p_base);
@@ -781,7 +781,7 @@ static char *test_core_error_no_handler_str(void)
 
 	/* No guard handler; string error message */
 	test_error_hook_called = 0;
-	x_base_field_error_handler(p_base) = NULL;
+	x_firstobj(x_base_field_error_handler(p_base)) = NULL;
 	p_args = x_mkspair(p_base, X_OBJ_FLAG_NONE, NULL,
 		x_mkspair(p_base, X_OBJ_FLAG_NONE, x_mkstr(p_base, "test error"), NULL));
 	p_ret = x_prim_error(p_base, p_args);
@@ -792,7 +792,7 @@ static char *test_core_error_no_handler_str(void)
 
 	/* No guard handler; non-string error message */
 	test_error_hook_called = 0;
-	x_base_field_error_handler(p_base) = NULL;
+	x_firstobj(x_base_field_error_handler(p_base)) = NULL;
 	p_args = x_mkspair(p_base, X_OBJ_FLAG_NONE, NULL,
 		x_mkspair(p_base, X_OBJ_FLAG_NONE, x_mksatom(p_base, X_OBJ_FLAG_NONE, 42), NULL));
 	p_ret = x_prim_error(p_base, p_args);
