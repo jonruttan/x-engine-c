@@ -166,7 +166,7 @@ static char *test_body_eval_tco(void)
 		x_firstobj(x_base_field_tco_expr(p_base)) != NULL
 		&& x_atomint(x_firstobj(x_base_field_tco_expr(p_base))) == 42);
 	_it_should("set tco_env compound with saved_env",
-		x_firstobj(x_firstobj(x_base_field_tco_env(p_base)))) == p_saved_env);
+		x_firstobj(x_firstobj(x_base_field_tco_env(p_base))) == p_saved_env);
 	_it_should("return NULL when setting tco_expr", p_result == NULL);
 	x_firstobj(x_base_field_tco_expr(p_base)) = NULL;
 	x_firstobj(x_base_field_tco_env(p_base)) = NULL;

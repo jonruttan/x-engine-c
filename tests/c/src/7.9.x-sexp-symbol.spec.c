@@ -80,6 +80,9 @@ void test_cleanup(x_obj_t *p_base)
 	}
 }
 
+/* Forward declaration for static handler atom */
+x_obj_t *test_token_read_delimit_whitespace(x_obj_t *p_base, x_obj_t *p_args);
+
 /* Static handler atom for callable dispatch */
 static x_satom_t delimit_ws_prim = x_obj_set(x_type_atom_obj, X_OBJ_FLAG_NONE,
 	{ .fn = test_token_read_delimit_whitespace });
