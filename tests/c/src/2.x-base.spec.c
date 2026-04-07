@@ -515,9 +515,9 @@ static char *test_base_error_with_handler(void)
 	_it_should("longjmp to handler on error",
 		1 == caught);
 
-	/* x_mkstrown is stubbed to return NULL, so error is NULL */
-	_it_should("handler error set (stub returns NULL)",
-		x_error_handler_error(p_handler) == NULL);
+	/* x_base_error now stores message in a static atom (zero allocation) */
+	_it_should("handler error set to message atom",
+		x_error_handler_error(p_handler) != NULL);
 
 	/* Test with symbol */
 	x_firstobj(x_base_field_error_handler(p_base)) = p_handler;

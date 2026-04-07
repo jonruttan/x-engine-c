@@ -254,24 +254,24 @@ static char *test_sexp_symbol_read_token(void)
 
 static char *test_sexp_symbol_write(void)
 {
-	x_obj_t *p_args, *p_obj, *p_ret;
+	x_obj_t *p_base, *p_args, *p_obj, *p_ret;
 	x_char_t *s, buffer[8] = "\0\0\0\0\0\0\0\0";
 
 	helper_file_buffer_ptr[TEST_HELPER_FILE_STDOUT] = buffer;
 	helper_file_reset();
 
+	p_base = x_base_ts_make(NULL, NULL);
 	s = "@ABC";
-	p_obj = x_mkstr(NULL, s);
-	p_args = x_mkspair(NULL, X_OBJ_FLAG_NONE, p_obj, NULL);
-	p_ret = x_sexp_symbol_write(NULL, p_args);
+	p_obj = x_mkstr(p_base, s);
+	p_args = x_mkspair(p_base, X_OBJ_FLAG_NONE, p_obj, NULL);
+	p_ret = x_sexp_symbol_write(p_base, p_args);
 	_it_should("write the value of the string object",
-		! x_obj_isnil(NULL, p_ret)
+		! x_obj_isnil(p_base, p_ret)
 		&& p_obj == p_ret
 		&& 0 == strncmp(s, buffer, strlen(s))
 	);
 
-	x_sys_free(p_args);
-	x_sys_free(p_obj);
+	test_cleanup(p_base);
 
 	return NULL;
 }
