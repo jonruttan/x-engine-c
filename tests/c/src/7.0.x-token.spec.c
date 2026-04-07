@@ -469,7 +469,7 @@ static char *test_token_write(void)
 	int fd_null = open("/dev/null", O_WRONLY);
 
 	/* Redirect output to /dev/null so writes don't pollute test output */
-	x_atomint(x_base_field_fileout(p_base)) = fd_null;
+	x_atomint(x_firstobj(x_base_field_fileout(p_base))) = fd_null;
 
 	/* Write satom — exercises x_sexp_atom_write path */
 	p_obj = x_mksatom(p_base, X_OBJ_FLAG_NONE, 'Z');
@@ -491,7 +491,7 @@ static char *test_token_write(void)
 		x_obj_t *p_prim_obj = x_make_prim(p_base3, X_OBJ_FLAG_NONE,
 			test_token_read_read_catchall);
 
-		x_atomint(x_base_field_fileout(p_base3)) = fd_null;
+		x_atomint(x_firstobj(x_base_field_fileout(p_base3))) = fd_null;
 		p_args = x_mkspair(p_base3, X_OBJ_FLAG_NONE, p_prim_obj, NULL);
 		p_ret = x_token_write(p_base3, p_args);
 		_it_should("write typed obj returns non-NULL",

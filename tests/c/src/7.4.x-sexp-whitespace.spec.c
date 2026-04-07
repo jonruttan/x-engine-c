@@ -214,7 +214,7 @@ static char *test_sexp_whitespace_null_read(void)
 	x_type_whitespace_register(p_base, p_base);
 
 	/* Find whitespace type on type alist */
-	p_type = x_base_field_type_alist(p_base);
+	p_type = x_firstobj(x_base_field_type_alist(p_base));
 	_it_should("whitespace type is registered",
 		! x_obj_isnil(p_base, p_type));
 	_it_should("whitespace type has NULL p_read (discard)",

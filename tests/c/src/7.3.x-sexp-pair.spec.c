@@ -49,7 +49,7 @@ static int x_token_write_call_count = 0;
 x_obj_t *x_token_write(x_obj_t *p_base, x_obj_t *p_obj)
 {
 	char s[16];
-	int fd = x_base_isset(p_base) ? x_atomint(x_base_field_fileout(p_base)) : STDOUT_FILENO;
+	int fd = x_base_isset(p_base) ? x_atomint(x_firstobj(x_base_field_fileout(p_base))) : STDOUT_FILENO;
 
 	sprintf(s, "<%d>", ++x_token_write_call_count);
 	x_sys_write(fd, s, strlen(s));

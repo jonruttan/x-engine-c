@@ -145,23 +145,22 @@ static char *test_sexp_comment_analyse2(void)
 		x_obj_t *p_score = (x_obj_t *)score;
 
 		p_args = (x_obj_t *)buffer_args;
+
 		p_obj = x_type_buffer_read(p_base, p_args);
 		p_obj = x_sexp_comment_analyse2(p_base, p_args);
 		_it_should("return the score", p_score == p_obj);
+
+		s = " ";
+		helper_file_buffer_ptr[TEST_HELPER_FILE_STDIN] = s;
+		helper_file_reset();
+		x_type_buffer_reset(p_base, p_args);
+
+		p_obj = x_type_buffer_read(p_base, p_args);
+		p_obj = x_sexp_comment_analyse2(p_base, p_args);
+		_it_should("return the analyse2 primitive object",
+			x_sexp_comment_analyse2_prim == p_obj
+		);
 	}
-
-
-	s = " ";
-	helper_file_buffer_ptr[TEST_HELPER_FILE_STDIN] = s;
-	helper_file_reset();
-	x_type_buffer_reset(p_base, p_args);
-
-	p_obj = x_type_buffer_read(p_base, p_args);
-	p_obj = x_sexp_comment_analyse2(p_base, p_args);
-	_it_should("return the analyse2 primitive object",
-		x_sexp_comment_analyse2_prim == p_obj
-	);
-
 
 	test_cleanup(p_base);
 
