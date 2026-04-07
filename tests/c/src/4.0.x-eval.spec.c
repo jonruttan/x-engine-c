@@ -225,11 +225,14 @@ x_obj_t *test_type_tco_eval_two_bounce(x_obj_t *p_base, x_obj_t *p_args)
 
 	if (tco_eval_calls == 2) {
 		/* Second bounce: set tco_env for env restore.
-		 * tco_env holds compound ((env . boundary) . bst). */
+		 * tco_env holds compound ((env . boundary) . (bst . shadow)). */
 		if (test_tco_env_to_set != NULL) {
 			x_firstobj(x_base_field_tco_env(p_base)) = x_mkspair(p_base, X_OBJ_FLAG_NONE,
-				x_mkspair(p_base, X_OBJ_FLAG_NONE, test_tco_env_to_set, NULL),
-				NULL);
+				x_mkspair(p_base, X_OBJ_FLAG_NONE, test_tco_env_to_set,
+					x_base_field_env_local_boundary(p_base)),
+				x_mkspair(p_base, X_OBJ_FLAG_NONE,
+					x_base_field_env_global_tree(p_base),
+					x_base_field_shadow_list(p_base)));
 		}
 		x_firstobj(x_base_field_tco_expr(p_base)) = p_obj;
 		return p_obj;

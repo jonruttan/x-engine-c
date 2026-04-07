@@ -9,13 +9,13 @@
 #ifndef X_GC
 #define X_GC
 #endif /* X_GC */
-
 #include "ext/x-expr/tests/src/test-helper-system.c"
 
 #include "ext/x-expr/src/x-sys.c"
 #include "ext/x-expr/src/x-lib.c"
 #include "ext/x-expr/src/x.c"
 #include "ext/x-expr/src/x-obj.c"
+#include "src/x-obj/prim.c"
 #include "src/x-alist.c"
 #include "ext/x-expr/src/x-base.c"
 #include "src/x-base.c"
@@ -468,7 +468,7 @@ static char *test_type_prim_call_procedure(void)
 	p_obj = make_typed_obj(p_base, (x_char_t *)X_TYPE_PROCEDURE_NAME, 1);
 	p_args = x_mkspair(p_base, X_OBJ_FLAG_NONE, p_obj, NULL);
 
-	p_ret = x_callable_call(p_base, p_args);
+	p_ret = x_obj_prim_call(p_base, p_args);
 	_it_should("dispatch procedure to stub and return NULL",
 		NULL == p_ret);
 
@@ -485,7 +485,7 @@ static char *test_type_prim_call_operative(void)
 	p_obj = make_typed_obj(p_base, (x_char_t *)X_TYPE_OPERATIVE_NAME, 1);
 	p_args = x_mkspair(p_base, X_OBJ_FLAG_NONE, p_obj, NULL);
 
-	p_ret = x_callable_call(p_base, p_args);
+	p_ret = x_obj_prim_call(p_base, p_args);
 	_it_should("dispatch operative to stub and return NULL",
 		NULL == p_ret);
 
@@ -507,14 +507,15 @@ static char *test_type_prim_apply_procedure(void)
 	p_s2 = x_mkspair(p_base, X_OBJ_FLAG_NONE, NULL, p_s3);       /* (body . (env . bst)) */
 	p_state = x_mkspair(p_base, X_OBJ_FLAG_NONE, NULL, p_s2);    /* (params . (body . (env . bst))) */
 
-	/* Procedure is spair (2 slots): [fn-ptr][state] */
+	/* Procedure is spair (2 slots): [fn-ptr][state]
+	 * fn-ptr must be x_type_procedure_call for x_callable_apply dispatch */
 	{
 	x_obj_t *p_name = x_mksatom(p_base, X_OBJ_FLAG_NONE, (x_char_t *)X_TYPE_PROCEDURE_NAME);
 	struct x_type_t ts = { .p_name = p_name };
 	x_obj_t *p_type = x_type_struct_make(p_base, ts);
 	x_base_type_alist_extend(p_base, p_type);
 	p_obj = x_obj_make(p_base, p_type, X_OBJ_FLAG_NONE, X_OBJ_LENGTH_PAIR,
-		(x_fn_t)NULL, p_state);
+		(x_fn_t)x_type_procedure_call, p_state);
 	}
 
 	p_args = x_mkspair(p_base, X_OBJ_FLAG_NONE, p_obj, NULL);
@@ -536,6 +537,8 @@ static char *test_type_prim_apply_operative(void)
 
 	p_base = x_base_ts_make(NULL, NULL);
 	p_obj = make_typed_obj(p_base, (x_char_t *)X_TYPE_OPERATIVE_NAME, 1);
+	/* Set fn-ptr to operative call for x_callable_apply dispatch */
+	x_primval(p_obj) = (x_fn_t)x_type_operative_call;
 	p_args = x_mkspair(p_base, X_OBJ_FLAG_NONE, p_obj, NULL);
 
 	p_ret = x_callable_apply(p_base, p_args);

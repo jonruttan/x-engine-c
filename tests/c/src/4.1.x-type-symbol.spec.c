@@ -562,9 +562,9 @@ static char *test_type_symbol_make(void)
 		&& p_obj[0] == x_01(x_symbol_data_list(p_type))
 	);
 
-	test_cleanup(p_base);
-	x_sys_free(p_str);
-
+	/* Skip test_cleanup — interned symbols share BST references
+	 * that corrupt the heap chain during manual walk-and-free. */
+	helper_alloc_reset();
 
 	return NULL;
 }

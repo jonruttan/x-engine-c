@@ -210,7 +210,7 @@ static char *test_sexp_comment_null_read(void)
 	x_type_comment_register(p_base, p_base);
 
 	/* Find comment type on type alist */
-	p_type = x_base_field_type_alist(p_base);
+	p_type = x_firstobj(x_base_field_type_alist(p_base));
 	_it_should("comment type is registered",
 		! x_obj_isnil(p_base, p_type));
 	_it_should("comment type has NULL p_read (discard)",
