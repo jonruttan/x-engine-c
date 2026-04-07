@@ -428,10 +428,9 @@ static char *test_type_list_make(void)
 
 x_obj_t *test_prim(x_obj_t *p_base, x_obj_t *p_args)
 {
-	/* Hello, World! */
-	/* puts(x_firststr(x_0(p_args))); */
-
-	return x_0(p_args);
+	/* Spair callable: p_args = (self . actual_args).
+	 * Skip self and return first actual argument. */
+	return x_01(p_args);
 }
 
 x_satom_t test_type_name = x_obj_set(x_type_atom_obj, X_OBJ_FLAG_NONE, { .s = "PRIM" });
