@@ -80,6 +80,10 @@ void test_cleanup(x_obj_t *p_base)
 	}
 }
 
+/* Static handler atom for callable dispatch */
+static x_satom_t delimit_ws_prim = x_obj_set(x_type_atom_obj, X_OBJ_FLAG_NONE,
+	{ .fn = test_token_read_delimit_whitespace });
+
 /*
  * ## Test Runners
  */
@@ -202,7 +206,7 @@ static char *test_sexp_symbol_read_token(void)
 	struct x_type_t type_whitespace = {
 		.p_name = x_mkstr(p_base, "WHITESPACE"),
 		.p_analyse = test_token_read_analyse_whitespace_prim,
-		.p_delimit = x_mkatom(p_base, test_token_read_delimit_whitespace)
+		.p_delimit = (x_obj_t *)delimit_ws_prim
 	};
 
 
