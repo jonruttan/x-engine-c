@@ -182,7 +182,8 @@ static char *test_type_struct_make(void)
 		TEST_TYPE_STRUCT_READ,
 		TEST_TYPE_STRUCT_WRITE,
 		TEST_TYPE_STRUCT_DISPLAY,
-		NULL	/* p_error */
+		NULL,	/* p_error */
+		NULL	/* p_iter */
 	};
 
 	helper_alloc_reset();

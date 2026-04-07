@@ -96,8 +96,7 @@ void test_cleanup(x_obj_t *p_base)
 x_obj_t *test_token_read_analyse_whitespace(x_obj_t *p_base, x_obj_t *p_args);
 x_obj_t *test_token_read_read_whitespace(x_obj_t *p_base, x_obj_t *p_args);
 
-x_satom_t test_token_read_analyse_whitespace_prim = x_obj_set(x_type_atom_obj, X_OBJ_FLAG_NONE, { .fn = test_token_read_analyse_whitespace }),
-	test_token_read_read_whitespace_prim = x_obj_set(x_type_atom_obj, X_OBJ_FLAG_NONE, { .fn = test_token_read_read_whitespace });
+x_satom_t test_token_read_analyse_whitespace_prim = x_obj_set(x_type_atom_obj, X_OBJ_FLAG_NONE, { .fn = test_token_read_analyse_whitespace });
 
 x_obj_t *test_token_read_analyse_whitespace(x_obj_t *p_base, x_obj_t *p_args)
 {
@@ -110,7 +109,6 @@ x_obj_t *test_token_read_analyse_whitespace(x_obj_t *p_base, x_obj_t *p_args)
 
 	if (x_bufferlen(p_buffer) > 1) {
 		x_firstint(p_score) = x_bufferlen(p_buffer) - 1;
-		x_restobj(p_score) = test_token_read_read_whitespace_prim;
 		return p_score;
 	}
 
@@ -277,7 +275,6 @@ x_obj_t *test_token_read_analyse_autoscore(x_obj_t *p_base, x_obj_t *p_args)
 static x_satom_t
 	analyse_whitespace_prim = x_obj_set(x_type_atom_obj, X_OBJ_FLAG_NONE, { .fn = test_token_read_analyse_whitespace }),
 	delimit_whitespace_prim = x_obj_set(x_type_atom_obj, X_OBJ_FLAG_NONE, { .fn = test_token_read_delimit_whitespace }),
-	read_whitespace_prim = x_obj_set(x_type_atom_obj, X_OBJ_FLAG_NONE, { .fn = test_token_read_read_whitespace }),
 	analyse1_prim = x_obj_set(x_type_atom_obj, X_OBJ_FLAG_NONE, { .fn = test_token_read_analyse1 }),
 	analyse_catchall_prim = x_obj_set(x_type_atom_obj, X_OBJ_FLAG_NONE, { .fn = test_token_read_analyse_catchall }),
 	read_catchall_prim = x_obj_set(x_type_atom_obj, X_OBJ_FLAG_NONE, { .fn = test_token_read_read_catchall }),

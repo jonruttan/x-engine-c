@@ -65,8 +65,8 @@
 x_obj_t *x_prim_callcc_register(x_obj_t *p_base, x_obj_t *p_args) { return p_base; }
 #include "src/x-exp/quote.c"
 
-static x_obj_t *x_prim_syscall(x_obj_t *p_base, x_obj_t *p_args) { return NULL; }
-static x_obj_t *x_prim_include(x_obj_t *p_base, x_obj_t *p_args) { return NULL; }
+x_obj_t *x_prim_syscall(x_obj_t *p_base, x_obj_t *p_args) { return NULL; }
+x_obj_t *x_prim_include(x_obj_t *p_base, x_obj_t *p_args) { return NULL; }
 #include "src/x-cli.c"
 
 

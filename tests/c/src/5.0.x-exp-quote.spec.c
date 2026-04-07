@@ -81,7 +81,7 @@ void test_cleanup(x_obj_t *p_base)
 
 static char *test_exp_quote(void)
 {
-	x_obj_t *p_base, *p_prim, *p_list, *p_args, *p_ret;
+	x_obj_t *p_base, *p_list, *p_ret;
 
 	helper_alloc_reset();
 

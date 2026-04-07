@@ -334,7 +334,7 @@ static char *test_make_buffer(void)
 {
 	x_obj_t *p_base, *p_obj;
 
-	p_obj = x_make_buffer(p_base, X_TEST_BUFFER_FLAG, X_TEST_BUFFER_VALUE);
+	p_obj = x_make_buffer(NULL, X_TEST_BUFFER_FLAG, X_TEST_BUFFER_VALUE);
 	_it_should("make a Buffer object with flags",
 		p_obj != NULL
 		&& X_TEST_BUFFER_FLAG == x_obj_flags(p_obj)
@@ -635,7 +635,7 @@ static char *test_type_buffer_read(void)
 {
 	/* TODO: check for file errors */
 	x_obj_t *p_args, *p_buffer, *p_ret;
-	x_char_t *s, buffer[2] = X_TEST_BUFFER_STR_EMPTY;
+	x_char_t *s, buffer[3] = X_TEST_BUFFER_STR_EMPTY;
 
 	s = X_TEST_BUFFER_STR;
 	helper_file_buffer_ptr[TEST_HELPER_FILE_STDIN] = s;
