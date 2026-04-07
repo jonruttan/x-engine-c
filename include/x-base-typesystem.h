@@ -95,6 +95,7 @@ extern x_satom_t x_type_base_obj;
 #define x_error_handler_saved_env(H)		x_firstobj(x_firstobj(x_restobj(H))) /**< [D] Saved environment alist. */
 #define x_error_handler_saved_boundary(H)	x_restobj(x_firstobj(x_restobj(H)))  /**< [D] Saved local boundary. */
 #define x_error_handler_error(H)			x_firstobj(x_restobj(x_restobj(H)))  /**< [D] Error value. */
+#define x_error_handler_line(H)				x_restobj(x_restobj(x_restobj(H)))   /**< [D] Error line (raw int). */
 /** @} */
 
 /**

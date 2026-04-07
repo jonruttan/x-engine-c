@@ -183,6 +183,8 @@ static x_obj_t *x_prim_error(x_obj_t *p_base, x_obj_t *p_args)
 	/* If handler installed, use it. */
 	if ( ! x_obj_isnil(p_base, p_handler)) {
 		x_error_handler_error(p_handler) = p_msg;
+		x_error_handler_line(p_handler)
+			= (x_obj_t *)(x_int_t)x_atomint(x_firstobj(x_base_field_line(p_base)));
 		x_firstobj(x_base_field_env_alist(p_base))
 			= x_error_handler_saved_env(p_handler);
 		x_base_field_env_local_boundary(p_base)

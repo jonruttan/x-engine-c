@@ -170,6 +170,11 @@ x_obj_t * init(x_obj_t *p_base, x_char_t *buffer)
 	/* Create base object. */
 	p_base = x_base_ts_make(NULL, NULL);
 
+	/* Enable 1 metadata slot per object for source line tracking.
+	 * Must be set before the first buffer is created so the buffer
+	 * itself gets X_OBJ_FLAG_META (needed for newline counting). */
+	x_atomint(x_firstobj(x_base_field_obj_meta_extra(p_base))) = 1;
+
 	/* Register types for parsing. */
 	x_type_prim_register(p_base, p_base);
 	x_type_operative_register(p_base, p_base);

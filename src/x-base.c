@@ -228,6 +228,10 @@ void x_base_error(x_obj_t *p_base, x_char_t *message, x_obj_t *p_obj)
 		x_atomstr(err_str) = message;
 		x_error_handler_error(p_handler) = (x_obj_t *)err_str;
 
+		/* Save error line — raw int in rest slot, zero allocation */
+		x_error_handler_line(p_handler)
+			= (x_obj_t *)(x_int_t)x_atomint(x_firstobj(x_base_field_line(p_base)));
+
 		x_firstobj(x_base_field_env_alist(p_base))
 			= x_error_handler_saved_env(p_handler);
 		x_base_field_env_local_boundary(p_base)

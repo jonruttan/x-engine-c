@@ -400,10 +400,34 @@ x_obj_t *x_prim_repl(x_obj_t *p_base, x_obj_t *p_args)
 	return NULL;
 }
 
+/**
+ * Return the source line at which the most recent error was signaled.
+ *
+ * Reads the line number saved in the current error handler's line slot
+ * (set by x_base_error before longjmp).  Returns 0 outside a guard handler.
+ *
+ * x-lang form: @code (error-line) @endcode
+ *
+ * @param p_base  Execution context.
+ * @param p_args  Unused.
+ * @return Integer line number.
+ */
+static x_obj_t *x_prim_error_line(x_obj_t *p_base, x_obj_t *p_args)
+{
+	x_obj_t *p_handler;
+	(void)p_args;
+
+	p_handler = x_firstobj(x_base_field_error_handler(p_base));
+	if (x_obj_isnil(p_base, p_handler))
+		return x_mkint(p_base, 0);
+
+	return x_mkint(p_base, (x_int_t)x_error_handler_line(p_handler));
+}
+
 /** Register I/O primitives into the environment.
  *
  *  Binds: write, display, read, read-char, write-to-str, display-to-str,
- *  heap-mark, heap-sweep, heap-count, gc-pin!.
+ *  heap-mark, heap-sweep, heap-count, gc-pin!, error-line.
  *  Conditionally binds clock (when X_CLOCK defined).
  *  Also binds "applicative" as a wrapped combiner for atomic execution.
  *
@@ -423,7 +447,8 @@ x_obj_t *x_prim_io_register(x_obj_t *p_base, x_obj_t *p_args)
 		{ "heap-mark", x_prim_heap_mark },
 		{ "heap-sweep", x_prim_heap_sweep },
 		{ "heap-count", x_prim_heap_count },
-		{ "gc-pin!", x_prim_system_mark }
+		{ "gc-pin!", x_prim_system_mark },
+		{ "error-line", x_prim_error_line }
 	};
 #ifdef X_CLOCK
 	static const x_callable_entry_t clock_entry[] = {

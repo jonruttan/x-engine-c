@@ -88,6 +88,12 @@ eval_start:
 		x_atomint(x_firstobj(x_base_field_profile_evals(p_base)))++;
 	p_exp = x_firstobj(x_eval_arg_exp(p_args));
 
+	/* Update base line counter from expression's source line metadata.
+	 * After this, current-line reflects the eval site (useful for errors). */
+	if (p_exp != NULL && (x_obj_flags(p_exp) & X_OBJ_FLAG_META))
+		x_atomint(x_firstobj(x_base_field_line(p_base)))
+			= x_obj_meta_i(p_exp, 0).i;
+
 #ifdef X_COV
 	if (p_exp != NULL)
 		x_obj_flags(p_exp) |= X_OBJ_FLAG_COV;
