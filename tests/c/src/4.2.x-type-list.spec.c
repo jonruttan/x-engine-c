@@ -225,7 +225,7 @@ static char *test_type_list_struct(void)
 
 	helper_alloc_reset();
 
-	p_base = x_mklist(p_base, NULL, NULL);
+	p_base = x_base_ts_make(NULL, NULL);
 	p_type = x_type_list_struct(p_base, p_base);
 	_it_should("return List Type list",
 		! x_obj_isnil(p_base, p_type)
