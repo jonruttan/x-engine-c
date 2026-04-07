@@ -1,6 +1,6 @@
 /**
  * @file pair.c
- * @brief Pair (cons cell) type implementation.
+ * @brief Pair type implementation.
  * @author Jon Ruttan (jonruttan@gmail.com)
  * @copyright 2021 Jon Ruttan
  * @license MIT No Attribution (MIT-0)
@@ -30,8 +30,8 @@ x_satom_t x_type_pair_name = x_obj_set(x_type_atom_obj, X_OBJ_FLAG_NONE, { .s = 
  *
  * @param p_base  x_obj_t* -- Execution context
  * @param flags   x_obj_flag_t -- Object flags
- * @param p1      void* -- First element (car)
- * @param p2      void* -- Rest element (cdr)
+ * @param p1      void* -- First element
+ * @param p2      void* -- Rest element
  * @return x_obj_t* -- New heap-allocated pair
  */
 x_obj_t *x_make_pair(x_obj_t *p_base, x_obj_flag_t flags, void *p1, void *p2)

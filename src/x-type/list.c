@@ -217,7 +217,7 @@ x_obj_t *x_type_list_call(x_obj_t *p_base, x_obj_t *p_args)
 /**
  * Eval handler -- resolve operator and dispatch through callable protocol.
  *
- * Evaluates the first element (car) of the list expression to obtain a
+ * Evaluates the first element of the list expression to obtain a
  * procedure or operative, then dispatches the rest of the list as
  * arguments through x_callable_call().  The expression is rooted on the
  * eval list to protect it from GC during evaluation.
@@ -232,9 +232,9 @@ x_obj_t *x_type_list_call(x_obj_t *p_base, x_obj_t *p_args)
 x_obj_t *x_type_list_eval(x_obj_t *p_base, x_obj_t *p_args)
 {
 	x_obj_t *p_exp = x_firstobj(x_eval_arg_exp(p_args)), *p_proc;
-	x_satom_t car_atom = x_obj_set(NULL, X_OBJ_FLAG_NONE, { x_firstobj(p_exp) });
+	x_satom_t first_atom = x_obj_set(NULL, X_OBJ_FLAG_NONE, { x_firstobj(p_exp) });
 	x_spair_t eval_args[1] = {
-		x_obj_set(NULL, X_OBJ_FLAG_NONE, { car_atom }, { NULL })
+		x_obj_set(NULL, X_OBJ_FLAG_NONE, { first_atom }, { NULL })
 	},
 	proc_exp = x_obj_set(NULL, X_OBJ_FLAG_NONE, { NULL }, { x_restobj(p_exp) }),
 	prim_args = x_obj_set(NULL, X_OBJ_FLAG_NONE, { NULL }, { (x_obj_t *)proc_exp });

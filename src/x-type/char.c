@@ -50,7 +50,7 @@ x_obj_t *x_make_char(x_obj_t *p_base, x_obj_flag_t flags, x_char_t c)
 #define sym(S)		x_mksymbol(p_base, (x_char_t *)(S))
 #define num(N)		x_mkint(p_base, (N))
 #define entry(S,N)	x_mkspair(p_base, X_OBJ_FLAG_NONE, sym(S), num(N))
-#define cons(A,B)	x_mkspair(p_base, X_OBJ_FLAG_NONE, (A), (B))
+#define pair(A,B)	x_mkspair(p_base, X_OBJ_FLAG_NONE, (A), (B))
 
 /**
  * Build the character type descriptor struct.
@@ -75,15 +75,15 @@ x_obj_t *x_type_char_struct(x_obj_t *p_base, x_obj_t *p_obj)
 	type.p_write = x_sexp_char_write_prim;
 	type.p_display = x_sexp_char_display_prim;
 	type.p_data =
-		cons(entry("alarm", '\a'),
-		cons(entry("backspace", '\b'),
-		cons(entry("delete", 127),
-		cons(entry("escape", '\033'),
-		cons(entry("newline", '\n'),
-		cons(entry("null", '\0'),
-		cons(entry("return", '\r'),
-		cons(entry("space", ' '),
-		cons(entry("tab", '\t'),
+		pair(entry("alarm", '\a'),
+		pair(entry("backspace", '\b'),
+		pair(entry("delete", 127),
+		pair(entry("escape", '\033'),
+		pair(entry("newline", '\n'),
+		pair(entry("null", '\0'),
+		pair(entry("return", '\r'),
+		pair(entry("space", ' '),
+		pair(entry("tab", '\t'),
 		NULL)))))))));
 
 	return x_type_struct_make(p_base, type);
@@ -92,7 +92,7 @@ x_obj_t *x_type_char_struct(x_obj_t *p_base, x_obj_t *p_obj)
 #undef sym
 #undef num
 #undef entry
-#undef cons
+#undef pair
 
 /**
  * Register or retrieve the character type on the base context.

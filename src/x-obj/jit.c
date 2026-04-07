@@ -26,7 +26,7 @@ x_obj_t *jit_mkint(x_obj_t *p_base, long value)
 }
 
 /**
- * Allocate a pair (cons cell) for JIT code.
+ * Allocate a pair for JIT code.
  *
  * @param p_base  x_obj_t* -- Execution context
  * @param a       x_obj_t* -- First element
@@ -39,7 +39,7 @@ x_obj_t *jit_mkpair(x_obj_t *p_base, x_obj_t *a, x_obj_t *b)
 }
 
 /**
- * Extract the first element of a pair (car).
+ * Extract the first element of a pair.
  *
  * @param p  x_obj_t* -- Pair object
  * @return First element
@@ -50,7 +50,7 @@ x_obj_t *jit_firstobj(x_obj_t *p)
 }
 
 /**
- * Extract the rest element of a pair (cdr).
+ * Extract the rest element of a pair.
  *
  * @param p  x_obj_t* -- Pair object
  * @return Rest element

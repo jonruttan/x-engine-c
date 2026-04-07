@@ -116,8 +116,6 @@ TESTS=$(PATH_TESTS_C)/src/*.spec.c
 endif
 TEST_CFLAGS=$(CFLAGS) -fno-common -g -Og -I. -DTESTS
 
-# Auto-discover language personality tests
-LANGS=$(patsubst lang/%/tests/spec-runner.sh,%,$(wildcard lang/*/tests/spec-runner.sh))
 
 # Coverage
 COVERAGE_DIR=.coverage
@@ -163,18 +161,7 @@ test-x: $(EXECUTABLE) ## Run x-lang tests
 	sh tests/x/spec-runner.sh
 .PHONY: test-x
 
-test-lang: $(EXECUTABLE) ## Run language tests (LANG=name for one, or all)
-ifdef LANG
-	sh lang/$(LANG)/tests/spec-runner.sh
-else
-	@for lang in $(LANGS); do \
-		echo "== $$lang =="; \
-		sh lang/$$lang/tests/spec-runner.sh || exit 1; \
-	done
-endif
-.PHONY: test-lang
-
-test: test-c test-x test-lang ## Run all tests
+test: test-c test-x ## Run all tests
 .PHONY: test
 
 # ============================================================================
@@ -193,23 +180,10 @@ test-x-cov: cov-clean $(EXECUTABLE) ## x-lang tests with coverage
 	gcovr -r . --filter 'src/' --print-summary --html-details $(COVERAGE_DIR)/index.html
 .PHONY: test-x-cov
 
-test-lang-cov: cov-clean $(EXECUTABLE) ## Language tests with coverage
-	$(MAKE) clean
-	CFLAGS="-Og --coverage" $(MAKE) $(EXECUTABLE)
-	@for lang in $(LANGS); do \
-		sh lang/$$lang/tests/spec-runner.sh || exit 1; \
-	done
-	mkdir -p $(COVERAGE_DIR)
-	gcovr -r . --filter 'src/' --print-summary --html-details $(COVERAGE_DIR)/index.html
-.PHONY: test-lang-cov
-
 test-cov: cov-clean ## All tests with coverage
 	$(MAKE) clean
 	CFLAGS="-Og --coverage" $(MAKE) $(EXECUTABLE)
 	sh tests/x/spec-runner.sh
-	@for lang in $(LANGS); do \
-		sh lang/$$lang/tests/spec-runner.sh || exit 1; \
-	done
 	CFLAGS="$(TEST_CFLAGS) -Og --coverage" RUNNER=command sh $(PATH_TESTS_C)/test-runner/test-runner.sh $(TESTS)
 	mkdir -p $(COVERAGE_DIR)
 	gcovr -r . --filter 'src/' --print-summary --html-details $(COVERAGE_DIR)/index.html
@@ -298,12 +272,10 @@ watch: ## Watch for changes
 install: $(EXECUTABLE) lib/$(EXECUTABLE).x $(EXECUTABLE).sh ## Install to PREFIX
 	install -d -m 0755 $(BINDIR)
 	install -d -m 0755 $(LIBDIR)/lib
-	install -d -m 0755 $(LIBDIR)/lang
 	install $C -m 0755 $(EXECUTABLE) $(BINDIR)
 	install $C -m 0755 $(EXECUTABLE).sh $(BINDIR)
 	strip $(BINDIR)/$(EXECUTABLE)
 	install $C -m 0644 lib/* $(LIBDIR)/lib
-	cp -R lang/* $(LIBDIR)/lang
 .PHONY: install
 
 uninstall: ## Uninstall from PREFIX

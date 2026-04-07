@@ -3,7 +3,7 @@
 
 /**
  * @file pair.h
- * @brief Pair (cons cell) type for the x-lang type system.
+ * @brief Pair type for the x-lang type system.
  * @author Jon Ruttan (jonruttan@gmail.com)
  * @copyright 2021 Jon Ruttan
  * @license MIT No Attribution (MIT-0)
