@@ -348,7 +348,7 @@ static char *test_core_guard(void)
 	_it_should("guard returns body result when no error",
 		x_atomint(p_result) == 42);
 	_it_should("guard pops handler",
-		x_firstobj(x_base_field_error_handler(p_base))) == NULL);
+		x_firstobj(x_base_field_error_handler(p_base)) == NULL);
 
 	test_cleanup(p_base);
 	return NULL;
@@ -718,7 +718,7 @@ static char *test_core_error_guard_catch(void)
 		_it_should("guard handler receives error value",
 			x_atomint(p_result) == 42);
 		_it_should("guard pops handler after catch",
-			x_firstobj(x_base_field_error_handler(p_base))) == NULL);
+			x_firstobj(x_base_field_error_handler(p_base)) == NULL);
 	}
 
 	test_cleanup(p_base);
@@ -771,6 +771,7 @@ static void test_error_hook(x_obj_t *p_base, x_char_t *msg, x_obj_t *p_obj)
 {
 	test_error_hook_called = 1;
 }
+static x_satom_t test_error_hook_atom = x_obj_set(NULL, X_OBJ_FLAG_NONE, { .v = (void *)test_error_hook });
 
 static char *test_core_error_no_handler_str(void)
 {
@@ -778,6 +779,9 @@ static char *test_core_error_no_handler_str(void)
 
 	p_base = x_base_ts_make(NULL, NULL);
 	x_prim_register(p_base, NULL);
+
+	/* Install test error hook */
+	x_firstobj(x_base_field_hook_error(p_base)) = (x_obj_t *)test_error_hook_atom;
 
 	/* No guard handler; string error message */
 	test_error_hook_called = 0;

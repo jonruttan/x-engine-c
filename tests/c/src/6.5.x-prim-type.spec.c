@@ -1053,6 +1053,8 @@ static void test_error_hook_type_passthrough(x_obj_t *p_base, x_char_t *msg, x_o
 		test_error_hook_called_type = 2;
 	}
 }
+static x_satom_t test_error_hook_passthrough_atom = x_obj_set(NULL, X_OBJ_FLAG_NONE,
+	{ .v = (void *)test_error_hook_type_passthrough });
 
 static char *test_type_base_eval_error_no_parent(void)
 {
@@ -1073,6 +1075,10 @@ static char *test_type_base_eval_error_no_parent(void)
 		x_base_env_alist_extend(p_base,
 			x_mkspair(p_base, X_OBJ_FLAG_NONE, x_mksymbol(p_base, "expr"), p_unbound));
 	}
+
+	/* Install passthrough error hook on both bases */
+	x_firstobj(x_base_field_hook_error(p_base)) = (x_obj_t *)test_error_hook_passthrough_atom;
+	x_firstobj(x_base_field_hook_error(p_target)) = (x_obj_t *)test_error_hook_passthrough_atom;
 
 	/* Hook passes first error to x_base_error (longjmp in target),
 	 * intercepts second error (parent has no handler, line 292). */
