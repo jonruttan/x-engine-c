@@ -477,6 +477,28 @@ static x_obj_t *x_prim_buffer_token(x_obj_t *p_base, x_obj_t *p_args)
 }
 
 /**
+ * Return the last character consumed by the tokenizer buffer.
+ *
+ * x-lang form: @code (buffer-last-char buffer) @endcode
+ *
+ * @param p_base  Execution context.
+ * @param p_args  Unevaluated: (self buffer).
+ * @return Integer character code, or NULL if buffer is empty.
+ */
+static x_obj_t *x_prim_buffer_last_char(x_obj_t *p_base, x_obj_t *p_args)
+{
+	x_obj_t *p_buffer;
+
+	x_eargs(p_base, p_args, 2, NULL, &p_buffer);
+
+	if (x_bufferlen(p_buffer) == 0) {
+		return NULL;
+	}
+
+	return x_mkint(p_base, (x_int_t)x_bufferlastchar(p_buffer));
+}
+
+/**
  * @brief Tokenize a string using a token base's registered types.
  *
  * x-lang form: @code (token-read-string token-base string) @endcode
@@ -670,11 +692,40 @@ static x_obj_t *x_prim_iter(x_obj_t *p_base, x_obj_t *p_args)
 }
 
 /**
+ * Read the next expression from a tokenizer buffer.
+ *
+ * Exposes x_token_read to x-lang so that custom reader hooks (defined
+ * via make-type) can recursively read sub-expressions from the stream.
+ *
+ * x-lang form: @code (token-read buffer) @endcode
+ *
+ * @param p_base  Execution context.
+ * @param p_args  Unevaluated: (self buffer).
+ * @return Parsed expression, or NULL on EOF.
+ */
+static x_obj_t *x_prim_token_read(x_obj_t *p_base, x_obj_t *p_args)
+{
+	x_obj_t *p_buffer;
+	x_spair_t read_args[1];
+
+	x_eargs(p_base, p_args, 2, NULL, &p_buffer);
+
+	read_args[0][X_OBJ_META_TYPE].p = NULL;
+	read_args[0][X_OBJ_META_FLAGS].i = X_OBJ_FLAG_NONE;
+	x_firstobj((x_obj_t *)read_args) = p_buffer;
+	x_restobj((x_obj_t *)read_args) = p_base;
+
+	x_type_buffer_retain(p_base, (x_obj_t *)read_args);
+
+	return x_token_read(p_base, (x_obj_t *)read_args);
+}
+
+/**
  * @brief Register all type-system and sandboxing primitives.
  *
  * Binds: make-type, base-make-type, make-instance, make-obj, obj-ref,
  * obj-set!, type?, type-of, type-name, buffer-token, make-token-base,
- * make-base, base-eval, base-bind, token-read-string, iter.
+ * make-base, base-eval, base-bind, token-read, token-read-string, iter.
  *
  * @param p_base  Execution context to bind primitives into.
  * @param p_args  Unused.
@@ -693,10 +744,12 @@ x_obj_t *x_prim_type_register(x_obj_t *p_base, x_obj_t *p_args)
 		{ "type-of", x_prim_type_of },
 		{ "type-name", x_prim_type_name },
 		{ "buffer-token", x_prim_buffer_token },
+		{ "buffer-last-char", x_prim_buffer_last_char },
 		{ "make-token-base", x_prim_make_token_base },
 		{ "make-base", x_prim_make_base },
 		{ "base-eval", x_prim_base_eval },
 		{ "base-bind", x_prim_base_bind },
+		{ "token-read", x_prim_token_read },
 		{ "token-read-string", x_prim_token_read_string },
 		{ "iter", x_prim_iter }
 	};
