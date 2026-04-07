@@ -139,11 +139,11 @@ static char *test_body_eval_tco(void)
 	 * Save-stack entries are ((env . boundary) . (bst . flag1)). */
 	p_base = x_base_ts_make(NULL, NULL);
 	p_saved_env = x_mkspair(p_base, X_OBJ_FLAG_NONE, x_mksatom(p_base, X_OBJ_FLAG_NONE, 99), NULL);
-	x_firstobj(x_base_field_save_stack(p_base)) = x_mkspair(p_base, X_OBJ_FLAG_NONE,
+	x_base_field_save_stack(p_base) = x_mkspair(p_base, X_OBJ_FLAG_NONE,
 		x_mkspair(p_base, X_OBJ_FLAG_NONE,
 			x_mkspair(p_base, X_OBJ_FLAG_NONE, p_saved_env, NULL),
 			x_mkspair(p_base, X_OBJ_FLAG_NONE, NULL, NULL)),
-		x_firstobj(x_base_field_save_stack(p_base)));
+		x_base_field_save_stack(p_base));
 	x_firstobj(x_base_field_env_alist(p_base)) = NULL;
 	p_result = x_eval_body_tco(p_base, NULL);
 	_it_should("restore env for nil body",
@@ -154,11 +154,11 @@ static char *test_body_eval_tco(void)
 	/* single form sets tco_expr and tco_env, pops save-stack */
 	p_base = x_base_ts_make(NULL, NULL);
 	p_saved_env = x_mkspair(p_base, X_OBJ_FLAG_NONE, x_mksatom(p_base, X_OBJ_FLAG_NONE, 88), NULL);
-	x_firstobj(x_base_field_save_stack(p_base)) = x_mkspair(p_base, X_OBJ_FLAG_NONE,
+	x_base_field_save_stack(p_base) = x_mkspair(p_base, X_OBJ_FLAG_NONE,
 		x_mkspair(p_base, X_OBJ_FLAG_NONE,
 			x_mkspair(p_base, X_OBJ_FLAG_NONE, p_saved_env, NULL),
 			x_mkspair(p_base, X_OBJ_FLAG_NONE, NULL, NULL)),
-		x_firstobj(x_base_field_save_stack(p_base)));
+		x_base_field_save_stack(p_base));
 	p_body = x_mkspair(p_base, X_OBJ_FLAG_NONE, x_mksatom(p_base, X_OBJ_FLAG_NONE, 42), NULL);
 	x_firstobj(x_base_field_tco_env(p_base)) = NULL;
 	p_result = x_eval_body_tco(p_base, p_body);
@@ -166,7 +166,7 @@ static char *test_body_eval_tco(void)
 		x_firstobj(x_base_field_tco_expr(p_base)) != NULL
 		&& x_atomint(x_firstobj(x_base_field_tco_expr(p_base))) == 42);
 	_it_should("set tco_env compound with saved_env",
-		x_firstobj(x_firstobj(x_base_field_tco_env(p_base))) == p_saved_env);
+		x_firstobj(x_firstobj(x_firstobj(x_base_field_tco_env(p_base)))) == p_saved_env);
 	_it_should("return NULL when setting tco_expr", p_result == NULL);
 	x_firstobj(x_base_field_tco_expr(p_base)) = NULL;
 	x_firstobj(x_base_field_tco_env(p_base)) = NULL;
@@ -175,11 +175,11 @@ static char *test_body_eval_tco(void)
 	/* nil last form: pops save-stack, restores env, no TCO */
 	p_base = x_base_ts_make(NULL, NULL);
 	p_saved_env = x_mkspair(p_base, X_OBJ_FLAG_NONE, x_mksatom(p_base, X_OBJ_FLAG_NONE, 77), NULL);
-	x_firstobj(x_base_field_save_stack(p_base)) = x_mkspair(p_base, X_OBJ_FLAG_NONE,
+	x_base_field_save_stack(p_base) = x_mkspair(p_base, X_OBJ_FLAG_NONE,
 		x_mkspair(p_base, X_OBJ_FLAG_NONE,
 			x_mkspair(p_base, X_OBJ_FLAG_NONE, p_saved_env, NULL),
 			x_mkspair(p_base, X_OBJ_FLAG_NONE, NULL, NULL)),
-		x_firstobj(x_base_field_save_stack(p_base)));
+		x_base_field_save_stack(p_base));
 	p_body = x_mkspair(p_base, X_OBJ_FLAG_NONE, NULL, NULL);
 	p_result = x_eval_body_tco(p_base, p_body);
 	_it_should("restore env for nil last form",
@@ -192,11 +192,11 @@ static char *test_body_eval_tco(void)
 	/* multi-form body: evals all but last, sets tco_expr for last */
 	p_base = x_base_ts_make(NULL, NULL);
 	p_saved_env = x_mkspair(p_base, X_OBJ_FLAG_NONE, x_mksatom(p_base, X_OBJ_FLAG_NONE, 44), NULL);
-	x_firstobj(x_base_field_save_stack(p_base)) = x_mkspair(p_base, X_OBJ_FLAG_NONE,
+	x_base_field_save_stack(p_base) = x_mkspair(p_base, X_OBJ_FLAG_NONE,
 		x_mkspair(p_base, X_OBJ_FLAG_NONE,
 			x_mkspair(p_base, X_OBJ_FLAG_NONE, p_saved_env, NULL),
 			x_mkspair(p_base, X_OBJ_FLAG_NONE, NULL, NULL)),
-		x_firstobj(x_base_field_save_stack(p_base)));
+		x_base_field_save_stack(p_base));
 	p_body = x_mkspair(p_base, X_OBJ_FLAG_NONE, x_mksatom(p_base, X_OBJ_FLAG_NONE, 10),
 		x_mkspair(p_base, X_OBJ_FLAG_NONE, x_mksatom(p_base, X_OBJ_FLAG_NONE, 20),
 		x_mkspair(p_base, X_OBJ_FLAG_NONE, x_mksatom(p_base, X_OBJ_FLAG_NONE, 30), NULL)));
@@ -217,11 +217,11 @@ static char *test_body_eval_tco(void)
 		x_obj_t *p_existing_tco_env = x_mkspair(p_base, X_OBJ_FLAG_NONE,
 			x_mksatom(p_base, X_OBJ_FLAG_NONE, 66), NULL);
 		p_saved_env = x_mkspair(p_base, X_OBJ_FLAG_NONE, x_mksatom(p_base, X_OBJ_FLAG_NONE, 55), NULL);
-		x_firstobj(x_base_field_save_stack(p_base)) = x_mkspair(p_base, X_OBJ_FLAG_NONE,
+		x_base_field_save_stack(p_base) = x_mkspair(p_base, X_OBJ_FLAG_NONE,
 			x_mkspair(p_base, X_OBJ_FLAG_NONE,
 				x_mkspair(p_base, X_OBJ_FLAG_NONE, p_saved_env, NULL),
 				x_mkspair(p_base, X_OBJ_FLAG_NONE, NULL, NULL)),
-			x_firstobj(x_base_field_save_stack(p_base)));
+			x_base_field_save_stack(p_base));
 		p_body = x_mkspair(p_base, X_OBJ_FLAG_NONE, x_mksatom(p_base, X_OBJ_FLAG_NONE, 42), NULL);
 		x_firstobj(x_base_field_tco_env(p_base)) = p_existing_tco_env;
 		p_result = x_eval_body_tco(p_base, p_body);

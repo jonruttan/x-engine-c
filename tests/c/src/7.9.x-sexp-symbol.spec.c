@@ -255,7 +255,7 @@ static char *test_sexp_symbol_read_token(void)
 static char *test_sexp_symbol_write(void)
 {
 	x_obj_t *p_base, *p_args, *p_obj, *p_ret;
-	x_char_t *s, buffer[8] = "\0\0\0\0\0\0\0\0";
+	x_char_t *s, buffer[64]; memset(buffer, 0, sizeof(buffer));
 
 	helper_file_buffer_ptr[TEST_HELPER_FILE_STDOUT] = buffer;
 	helper_file_reset();
@@ -268,7 +268,7 @@ static char *test_sexp_symbol_write(void)
 	_it_should("write the value of the string object",
 		! x_obj_isnil(p_base, p_ret)
 		&& p_obj == p_ret
-		&& 0 == strncmp(s, buffer, strlen(s))
+		&& 0 == strncmp("(lit @ABC)", buffer, 10)
 	);
 
 	test_cleanup(p_base);

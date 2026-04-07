@@ -75,7 +75,9 @@ void test_cleanup(x_obj_t *p_base)
 
 x_obj_t *list_iter_prim(x_obj_t *p_base, x_obj_t *p_args)
 {
-	x_obj_t *p_iter = x_firstobj(p_args),
+	/* Spair callable: p_args = (self . actual_args).
+	 * Skip self to get the iterator. */
+	x_obj_t *p_iter = x_firstobj(x_restobj(p_args)),
 		*p_obj = x_firstobj(x_iterval(p_iter));
 
 	x_iterval(p_iter) = x_restobj(x_iterval(p_iter));
