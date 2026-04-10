@@ -692,6 +692,43 @@ static x_obj_t *x_prim_iter(x_obj_t *p_base, x_obj_t *p_args)
 }
 
 /**
+ * Create a read-only string buffer for tokenization.
+ *
+ * x-lang form: @code (make-string-buffer token-base string) @endcode
+ *
+ * Creates a buffer from a string that can be passed to token-read
+ * for incremental tokenization.
+ *
+ * @param p_base  Execution context.
+ * @param p_args  Unevaluated: (self token-base string).
+ * @return Buffer object suitable for token-read.
+ */
+static x_obj_t *x_prim_make_string_buffer(x_obj_t *p_base, x_obj_t *p_args)
+{
+	x_obj_t *p_token_base, *p_str, *p_buffer;
+	x_char_t *str, *buf;
+	x_int_t len;
+
+	x_eargs(p_base, p_args, 3, NULL, &p_token_base, &p_str);
+	str = x_strval(p_str);
+	len = x_lib_strlen(str);
+	buf = (x_char_t *)x_sys_malloc(len + 1);
+
+	x_lib_memcpy(buf, str, len);
+	buf[len] = '\0';
+
+	p_buffer = x_mkfbufferown(p_token_base, X_OBJ_FLAG_RO, buf);
+	x_bufferwrite(p_buffer) = x_bufferval(p_buffer) + len;
+
+	if (x_atomint(x_firstobj(x_base_field_obj_meta_extra(p_base))) > 0
+			&& (x_obj_flags(p_buffer) & X_OBJ_FLAG_META)) {
+		x_obj_meta_i(p_buffer, 0).i = 1;
+	}
+
+	return p_buffer;
+}
+
+/**
  * Read the next expression from a tokenizer buffer.
  *
  * Exposes x_token_read to x-lang so that custom reader hooks (defined
@@ -751,6 +788,7 @@ x_obj_t *x_prim_type_register(x_obj_t *p_base, x_obj_t *p_args)
 		{ "base-bind", x_prim_base_bind },
 		{ "token-read", x_prim_token_read },
 		{ "token-read-string", x_prim_token_read_string },
+		{ "make-string-buffer", x_prim_make_string_buffer },
 		{ "iter", x_prim_iter }
 	};
 
