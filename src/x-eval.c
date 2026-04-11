@@ -18,6 +18,10 @@
 #include "x-obj.h"
 #include "x-prim.h"
 #include "x-type.h"
+
+/** SIGINT flag -- set by signal handler, checked in TCO trampoline. */
+extern x_satom_t x_sigint_flag;
+
 #include "x-type/prim.h"
 
 /**
@@ -84,6 +88,16 @@ x_obj_t *x_eval(x_obj_t *p_base, x_obj_t *p_args)
 	int trampolining = 0;
 
 eval_start:
+	/* SIGINT: throw STOP if a guard is active.
+	 * Volatile cast forces re-read from memory; without it
+	 * -O2 hoists the read out of the goto loop. */
+	if (x_base_isset(p_base)
+		&& *(volatile x_int_t *)&x_atomint(x_sigint_flag)
+		&& ! x_obj_isnil(p_base,
+			x_firstobj(x_base_field_error_handler(p_base)))) {
+		x_atomint(x_sigint_flag) = 0;
+		x_base_error(p_base, "STOP", NULL);
+	}
 	if (x_base_isset(p_base))
 		x_atomint(x_firstobj(x_base_field_profile_evals(p_base)))++;
 	p_exp = x_firstobj(x_eval_arg_exp(p_args));
@@ -142,6 +156,7 @@ eval_start:
 		x_firstobj(x_eval_arg_exp(p_args)) = x_firstobj(x_base_field_tco_expr(p_base));
 		x_firstobj(x_base_field_tco_expr(p_base)) = NULL;
 		x_atomint(x_firstobj(x_base_field_profile_tco(p_base)))++;
+
 		goto eval_start;
 	}
 

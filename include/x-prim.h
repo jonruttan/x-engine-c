@@ -128,6 +128,9 @@ typedef struct {
 	x_fn_t fn;                             /**< C primitive function pointer. */
 } x_callable_entry_t;
 
+/** Bind a named symbol to an arbitrary value in the global environment. */
+void x_value_bind(x_obj_t *p_base, x_char_t *name, x_obj_t *p_val);
+
 /** Bind a single C function as a named callable in the environment. */
 void x_callable_bind(x_obj_t *p_base, x_char_t *name, x_fn_t fn);
 
@@ -167,6 +170,9 @@ x_obj_t *x_prim_ffi_register(x_obj_t *p_base, x_obj_t *p_args);
 
 /** Register call/cc continuation primitives. */
 x_obj_t *x_prim_callcc_register(x_obj_t *p_base, x_obj_t *p_args);
+
+/** Register signal handling primitives and %sigint-flag. */
+x_obj_t *x_prim_signal_register(x_obj_t *p_base, x_obj_t *p_args);
 
 /** Initialize the call/cc subsystem. */
 void x_callcc_init(void);

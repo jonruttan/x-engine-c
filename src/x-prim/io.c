@@ -464,14 +464,8 @@ x_obj_t *x_prim_io_register(x_obj_t *p_base, x_obj_t *p_args)
 #endif /* X_CLOCK */
 
 	/* applicative: wrapped so args are pre-evaluated */
-	{
-		x_obj_t *p_sym = x_make_symbol(p_base, X_OBJ_FLAG_NONE,
-			"applicative"),
-			*p_prim = x_mkprim(p_base, x_prim_atomic),
-			*p_wrapped = x_mkwrap(p_base, p_prim),
-			*p_pair = x_mkspair(p_base, X_OBJ_FLAG_NONE, p_sym, p_wrapped);
-		x_base_env_alist_extend(p_base, p_pair);
-	}
+	x_value_bind(p_base, "applicative",
+		x_mkwrap(p_base, x_mkprim(p_base, x_prim_atomic)));
 
 	return p_base;
 }

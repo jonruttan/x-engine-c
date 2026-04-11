@@ -497,6 +497,7 @@ x_obj_t *x_eval_tco_trampoline(x_obj_t *p_base, x_obj_t *p_result)
  *       by FFI registration.  All bindings created here are permanent
  *       globals that survive scope changes.
  *
+ * @see x_value_bind          -- lower-level helper that binds any value
  * @see x_callable_bind_table -- batch registration of multiple primitives
  * @see x_prim_define         -- x-lang-level def with similar BST insertion
  */
@@ -505,6 +506,38 @@ void x_callable_bind(x_obj_t *p_base, x_char_t *name, x_fn_t fn)
 	x_obj_t *p_sym = x_make_symbol(p_base, X_OBJ_FLAG_NONE, name),
 		*p_prim = x_mkprim(p_base, fn),
 		*p_pair = x_mkspair(p_base, X_OBJ_FLAG_NONE, p_sym, p_prim);
+
+	x_base_env_alist_extend(p_base, p_pair);
+
+	x_base_field_env_global_tree(p_base) = x_alist_bst_insert(
+		p_base, x_base_field_env_global_tree(p_base), p_pair);
+	x_base_field_env_local_boundary(p_base)
+		= x_firstobj(x_base_field_env_alist(p_base));
+}
+
+/**
+ * Bind a named symbol to an arbitrary value in the global environment.
+ *
+ * Creates a (symbol . value) pair, prepends it to the env alist,
+ * inserts it into the global BST, and advances the local boundary.
+ *
+ * @param p_base  x_obj_t* -- Execution context
+ * @param name    x_char_t* -- Symbol name to bind
+ * @param p_val   x_obj_t* -- Value to bind
+ *
+ * @see x_callable_bind -- convenience wrapper for binding C primitives
+ */
+void x_value_bind(x_obj_t *p_base, x_char_t *name, x_obj_t *p_val)
+{
+	x_obj_t *p_sym, *p_pair;
+
+	/* Root p_val on the eval list so GC won't collect it while
+	 * x_make_symbol / x_mkspair allocate. */
+	x_obj_push_field(p_base, &x_base_field_eval_list(p_base),
+		p_val, X_OBJ_FLAG_NONE);
+	p_sym = x_make_symbol(p_base, X_OBJ_FLAG_NONE, name);
+	p_pair = x_mkspair(p_base, X_OBJ_FLAG_NONE, p_sym, p_val);
+	x_obj_pop_field(p_base, &x_base_field_eval_list(p_base));
 
 	x_base_env_alist_extend(p_base, p_pair);
 
@@ -550,29 +583,11 @@ void x_callable_bind_table(x_obj_t *p_base, const x_callable_entry_t *table, int
 x_obj_t *x_prim_register(x_obj_t *p_base, x_obj_t *p_args)
 {
 	/* Bind #t and #f as boolean singletons, cache in base. */
-	{
-		x_obj_t *p_t = (x_obj_t *)&x_true_obj,
-			*p_f = (x_obj_t *)&x_false_obj,
-			*p_pair;
+	x_value_bind(p_base, x_atomstr(x_true_obj), (x_obj_t *)&x_true_obj);
+	x_firstobj(x_base_field_true(p_base)) = (x_obj_t *)&x_true_obj;
 
-		p_pair = x_mkspair(p_base, X_OBJ_FLAG_NONE,
-			x_mksymbol(p_base, x_atomstr(x_true_obj)), p_t);
-		x_base_env_alist_extend(p_base, p_pair);
-		x_base_field_env_global_tree(p_base) = x_alist_bst_insert(
-			p_base, x_base_field_env_global_tree(p_base), p_pair);
-		x_base_field_env_local_boundary(p_base)
-			= x_firstobj(x_base_field_env_alist(p_base));
-		x_firstobj(x_base_field_true(p_base)) = p_t;
-
-		p_pair = x_mkspair(p_base, X_OBJ_FLAG_NONE,
-			x_mksymbol(p_base, x_atomstr(x_false_obj)), p_f);
-		x_base_env_alist_extend(p_base, p_pair);
-		x_base_field_env_global_tree(p_base) = x_alist_bst_insert(
-			p_base, x_base_field_env_global_tree(p_base), p_pair);
-		x_base_field_env_local_boundary(p_base)
-			= x_firstobj(x_base_field_env_alist(p_base));
-		x_firstobj(x_base_field_false(p_base)) = p_f;
-	}
+	x_value_bind(p_base, x_atomstr(x_false_obj), (x_obj_t *)&x_false_obj);
+	x_firstobj(x_base_field_false(p_base)) = (x_obj_t *)&x_false_obj;
 
 	x_prim_core_register(p_base, p_args);
 	x_syntax_quote_register(p_base, p_args);
@@ -586,6 +601,7 @@ x_obj_t *x_prim_register(x_obj_t *p_base, x_obj_t *p_args)
 	x_prim_type_register(p_base, p_args);
 	x_prim_ffi_register(p_base, p_args);
 	x_prim_callcc_register(p_base, p_args);
+	x_prim_signal_register(p_base, p_args);
 
 	return p_base;
 }

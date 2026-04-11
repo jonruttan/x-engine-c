@@ -197,13 +197,7 @@ x_obj_t * init(x_obj_t *p_base, x_char_t *buffer)
 
 #ifdef X_SYSCALL
 	/* Register syscall primitive. */
-	{
-		x_obj_t *p_sym = x_make_symbol(p_base, X_OBJ_FLAG_NONE,
-			(x_char_t *)"syscall");
-		x_obj_t *p_prim = x_mkprim(p_base, x_prim_syscall);
-		x_obj_t *p_pair = x_mkspair(p_base, X_OBJ_FLAG_NONE, p_sym, p_prim);
-		x_base_env_alist_extend(p_base, p_pair);
-	}
+	x_callable_bind(p_base, "syscall", x_prim_syscall);
 #endif
 
 #ifdef X_INCLUDE
@@ -232,7 +226,7 @@ int main(int argc, char *argv[])
 {
 	x_obj_t *p_base;
 	x_char_t buffer[X_CLI_BUFFER_SIZE];
-	x_obj_t *p_sym, *p_list = NULL, *p_pair;
+	x_obj_t *p_list = NULL;
 	int i;
 
 	(void)0; /* stack base set after init creates base */
@@ -251,27 +245,16 @@ int main(int argc, char *argv[])
 	}
 
 	/* Bind args as a list of command-line argument strings. */
-	p_sym = x_make_symbol(p_base, X_OBJ_FLAG_NONE, (x_char_t *)"args");
-
 	for (i = argc - 1; i >= 0; i--) {
 		p_list = x_mklist(p_base, x_mkstr(p_base, (x_char_t *)argv[i]), p_list);
 	}
-
-	p_pair = x_mkspair(p_base, X_OBJ_FLAG_NONE, p_sym, p_list);
-	x_base_env_alist_extend(p_base, p_pair);
+	x_value_bind(p_base, "args", p_list);
 
 	/* Bind platform constants. */
-	p_sym = x_make_symbol(p_base, X_OBJ_FLAG_NONE,
-		(x_char_t *)"x-machine");
-	p_pair = x_mkspair(p_base, X_OBJ_FLAG_NONE, p_sym,
+	x_value_bind(p_base, "x-machine",
 		x_mkstr(p_base, (x_char_t *)X_MACHINE));
-	x_base_env_alist_extend(p_base, p_pair);
-
-	p_sym = x_make_symbol(p_base, X_OBJ_FLAG_NONE,
-		(x_char_t *)"x-version");
-	p_pair = x_mkspair(p_base, X_OBJ_FLAG_NONE, p_sym,
+	x_value_bind(p_base, "x-version",
 		x_mkstr(p_base, (x_char_t *)X_VERSION));
-	x_base_env_alist_extend(p_base, p_pair);
 
 	/* REPL. */
 	x_prim_repl(p_base, NULL);

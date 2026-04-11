@@ -754,11 +754,8 @@ x_obj_t *x_prim_ffi_register(x_obj_t *p_base, x_obj_t *p_args)
 		int i;
 
 		for (i = 0; i < (int)(sizeof(consts) / sizeof(consts[0])); i++) {
-			x_obj_t *p_sym = x_make_symbol(p_base,
-					X_OBJ_FLAG_NONE, consts[i].name),
-				*p_val = x_mkint(p_base, consts[i].val),
-				*p_pair = x_mkspair(p_base, X_OBJ_FLAG_NONE, p_sym, p_val);
-			x_base_env_alist_extend(p_base, p_pair);
+			x_value_bind(p_base, consts[i].name,
+				x_mkint(p_base, consts[i].val));
 		}
 	}
 
