@@ -691,94 +691,6 @@ static x_obj_t *x_prim_iter(x_obj_t *p_base, x_obj_t *p_args)
 	}
 }
 
-/* --- SIGINT flag for Logo REPL break --- */
-
-#include <signal.h>
-
-static volatile sig_atomic_t x_sigint_flag = 0;
-
-static void x_sigint_handler(int sig)
-{
-	(void)sig;
-	x_sigint_flag = 1;
-}
-
-/**
- * Install SIGINT handler that sets a flag instead of killing the process.
- * Uses sigaction with SA_RESTART so interrupted reads resume automatically.
- * x-lang: (sigint-install)
- */
-static x_obj_t *x_prim_sigint_install(x_obj_t *p_base, x_obj_t *p_args)
-{
-	struct sigaction sa;
-	(void)p_args;
-	sa.sa_handler = x_sigint_handler;
-	sa.sa_flags = SA_RESTART;
-	sigemptyset(&sa.sa_mask);
-	sigaction(SIGINT, &sa, NULL);
-	return p_base;
-}
-
-/**
- * Check the SIGINT flag (non-destructive). Returns true if ctrl-c was pressed.
- * x-lang: (sigint-check)
- */
-static x_obj_t *x_prim_sigint_check(x_obj_t *p_base, x_obj_t *p_args)
-{
-	(void)p_args;
-	return x_sigint_flag
-		? x_firstobj(x_base_field_true(p_base))
-		: NULL;
-}
-
-/**
- * Clear the SIGINT flag.
- * x-lang: (sigint-clear)
- */
-static x_obj_t *x_prim_sigint_clear(x_obj_t *p_base, x_obj_t *p_args)
-{
-	(void)p_args;
-	x_sigint_flag = 0;
-	return p_base;
-}
-
-/**
- * Create a read-only string buffer for tokenization.
- *
- * x-lang form: @code (make-string-buffer token-base string) @endcode
- *
- * Creates a buffer from a string that can be passed to token-read
- * for incremental tokenization.
- *
- * @param p_base  Execution context.
- * @param p_args  Unevaluated: (self token-base string).
- * @return Buffer object suitable for token-read.
- */
-static x_obj_t *x_prim_make_string_buffer(x_obj_t *p_base, x_obj_t *p_args)
-{
-	x_obj_t *p_token_base, *p_str, *p_buffer;
-	x_char_t *str, *buf;
-	x_int_t len;
-
-	x_eargs(p_base, p_args, 3, NULL, &p_token_base, &p_str);
-	str = x_strval(p_str);
-	len = x_lib_strlen(str);
-	buf = (x_char_t *)x_sys_malloc(len + 1);
-
-	x_lib_memcpy(buf, str, len);
-	buf[len] = '\0';
-
-	p_buffer = x_mkfbufferown(p_token_base, X_OBJ_FLAG_RO, buf);
-	x_bufferwrite(p_buffer) = x_bufferval(p_buffer) + len;
-
-	if (x_atomint(x_firstobj(x_base_field_obj_meta_extra(p_base))) > 0
-			&& (x_obj_flags(p_buffer) & X_OBJ_FLAG_META)) {
-		x_obj_meta_i(p_buffer, 0).i = 1;
-	}
-
-	return p_buffer;
-}
-
 /**
  * Read the next expression from a tokenizer buffer.
  *
@@ -839,10 +751,6 @@ x_obj_t *x_prim_type_register(x_obj_t *p_base, x_obj_t *p_args)
 		{ "base-bind", x_prim_base_bind },
 		{ "token-read", x_prim_token_read },
 		{ "token-read-string", x_prim_token_read_string },
-		{ "make-string-buffer", x_prim_make_string_buffer },
-		{ "sigint-install", x_prim_sigint_install },
-		{ "sigint-check", x_prim_sigint_check },
-		{ "sigint-clear", x_prim_sigint_clear },
 		{ "iter", x_prim_iter }
 	};
 
