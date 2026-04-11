@@ -705,12 +705,17 @@ static void x_sigint_handler(int sig)
 
 /**
  * Install SIGINT handler that sets a flag instead of killing the process.
+ * Uses sigaction with SA_RESTART so interrupted reads resume automatically.
  * x-lang: (sigint-install)
  */
 static x_obj_t *x_prim_sigint_install(x_obj_t *p_base, x_obj_t *p_args)
 {
+	struct sigaction sa;
 	(void)p_args;
-	signal(SIGINT, x_sigint_handler);
+	sa.sa_handler = x_sigint_handler;
+	sa.sa_flags = SA_RESTART;
+	sigemptyset(&sa.sa_mask);
+	sigaction(SIGINT, &sa, NULL);
 	return p_base;
 }
 
