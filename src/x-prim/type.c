@@ -691,6 +691,43 @@ static x_obj_t *x_prim_iter(x_obj_t *p_base, x_obj_t *p_args)
 	}
 }
 
+/* --- SIGINT flag for Logo REPL break --- */
+
+#include <signal.h>
+
+static volatile sig_atomic_t x_sigint_flag = 0;
+
+static void x_sigint_handler(int sig)
+{
+	(void)sig;
+	x_sigint_flag = 1;
+}
+
+/**
+ * Install SIGINT handler that sets a flag instead of killing the process.
+ * x-lang: (sigint-install)
+ */
+static x_obj_t *x_prim_sigint_install(x_obj_t *p_base, x_obj_t *p_args)
+{
+	(void)p_args;
+	signal(SIGINT, x_sigint_handler);
+	return p_base;
+}
+
+/**
+ * Check and clear the SIGINT flag. Returns true if ctrl-c was pressed.
+ * x-lang: (sigint-check)
+ */
+static x_obj_t *x_prim_sigint_check(x_obj_t *p_base, x_obj_t *p_args)
+{
+	(void)p_args;
+	if (x_sigint_flag) {
+		x_sigint_flag = 0;
+		return x_firstobj(x_base_field_true(p_base));
+	}
+	return NULL;
+}
+
 /**
  * Create a read-only string buffer for tokenization.
  *
@@ -789,6 +826,8 @@ x_obj_t *x_prim_type_register(x_obj_t *p_base, x_obj_t *p_args)
 		{ "token-read", x_prim_token_read },
 		{ "token-read-string", x_prim_token_read_string },
 		{ "make-string-buffer", x_prim_make_string_buffer },
+		{ "sigint-install", x_prim_sigint_install },
+		{ "sigint-check", x_prim_sigint_check },
 		{ "iter", x_prim_iter }
 	};
 
