@@ -720,17 +720,26 @@ static x_obj_t *x_prim_sigint_install(x_obj_t *p_base, x_obj_t *p_args)
 }
 
 /**
- * Check and clear the SIGINT flag. Returns true if ctrl-c was pressed.
+ * Check the SIGINT flag (non-destructive). Returns true if ctrl-c was pressed.
  * x-lang: (sigint-check)
  */
 static x_obj_t *x_prim_sigint_check(x_obj_t *p_base, x_obj_t *p_args)
 {
 	(void)p_args;
-	if (x_sigint_flag) {
-		x_sigint_flag = 0;
-		return x_firstobj(x_base_field_true(p_base));
-	}
-	return NULL;
+	return x_sigint_flag
+		? x_firstobj(x_base_field_true(p_base))
+		: NULL;
+}
+
+/**
+ * Clear the SIGINT flag.
+ * x-lang: (sigint-clear)
+ */
+static x_obj_t *x_prim_sigint_clear(x_obj_t *p_base, x_obj_t *p_args)
+{
+	(void)p_args;
+	x_sigint_flag = 0;
+	return p_base;
 }
 
 /**
@@ -833,6 +842,7 @@ x_obj_t *x_prim_type_register(x_obj_t *p_base, x_obj_t *p_args)
 		{ "make-string-buffer", x_prim_make_string_buffer },
 		{ "sigint-install", x_prim_sigint_install },
 		{ "sigint-check", x_prim_sigint_check },
+		{ "sigint-clear", x_prim_sigint_clear },
 		{ "iter", x_prim_iter }
 	};
 
