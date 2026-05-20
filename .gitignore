@@ -76,3 +76,6 @@ core
 *.core
 docs/ref/c/
 docs/ref/x/
+
+# Agent / editor local state (Claude Code, etc.)
+.claude/
