@@ -14,7 +14,7 @@
  * # Includes
  */
 #include "x-prim.h"
-#include "x-base-typesystem.h"
+#include "x-interp.h"
 #include "x-eval.h"
 #include "x-heap.h"
 #include "x-token.h"
@@ -225,10 +225,12 @@ static x_obj_t *x_prim_heap_sweep(x_obj_t *p_base, x_obj_t *p_args)
 	(void)p_args;
 #ifdef X_PROFILE
 	if (x_base_isset(p_base))
-		x_atomint(x_firstobj(x_base_field_profile_gc_runs(p_base)))++;
+		x_atomint(x_firstobj(x_interp_field_profile_gc_runs(p_base)))++;
 #endif
 
-	/* Call free hooks before sweep */
+	/* Call free hooks before sweep.  The list lives in x-expr's
+	 * heap-group; x-expr stores but cannot dispatch (no callable
+	 * mechanism at that layer), so the walk + invoke happens here. */
 	if (x_base_isset(p_base)) {
 		x_obj_t *p_hooks = x_firstobj(x_base_field_heap_free_hooks(p_base));
 		x_spair_t hook_args[1];
@@ -289,7 +291,9 @@ static x_obj_t *x_prim_heap_mark(x_obj_t *p_base, x_obj_t *p_args)
 	/* Conservative stack scan: mark objects referenced from C stack */
 	x_heap_callstack_mark(p_base, X_OBJ_FLAG_HEAP);
 
-	/* Mark all registered GC roots */
+	/* Mark all registered GC roots.  The list lives in x-expr's
+	 * heap-group; we walk it here because we already have the
+	 * collection-phase context. */
 	if (x_base_isset(p_base)) {
 		x_obj_t *p_roots = x_firstobj(x_base_field_heap_mark_roots(p_base));
 
@@ -300,7 +304,8 @@ static x_obj_t *x_prim_heap_mark(x_obj_t *p_base, x_obj_t *p_args)
 		}
 	}
 
-	/* Call mark hooks (each is a callable) */
+	/* Call mark hooks (each is a callable).  Storage in x-expr,
+	 * dispatch here (x-expr has no callable mechanism). */
 	if (x_base_isset(p_base)) {
 		x_obj_t *p_hooks = x_firstobj(x_base_field_heap_mark_hooks(p_base));
 		x_spair_t hook_args[1];
@@ -339,6 +344,52 @@ static x_obj_t *x_prim_system_mark(x_obj_t *p_base, x_obj_t *p_args)
 	return p_obj;
 }
 
+/** Register a callable to run during the GC mark phase.
+ *  x-lang: (heap-mark-hook! hook)
+ *  @param p_base  Execution context.
+ *  @param p_args  Unevaluated (hook).
+ *  @return NULL.
+ *  @note Storage in x-expr's heap-group (one canonical location).
+ *  @see x_heap_mark_hook_add
+ */
+static x_obj_t *x_prim_heap_mark_hook(x_obj_t *p_base, x_obj_t *p_args)
+{
+	x_obj_t *p_hook;
+	x_eargs(p_base, p_args, 2, NULL, &p_hook);
+	x_heap_mark_hook_add(p_base, p_hook);
+	return NULL;
+}
+
+/** Register a callable to run during the GC sweep phase.
+ *  x-lang: (heap-free-hook! hook)
+ *  @param p_base  Execution context.
+ *  @param p_args  Unevaluated (hook).
+ *  @return NULL.
+ *  @see x_heap_free_hook_add
+ */
+static x_obj_t *x_prim_heap_free_hook(x_obj_t *p_base, x_obj_t *p_args)
+{
+	x_obj_t *p_hook;
+	x_eargs(p_base, p_args, 2, NULL, &p_hook);
+	x_heap_free_hook_add(p_base, p_hook);
+	return NULL;
+}
+
+/** Register an object to mark on every collection (extra GC root).
+ *  x-lang: (heap-mark-root! obj)
+ *  @param p_base  Execution context.
+ *  @param p_args  Unevaluated (obj).
+ *  @return NULL.
+ *  @see x_heap_mark_root_add
+ */
+static x_obj_t *x_prim_heap_mark_root(x_obj_t *p_base, x_obj_t *p_args)
+{
+	x_obj_t *p_obj;
+	x_eargs(p_base, p_args, 2, NULL, &p_obj);
+	x_heap_mark_root_add(p_base, p_obj);
+	return NULL;
+}
+
 /** Call each zero-arg function sequentially with no allocations between.
  *  x-lang: (applicative f1 f2 ...)
  *  @param p_base  Execution context.
@@ -358,7 +409,7 @@ static x_obj_t *x_prim_atomic(x_obj_t *p_base, x_obj_t *p_args)
 	call_args[0][X_OBJ_META_FLAGS].i = X_OBJ_FLAG_NONE;
 
 	/* Root p_args so mark+sweep inside the loop doesn't free them */
-	x_obj_push_field(p_base, &x_base_field_eval_list(p_base), p_args, X_OBJ_FLAG_NONE);
+	x_obj_push_field(p_base, &x_interp_field_eval_list(p_base), p_args, X_OBJ_FLAG_NONE);
 
 	while ( ! x_obj_isnil(p_base, p_args)) {
 		x_firstobj((x_obj_t *)call_args) = x_firstobj(p_args);
@@ -367,7 +418,7 @@ static x_obj_t *x_prim_atomic(x_obj_t *p_base, x_obj_t *p_args)
 		p_args = x_restobj(p_args);
 	}
 
-	x_obj_pop_field(p_base, &x_base_field_eval_list(p_base));
+	x_obj_pop_field(p_base, &x_interp_field_eval_list(p_base));
 
 	return p_result;
 }
@@ -404,7 +455,7 @@ x_obj_t *x_prim_repl(x_obj_t *p_base, x_obj_t *p_args)
  * Return the source line at which the most recent error was signaled.
  *
  * Reads the line number saved in the current error handler's line slot
- * (set by x_base_error before longjmp).  Returns 0 outside a guard handler.
+ * (set by x_interp_error before longjmp).  Returns 0 outside a guard handler.
  *
  * x-lang form: @code (error-line) @endcode
  *
@@ -417,7 +468,7 @@ static x_obj_t *x_prim_error_line(x_obj_t *p_base, x_obj_t *p_args)
 	x_obj_t *p_handler;
 	(void)p_args;
 
-	p_handler = x_firstobj(x_base_field_error_handler(p_base));
+	p_handler = x_firstobj(x_interp_field_error_handler(p_base));
 	if (x_obj_isnil(p_base, p_handler))
 		return x_mkint(p_base, 0);
 
@@ -447,6 +498,9 @@ x_obj_t *x_prim_io_register(x_obj_t *p_base, x_obj_t *p_args)
 		{ "heap-mark", x_prim_heap_mark },
 		{ "heap-sweep", x_prim_heap_sweep },
 		{ "heap-count", x_prim_heap_count },
+		{ "heap-mark-hook!", x_prim_heap_mark_hook },
+		{ "heap-free-hook!", x_prim_heap_free_hook },
+		{ "heap-mark-root!", x_prim_heap_mark_root },
 		{ "gc-pin!", x_prim_system_mark },
 		{ "error-line", x_prim_error_line }
 	};
