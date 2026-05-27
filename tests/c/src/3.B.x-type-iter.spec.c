@@ -21,7 +21,7 @@
 #include "ext/x-expr/src/x-obj.c"
 #include "src/x-alist.c"
 #include "ext/x-expr/src/x-base.c"
-#include "src/x-base.c"
+#include "src/x-interp.c"
 #include "ext/x-expr/src/x-heap.c"
 #include "src/x-type.c"
 #include "src/x-type/prim.c"
@@ -98,7 +98,7 @@ static char *test_obj_type_isiter(void)
 {
 	x_obj_t *p_base, *p_obj;
 
-	p_base = x_base_ts_make(NULL, NULL);
+	p_base = x_interp_make(NULL, NULL);
 
 	p_obj = x_mkiter(p_base, 0, 0);
 	_it_should("return true when object is an Iter",
@@ -169,7 +169,7 @@ static char *test_mkiter(void)
 	x_obj_t *p_base, *p_obj;
 	x_int_t i = rand(), j = rand();
 
-	p_base = x_base_ts_make(NULL, NULL);
+	p_base = x_interp_make(NULL, NULL);
 
 	p_obj = x_mkiter(p_base, (void *)i, (void *)j);
 	_it_should("make an Iter object and set its first and rest values",
@@ -182,7 +182,7 @@ static char *test_mkiter(void)
 	x_sys_free(p_obj);
 
 
-	p_base = x_base_ts_make(NULL, NULL);
+	p_base = x_interp_make(NULL, NULL);
 	p_obj = x_mkiter(p_base, (void *)i, (void *)j);
 	_it_should("make an Iter object and set its first and rest values",
 		p_obj != NULL
@@ -202,7 +202,7 @@ static char *test_mkfiter(void)
 	x_int_t i = rand(), j = rand();
 	x_obj_flag_t flags = rand();
 
-	p_base = x_base_ts_make(NULL, NULL);
+	p_base = x_interp_make(NULL, NULL);
 
 	p_obj = x_mkfiter(p_base, flags, (void *)i, (void *)j);
 	_it_should("make an Iter object and set its first and rest values",
@@ -215,7 +215,7 @@ static char *test_mkfiter(void)
 	x_sys_free(p_obj);
 
 
-	p_base = x_base_ts_make(NULL, NULL);
+	p_base = x_interp_make(NULL, NULL);
 	p_obj = x_mkfiter(p_base, flags, (void *)i, (void *)j);
 	_it_should("make an Iter object and set its first and rest values",
 		p_obj != NULL
@@ -235,7 +235,7 @@ static char *test_make_iter(void)
 	x_int_t i = rand(), j = rand();
 	x_obj_flag_t flags = rand();
 
-	p_base = x_base_ts_make(NULL, NULL);
+	p_base = x_interp_make(NULL, NULL);
 
 	p_obj = x_make_iter(p_base, flags, (void *)i, (void *)j);
 	_it_should("make an Iter object and set its first and rest values",
@@ -248,7 +248,7 @@ static char *test_make_iter(void)
 	x_sys_free(p_obj);
 
 
-	p_base = x_base_ts_make(NULL, NULL);
+	p_base = x_interp_make(NULL, NULL);
 	p_obj = x_make_iter(p_base, flags, (void *)i, (void *)j);
 	_it_should("make an Iter object and set its first and rest values",
 		p_obj != NULL
@@ -266,14 +266,14 @@ static char *test_type_iter_register(void)
 {
 	x_obj_t *p_base, *p_type;
 
-	p_base = x_base_ts_make(NULL, NULL);
+	p_base = x_interp_make(NULL, NULL);
 
 	p_type = x_type_iter_register(p_base, p_base);
 	_it_should("return the Iter type object",
 		0 == x_lib_strcmp(X_TYPE_ITER_NAME, x_atomstr(x_type_field_name(p_type)))
 	);
 	_it_should("add the Iter type to the Type alist",
-		p_type == x_restobj(x_firstobj(x_firstobj(x_base_field_type_alist(p_base))))
+		p_type == x_restobj(x_firstobj(x_firstobj(x_interp_field_type_alist(p_base))))
 	);
 
 	test_cleanup(p_base);
@@ -287,7 +287,7 @@ static char *test_type_iter_struct(void)
 
 	helper_alloc_reset();
 
-	p_base = x_base_ts_make(NULL, NULL);
+	p_base = x_interp_make(NULL, NULL);
 	p_type = x_type_iter_struct(p_base, p_base);
 	_it_should("return Iter Type list",
 		! x_obj_isnil(p_base, p_type)
@@ -361,10 +361,10 @@ static char *test_base_alist_assoc(void)
 
 	helper_alloc_reset();
 
-	p_base = x_base_ts_make(NULL, NULL);
-	x_base_type_alist_extend(p_base, x_mkspair(p_base, X_OBJ_FLAG_NONE, x_mkspair(p_base, X_OBJ_FLAG_NONE, x_type_iter_name, NULL), atom(1)));
+	p_base = x_interp_make(NULL, NULL);
+	x_interp_type_alist_extend(p_base, x_mkspair(p_base, X_OBJ_FLAG_NONE, x_mkspair(p_base, X_OBJ_FLAG_NONE, x_type_iter_name, NULL), atom(1)));
 
-	p_type = x_base_type_alist_assoc(p_base, x_mkspair(p_base, X_OBJ_FLAG_NONE, x_type_iter_name, NULL));
+	p_type = x_interp_type_alist_assoc(p_base, x_mkspair(p_base, X_OBJ_FLAG_NONE, x_type_iter_name, NULL));
 	_it_should("find the type in the Type alist and return its properties",
 		x_type_iter_name == x_type_field_name(p_type)
 	);
@@ -405,7 +405,7 @@ static char *test_type_iter_make(void)
 
 
 	/* Empty p_base object */
-	p_base = x_base_ts_make(NULL, NULL);
+	p_base = x_interp_make(NULL, NULL);
 	p_iter = x_mkspair(p_base, X_OBJ_FLAG_NONE, rand(), rand());
 	p_args = x_mkspair(p_base, X_OBJ_FLAG_NONE, p_iter, NULL);
 
@@ -427,7 +427,7 @@ static char *test_type_iter_make(void)
 
 
 	/* With p_base object */
-	p_base = x_base_ts_make(NULL, NULL);
+	p_base = x_interp_make(NULL, NULL);
 	p_iter = x_mkspair(p_base, X_OBJ_FLAG_NONE, rand(), rand());
 	p_args = x_mkspair(p_base, X_OBJ_FLAG_NONE, p_iter, NULL);
 
@@ -456,7 +456,7 @@ static char *test_type_iter_next(void)
 
 	helper_alloc_reset();
 
-	p_base = x_base_ts_make(NULL, NULL);
+	p_base = x_interp_make(NULL, NULL);
 	p_list = pair(atom(1), pair(nil, pair(atom(3), nil)));
 	p_iter = x_mkiter(p_base, x_mkprim(p_base, list_iter_prim), p_list);
 	p_args = x_mkspair(p_base, X_OBJ_FLAG_NONE, p_iter, NULL);
@@ -485,7 +485,7 @@ static char *test_type_iter_write(void)
 	helper_file_buffer_ptr[TEST_HELPER_FILE_STDOUT] = buf;
 	helper_file_reset();
 
-	p_base = x_base_ts_make(NULL, NULL);
+	p_base = x_interp_make(NULL, NULL);
 	p_iter = x_mkiter(p_base, NULL, NULL);
 	p_args = x_mkspair(p_base, X_OBJ_FLAG_NONE, p_iter, NULL);
 
@@ -503,7 +503,7 @@ static char *test_type_iter_isempty_fn(void)
 
 	helper_alloc_reset();
 
-	p_base = x_base_ts_make(NULL, NULL);
+	p_base = x_interp_make(NULL, NULL);
 
 	p_iter = x_mkiter(p_base, NULL, NULL);
 	p_args = x_mkspair(p_base, X_OBJ_FLAG_NONE, p_iter, NULL);

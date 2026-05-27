@@ -18,7 +18,7 @@
 #include "ext/x-expr/src/x-obj.c"
 #include "src/x-alist.c"
 #include "ext/x-expr/src/x-base.c"
-#include "src/x-base.c"
+#include "src/x-interp.c"
 #include "ext/x-expr/src/x-heap.c"
 #include "src/x-type.c"
 #include "src/x-type/prim.c"
@@ -84,7 +84,7 @@ static char *test_obj_type_ischar(void)
 {
 	x_obj_t *p_base, *p_obj;
 
-	p_base = x_base_ts_make(NULL, NULL);
+	p_base = x_interp_make(NULL, NULL);
 
 	p_obj = x_mkchar(p_base, 0);
 	_it_should("return true when object is a char",
@@ -131,7 +131,7 @@ static char *test_mkchar(void)
 	x_sys_free(p_obj);
 
 
-	p_base = x_base_ts_make(NULL, NULL);
+	p_base = x_interp_make(NULL, NULL);
 	p_obj = x_mkchar(p_base, c);
 	_it_should("make a Character object, attach it to the Base object, and set its value",
 		p_obj != NULL
@@ -150,7 +150,7 @@ static char *test_mkfchar(void)
 	x_char_t c = rand();
 	x_obj_flag_t flags = rand();
 
-	p_base = x_base_ts_make(NULL, NULL);
+	p_base = x_interp_make(NULL, NULL);
 
 	p_obj = x_mkfchar(p_base, flags, c);
 	_it_should("make a Character object and set its value",
@@ -162,7 +162,7 @@ static char *test_mkfchar(void)
 	x_sys_free(p_obj);
 
 
-	p_base = x_base_ts_make(NULL, NULL);
+	p_base = x_interp_make(NULL, NULL);
 	p_obj = x_mkfchar(p_base, flags, c);
 	_it_should("make a Character object, attach it to the Base object, and set its value",
 		p_obj != NULL
@@ -181,7 +181,7 @@ static char *test_make_char(void)
 	x_char_t c = rand();
 	x_obj_flag_t flags = rand();
 
-	p_base = x_base_ts_make(NULL, NULL);
+	p_base = x_interp_make(NULL, NULL);
 
 	p_obj = x_make_char(p_base, flags, c);
 	_it_should("make a Character object and set its value",
@@ -193,7 +193,7 @@ static char *test_make_char(void)
 	x_sys_free(p_obj);
 
 
-	p_base = x_base_ts_make(NULL, NULL);
+	p_base = x_interp_make(NULL, NULL);
 	p_obj = x_make_char(p_base, flags, c);
 	_it_should("make a Character object, attach it to the Base object, and set its value",
 		p_obj != NULL
@@ -212,7 +212,7 @@ static char *test_type_char_struct(void)
 
 	helper_alloc_reset();
 
-	p_base = x_base_ts_make(NULL, NULL);
+	p_base = x_interp_make(NULL, NULL);
 	p_type = x_type_char_struct(p_base, p_base);
 	_it_should("return Character Type list",
 		! x_obj_isnil(p_base, p_type)
@@ -284,14 +284,14 @@ static char *test_type_char_register(void)
 {
 	x_obj_t *p_base, *p_type;
 
-	p_base = x_base_ts_make(NULL, NULL);
+	p_base = x_interp_make(NULL, NULL);
 
 	p_type = x_type_char_register(p_base, p_base);
 	_it_should("return the Character type object",
 		0 == x_lib_strcmp(X_TYPE_CHAR_NAME, x_strval(x_type_field_name(p_type)))
 	);
 	_it_should("add the Character type to the Type alist",
-		p_type == x_restobj(x_firstobj(x_firstobj(x_base_field_type_alist(p_base))))
+		p_type == x_restobj(x_firstobj(x_firstobj(x_interp_field_type_alist(p_base))))
 	);
 
 	test_cleanup(p_base);
@@ -305,10 +305,10 @@ static char *test_base_alist_assoc(void)
 
 	helper_alloc_reset();
 
-	p_base = x_base_ts_make(NULL, NULL);
-	x_base_type_alist_extend(p_base, x_mkspair(p_base, X_OBJ_FLAG_NONE, x_mkspair(p_base, X_OBJ_FLAG_NONE, x_type_char_name, NULL), atom(1)));
+	p_base = x_interp_make(NULL, NULL);
+	x_interp_type_alist_extend(p_base, x_mkspair(p_base, X_OBJ_FLAG_NONE, x_mkspair(p_base, X_OBJ_FLAG_NONE, x_type_char_name, NULL), atom(1)));
 
-	p_type = x_base_type_alist_assoc(p_base, x_mkspair(p_base, X_OBJ_FLAG_NONE, x_type_char_name, NULL));
+	p_type = x_interp_type_alist_assoc(p_base, x_mkspair(p_base, X_OBJ_FLAG_NONE, x_type_char_name, NULL));
 	_it_should("find the type in the Type alist and return its properties",
 		x_type_char_name == x_type_field_name(p_type)
 	);
@@ -352,7 +352,7 @@ static char *test_type_char_make(void)
 	helper_alloc_reset();
 
 	/* Empty p_base object */
-	p_base = x_base_ts_make(NULL, NULL);
+	p_base = x_interp_make(NULL, NULL);
 	p_char = x_mksatom(p_base, X_OBJ_FLAG_NONE, value);
 	p_args = x_mkspair(p_base, X_OBJ_FLAG_NONE, p_char, NULL);
 
@@ -378,7 +378,7 @@ static char *test_type_char_make(void)
 	helper_alloc_reset();
 
 	/* With p_base object */
-	p_base = x_base_ts_make(NULL, NULL);
+	p_base = x_interp_make(NULL, NULL);
 	p_char = x_mksatom(p_base, X_OBJ_FLAG_NONE, value);
 	p_args = x_mkspair(p_base, X_OBJ_FLAG_NONE, p_char, NULL);
 

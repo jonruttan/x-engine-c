@@ -19,7 +19,7 @@
 #include "ext/x-expr/src/x.c"
 #include "src/x-alist.c"
 #include "ext/x-expr/src/x-base.c"
-#include "src/x-base.c"
+#include "src/x-interp.c"
 #include "src/x-eval.c"
 #include "src/x-type.c"
 #include "src/x-type/atom.c"
@@ -124,7 +124,7 @@ static char *test_ffi_arith_add(void)
 	x_obj_t *p_base, *p_args, *p_result;
 	double r;
 
-	p_base = x_base_ts_make(NULL, NULL);
+	p_base = x_interp_make(NULL, NULL);
 	x_prim_register(p_base, NULL);
 
 	/* (ffi-call "d+d" () 3.0 4.0) -> 7.0 */
@@ -147,7 +147,7 @@ static char *test_ffi_arith_sub(void)
 	x_obj_t *p_base, *p_args, *p_result;
 	double r;
 
-	p_base = x_base_ts_make(NULL, NULL);
+	p_base = x_interp_make(NULL, NULL);
 	x_prim_register(p_base, NULL);
 
 	/* (ffi-call "d-d" () 10.0 3.0) -> 7.0 */
@@ -170,7 +170,7 @@ static char *test_ffi_arith_mul(void)
 	x_obj_t *p_base, *p_args, *p_result;
 	double r;
 
-	p_base = x_base_ts_make(NULL, NULL);
+	p_base = x_interp_make(NULL, NULL);
 	x_prim_register(p_base, NULL);
 
 	/* (ffi-call "d*d" () 3.0 5.0) -> 15.0 */
@@ -193,7 +193,7 @@ static char *test_ffi_arith_div(void)
 	x_obj_t *p_base, *p_args, *p_result;
 	double r;
 
-	p_base = x_base_ts_make(NULL, NULL);
+	p_base = x_interp_make(NULL, NULL);
 	x_prim_register(p_base, NULL);
 
 	/* (ffi-call "d/d" () 15.0 3.0) -> 5.0 */
@@ -215,7 +215,7 @@ static char *test_ffi_compare(void)
 {
 	x_obj_t *p_base, *p_args, *p_result;
 
-	p_base = x_base_ts_make(NULL, NULL);
+	p_base = x_interp_make(NULL, NULL);
 	x_prim_register(p_base, NULL);
 
 	/* d<d: 1.0 < 2.0 -> t */
@@ -227,7 +227,7 @@ static char *test_ffi_compare(void)
 		NULL)))));
 	p_result = x_prim_ffi_call(p_base, p_args);
 	_it_should("d<d: 1.0 < 2.0 is true",
-		p_result == x_firstobj(x_base_field_true(p_base)));
+		p_result == x_firstobj(x_interp_field_true(p_base)));
 
 	/* d<d: 2.0 < 1.0 -> #f */
 	p_args = x_mkspair(p_base, X_OBJ_FLAG_NONE, NULL,
@@ -238,7 +238,7 @@ static char *test_ffi_compare(void)
 		NULL)))));
 	p_result = x_prim_ffi_call(p_base, p_args);
 	_it_should("d<d: 2.0 < 1.0 is false",
-		p_result == x_firstobj(x_base_field_false(p_base)));
+		p_result == x_firstobj(x_interp_field_false(p_base)));
 
 	/* d=d: 5.0 = 5.0 -> t */
 	p_args = x_mkspair(p_base, X_OBJ_FLAG_NONE, NULL,
@@ -249,7 +249,7 @@ static char *test_ffi_compare(void)
 		NULL)))));
 	p_result = x_prim_ffi_call(p_base, p_args);
 	_it_should("d=d: 5.0 = 5.0 is true",
-		p_result == x_firstobj(x_base_field_true(p_base)));
+		p_result == x_firstobj(x_interp_field_true(p_base)));
 
 	/* d>=d: 3.0 >= 3.0 -> t */
 	p_args = x_mkspair(p_base, X_OBJ_FLAG_NONE, NULL,
@@ -260,7 +260,7 @@ static char *test_ffi_compare(void)
 		NULL)))));
 	p_result = x_prim_ffi_call(p_base, p_args);
 	_it_should("d>=d: 3.0 >= 3.0 is true",
-		p_result == x_firstobj(x_base_field_true(p_base)));
+		p_result == x_firstobj(x_interp_field_true(p_base)));
 
 	test_cleanup(p_base);
 	return NULL;
@@ -271,7 +271,7 @@ static char *test_ffi_cast_i_to_d(void)
 	x_obj_t *p_base, *p_args, *p_result;
 	double r;
 
-	p_base = x_base_ts_make(NULL, NULL);
+	p_base = x_interp_make(NULL, NULL);
 	x_prim_register(p_base, NULL);
 
 	/* (ffi-call "i->d" () 42) -> 42.0 as IEEE bits */
@@ -292,7 +292,7 @@ static char *test_ffi_cast_d_to_i(void)
 {
 	x_obj_t *p_base, *p_args, *p_result;
 
-	p_base = x_base_ts_make(NULL, NULL);
+	p_base = x_interp_make(NULL, NULL);
 	x_prim_register(p_base, NULL);
 
 	/* (ffi-call "d->i" () 42.7-as-bits) -> 42 (truncated) */
@@ -312,7 +312,7 @@ static char *test_ffi_d_to_s(void)
 {
 	x_obj_t *p_base, *p_args, *p_result;
 
-	p_base = x_base_ts_make(NULL, NULL);
+	p_base = x_interp_make(NULL, NULL);
 	x_prim_register(p_base, NULL);
 
 	/* (ffi-call "d->s" () 3.14-as-bits) -> "3.14" */
@@ -335,7 +335,7 @@ static char *test_ffi_int_ptr_convert(void)
 {
 	x_obj_t *p_base, *p_args, *p_result;
 
-	p_base = x_base_ts_make(NULL, NULL);
+	p_base = x_interp_make(NULL, NULL);
 	x_prim_register(p_base, NULL);
 
 	/* int->ptr: convert 12345 to ptr */
@@ -362,7 +362,7 @@ static char *test_ffi_ptr_set_ref(void)
 	x_obj_t *p_base, *p_args, *p_result, *p_ptr;
 	unsigned char mem[16];
 
-	p_base = x_base_ts_make(NULL, NULL);
+	p_base = x_interp_make(NULL, NULL);
 	x_prim_register(p_base, NULL);
 
 	p_ptr = x_mkptr(p_base, mem);
@@ -398,7 +398,7 @@ static char *test_ffi_string_ptr_convert(void)
 {
 	x_obj_t *p_base, *p_args, *p_result, *p_ptr;
 
-	p_base = x_base_ts_make(NULL, NULL);
+	p_base = x_interp_make(NULL, NULL);
 	x_prim_register(p_base, NULL);
 
 	/* string->ptr: get raw pointer to string data */
@@ -424,10 +424,10 @@ static char *test_ffi_register(void)
 {
 	x_obj_t *p_base, *p_env;
 
-	p_base = x_base_ts_make(NULL, NULL);
+	p_base = x_interp_make(NULL, NULL);
 	x_prim_register(p_base, NULL);
 
-	p_env = x_firstobj(x_base_field_env_alist(p_base));
+	p_env = x_firstobj(x_interp_field_env_alist(p_base));
 	_it_should("env is not empty after register",
 		p_env != NULL);
 
@@ -439,7 +439,7 @@ static char *test_ffi_dlopen_dlsym(void)
 {
 	x_obj_t *p_base, *p_args, *p_handle, *p_sym;
 
-	p_base = x_base_ts_make(NULL, NULL);
+	p_base = x_interp_make(NULL, NULL);
 	x_prim_register(p_base, NULL);
 
 	/* dlopen(NULL, RTLD_LAZY) -> handle to current process */
@@ -488,7 +488,7 @@ static char *test_ffi_call_d_to_d(void)
 	x_obj_t *p_base, *p_args, *p_result;
 	double r;
 
-	p_base = x_base_ts_make(NULL, NULL);
+	p_base = x_interp_make(NULL, NULL);
 	x_prim_register(p_base, NULL);
 
 	/* (ffi-call "d->d" fptr 5.0) -> -5.0 */
@@ -510,7 +510,7 @@ static char *test_ffi_call_dd_to_d(void)
 	x_obj_t *p_base, *p_args, *p_result;
 	double r;
 
-	p_base = x_base_ts_make(NULL, NULL);
+	p_base = x_interp_make(NULL, NULL);
 	x_prim_register(p_base, NULL);
 
 	/* (ffi-call "dd->d" fptr 3.0 7.0) -> 10.0 */
@@ -532,7 +532,7 @@ static char *test_ffi_compare_gt_le(void)
 {
 	x_obj_t *p_base, *p_args, *p_result;
 
-	p_base = x_base_ts_make(NULL, NULL);
+	p_base = x_interp_make(NULL, NULL);
 	x_prim_register(p_base, NULL);
 
 	/* d>d: 5.0 > 3.0 -> t */
@@ -544,7 +544,7 @@ static char *test_ffi_compare_gt_le(void)
 		NULL)))));
 	p_result = x_prim_ffi_call(p_base, p_args);
 	_it_should("d>d: 5.0 > 3.0 is true",
-		p_result == x_firstobj(x_base_field_true(p_base)));
+		p_result == x_firstobj(x_interp_field_true(p_base)));
 
 	/* d>d: 1.0 > 2.0 -> #f */
 	p_args = x_mkspair(p_base, X_OBJ_FLAG_NONE, NULL,
@@ -555,7 +555,7 @@ static char *test_ffi_compare_gt_le(void)
 		NULL)))));
 	p_result = x_prim_ffi_call(p_base, p_args);
 	_it_should("d>d: 1.0 > 2.0 is false",
-		p_result == x_firstobj(x_base_field_false(p_base)));
+		p_result == x_firstobj(x_interp_field_false(p_base)));
 
 	/* d<=d: 3.0 <= 3.0 -> t */
 	p_args = x_mkspair(p_base, X_OBJ_FLAG_NONE, NULL,
@@ -566,7 +566,7 @@ static char *test_ffi_compare_gt_le(void)
 		NULL)))));
 	p_result = x_prim_ffi_call(p_base, p_args);
 	_it_should("d<=d: 3.0 <= 3.0 is true",
-		p_result == x_firstobj(x_base_field_true(p_base)));
+		p_result == x_firstobj(x_interp_field_true(p_base)));
 
 	/* d<=d: 5.0 <= 3.0 -> #f */
 	p_args = x_mkspair(p_base, X_OBJ_FLAG_NONE, NULL,
@@ -577,7 +577,7 @@ static char *test_ffi_compare_gt_le(void)
 		NULL)))));
 	p_result = x_prim_ffi_call(p_base, p_args);
 	_it_should("d<=d: 5.0 <= 3.0 is false",
-		p_result == x_firstobj(x_base_field_false(p_base)));
+		p_result == x_firstobj(x_interp_field_false(p_base)));
 
 	test_cleanup(p_base);
 	return NULL;
@@ -588,7 +588,7 @@ static char *test_ffi_call_s0_to_d(void)
 	x_obj_t *p_base, *p_args, *p_result;
 	double r;
 
-	p_base = x_base_ts_make(NULL, NULL);
+	p_base = x_interp_make(NULL, NULL);
 	x_prim_register(p_base, NULL);
 
 	/* (ffi-call "s0->d" fptr "5") -> 5.0 (our stub reads first char - '0') */
@@ -609,7 +609,7 @@ static char *test_ffi_unknown_convention(void)
 {
 	x_obj_t *p_base, *p_args, *p_result;
 
-	p_base = x_base_ts_make(NULL, NULL);
+	p_base = x_interp_make(NULL, NULL);
 	x_prim_register(p_base, NULL);
 
 	/* (ffi-call "bogus" () 1) -> NULL */
@@ -630,7 +630,7 @@ static char *test_ffi_ptr_call(void)
 {
 	x_obj_t *p_base, *p_args, *p_result;
 
-	p_base = x_base_ts_make(NULL, NULL);
+	p_base = x_interp_make(NULL, NULL);
 	x_prim_register(p_base, NULL);
 
 	/* (ptr-call fptr 10 20 30) -> 60 */
@@ -655,7 +655,7 @@ static char *test_ffi_ptr_set_word(void)
 	unsigned char mem[32];
 	long val;
 
-	p_base = x_base_ts_make(NULL, NULL);
+	p_base = x_interp_make(NULL, NULL);
 	x_prim_register(p_base, NULL);
 
 	memset(mem, 0, sizeof(mem));
@@ -681,7 +681,7 @@ static char *test_ffi_ptr_call_str_arg(void)
 {
 	x_obj_t *p_base, *p_args, *p_result;
 
-	p_base = x_base_ts_make(NULL, NULL);
+	p_base = x_interp_make(NULL, NULL);
 	x_prim_register(p_base, NULL);
 
 	/* ptr-call with a string arg exercises the str branch */

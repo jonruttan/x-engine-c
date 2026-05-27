@@ -18,7 +18,7 @@
 #include "ext/x-expr/src/x-obj.c"
 #include "src/x-alist.c"
 #include "ext/x-expr/src/x-base.c"
-#include "src/x-base.c"
+#include "src/x-interp.c"
 #include "src/x-eval.c"
 #include "ext/x-expr/src/x-heap.c"
 #include "src/x-type.c"
@@ -86,7 +86,7 @@ static char *test_exp_quote(void)
 	helper_alloc_reset();
 
 	/* Make a simple base to help with cleanup. */
-	p_base = x_base_ts_make(NULL, NULL);
+	p_base = x_interp_make(NULL, NULL);
 	/* Call x_exp_quote directly with the satom calling convention (no self).
 	 * In production, quote is a static satom dispatched through x_callable_call
 	 * which strips self before calling. */

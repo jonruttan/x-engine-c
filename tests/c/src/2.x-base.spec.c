@@ -17,7 +17,7 @@
 #include "ext/x-expr/src/x.c"
 #include "src/x-alist.c"
 #include "ext/x-expr/src/x-base.c"
-#include "src/x-base.c"
+#include "src/x-interp.c"
 
 #define STUB_X_PRIM
 #define STUB_X_PRIM_REGISTER
@@ -94,7 +94,7 @@ static char *test_base_make(void)
 	x_obj_free(NULL, p_base);
 
 
-	p_base = x_base_ts_make(NULL, NULL);
+	p_base = x_interp_make(NULL, NULL);
 	_it_should("return a new Base object",
 		NULL != p_base
 	);
@@ -107,7 +107,7 @@ static char *test_base_make(void)
 		&& x_obj_type_isspair(p_obj)
 	);
 
-/*	p_obj = x_base_field_type_alist(p_base);
+/*	p_obj = x_interp_field_type_alist(p_base);
 	_it_should("return the Base object type alist",
 		! x_obj_isnil(p_base, p_obj)
 		&& x_obj_type_isspair(p_obj)
@@ -140,12 +140,12 @@ static char *test_base_make(void)
 	);
 
 
-	p_obj = x_firstobj(x_base_field_env_alist(p_base));
+	p_obj = x_firstobj(x_interp_field_env_alist(p_base));
 	_it_should("return the Base object environment list (initially nil)",
 		x_obj_isnil(p_base, p_obj)
 	);
 
-	p_obj = x_firstobj(x_base_field_eval_list(p_base));
+	p_obj = x_firstobj(x_interp_field_eval_list(p_base));
 	_it_should("return the Base object expression list (initially nil)",
 		x_obj_isnil(p_base, p_obj)
 	);
@@ -155,7 +155,7 @@ static char *test_base_make(void)
 		x_obj_isnil(p_base, p_obj)
 	);
 
-	p_obj = x_firstobj(x_base_field_token_cache(p_base));
+	p_obj = x_firstobj(x_interp_field_token_cache(p_base));
 	_it_should("return the Base object token cache",
 		x_obj_isnil(p_base, p_obj)
 	);
@@ -179,7 +179,7 @@ static char *test_base_type_alist_extend(void)
 	 * so x_type_field_name returns name_satom */
 
 	p_args = x_mkspair(NULL, X_OBJ_FLAG_NONE, NULL, NULL);
-	p_alist = x_base_type_alist_extend(NULL, p_args);
+	p_alist = x_interp_type_alist_extend(NULL, p_args);
 	_it_should("return NULL when base is NULL",
 		NULL == p_alist
 	);
@@ -187,7 +187,7 @@ static char *test_base_type_alist_extend(void)
 
 	p_base = x_mksatom(NULL, X_OBJ_FLAG_NONE, 0);
 	p_args = x_mkspair(NULL, X_OBJ_FLAG_NONE, NULL, NULL);
-	p_alist = x_base_type_alist_extend(p_base, p_args);
+	p_alist = x_interp_type_alist_extend(p_base, p_args);
 	_it_should("return nil when base is a bare atom (not set)",
 		NULL == p_alist
 	);
@@ -195,12 +195,12 @@ static char *test_base_type_alist_extend(void)
 	x_sys_free(p_base);
 
 
-	p_base = x_base_ts_make(NULL, NULL);
+	p_base = x_interp_make(NULL, NULL);
 
 	/* Build mock type struct with name stack: ((name . nil) . nil) */
 	p_name0 = x_mksatom(p_base, X_OBJ_FLAG_NONE, "type0");
 	p_type0 = x_mkspair(p_base, X_OBJ_FLAG_NONE, x_mkspair(p_base, X_OBJ_FLAG_NONE, p_name0, NULL), NULL);
-	p_alist = x_base_type_alist_extend(p_base, p_type0);
+	p_alist = x_interp_type_alist_extend(p_base, p_type0);
 	/* Entry is (name . type_struct) */
 	_it_should("extend alist with first type",
 		x_obj_type_isspair(p_alist)
@@ -212,7 +212,7 @@ static char *test_base_type_alist_extend(void)
 
 	p_name1 = x_mksatom(p_base, X_OBJ_FLAG_NONE, "type1");
 	p_type1 = x_mkspair(p_base, X_OBJ_FLAG_NONE, x_mkspair(p_base, X_OBJ_FLAG_NONE, p_name1, NULL), NULL);
-	p_alist = x_base_type_alist_extend(p_base, p_type1);
+	p_alist = x_interp_type_alist_extend(p_base, p_type1);
 	_it_should("extend alist with second type",
 		x_obj_type_isspair(p_alist)
 		&& x_obj_type_isspair(x_firstobj(p_alist))
@@ -243,13 +243,13 @@ static char *test_base_type_alist_assoc(void)
 		NULL
 	);
 
-	p_obj[0] = x_base_type_alist_assoc(NULL, p_args);
+	p_obj[0] = x_interp_type_alist_assoc(NULL, p_args);
 	_it_should("return NULL when base is NULL",
 		NULL == p_obj[0]
 	);
 
-	p_base = x_base_ts_make(NULL, NULL);
-	p_obj[0] = x_base_type_alist_assoc(p_base, p_args);
+	p_base = x_interp_make(NULL, NULL);
+	p_obj[0] = x_interp_type_alist_assoc(p_base, p_args);
 	_it_should("return nil when base is not set",
 		NULL == p_obj[0]
 	);
@@ -257,10 +257,10 @@ static char *test_base_type_alist_assoc(void)
 	x_sys_free(p_base);
 
 
-	p_base = x_base_ts_make(NULL, NULL);
+	p_base = x_interp_make(NULL, NULL);
 
 	p_args = x_mkspair(p_base, X_OBJ_FLAG_NONE, x_mksatom(p_base, X_OBJ_FLAG_NONE, s[0]), NULL);
-	p_obj[0] = x_base_type_alist_assoc(p_base, p_args);
+	p_obj[0] = x_interp_type_alist_assoc(p_base, p_args);
 	_it_should("return nil when item is not found",
 		NULL == p_obj[0]
 	);
@@ -271,29 +271,29 @@ static char *test_base_type_alist_assoc(void)
 	p_type[0] = x_mkspair(p_base, X_OBJ_FLAG_NONE, x_mkspair(p_base, X_OBJ_FLAG_NONE, p_name[0], NULL), NULL);
 	p_name[1] = x_mksatom(p_base, X_OBJ_FLAG_NONE, s[1]);
 	p_type[1] = x_mkspair(p_base, X_OBJ_FLAG_NONE, x_mkspair(p_base, X_OBJ_FLAG_NONE, p_name[1], NULL), NULL);
-	x_base_type_alist_extend(p_base, p_type[0]);
-	x_base_type_alist_extend(p_base, p_type[1]);
+	x_interp_type_alist_extend(p_base, p_type[0]);
+	x_interp_type_alist_extend(p_base, p_type[1]);
 
 	/* assoc returns the unwrapped type struct */
-	p_obj[0] = x_base_type_alist_assoc(p_base, p_args);
+	p_obj[0] = x_interp_type_alist_assoc(p_base, p_args);
 	_it_should("return type struct when found",
 		p_obj[0] == p_type[0]
 	);
 
-	p_obj[1] = x_base_type_alist_assoc(p_base, p_args);
+	p_obj[1] = x_interp_type_alist_assoc(p_base, p_args);
 	_it_should("return same item when found",
 		p_obj[0] == p_obj[1]
 	);
 
 
 	p_args = x_mkspair(p_base, X_OBJ_FLAG_NONE, x_mksatom(p_base, X_OBJ_FLAG_NONE, s[1]), NULL);
-	p_obj[0] = x_base_type_alist_assoc(p_base, p_args);
+	p_obj[0] = x_interp_type_alist_assoc(p_base, p_args);
 	_it_should("return second type struct when found",
 		p_obj[0] == p_type[1]
 	);
 
 	p_args = x_mkspair(p_base, X_OBJ_FLAG_NONE, x_mksatom(p_base, X_OBJ_FLAG_NONE, s[2]), NULL);
-	p_obj[0] = x_base_type_alist_assoc(p_base, p_args);
+	p_obj[0] = x_interp_type_alist_assoc(p_base, p_args);
 	_it_should("return nil when item is not found",
 		NULL == p_obj[0]
 	);
@@ -316,7 +316,7 @@ static char *test_base_env_alist_extend(void)
 
 	p_alist = p_base;
 	p_args = x_mkspair(NULL, X_OBJ_FLAG_NONE, p_atoms[0], p_atoms[1]);
-	p_alist = x_base_env_alist_extend(NULL, p_args);
+	p_alist = x_interp_env_alist_extend(NULL, p_args);
 	_it_should("return NULL when base is NULL",
 		NULL == p_alist
 	);
@@ -324,7 +324,7 @@ static char *test_base_env_alist_extend(void)
 
 	p_base = x_mksatom(NULL, X_OBJ_FLAG_NONE, 0);
 	p_args = x_mkspair(NULL, X_OBJ_FLAG_NONE, p_atoms[0], p_atoms[1]);
-	p_alist = x_base_env_alist_extend(p_base, p_args);
+	p_alist = x_interp_env_alist_extend(p_base, p_args);
 	_it_should("return nil when base is a bare atom (not set)",
 		NULL == p_alist
 	);
@@ -332,9 +332,9 @@ static char *test_base_env_alist_extend(void)
 	x_obj_free(NULL, p_base);
 
 
-	p_base = x_base_ts_make(NULL, NULL);
+	p_base = x_interp_make(NULL, NULL);
 	p_args = x_mkspair(p_base, X_OBJ_FLAG_NONE, p_atoms[0], p_atoms[1]);
-	p_alist = x_base_env_alist_extend(p_base, p_args);
+	p_alist = x_interp_env_alist_extend(p_base, p_args);
 	_it_should("extend alist with (#<0x1:0x0> . #<0x1:0x1>)",
 		x_obj_type_isspair(p_alist)
 		&& x_obj_type_isspair(x_firstobj(p_alist))
@@ -344,7 +344,7 @@ static char *test_base_env_alist_extend(void)
 
 
 	p_args = x_mkspair(p_base, X_OBJ_FLAG_NONE, p_atoms[1], p_atoms[2]);
-	p_alist = x_base_env_alist_extend(p_base, p_args);
+	p_alist = x_interp_env_alist_extend(p_base, p_args);
 	_it_should("extend alist with (#<0x1:0x2> . #<0x1:0x3>)",
 		x_obj_type_isspair(p_alist)
 		&& x_obj_type_isspair(x_firstobj(p_alist))
@@ -456,19 +456,19 @@ static char *test_base_error_no_handler(void)
 	helper_file_buffer_length[TEST_HELPER_FILE_STDERR] = 64;
 	helper_file_reset();
 
-	x_base_error(NULL, "test error", NULL);
+	x_interp_error(NULL, "test error", NULL);
 	_it_should("write error to stderr without base",
 		s[0] != '\0');
 
 	/* With base, no handler — writes to base's stderr fd */
-	p_base = x_base_ts_make(NULL, NULL);
+	p_base = x_interp_make(NULL, NULL);
 
 	helper_file_buffer_ptr[TEST_HELPER_FILE_STDERR] = s;
 	helper_file_buffer_length[TEST_HELPER_FILE_STDERR] = 64;
 	helper_file_reset();
 	s[0] = '\0';
 
-	x_base_error(p_base, "base error", NULL);
+	x_interp_error(p_base, "base error", NULL);
 	_it_should("write error to stderr with base",
 		s[0] != '\0');
 
@@ -478,7 +478,7 @@ static char *test_base_error_no_handler(void)
 	helper_file_reset();
 	s[0] = '\0';
 
-	x_base_error(p_base, "undef", x_mksatom(p_base, X_OBJ_FLAG_NONE, "foo"));
+	x_interp_error(p_base, "undef", x_mksatom(p_base, X_OBJ_FLAG_NONE, "foo"));
 	_it_should("write error with symbol",
 		s[0] != '\0');
 
@@ -493,21 +493,21 @@ static char *test_base_error_with_handler(void)
 	jmp_buf jmp;
 	int caught;
 
-	p_base = x_base_ts_make(NULL, NULL);
+	p_base = x_interp_make(NULL, NULL);
 
 	/* Build handler: (jmp-ptr (saved-env . saved-boundary) error-value) */
 	p_handler = x_mkspair(p_base, X_OBJ_FLAG_NONE,
 		x_mksatom(p_base, X_OBJ_FLAG_NONE, &jmp),
 		x_mkspair(p_base, X_OBJ_FLAG_NONE,
 			x_mkspair(p_base, X_OBJ_FLAG_NONE,
-				x_firstobj(x_base_field_env_alist(p_base)),
-				x_base_field_env_local_boundary(p_base)),
+				x_firstobj(x_interp_field_env_alist(p_base)),
+				x_interp_field_env_local_boundary(p_base)),
 			x_mkspair(p_base, X_OBJ_FLAG_NONE, NULL, NULL)));
-	x_firstobj(x_base_field_error_handler(p_base)) = p_handler;
+	x_firstobj(x_interp_field_error_handler(p_base)) = p_handler;
 
 	caught = 0;
 	if (setjmp(jmp) == 0) {
-		x_base_error(p_base, "test err", NULL);
+		x_interp_error(p_base, "test err", NULL);
 	} else {
 		caught = 1;
 	}
@@ -515,17 +515,17 @@ static char *test_base_error_with_handler(void)
 	_it_should("longjmp to handler on error",
 		1 == caught);
 
-	/* x_base_error now stores message in a static atom (zero allocation) */
+	/* x_interp_error now stores message in a static atom (zero allocation) */
 	_it_should("handler error set to message atom",
 		x_error_handler_error(p_handler) != NULL);
 
 	/* Test with symbol */
-	x_firstobj(x_base_field_error_handler(p_base)) = p_handler;
+	x_firstobj(x_interp_field_error_handler(p_base)) = p_handler;
 	x_error_handler_error(p_handler) = NULL;
 
 	caught = 0;
 	if (setjmp(jmp) == 0) {
-		x_base_error(p_base, "undef", x_mksatom(p_base, X_OBJ_FLAG_NONE, "bar"));
+		x_interp_error(p_base, "undef", x_mksatom(p_base, X_OBJ_FLAG_NONE, "bar"));
 	} else {
 		caught = 1;
 	}
@@ -548,7 +548,7 @@ static char *test_base_write_buf(void)
 			{ .v = buf }, { (x_obj_t *)&buf_pos })
 	};
 
-	p_base = x_base_ts_make(NULL, NULL);
+	p_base = x_interp_make(NULL, NULL);
 
 	/* Install write-buffer on base */
 	x_firstobj(x_base_field_write_buf(p_base)) = (x_obj_t *)buf_obj;
@@ -603,17 +603,17 @@ static char *test_base_load(void)
 	x_obj_t *p_base, *p_ret;
 	x_obj_t *tokens[3];
 
-	p_base = x_base_ts_make(NULL, NULL);
-	/* x_base_load reads x_base_field_buffer but our stubbed x_token_read
+	p_base = x_interp_make(NULL, NULL);
+	/* x_interp_load reads x_base_field_buffer but our stubbed x_token_read
 	 * ignores it — just push a non-NULL dummy. */
-	x_base_buffer_push(p_base, x_mkspair(p_base, X_OBJ_FLAG_NONE, NULL, NULL));
+	x_interp_buffer_push(p_base, x_mkspair(p_base, X_OBJ_FLAG_NONE, NULL, NULL));
 
 	/* Empty input — token_read returns NULL immediately */
 	_token_read_returns = NULL;
 	_token_read_index = 0;
 	_eval_last = NULL;
 
-	p_ret = x_base_load(p_base, NULL);
+	p_ret = x_interp_load(p_base, NULL);
 	_it_should("return NULL for empty input", NULL == p_ret);
 
 	/* Two tokens then NULL */
@@ -624,7 +624,7 @@ static char *test_base_load(void)
 	_token_read_index = 0;
 	_eval_last = NULL;
 
-	p_ret = x_base_load(p_base, NULL);
+	p_ret = x_interp_load(p_base, NULL);
 	_it_should("return last eval result", _eval_last == p_ret);
 	_it_should("eval was called with second token",
 		tokens[1] == _eval_last);

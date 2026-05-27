@@ -19,7 +19,7 @@
 #include "ext/x-expr/src/x.c"
 #include "src/x-alist.c"
 #include "ext/x-expr/src/x-base.c"
-#include "src/x-base.c"
+#include "src/x-interp.c"
 #include "src/x-eval.c"
 #include "src/x-type.c"
 #include "src/x-type/atom.c"
@@ -103,7 +103,7 @@ static char *test_arith_sum(void)
 {
 	x_obj_t *p_base, *p_args, *p_result;
 
-	p_base = x_base_ts_make(NULL, NULL);
+	p_base = x_interp_make(NULL, NULL);
 	x_prim_register(p_base, NULL);
 
 	/* (+ 10 3) -> 13 */
@@ -135,7 +135,7 @@ static char *test_arith_sub(void)
 {
 	x_obj_t *p_base, *p_args, *p_result;
 
-	p_base = x_base_ts_make(NULL, NULL);
+	p_base = x_interp_make(NULL, NULL);
 	x_prim_register(p_base, NULL);
 
 	/* (- 10 3) -> 7 */
@@ -165,7 +165,7 @@ static char *test_arith_prod(void)
 {
 	x_obj_t *p_base, *p_args, *p_result;
 
-	p_base = x_base_ts_make(NULL, NULL);
+	p_base = x_interp_make(NULL, NULL);
 	x_prim_register(p_base, NULL);
 
 	/* (* 4 5) -> 20 */
@@ -190,7 +190,7 @@ static char *test_arith_div(void)
 {
 	x_obj_t *p_base, *p_args, *p_result;
 
-	p_base = x_base_ts_make(NULL, NULL);
+	p_base = x_interp_make(NULL, NULL);
 	x_prim_register(p_base, NULL);
 
 	/* (/ 10 3) -> 3 (integer division) */
@@ -215,7 +215,7 @@ static char *test_arith_bitwise(void)
 {
 	x_obj_t *p_base, *p_args, *p_result;
 
-	p_base = x_base_ts_make(NULL, NULL);
+	p_base = x_interp_make(NULL, NULL);
 	x_prim_register(p_base, NULL);
 
 	/* (~ 0) -> -1 */
@@ -253,7 +253,7 @@ static char *test_arith_shift(void)
 {
 	x_obj_t *p_base, *p_args, *p_result;
 
-	p_base = x_base_ts_make(NULL, NULL);
+	p_base = x_interp_make(NULL, NULL);
 	x_prim_register(p_base, NULL);
 
 	/* (<< 1 4) -> 16 */
@@ -278,10 +278,10 @@ static char *test_arith_register(void)
 {
 	x_obj_t *p_base, *p_env;
 
-	p_base = x_base_ts_make(NULL, NULL);
+	p_base = x_interp_make(NULL, NULL);
 	x_prim_register(p_base, NULL);
 
-	p_env = x_firstobj(x_base_field_env_alist(p_base));
+	p_env = x_firstobj(x_interp_field_env_alist(p_base));
 	_it_should("env is not empty after register",
 		p_env != NULL);
 

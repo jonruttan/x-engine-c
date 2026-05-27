@@ -18,7 +18,7 @@
 #include "ext/x-expr/src/x-obj.c"
 #include "src/x-alist.c"
 #include "ext/x-expr/src/x-base.c"
-#include "src/x-base.c"
+#include "src/x-interp.c"
 #include "ext/x-expr/src/x-heap.c"
 #include "src/x-type.c"
 #include "src/x-type/prim.c"
@@ -175,14 +175,14 @@ static char *test_type_comment_register(void)
 {
 	x_obj_t *p_base, *p_type;
 
-	p_base = x_base_ts_make(NULL, NULL);
+	p_base = x_interp_make(NULL, NULL);
 
 	p_type = x_type_comment_register(p_base, p_base);
 	_it_should("return the Comment type object",
 		0 == x_lib_strcmp(X_TYPE_COMMENT_NAME, x_strval(x_type_field_name(p_type)))
 	);
 	_it_should("add the Comment type to the Type alist",
-		p_type == x_restobj(x_firstobj(x_firstobj(x_base_field_type_alist(p_base))))
+		p_type == x_restobj(x_firstobj(x_firstobj(x_interp_field_type_alist(p_base))))
 	);
 
 	test_cleanup(p_base);

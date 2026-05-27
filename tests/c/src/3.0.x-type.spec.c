@@ -20,7 +20,7 @@
 #include "ext/x-expr/src/x-obj.c"
 #include "src/x-alist.c"
 #include "ext/x-expr/src/x-base.c"
-#include "src/x-base.c"
+#include "src/x-interp.c"
 #include "ext/x-expr/src/x-heap.c"
 #include "src/x-type.c"
 #include "src/x-type/atom.c"
@@ -286,7 +286,7 @@ static char *test_type_struct_get(void)
 	x_sys_free(p_args);
 
 
-	p_base = x_base_ts_make(NULL, NULL);
+	p_base = x_interp_make(NULL, NULL);
 	p_obj[3] = x_mksatom(p_base, X_OBJ_FLAG_NONE, mock_fn);
 	p_obj[2] = x_mksatom(p_base, X_OBJ_FLAG_NONE, mock_str);
 	p_obj[1] = x_mkspair(p_base, X_OBJ_FLAG_NONE, p_obj[3], p_base);
@@ -311,7 +311,7 @@ static char *test_type_struct_get(void)
 	x_sys_free(p_base);
 
 
-	p_base = x_base_ts_make(NULL, NULL);
+	p_base = x_interp_make(NULL, NULL);
 
 	p_args = x_mkspair(NULL, X_OBJ_FLAG_NONE,
 		x_mksatom(p_base, X_OBJ_FLAG_NONE, mock_str),
@@ -632,7 +632,7 @@ static char *test_type_heap_mark(void)
 
 	/* Path 1: base type object returns x_atomobj */
 	p_obj = x_mksatom(p_base, X_OBJ_FLAG_NONE, 99);
-	x_obj_type(p_obj) = (x_obj_t *)&x_type_base_obj;
+	x_obj_type(p_obj) = (x_obj_t *)&x_interp_obj;
 	p_ret = x_type_heap_mark(p_base, p_obj, 0);
 	_it_should("base type returns atomobj",
 		p_ret == x_atomobj(p_obj));

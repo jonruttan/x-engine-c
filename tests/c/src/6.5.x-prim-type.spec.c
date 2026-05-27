@@ -19,7 +19,7 @@
 #include "ext/x-expr/src/x.c"
 #include "src/x-alist.c"
 #include "ext/x-expr/src/x-base.c"
-#include "src/x-base.c"
+#include "src/x-interp.c"
 #include "src/x-eval.c"
 #include "src/x-type.c"
 #include "src/x-type/atom.c"
@@ -113,7 +113,7 @@ static char *test_type_typep(void)
 	x_obj_t *p_base, *p_args, *p_result, *p_int;
 	x_obj_t *p_int_handle;
 
-	p_base = x_base_ts_make(NULL, NULL);
+	p_base = x_interp_make(NULL, NULL);
 	x_prim_register(p_base, NULL);
 
 	/* Create an int and get its type handle */
@@ -121,9 +121,9 @@ static char *test_type_typep(void)
 	p_int_handle = x_type_field_name(x_obj_type(p_int));
 
 	/* Bind both to env for eval */
-	x_base_env_alist_extend(p_base,
+	x_interp_env_alist_extend(p_base,
 		x_mkspair(p_base, X_OBJ_FLAG_NONE, x_mksymbol(p_base, "myint"), p_int));
-	x_base_env_alist_extend(p_base,
+	x_interp_env_alist_extend(p_base,
 		x_mkspair(p_base, X_OBJ_FLAG_NONE, x_mksymbol(p_base, "inthandle"), p_int_handle));
 
 	/* (type? myint inthandle) -> t */
@@ -133,7 +133,7 @@ static char *test_type_typep(void)
 		x_mkspair(p_base, X_OBJ_FLAG_NONE, x_mksymbol(p_base, "inthandle"), NULL)));
 	p_result = x_prim_typep(p_base, p_args);
 	_it_should("type? matches correct type",
-		p_result == x_firstobj(x_base_field_true(p_base)));
+		p_result == x_firstobj(x_interp_field_true(p_base)));
 
 	/* (type? nil inthandle) -> #f */
 	p_args = x_mkspair(p_base, X_OBJ_FLAG_NONE, NULL,
@@ -141,7 +141,7 @@ static char *test_type_typep(void)
 		x_mkspair(p_base, X_OBJ_FLAG_NONE, x_mksymbol(p_base, "inthandle"), NULL)));
 	p_result = x_prim_typep(p_base, p_args);
 	_it_should("type? nil returns #f",
-		p_result == x_firstobj(x_base_field_false(p_base)));
+		p_result == x_firstobj(x_interp_field_false(p_base)));
 
 	test_cleanup(p_base);
 	return NULL;
@@ -151,11 +151,11 @@ static char *test_type_type_of(void)
 {
 	x_obj_t *p_base, *p_args, *p_result, *p_int;
 
-	p_base = x_base_ts_make(NULL, NULL);
+	p_base = x_interp_make(NULL, NULL);
 	x_prim_register(p_base, NULL);
 
 	p_int = x_mkint(p_base, (x_int_t)42);
-	x_base_env_alist_extend(p_base,
+	x_interp_env_alist_extend(p_base,
 		x_mkspair(p_base, X_OBJ_FLAG_NONE, x_mksymbol(p_base, "myint"), p_int));
 
 	/* (type-of myint) -> int handle */
@@ -176,11 +176,11 @@ static char *test_type_type_name(void)
 {
 	x_obj_t *p_base, *p_args, *p_result, *p_int;
 
-	p_base = x_base_ts_make(NULL, NULL);
+	p_base = x_interp_make(NULL, NULL);
 	x_prim_register(p_base, NULL);
 
 	p_int = x_mkint(p_base, (x_int_t)42);
-	x_base_env_alist_extend(p_base,
+	x_interp_env_alist_extend(p_base,
 		x_mkspair(p_base, X_OBJ_FLAG_NONE, x_mksymbol(p_base, "myint"), p_int));
 
 	/* (type-name myint) -> "int" */
@@ -209,14 +209,14 @@ static char *test_type_make_instance(void)
 	x_obj_t *p_base, *p_args, *p_result, *p_int;
 	x_obj_t *p_int_handle;
 
-	p_base = x_base_ts_make(NULL, NULL);
+	p_base = x_interp_make(NULL, NULL);
 	x_prim_register(p_base, NULL);
 
 	/* Get the int type handle */
 	p_int = x_mkint(p_base, (x_int_t)0);
 	p_int_handle = x_type_field_name(x_obj_type(p_int));
 
-	x_base_env_alist_extend(p_base,
+	x_interp_env_alist_extend(p_base,
 		x_mkspair(p_base, X_OBJ_FLAG_NONE, x_mksymbol(p_base, "inthandle"), p_int_handle));
 
 	/* (make-instance inthandle 42) -> int-typed instance with data 42 */
@@ -238,7 +238,7 @@ static char *test_type_make_token_base(void)
 {
 	x_obj_t *p_base, *p_result;
 
-	p_base = x_base_ts_make(NULL, NULL);
+	p_base = x_interp_make(NULL, NULL);
 	x_prim_register(p_base, NULL);
 
 	p_result = x_prim_make_token_base(p_base, NULL);
@@ -257,7 +257,7 @@ static char *test_type_null_read_discard(void)
 	x_obj_t *p_base, *p_type;
 	struct x_type_t desc;
 
-	p_base = x_base_ts_make(NULL, NULL);
+	p_base = x_interp_make(NULL, NULL);
 	x_prim_register(p_base, NULL);
 
 	/* A type with NULL p_read is a discard type.
@@ -268,7 +268,7 @@ static char *test_type_null_read_discard(void)
 	desc.p_analyse = x_mksatom(p_base, X_OBJ_FLAG_NONE, 1);
 	/* p_read intentionally left NULL */
 	p_type = x_type_struct_make(p_base, desc);
-	x_base_type_alist_extend(p_base, p_type);
+	x_interp_type_alist_extend(p_base, p_type);
 
 	_it_should("null-read type registered successfully",
 		p_type != NULL);
@@ -283,10 +283,10 @@ static char *test_type_register(void)
 {
 	x_obj_t *p_base, *p_env;
 
-	p_base = x_base_ts_make(NULL, NULL);
+	p_base = x_interp_make(NULL, NULL);
 	x_prim_register(p_base, NULL);
 
-	p_env = x_firstobj(x_base_field_env_alist(p_base));
+	p_env = x_firstobj(x_interp_field_env_alist(p_base));
 	_it_should("env is not empty after register",
 		p_env != NULL);
 
@@ -299,16 +299,16 @@ static char *test_type_make_type(void)
 	x_obj_t *p_base, *p_args, *p_result, *p_instance;
 	x_obj_t *p_name_handle, *p_handlers;
 
-	p_base = x_base_ts_make(NULL, NULL);
+	p_base = x_interp_make(NULL, NULL);
 	x_prim_register(p_base, NULL);
 
 	/* Build an empty handlers alist and create a type. */
 	p_handlers = NULL;
 
-	x_base_env_alist_extend(p_base,
+	x_interp_env_alist_extend(p_base,
 		x_mkspair(p_base, X_OBJ_FLAG_NONE, x_mksymbol(p_base, "name"),
 			x_mkstr(p_base, "mytype")));
-	x_base_env_alist_extend(p_base,
+	x_interp_env_alist_extend(p_base,
 		x_mkspair(p_base, X_OBJ_FLAG_NONE, x_mksymbol(p_base, "handlers"), p_handlers));
 
 	/* (make-type name handlers) */
@@ -324,7 +324,7 @@ static char *test_type_make_type(void)
 
 	/* Verify we can make-instance with it. */
 	p_name_handle = p_result;
-	x_base_env_alist_extend(p_base,
+	x_interp_env_alist_extend(p_base,
 		x_mkspair(p_base, X_OBJ_FLAG_NONE, x_mksymbol(p_base, "th"), p_name_handle));
 	p_args = x_mkspair(p_base, X_OBJ_FLAG_NONE, NULL,
 		x_mkspair(p_base, X_OBJ_FLAG_NONE,
@@ -351,7 +351,7 @@ static char *test_type_make_type_with_handlers(void)
 	x_obj_t *p_base, *p_args, *p_result;
 	x_obj_t *p_handlers, *p_fn;
 
-	p_base = x_base_ts_make(NULL, NULL);
+	p_base = x_interp_make(NULL, NULL);
 	x_prim_register(p_base, NULL);
 
 	/* Use a prim as handler — it has the right shape for type handler calls */
@@ -378,10 +378,10 @@ static char *test_type_make_type_with_handlers(void)
 		x_mkspair(p_base, X_OBJ_FLAG_NONE, x_mksymbol(p_base, "to"), p_fn),
 		NULL)))))))));
 
-	x_base_env_alist_extend(p_base,
+	x_interp_env_alist_extend(p_base,
 		x_mkspair(p_base, X_OBJ_FLAG_NONE, x_mksymbol(p_base, "name"),
 			x_mkstr(p_base, "fulltype")));
-	x_base_env_alist_extend(p_base,
+	x_interp_env_alist_extend(p_base,
 		x_mkspair(p_base, X_OBJ_FLAG_NONE, x_mksymbol(p_base, "hdlrs"), p_handlers));
 
 	p_args = x_mkspair(p_base, X_OBJ_FLAG_NONE, NULL,
@@ -402,16 +402,16 @@ static char *test_type_base_make_type(void)
 {
 	x_obj_t *p_base, *p_args, *p_result, *p_target;
 
-	p_base = x_base_ts_make(NULL, NULL);
+	p_base = x_interp_make(NULL, NULL);
 	x_prim_register(p_base, NULL);
 
-	p_target = x_base_ts_make(p_base, NULL);
-	x_base_env_alist_extend(p_base,
+	p_target = x_interp_make(p_base, NULL);
+	x_interp_env_alist_extend(p_base,
 		x_mkspair(p_base, X_OBJ_FLAG_NONE, x_mksymbol(p_base, "tgt"), p_target));
-	x_base_env_alist_extend(p_base,
+	x_interp_env_alist_extend(p_base,
 		x_mkspair(p_base, X_OBJ_FLAG_NONE, x_mksymbol(p_base, "name"),
 			x_mkstr(p_base, "tgttype")));
-	x_base_env_alist_extend(p_base,
+	x_interp_env_alist_extend(p_base,
 		x_mkspair(p_base, X_OBJ_FLAG_NONE, x_mksymbol(p_base, "hdlrs"), NULL));
 
 	/* (base-make-type tgt name hdlrs) */
@@ -435,7 +435,7 @@ static char *test_type_make_base(void)
 	x_obj_t *p_base, *p_new_base;
 
 	helper_set_alloc(MEM_SYSTEM);
-	p_base = x_base_ts_make(NULL, NULL);
+	p_base = x_interp_make(NULL, NULL);
 	x_prim_register(p_base, NULL);
 
 	p_new_base = x_prim_make_base(p_base, NULL);
@@ -444,7 +444,7 @@ static char *test_type_make_base(void)
 	_it_should("make-base returns different base",
 		p_new_base != p_base);
 	_it_should("make-base has env",
-		x_base_field_env_alist(p_new_base) != NULL);
+		x_interp_field_env_alist(p_new_base) != NULL);
 	_it_should("make-base has buffer",
 		x_base_field_buffer(p_new_base) != NULL);
 
@@ -461,24 +461,24 @@ static char *test_type_base_eval(void)
 	x_obj_t *p_sym;
 
 	helper_set_alloc(MEM_SYSTEM);
-	p_base = x_base_ts_make(NULL, NULL);
+	p_base = x_interp_make(NULL, NULL);
 	x_prim_register(p_base, NULL);
 
 	/* Create a target base and bind a value there */
-	p_target = x_base_ts_make(p_base, NULL);
+	p_target = x_interp_make(p_base, NULL);
 	x_prim_register(p_target, NULL);
 	p_sym = x_mksymbol(p_target, "xx");
-	x_base_env_alist_extend(p_target,
+	x_interp_env_alist_extend(p_target,
 		x_mkspair(p_target, X_OBJ_FLAG_NONE, p_sym,
 			x_mksatom(p_target, X_OBJ_FLAG_NONE, (x_int_t)77)));
 
-	x_base_env_alist_extend(p_base,
+	x_interp_env_alist_extend(p_base,
 		x_mkspair(p_base, X_OBJ_FLAG_NONE, x_mksymbol(p_base, "tgt"), p_target));
 
 	/* Pass the symbol xx as expression — it self-evaluates in calling base
 	 * (it's a symbol atom), then gets eval'd in target base.
 	 * Bind the symbol to expr in calling base so x_eval_arg resolves it. */
-	x_base_env_alist_extend(p_base,
+	x_interp_env_alist_extend(p_base,
 		x_mkspair(p_base, X_OBJ_FLAG_NONE, x_mksymbol(p_base, "expr"), p_sym));
 
 	/* (base-eval tgt expr) -> evaluates xx in target -> 77 */
@@ -503,13 +503,13 @@ static char *test_type_base_eval_error(void)
 	x_obj_t *p_handler;
 
 	helper_set_alloc(MEM_SYSTEM);
-	p_base = x_base_ts_make(NULL, NULL);
+	p_base = x_interp_make(NULL, NULL);
 	x_prim_register(p_base, NULL);
 
-	p_target = x_base_ts_make(p_base, NULL);
+	p_target = x_interp_make(p_base, NULL);
 	x_prim_register(p_target, NULL);
 
-	x_base_env_alist_extend(p_base,
+	x_interp_env_alist_extend(p_base,
 		x_mkspair(p_base, X_OBJ_FLAG_NONE, x_mksymbol(p_base, "tgt"), p_target));
 
 	/* Use an unbound symbol — evaluating it in target will trigger error.
@@ -517,7 +517,7 @@ static char *test_type_base_eval_error(void)
 	{
 		x_obj_t *p_unbound;
 		p_unbound = x_mksymbol(p_base, "____unbound____");
-		x_base_env_alist_extend(p_base,
+		x_interp_env_alist_extend(p_base,
 			x_mkspair(p_base, X_OBJ_FLAG_NONE, x_mksymbol(p_base, "expr"), p_unbound));
 	}
 
@@ -525,9 +525,9 @@ static char *test_type_base_eval_error(void)
 	p_handler = x_mkspair(p_base, X_OBJ_FLAG_NONE,
 		x_mkptr(p_base, &jmp),
 		x_mkspair(p_base, X_OBJ_FLAG_NONE,
-			x_firstobj(x_base_field_env_alist(p_base)),
+			x_firstobj(x_interp_field_env_alist(p_base)),
 			x_mkspair(p_base, X_OBJ_FLAG_NONE, NULL, NULL)));
-	x_firstobj(x_base_field_error_handler(p_base)) = p_handler;
+	x_firstobj(x_interp_field_error_handler(p_base)) = p_handler;
 
 	if (setjmp(jmp) == 0) {
 		p_args = x_mkspair(p_base, X_OBJ_FLAG_NONE, NULL,
@@ -542,7 +542,7 @@ static char *test_type_base_eval_error(void)
 			p_result != NULL);
 	}
 
-	x_firstobj(x_base_field_error_handler(p_base)) = NULL;
+	x_firstobj(x_interp_field_error_handler(p_base)) = NULL;
 	test_cleanup(p_base);
 	return NULL;
 }
@@ -551,18 +551,18 @@ static char *test_type_base_bind(void)
 {
 	x_obj_t *p_base, *p_args, *p_result, *p_target;
 
-	p_base = x_base_ts_make(NULL, NULL);
+	p_base = x_interp_make(NULL, NULL);
 	x_prim_register(p_base, NULL);
 
-	p_target = x_base_ts_make(p_base, NULL);
+	p_target = x_interp_make(p_base, NULL);
 	x_prim_register(p_target, NULL);
 
-	x_base_env_alist_extend(p_base,
+	x_interp_env_alist_extend(p_base,
 		x_mkspair(p_base, X_OBJ_FLAG_NONE, x_mksymbol(p_base, "tgt"), p_target));
-	x_base_env_alist_extend(p_base,
+	x_interp_env_alist_extend(p_base,
 		x_mkspair(p_base, X_OBJ_FLAG_NONE, x_mksymbol(p_base, "nm"),
 			x_mksymbol(p_base, "hello")));
-	x_base_env_alist_extend(p_base,
+	x_interp_env_alist_extend(p_base,
 		x_mkspair(p_base, X_OBJ_FLAG_NONE, x_mksymbol(p_base, "val"),
 			x_mksatom(p_base, X_OBJ_FLAG_NONE, (x_int_t)55)));
 
@@ -587,14 +587,14 @@ static char *test_type_buffer_token(void)
 	x_obj_t *p_base, *p_args, *p_result, *p_buffer;
 	x_char_t buffer[64];
 
-	p_base = x_base_ts_make(NULL, NULL);
+	p_base = x_interp_make(NULL, NULL);
 	x_prim_register(p_base, NULL);
 
 	p_buffer = x_mkbuffer(p_base, buffer);
 	x_lib_memcpy(x_bufferval(p_buffer), "hello", 5);
 	x_bufferread(p_buffer) = x_bufferval(p_buffer) + 5;
 
-	x_base_env_alist_extend(p_base,
+	x_interp_env_alist_extend(p_base,
 		x_mkspair(p_base, X_OBJ_FLAG_NONE, x_mksymbol(p_base, "buf"), p_buffer));
 
 	/* (buffer-token buf) */
@@ -617,21 +617,21 @@ static char *test_type_token_read_string(void)
 	x_obj_t *p_token_base;
 
 	helper_set_alloc(MEM_SYSTEM);
-	p_base = x_base_ts_make(NULL, NULL);
+	p_base = x_interp_make(NULL, NULL);
 	x_prim_register(p_base, NULL);
 
 	/* Use make-base for a full base with all types and primitives */
 	p_token_base = x_prim_make_base(p_base, NULL);
 
-	x_base_env_alist_extend(p_base,
+	x_interp_env_alist_extend(p_base,
 		x_mkspair(p_base, X_OBJ_FLAG_NONE, x_mksymbol(p_base, "tb"), p_token_base));
-	x_base_env_alist_extend(p_base,
+	x_interp_env_alist_extend(p_base,
 		x_mkspair(p_base, X_OBJ_FLAG_NONE, x_mksymbol(p_base, "s"),
 			x_mkstr(p_base, "hello")));
 
-	x_base_env_alist_extend(p_base,
+	x_interp_env_alist_extend(p_base,
 		x_mkspair(p_base, X_OBJ_FLAG_NONE, x_mksymbol(p_base, "tb"), p_token_base));
-	x_base_env_alist_extend(p_base,
+	x_interp_env_alist_extend(p_base,
 		x_mkspair(p_base, X_OBJ_FLAG_NONE, x_mksymbol(p_base, "s"),
 			x_mkstr(p_base, "hello")));
 
@@ -659,16 +659,16 @@ static char *test_type_convert(void)
 	x_obj_t *p_base, *p_args, *p_result, *p_int;
 	x_obj_t *p_int_handle;
 
-	p_base = x_base_ts_make(NULL, NULL);
+	p_base = x_interp_make(NULL, NULL);
 	x_prim_register(p_base, NULL);
 
 	/* Test short-circuit: already target type */
 	p_int = x_mkint(p_base, (x_int_t)42);
 	p_int_handle = x_type_field_name(x_obj_type(p_int));
 
-	x_base_env_alist_extend(p_base,
+	x_interp_env_alist_extend(p_base,
 		x_mkspair(p_base, X_OBJ_FLAG_NONE, x_mksymbol(p_base, "v"), p_int));
-	x_base_env_alist_extend(p_base,
+	x_interp_env_alist_extend(p_base,
 		x_mkspair(p_base, X_OBJ_FLAG_NONE, x_mksymbol(p_base, "h"), p_int_handle));
 
 	/* (convert v h) -> v (same type, short-circuit) */
@@ -681,7 +681,7 @@ static char *test_type_convert(void)
 		p_result == p_int);
 
 	/* (convert nil h) -> nil */
-	x_base_env_alist_extend(p_base,
+	x_interp_env_alist_extend(p_base,
 		x_mkspair(p_base, X_OBJ_FLAG_NONE, x_mksymbol(p_base, "v"), NULL));
 	p_args = x_mkspair(p_base, X_OBJ_FLAG_NONE, NULL,
 		x_mkspair(p_base, X_OBJ_FLAG_NONE,
@@ -695,9 +695,9 @@ static char *test_type_convert(void)
 	{
 		x_obj_t *p_bogus;
 		p_bogus = x_mksatom(p_base, X_OBJ_FLAG_NONE, (x_int_t)0);
-		x_base_env_alist_extend(p_base,
+		x_interp_env_alist_extend(p_base,
 			x_mkspair(p_base, X_OBJ_FLAG_NONE, x_mksymbol(p_base, "v"), p_int));
-		x_base_env_alist_extend(p_base,
+		x_interp_env_alist_extend(p_base,
 			x_mkspair(p_base, X_OBJ_FLAG_NONE, x_mksymbol(p_base, "bh"), p_bogus));
 		p_args = x_mkspair(p_base, X_OBJ_FLAG_NONE, NULL,
 		x_mkspair(p_base, X_OBJ_FLAG_NONE,
@@ -719,7 +719,7 @@ static char *test_type_type_name_nil_name(void)
 	x_obj_t *p_type;
 	struct x_type_t type_desc;
 
-	p_base = x_base_ts_make(NULL, NULL);
+	p_base = x_interp_make(NULL, NULL);
 	x_prim_register(p_base, NULL);
 
 	/* Create a type with nil name — do NOT register on type alist
@@ -758,7 +758,7 @@ static char *test_type_convert_from_exact(void)
 	x_obj_t *p_converter, *p_from_alist;
 	struct x_type_t src_desc, tgt_desc;
 
-	p_base = x_base_ts_make(NULL, NULL);
+	p_base = x_interp_make(NULL, NULL);
 	x_prim_register(p_base, NULL);
 
 	/* Create source type */
@@ -766,7 +766,7 @@ static char *test_type_convert_from_exact(void)
 	src_desc.p_name = x_mksatom(p_base, X_OBJ_FLAG_NONE, "SRC");
 	src_desc.p_units = (x_obj_t *)&x_type_units_pair_obj;
 	p_src_type = x_type_struct_make(p_base, src_desc);
-	x_base_type_alist_extend(p_base, p_src_type);
+	x_interp_type_alist_extend(p_base, p_src_type);
 	p_src_handle = x_type_field_name(p_src_type);
 
 	/* Build converter prim */
@@ -782,7 +782,7 @@ static char *test_type_convert_from_exact(void)
 	tgt_desc.p_units = (x_obj_t *)&x_type_units_pair_obj;
 	tgt_desc.p_from = p_from_alist;
 	p_tgt_type = x_type_struct_make(p_base, tgt_desc);
-	x_base_type_alist_extend(p_base, p_tgt_type);
+	x_interp_type_alist_extend(p_base, p_tgt_type);
 	p_tgt_handle = x_type_field_name(p_tgt_type);
 
 	/* Create instance of source type */
@@ -790,9 +790,9 @@ static char *test_type_convert_from_exact(void)
 		x_mksatom(p_base, X_OBJ_FLAG_NONE, (x_int_t)42), NULL);
 
 	/* Bind to env */
-	x_base_env_alist_extend(p_base,
+	x_interp_env_alist_extend(p_base,
 		x_mkspair(p_base, X_OBJ_FLAG_NONE, x_mksymbol(p_base, "v"), p_instance));
-	x_base_env_alist_extend(p_base,
+	x_interp_env_alist_extend(p_base,
 		x_mkspair(p_base, X_OBJ_FLAG_NONE, x_mksymbol(p_base, "h"), p_tgt_handle));
 
 	/* (convert v h) -> from alist exact match */
@@ -816,7 +816,7 @@ static char *test_type_convert_wildcard(void)
 	x_obj_t *p_converter, *p_from_alist;
 	struct x_type_t src_desc, tgt_desc;
 
-	p_base = x_base_ts_make(NULL, NULL);
+	p_base = x_interp_make(NULL, NULL);
 	x_prim_register(p_base, NULL);
 
 	/* Create source type (no from/to) */
@@ -824,14 +824,14 @@ static char *test_type_convert_wildcard(void)
 	src_desc.p_name = x_mksatom(p_base, X_OBJ_FLAG_NONE, "WSRC");
 	src_desc.p_units = (x_obj_t *)&x_type_units_pair_obj;
 	p_src_type = x_type_struct_make(p_base, src_desc);
-	x_base_type_alist_extend(p_base, p_src_type);
+	x_interp_type_alist_extend(p_base, p_src_type);
 
 	/* Build converter prim */
 	p_converter = x_mkprim(p_base, test_convert_handler);
 
 	/* Build from alist with wildcard key #t */
 	p_from_alist = x_mklist(p_base,
-		x_mkspair(p_base, X_OBJ_FLAG_NONE, x_base_field_true(p_base), p_converter),
+		x_mkspair(p_base, X_OBJ_FLAG_NONE, x_interp_field_true(p_base), p_converter),
 		NULL);
 
 	/* Create target type with wildcard from alist */
@@ -840,16 +840,16 @@ static char *test_type_convert_wildcard(void)
 	tgt_desc.p_units = (x_obj_t *)&x_type_units_pair_obj;
 	tgt_desc.p_from = p_from_alist;
 	p_tgt_type = x_type_struct_make(p_base, tgt_desc);
-	x_base_type_alist_extend(p_base, p_tgt_type);
+	x_interp_type_alist_extend(p_base, p_tgt_type);
 	p_tgt_handle = x_type_field_name(p_tgt_type);
 
 	/* Create instance of source type */
 	p_instance = x_obj_make(p_base, p_src_type, 0, X_OBJ_LENGTH_PAIR,
 		x_mksatom(p_base, X_OBJ_FLAG_NONE, (x_int_t)99), NULL);
 
-	x_base_env_alist_extend(p_base,
+	x_interp_env_alist_extend(p_base,
 		x_mkspair(p_base, X_OBJ_FLAG_NONE, x_mksymbol(p_base, "v"), p_instance));
-	x_base_env_alist_extend(p_base,
+	x_interp_env_alist_extend(p_base,
 		x_mkspair(p_base, X_OBJ_FLAG_NONE, x_mksymbol(p_base, "h"), p_tgt_handle));
 
 	/* (convert v h) -> wildcard #t match in from alist */
@@ -873,7 +873,7 @@ static char *test_type_convert_to_alist(void)
 	x_obj_t *p_converter, *p_to_alist;
 	struct x_type_t src_desc, tgt_desc;
 
-	p_base = x_base_ts_make(NULL, NULL);
+	p_base = x_interp_make(NULL, NULL);
 	x_prim_register(p_base, NULL);
 
 	/* Build converter prim */
@@ -885,7 +885,7 @@ static char *test_type_convert_to_alist(void)
 	tgt_desc.p_units = (x_obj_t *)&x_type_units_pair_obj;
 	x_type_struct_make(p_base, tgt_desc);
 	p_tgt_handle = tgt_desc.p_name;
-	x_base_type_alist_extend(p_base,
+	x_interp_type_alist_extend(p_base,
 		x_type_struct_make(p_base, tgt_desc));
 
 	/* Build to alist: ((tgt-handle . converter)) */
@@ -898,7 +898,7 @@ static char *test_type_convert_to_alist(void)
 	src_desc.p_units = (x_obj_t *)&x_type_units_pair_obj;
 	src_desc.p_to = p_to_alist;
 	p_src_type = x_type_struct_make(p_base, src_desc);
-	x_base_type_alist_extend(p_base, p_src_type);
+	x_interp_type_alist_extend(p_base, p_src_type);
 	p_src_handle = x_type_field_name(p_src_type);
 	(void)p_src_handle;
 
@@ -906,9 +906,9 @@ static char *test_type_convert_to_alist(void)
 	p_instance = x_obj_make(p_base, p_src_type, 0, X_OBJ_LENGTH_PAIR,
 		x_mksatom(p_base, X_OBJ_FLAG_NONE, (x_int_t)77), NULL);
 
-	x_base_env_alist_extend(p_base,
+	x_interp_env_alist_extend(p_base,
 		x_mkspair(p_base, X_OBJ_FLAG_NONE, x_mksymbol(p_base, "v"), p_instance));
-	x_base_env_alist_extend(p_base,
+	x_interp_env_alist_extend(p_base,
 		x_mkspair(p_base, X_OBJ_FLAG_NONE, x_mksymbol(p_base, "h"), p_tgt_handle));
 
 	/* (convert v h) -> source's to alist match */
@@ -933,7 +933,7 @@ static char *test_type_convert_no_match(void)
 	x_obj_t *p_bogus_key;
 	struct x_type_t src_desc, tgt_desc;
 
-	p_base = x_base_ts_make(NULL, NULL);
+	p_base = x_interp_make(NULL, NULL);
 	x_prim_register(p_base, NULL);
 
 	p_converter = x_mkprim(p_base, test_convert_handler);
@@ -947,7 +947,7 @@ static char *test_type_convert_no_match(void)
 	tgt_desc.p_name = x_mksatom(p_base, X_OBJ_FLAG_NONE, "NMTGT");
 	tgt_desc.p_units = (x_obj_t *)&x_type_units_pair_obj;
 	tgt_desc.p_from = p_from_alist;
-	x_base_type_alist_extend(p_base,
+	x_interp_type_alist_extend(p_base,
 		x_type_struct_make(p_base, tgt_desc));
 	p_tgt_handle = tgt_desc.p_name;
 
@@ -960,15 +960,15 @@ static char *test_type_convert_no_match(void)
 	src_desc.p_units = (x_obj_t *)&x_type_units_pair_obj;
 	src_desc.p_to = p_to_alist;
 	p_src_type = x_type_struct_make(p_base, src_desc);
-	x_base_type_alist_extend(p_base, p_src_type);
+	x_interp_type_alist_extend(p_base, p_src_type);
 
 	/* Create instance of source type */
 	p_instance = x_obj_make(p_base, p_src_type, 0, X_OBJ_LENGTH_PAIR,
 		x_mksatom(p_base, X_OBJ_FLAG_NONE, (x_int_t)11), NULL);
 
-	x_base_env_alist_extend(p_base,
+	x_interp_env_alist_extend(p_base,
 		x_mkspair(p_base, X_OBJ_FLAG_NONE, x_mksymbol(p_base, "v"), p_instance));
-	x_base_env_alist_extend(p_base,
+	x_interp_env_alist_extend(p_base,
 		x_mkspair(p_base, X_OBJ_FLAG_NONE, x_mksymbol(p_base, "h"), p_tgt_handle));
 
 	/* (convert v h) -> no from or to match, returns nil */
@@ -991,14 +991,14 @@ static char *test_type_token_read_string_tokens(void)
 	x_obj_t *p_token_base;
 
 	helper_set_alloc(MEM_SYSTEM);
-	p_base = x_base_ts_make(NULL, NULL);
+	p_base = x_interp_make(NULL, NULL);
 	x_prim_register(p_base, NULL);
 
 	p_token_base = x_prim_make_base(p_base, NULL);
 
-	x_base_env_alist_extend(p_base,
+	x_interp_env_alist_extend(p_base,
 		x_mkspair(p_base, X_OBJ_FLAG_NONE, x_mksymbol(p_base, "tb"), p_token_base));
-	x_base_env_alist_extend(p_base,
+	x_interp_env_alist_extend(p_base,
 		x_mkspair(p_base, X_OBJ_FLAG_NONE, x_mksymbol(p_base, "s"),
 			x_mkstr(p_base, "(1)(2)")));
 
@@ -1022,12 +1022,12 @@ static char *test_type_make_instance_nil_type(void)
 	x_obj_t *p_base, *p_args, *p_result;
 	x_obj_t *p_bogus;
 
-	p_base = x_base_ts_make(NULL, NULL);
+	p_base = x_interp_make(NULL, NULL);
 	x_prim_register(p_base, NULL);
 
 	/* make-instance with bogus handle -> nil */
 	p_bogus = x_mksatom(p_base, X_OBJ_FLAG_NONE, (x_int_t)999);
-	x_base_env_alist_extend(p_base,
+	x_interp_env_alist_extend(p_base,
 		x_mkspair(p_base, X_OBJ_FLAG_NONE, x_mksymbol(p_base, "bh"), p_bogus));
 	p_args = x_mkspair(p_base, X_OBJ_FLAG_NONE, NULL,
 		x_mkspair(p_base, X_OBJ_FLAG_NONE,
@@ -1044,11 +1044,11 @@ static char *test_type_make_instance_nil_type(void)
 static int test_error_hook_called_type;
 static void test_error_hook_type_passthrough(x_obj_t *p_base, x_char_t *msg, x_obj_t *p_obj)
 {
-	/* First call: delegate to x_base_error (triggers longjmp in target).
+	/* First call: delegate to x_interp_error (triggers longjmp in target).
 	 * Second call: intercept (parent base has no handler). */
 	if (test_error_hook_called_type == 0) {
 		test_error_hook_called_type = 1;
-		x_base_error(p_base, msg, p_obj);
+		x_interp_error(p_base, msg, p_obj);
 	} else {
 		test_error_hook_called_type = 2;
 	}
@@ -1060,19 +1060,19 @@ static char *test_type_base_eval_error_no_parent(void)
 {
 	x_obj_t *p_base, *p_args, *p_result, *p_target;
 
-	p_base = x_base_ts_make(NULL, NULL);
+	p_base = x_interp_make(NULL, NULL);
 	x_prim_register(p_base, NULL);
 
-	p_target = x_base_ts_make(p_base, NULL);
+	p_target = x_interp_make(p_base, NULL);
 	x_prim_register(p_target, NULL);
 
-	x_base_env_alist_extend(p_base,
+	x_interp_env_alist_extend(p_base,
 		x_mkspair(p_base, X_OBJ_FLAG_NONE, x_mksymbol(p_base, "tgt"), p_target));
 
 	{
 		x_obj_t *p_unbound;
 		p_unbound = x_mksymbol(p_base, "____unbound2____");
-		x_base_env_alist_extend(p_base,
+		x_interp_env_alist_extend(p_base,
 			x_mkspair(p_base, X_OBJ_FLAG_NONE, x_mksymbol(p_base, "expr"), p_unbound));
 	}
 
@@ -1080,10 +1080,10 @@ static char *test_type_base_eval_error_no_parent(void)
 	x_firstobj(x_base_field_hook_error(p_base)) = (x_obj_t *)test_error_hook_passthrough_atom;
 	x_firstobj(x_base_field_hook_error(p_target)) = (x_obj_t *)test_error_hook_passthrough_atom;
 
-	/* Hook passes first error to x_base_error (longjmp in target),
+	/* Hook passes first error to x_interp_error (longjmp in target),
 	 * intercepts second error (parent has no handler, line 292). */
 	test_error_hook_called_type = 0;
-	x_firstobj(x_base_field_error_handler(p_base)) = NULL;
+	x_firstobj(x_interp_field_error_handler(p_base)) = NULL;
 
 	p_args = x_mkspair(p_base, X_OBJ_FLAG_NONE, NULL,
 		x_mkspair(p_base, X_OBJ_FLAG_NONE,

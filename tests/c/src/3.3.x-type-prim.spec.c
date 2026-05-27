@@ -18,7 +18,7 @@
 #include "src/x-obj/prim.c"
 #include "src/x-alist.c"
 #include "ext/x-expr/src/x-base.c"
-#include "src/x-base.c"
+#include "src/x-interp.c"
 #include "ext/x-expr/src/x-heap.c"
 #include "src/x-type.c"
 #include "src/x-type/atom.c"
@@ -93,7 +93,7 @@ static char *test_obj_type_isprim(void)
 {
 	x_obj_t *p_base, *p_obj;
 
-	p_base = x_base_ts_make(NULL, NULL);
+	p_base = x_interp_make(NULL, NULL);
 
 	p_obj = x_mkprim(p_base, 0);
 	_it_should("return true when object is a primitive",
@@ -139,7 +139,7 @@ static char *test_mkprim(void)
 	x_sys_free(p_obj);
 
 
-	p_base = x_base_ts_make(NULL, NULL);
+	p_base = x_interp_make(NULL, NULL);
 	p_obj = x_mkprim(p_base, test_prim_fn);
 	_it_should("make a Primitive object, attach it to the Base object, and set its value",
 		! x_obj_isnil(p_base, p_obj)
@@ -158,7 +158,7 @@ static char *test_mkfprim(void)
 	x_obj_t *p_base, *p_obj;
 	x_obj_flag_t flags = rand();
 
-	p_base = x_base_ts_make(NULL, NULL);
+	p_base = x_interp_make(NULL, NULL);
 
 	p_obj = x_mkfprim(p_base, flags, test_prim_fn);
 	_it_should("make a Primitive object and set its value",
@@ -171,7 +171,7 @@ static char *test_mkfprim(void)
 	x_sys_free(p_obj);
 
 
-	p_base = x_base_ts_make(NULL, NULL);
+	p_base = x_interp_make(NULL, NULL);
 	p_obj = x_mkfprim(p_base, flags, test_prim_fn);
 	_it_should("make a Primitive object, attach it to the Base object, and set its value",
 		! x_obj_isnil(p_base, p_obj)
@@ -190,7 +190,7 @@ static char *test_make_prim(void)
 	x_obj_t *p_base, *p_obj;
 	x_obj_flag_t flags = rand();
 
-	p_base = x_base_ts_make(NULL, NULL);
+	p_base = x_interp_make(NULL, NULL);
 
 	p_obj = x_make_prim(p_base, flags, test_prim_fn);
 	_it_should("make a Primitive object and set its value",
@@ -203,7 +203,7 @@ static char *test_make_prim(void)
 	x_sys_free(p_obj);
 
 
-	p_base = x_base_ts_make(NULL, NULL);
+	p_base = x_interp_make(NULL, NULL);
 	p_obj = x_make_prim(p_base, flags, test_prim_fn);
 	_it_should("make a Primitive object, attach it to the Base object, and set its value",
 		! x_obj_isnil(p_base, p_obj)
@@ -221,14 +221,14 @@ static char *test_type_prim_register(void)
 {
 	x_obj_t *p_base, *p_type;
 
-	p_base = x_base_ts_make(NULL, NULL);
+	p_base = x_interp_make(NULL, NULL);
 
 	p_type = x_type_prim_register(p_base, p_base);
 	_it_should("return the Primitive type object",
 		0 == x_lib_strcmp(X_TYPE_PRIM_NAME, x_strval(x_type_field_name(p_type)))
 	);
 	_it_should("add the Primitive type to the Type alist",
-		p_type == x_restobj(x_firstobj(x_firstobj(x_base_field_type_alist(p_base))))
+		p_type == x_restobj(x_firstobj(x_firstobj(x_interp_field_type_alist(p_base))))
 	);
 
 	x_sys_free(p_base);
@@ -242,7 +242,7 @@ static char *test_type_prim_struct(void)
 
 	helper_alloc_reset();
 
-	p_base = x_base_ts_make(NULL, NULL);
+	p_base = x_interp_make(NULL, NULL);
 	p_type = x_type_prim_struct(p_base, p_base);
 	_it_should("return Primitive Type list",
 		! x_obj_isnil(p_base, p_type)
@@ -316,10 +316,10 @@ static char *test_base_alist_assoc(void)
 
 	helper_alloc_reset();
 
-	p_base = x_base_ts_make(NULL, NULL);
-	x_base_type_alist_extend(p_base, x_mkspair(p_base, X_OBJ_FLAG_NONE, x_mkspair(p_base, X_OBJ_FLAG_NONE, x_type_prim_name, NULL), atom(1)));
+	p_base = x_interp_make(NULL, NULL);
+	x_interp_type_alist_extend(p_base, x_mkspair(p_base, X_OBJ_FLAG_NONE, x_mkspair(p_base, X_OBJ_FLAG_NONE, x_type_prim_name, NULL), atom(1)));
 
-	p_type = x_base_type_alist_assoc(p_base, x_mkspair(p_base, X_OBJ_FLAG_NONE, x_type_prim_name, NULL));
+	p_type = x_interp_type_alist_assoc(p_base, x_mkspair(p_base, X_OBJ_FLAG_NONE, x_type_prim_name, NULL));
 	_it_should("find the type in the Type alist and return its properties",
 		x_type_prim_name == x_type_field_name(p_type)
 	);
@@ -359,7 +359,7 @@ static char *test_type_prim_make(void)
 
 
 	/* Real base object */
-	p_base = x_base_ts_make(NULL, NULL);
+	p_base = x_interp_make(NULL, NULL);
 	p_fn = x_mksatom(p_base, X_OBJ_FLAG_NONE, test_prim_fn);
 	p_args = x_mkspair(p_base, X_OBJ_FLAG_NONE, p_fn, NULL);
 
@@ -382,7 +382,7 @@ static char *test_type_prim_make(void)
 
 
 	/* With p_base object */
-	p_base = x_base_ts_make(NULL, NULL);
+	p_base = x_interp_make(NULL, NULL);
 	p_fn = x_mksatom(p_base, X_OBJ_FLAG_NONE, test_prim_fn);
 	p_args = x_mkspair(p_base, X_OBJ_FLAG_NONE, p_fn, NULL);
 
@@ -445,7 +445,7 @@ static x_obj_t *make_typed_obj(x_obj_t *p_base, x_char_t *name, int units)
 	x_obj_t *p_type = x_type_struct_make(p_base, ts);
 	x_obj_t *p_state;
 
-	x_base_type_alist_extend(p_base, p_type);
+	x_interp_type_alist_extend(p_base, p_type);
 
 	/* Build a minimal state list for 2-unit callable layout:
 	   procedures need (params . (body . (env . bst))),
@@ -464,7 +464,7 @@ static char *test_type_prim_call_procedure(void)
 
 	helper_alloc_reset();
 
-	p_base = x_base_ts_make(NULL, NULL);
+	p_base = x_interp_make(NULL, NULL);
 	p_obj = make_typed_obj(p_base, (x_char_t *)X_TYPE_PROCEDURE_NAME, 1);
 	p_args = x_mkspair(p_base, X_OBJ_FLAG_NONE, p_obj, NULL);
 
@@ -481,7 +481,7 @@ static char *test_type_prim_call_operative(void)
 
 	helper_alloc_reset();
 
-	p_base = x_base_ts_make(NULL, NULL);
+	p_base = x_interp_make(NULL, NULL);
 	p_obj = make_typed_obj(p_base, (x_char_t *)X_TYPE_OPERATIVE_NAME, 1);
 	p_args = x_mkspair(p_base, X_OBJ_FLAG_NONE, p_obj, NULL);
 
@@ -499,8 +499,8 @@ static char *test_type_prim_apply_procedure(void)
 
 	helper_alloc_reset();
 
-	p_base = x_base_ts_make(NULL, NULL);
-	p_env = x_firstobj(x_base_field_env_alist(p_base));
+	p_base = x_interp_make(NULL, NULL);
+	p_env = x_firstobj(x_interp_field_env_alist(p_base));
 
 	/* Build state list: (params . (body . (env . bst))) */
 	p_s3 = x_mkspair(p_base, X_OBJ_FLAG_NONE, NULL, NULL);       /* (env . bst) */
@@ -513,7 +513,7 @@ static char *test_type_prim_apply_procedure(void)
 	x_obj_t *p_name = x_mksatom(p_base, X_OBJ_FLAG_NONE, (x_char_t *)X_TYPE_PROCEDURE_NAME);
 	struct x_type_t ts = { .p_name = p_name };
 	x_obj_t *p_type = x_type_struct_make(p_base, ts);
-	x_base_type_alist_extend(p_base, p_type);
+	x_interp_type_alist_extend(p_base, p_type);
 	p_obj = x_obj_make(p_base, p_type, X_OBJ_FLAG_NONE, X_OBJ_LENGTH_PAIR,
 		(x_fn_t)x_type_procedure_call, p_state);
 	}
@@ -524,7 +524,7 @@ static char *test_type_prim_apply_procedure(void)
 	_it_should("apply procedure via stub and return NULL",
 		NULL == p_ret);
 	_it_should("restore the environment after apply",
-		p_env == x_firstobj(x_base_field_env_alist(p_base)));
+		p_env == x_firstobj(x_interp_field_env_alist(p_base)));
 
 	return NULL;
 }
@@ -535,7 +535,7 @@ static char *test_type_prim_apply_operative(void)
 
 	helper_alloc_reset();
 
-	p_base = x_base_ts_make(NULL, NULL);
+	p_base = x_interp_make(NULL, NULL);
 	p_obj = make_typed_obj(p_base, (x_char_t *)X_TYPE_OPERATIVE_NAME, 1);
 	/* Set fn-ptr to operative call for x_callable_apply dispatch */
 	x_primval(p_obj) = (x_fn_t)x_type_operative_call;
@@ -556,7 +556,7 @@ static char *test_type_prim_write(void)
 	helper_alloc_reset();
 	memset(buf, 0, sizeof(buf));
 
-	p_base = x_base_ts_make(NULL, NULL);
+	p_base = x_interp_make(NULL, NULL);
 	p_obj = x_mkprim(p_base, test_prim_fn);
 	p_args = x_mkspair(p_base, X_OBJ_FLAG_NONE, p_obj, NULL);
 

@@ -18,7 +18,7 @@
 #include "ext/x-expr/src/x-obj.c"
 #include "src/x-alist.c"
 #include "ext/x-expr/src/x-base.c"
-#include "src/x-base.c"
+#include "src/x-interp.c"
 #include "src/x-eval.c"
 #include "ext/x-expr/src/x-heap.c"
 #include "src/x-type.c"
@@ -85,7 +85,7 @@ static char *test_obj_type_islist(void)
 {
 	x_obj_t *p_base, *p_obj;
 
-	p_base = x_base_ts_make(NULL, NULL);
+	p_base = x_interp_make(NULL, NULL);
 
 	p_obj = x_mklist(p_base, 0, 0);
 	_it_should("return true when object is a list",
@@ -107,7 +107,7 @@ static char *test_mklist(void)
 	x_obj_t *p_base, *p_obj;
 	x_int_t i1 = rand(), i2 = rand();
 
-	p_base = x_base_ts_make(NULL, NULL);
+	p_base = x_interp_make(NULL, NULL);
 
 	p_obj = x_mklist(p_base, (void *)i1, (void *)i2);
 	_it_should("make a List object and set its first and rest values",
@@ -120,7 +120,7 @@ static char *test_mklist(void)
 	x_sys_free(p_obj);
 
 
-	p_base = x_base_ts_make(NULL, NULL);
+	p_base = x_interp_make(NULL, NULL);
 	p_obj = x_mklist(p_base, (void *)i1, (void *)i2);
 	_it_should("make a List object, attach it to the Base object, and set its first and rest values",
 		p_obj != NULL
@@ -140,7 +140,7 @@ static char *test_mkflist(void)
 	x_int_t i1 = rand(), i2 = rand();
 	x_obj_flag_t flags = rand();
 
-	p_base = x_base_ts_make(NULL, NULL);
+	p_base = x_interp_make(NULL, NULL);
 
 	p_obj = x_mkflist(p_base, flags, (void *)i1, (void *)i2);
 	_it_should("make a List object and set its first and rest values",
@@ -153,7 +153,7 @@ static char *test_mkflist(void)
 	x_sys_free(p_obj);
 
 
-	p_base = x_base_ts_make(NULL, NULL);
+	p_base = x_interp_make(NULL, NULL);
 	p_obj = x_mkflist(p_base, flags, (void *)i1, (void *)i2);
 	_it_should("make a List object, attach it to the Base object, and set its first and rest values",
 		p_obj != NULL
@@ -173,7 +173,7 @@ static char *test_make_list(void)
 	x_int_t i1 = rand(), i2 = rand();
 	x_obj_flag_t flags = rand();
 
-	p_base = x_base_ts_make(NULL, NULL);
+	p_base = x_interp_make(NULL, NULL);
 
 	p_obj = x_make_list(p_base, flags, (void *)i1, (void *)i2);
 	_it_should("make a List object and set its first and rest values",
@@ -186,7 +186,7 @@ static char *test_make_list(void)
 	x_sys_free(p_obj);
 
 
-	p_base = x_base_ts_make(NULL, NULL);
+	p_base = x_interp_make(NULL, NULL);
 	p_obj = x_make_list(p_base, flags, (void *)i1, (void *)i2);
 	_it_should("make a List object, attach it to the Base object, and set its first and rest values",
 		p_obj != NULL
@@ -204,14 +204,14 @@ static char *test_type_list_register(void)
 {
 	x_obj_t *p_base, *p_type;
 
-	p_base = x_base_ts_make(NULL, NULL);
+	p_base = x_interp_make(NULL, NULL);
 
 	p_type = x_type_list_register(p_base, p_base);
 	_it_should("return the List type object",
 		0 == x_lib_strcmp(X_TYPE_LIST_NAME, x_atomstr(x_type_field_name(p_type)))
 	);
 	_it_should("add the List type to the Type alist",
-		p_type == x_restobj(x_firstobj(x_firstobj(x_base_field_type_alist(p_base))))
+		p_type == x_restobj(x_firstobj(x_firstobj(x_interp_field_type_alist(p_base))))
 	);
 
 	test_cleanup(p_base);
@@ -225,7 +225,7 @@ static char *test_type_list_struct(void)
 
 	helper_alloc_reset();
 
-	p_base = x_base_ts_make(NULL, NULL);
+	p_base = x_interp_make(NULL, NULL);
 	p_type = x_type_list_struct(p_base, p_base);
 	_it_should("return List Type list",
 		! x_obj_isnil(p_base, p_type)
@@ -300,10 +300,10 @@ static char *test_base_alist_assoc(void)
 
 	helper_alloc_reset();
 
-	p_base = x_base_ts_make(NULL, NULL);
-	x_base_type_alist_extend(p_base, x_mkspair(p_base, X_OBJ_FLAG_NONE, x_mkspair(p_base, X_OBJ_FLAG_NONE, x_type_list_name, NULL), atom(1)));
+	p_base = x_interp_make(NULL, NULL);
+	x_interp_type_alist_extend(p_base, x_mkspair(p_base, X_OBJ_FLAG_NONE, x_mkspair(p_base, X_OBJ_FLAG_NONE, x_type_list_name, NULL), atom(1)));
 
-	p_type = x_base_type_alist_assoc(p_base, x_mkspair(p_base, X_OBJ_FLAG_NONE, x_type_list_name, NULL));
+	p_type = x_interp_type_alist_assoc(p_base, x_mkspair(p_base, X_OBJ_FLAG_NONE, x_type_list_name, NULL));
 	_it_should("find the type in the Type alist and return its properties",
 		x_type_list_name == x_type_field_name(p_type)
 	);
@@ -357,7 +357,7 @@ static char *test_type_list_make(void)
 
 
 	/* Empty p_base object */
-	p_base = x_base_ts_make(NULL, NULL);
+	p_base = x_interp_make(NULL, NULL);
 	p_list = x_mkspair(p_base, X_OBJ_FLAG_NONE, rand(), rand());
 	p_args = x_mkspair(p_base, X_OBJ_FLAG_NONE, p_list, NULL);
 
@@ -389,7 +389,7 @@ static char *test_type_list_make(void)
 
 
 	/* With p_base object */
-	p_base = x_base_ts_make(NULL, NULL);
+	p_base = x_interp_make(NULL, NULL);
 	p_list = x_mkspair(p_base, X_OBJ_FLAG_NONE, rand(), rand());
 	p_args = x_mkspair(p_base, X_OBJ_FLAG_NONE, p_list, NULL);
 
@@ -445,7 +445,7 @@ static char *test_type_list_eval(void)
 
 	helper_alloc_reset();
 
-	p_base = x_base_ts_make(NULL, NULL);
+	p_base = x_interp_make(NULL, NULL);
 	p_type = x_type_struct_make(p_base, type);
 	p_prim = x_obj_make(p_base, p_type, X_OBJ_FLAG_NONE, X_OBJ_LENGTH_ATOM, test_prim);
 	p_atom = x_mksatom(p_base, X_OBJ_FLAG_NONE, "Hello, World!");
@@ -468,7 +468,7 @@ static char *test_type_list_eval_nil_operator(void)
 	helper_alloc_reset();
 
 	/* List whose first element evaluates to nil -> returns p_exp */
-	p_base = x_base_ts_make(NULL, NULL);
+	p_base = x_interp_make(NULL, NULL);
 	p_list = x_mklist(p_base, NULL, pair(atom(42), nil));
 	p_args = pair(pair(p_list, nil), nil);
 	p_ret = x_type_list_eval(p_base, p_args);
@@ -487,7 +487,7 @@ static char *test_type_list_eval_no_call(void)
 	helper_alloc_reset();
 
 	/* Type with no call field -> returns p_exp */
-	p_base = x_base_ts_make(NULL, NULL);
+	p_base = x_interp_make(NULL, NULL);
 
 	x_lib_memset(&type_desc, 0, sizeof(type_desc));
 	type_desc.p_name = x_mksatom(p_base, X_OBJ_FLAG_NONE, "NOCALL");
@@ -513,7 +513,7 @@ static char *test_type_list_iter(void)
 	helper_alloc_reset();
 
 	/* Make a simple base to help with cleanup. */
-	p_base = x_base_ts_make(NULL, NULL);
+	p_base = x_interp_make(NULL, NULL);
 	p_list = x_mkspair(p_base, X_OBJ_FLAG_NONE, x_mksatom(p_base, X_OBJ_FLAG_NONE, 0),
 		x_mkspair(p_base, X_OBJ_FLAG_NONE, x_mksatom(p_base, X_OBJ_FLAG_NONE, 1),
 		x_mkspair(p_base, X_OBJ_FLAG_NONE, x_mksatom(p_base, X_OBJ_FLAG_NONE, 2),
@@ -551,14 +551,14 @@ static char *test_type_list_length(void)
 	x_obj_t *p_base, *p_list, *p_args, *p_ret;
 
 	/* empty list */
-	p_base = x_base_ts_make(NULL, NULL);
+	p_base = x_interp_make(NULL, NULL);
 	p_args = pair(nil, nil);
 	p_ret = x_type_list_length(p_base, p_args);
 	_it_should("return 0 for nil list", x_atomint(p_ret) == 0);
 	test_cleanup(p_base);
 
 	/* single element */
-	p_base = x_base_ts_make(NULL, NULL);
+	p_base = x_interp_make(NULL, NULL);
 	p_list = x_mklist(p_base, atom(1), nil);
 	p_args = pair(p_list, nil);
 	p_ret = x_type_list_length(p_base, p_args);
@@ -566,7 +566,7 @@ static char *test_type_list_length(void)
 	test_cleanup(p_base);
 
 	/* three elements */
-	p_base = x_base_ts_make(NULL, NULL);
+	p_base = x_interp_make(NULL, NULL);
 	p_list = x_mklist(p_base, atom(1),
 		x_mklist(p_base, atom(2),
 		x_mklist(p_base, atom(3), nil)));
@@ -583,7 +583,7 @@ static char *test_type_list_call(void)
 	x_obj_t *p_base, *p_list, *p_args, *p_ret;
 
 	/* no args returns nil */
-	p_base = x_base_ts_make(NULL, NULL);
+	p_base = x_interp_make(NULL, NULL);
 	p_list = x_mklist(p_base, atom(10), x_mklist(p_base, atom(20), nil));
 	p_args = pair(p_list, nil);
 	p_ret = x_type_list_call(p_base, p_args);
@@ -591,7 +591,7 @@ static char *test_type_list_call(void)
 	test_cleanup(p_base);
 
 	/* single index 0 */
-	p_base = x_base_ts_make(NULL, NULL);
+	p_base = x_interp_make(NULL, NULL);
 	p_list = x_mklist(p_base, atom(10),
 		x_mklist(p_base, atom(20),
 		x_mklist(p_base, atom(30), nil)));
@@ -602,7 +602,7 @@ static char *test_type_list_call(void)
 	test_cleanup(p_base);
 
 	/* single index 2 */
-	p_base = x_base_ts_make(NULL, NULL);
+	p_base = x_interp_make(NULL, NULL);
 	p_list = x_mklist(p_base, atom(10),
 		x_mklist(p_base, atom(20),
 		x_mklist(p_base, atom(30), nil)));
@@ -613,7 +613,7 @@ static char *test_type_list_call(void)
 	test_cleanup(p_base);
 
 	/* out of bounds index */
-	p_base = x_base_ts_make(NULL, NULL);
+	p_base = x_interp_make(NULL, NULL);
 	p_list = x_mklist(p_base, atom(10), nil);
 	p_args = pair(p_list, pair(atom(5), nil));
 	p_ret = x_type_list_call(p_base, p_args);
@@ -621,7 +621,7 @@ static char *test_type_list_call(void)
 	test_cleanup(p_base);
 
 	/* negative index -1 */
-	p_base = x_base_ts_make(NULL, NULL);
+	p_base = x_interp_make(NULL, NULL);
 	p_list = x_mklist(p_base, atom(10),
 		x_mklist(p_base, atom(20),
 		x_mklist(p_base, atom(30), nil)));
@@ -632,7 +632,7 @@ static char *test_type_list_call(void)
 	test_cleanup(p_base);
 
 	/* negative index -2 */
-	p_base = x_base_ts_make(NULL, NULL);
+	p_base = x_interp_make(NULL, NULL);
 	p_list = x_mklist(p_base, atom(10),
 		x_mklist(p_base, atom(20),
 		x_mklist(p_base, atom(30), nil)));
@@ -643,7 +643,7 @@ static char *test_type_list_call(void)
 	test_cleanup(p_base);
 
 	/* slice: (list 1 2) from (10 20 30 40) */
-	p_base = x_base_ts_make(NULL, NULL);
+	p_base = x_interp_make(NULL, NULL);
 	p_list = x_mklist(p_base, atom(10),
 		x_mklist(p_base, atom(20),
 		x_mklist(p_base, atom(30),
@@ -659,7 +659,7 @@ static char *test_type_list_call(void)
 	test_cleanup(p_base);
 
 	/* slice: start=0 len=0 returns nil */
-	p_base = x_base_ts_make(NULL, NULL);
+	p_base = x_interp_make(NULL, NULL);
 	p_list = x_mklist(p_base, atom(10), nil);
 	p_args = pair(p_list, pair(atom(0), pair(atom(0), nil)));
 	p_ret = x_type_list_call(p_base, p_args);

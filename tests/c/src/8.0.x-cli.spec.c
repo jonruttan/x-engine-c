@@ -20,7 +20,7 @@
 #include "src/x-obj/prim.c"
 #include "ext/x-expr/src/x.c"
 #include "src/x-alist.c"
-#include "src/x-base.c"
+#include "src/x-interp.c"
 #include "src/x-eval.c"
 #include "src/x-type.c"
 #include "src/x-type/atom.c"
@@ -120,7 +120,7 @@ static char *test_cli_init(void)
 	_it_should("init sets buffer on base",
 		x_firstobj(x_base_field_buffer(p_base)) != NULL);
 	_it_should("init registers primitives (eval is bound)",
-		!x_obj_isnil(p_base, x_firstobj(x_base_field_env_alist(p_base))));
+		!x_obj_isnil(p_base, x_firstobj(x_interp_field_env_alist(p_base))));
 
 	test_cleanup(p_base);
 	return NULL;

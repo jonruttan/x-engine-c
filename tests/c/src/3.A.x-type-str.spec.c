@@ -18,7 +18,7 @@
 #include "ext/x-expr/src/x-obj.c"
 #include "src/x-alist.c"
 #include "ext/x-expr/src/x-base.c"
-#include "src/x-base.c"
+#include "src/x-interp.c"
 #include "ext/x-expr/src/x-heap.c"
 #include "src/x-type.c"
 #include "src/x-type/prim.c"
@@ -84,7 +84,7 @@ static char *test_obj_type_isstr(void)
 {
 	x_obj_t *p_base, *p_obj;
 
-	p_base = x_base_ts_make(NULL, NULL);
+	p_base = x_interp_make(NULL, NULL);
 
 	p_obj = x_mkstr(p_base, X_TEST_STR_VALUE);
 	_it_should("return true when object is a String",
@@ -130,7 +130,7 @@ static char *test_mkstr(void)
 	x_sys_free(p_obj);
 
 
-	p_base = x_base_ts_make(NULL, NULL);
+	p_base = x_interp_make(NULL, NULL);
 	p_obj = x_mkstr(p_base, X_TEST_STR_VALUE);
 	_it_should("make an String object, attach it to the Base object, and set its value",
 		p_obj != NULL
@@ -148,7 +148,7 @@ static char *test_mkfstr(void)
 	x_obj_t *p_base, *p_obj;
 	x_obj_flag_t flags = rand();
 
-	p_base = x_base_ts_make(NULL, NULL);
+	p_base = x_interp_make(NULL, NULL);
 
 	p_obj = x_mkfstr(p_base, flags, X_TEST_STR_VALUE);
 	_it_should("make a String object and set its value",
@@ -160,7 +160,7 @@ static char *test_mkfstr(void)
 	x_sys_free(p_obj);
 
 
-	p_base = x_base_ts_make(NULL, NULL);
+	p_base = x_interp_make(NULL, NULL);
 	p_obj = x_mkfstr(p_base, flags, X_TEST_STR_VALUE);
 	_it_should("make an String object, attach it to the Base object, and set its value",
 		p_obj != NULL
@@ -187,7 +187,7 @@ static char *test_mkstrown(void)
 	x_sys_free(p_obj);
 
 
-	p_base = x_base_ts_make(NULL, NULL);
+	p_base = x_interp_make(NULL, NULL);
 	p_obj = x_mkstrown(p_base, X_TEST_STR_VALUE);
 	_it_should("make an Owned String object, attach it to the Base object, and set its value",
 		p_obj != NULL
@@ -205,7 +205,7 @@ static char *test_mkfstrown(void)
 	x_obj_t *p_base, *p_obj;
 	x_obj_flag_t flags = rand();
 
-	p_base = x_base_ts_make(NULL, NULL);
+	p_base = x_interp_make(NULL, NULL);
 
 	p_obj = x_mkfstrown(NULL, flags, X_TEST_STR_VALUE);
 	_it_should("make an Owned String object and set its value",
@@ -217,7 +217,7 @@ static char *test_mkfstrown(void)
 	x_sys_free(p_obj);
 
 
-	p_base = x_base_ts_make(NULL, NULL);
+	p_base = x_interp_make(NULL, NULL);
 	p_obj = x_mkfstr(p_base, flags, X_TEST_STR_VALUE);
 	_it_should("make an Owned String object, attach it to the Base object, and set its value",
 		p_obj != NULL
@@ -235,7 +235,7 @@ static char *test_make_str(void)
 	x_obj_t *p_base, *p_obj;
 	x_obj_flag_t flags = rand();
 
-	p_base = x_base_ts_make(NULL, NULL);
+	p_base = x_interp_make(NULL, NULL);
 
 	p_obj = x_make_str(p_base, flags, X_TEST_STR_VALUE);
 	_it_should("make an Owned String object and set its value",
@@ -247,7 +247,7 @@ static char *test_make_str(void)
 	x_sys_free(p_obj);
 
 
-	p_base = x_base_ts_make(NULL, NULL);
+	p_base = x_interp_make(NULL, NULL);
 	p_obj = x_make_str(p_base, flags, X_TEST_STR_VALUE);
 	_it_should("make an Owned String object, attach it to the Base object, and set its value",
 		p_obj != NULL
@@ -266,7 +266,7 @@ static char *test_type_str_struct(void)
 
 	helper_alloc_reset();
 
-	p_base = x_base_ts_make(NULL, NULL);
+	p_base = x_interp_make(NULL, NULL);
 	p_type = x_type_str_struct(p_base, p_base);
 	_it_should("return String Type list",
 		! x_obj_isnil(p_base, p_type)
@@ -338,14 +338,14 @@ static char *test_type_str_register(void)
 {
 	x_obj_t *p_base, *p_type;
 
-	p_base = x_base_ts_make(NULL, NULL);
+	p_base = x_interp_make(NULL, NULL);
 
 	p_type = x_type_str_register(p_base, p_base);
 	_it_should("return the String type object",
 		0 == x_lib_strcmp(X_TYPE_STR_NAME, x_strval(x_type_field_name(p_type)))
 	);
 	_it_should("add the String type to the Type alist",
-		p_type == x_restobj(x_firstobj(x_firstobj(x_base_field_type_alist(p_base))))
+		p_type == x_restobj(x_firstobj(x_firstobj(x_interp_field_type_alist(p_base))))
 	);
 
 	test_cleanup(p_base);
@@ -359,10 +359,10 @@ static char *test_base_alist_assoc(void)
 
 	helper_alloc_reset();
 
-	p_base = x_base_ts_make(NULL, NULL);
-	x_base_type_alist_extend(p_base, x_mkspair(p_base, X_OBJ_FLAG_NONE, x_mkspair(p_base, X_OBJ_FLAG_NONE, x_type_str_name, NULL), atom(1)));
+	p_base = x_interp_make(NULL, NULL);
+	x_interp_type_alist_extend(p_base, x_mkspair(p_base, X_OBJ_FLAG_NONE, x_mkspair(p_base, X_OBJ_FLAG_NONE, x_type_str_name, NULL), atom(1)));
 
-	p_type = x_base_type_alist_assoc(p_base, x_mkspair(p_base, X_OBJ_FLAG_NONE, x_type_str_name, NULL));
+	p_type = x_interp_type_alist_assoc(p_base, x_mkspair(p_base, X_OBJ_FLAG_NONE, x_type_str_name, NULL));
 	_it_should("find the type in the Type alist and return its properties",
 		x_type_str_name == x_type_field_name(p_type)
 	);
@@ -405,7 +405,7 @@ static char *test_type_str_make(void)
 	helper_alloc_reset();
 
 	/* Empty p_base object */
-	p_base = x_base_ts_make(NULL, NULL);
+	p_base = x_interp_make(NULL, NULL);
 	p_str = x_mksatom(p_base, X_OBJ_FLAG_NONE, value);
 	p_args = x_mkspair(p_base, X_OBJ_FLAG_NONE, p_str, NULL);
 
@@ -431,7 +431,7 @@ static char *test_type_str_make(void)
 	helper_alloc_reset();
 
 	/* With p_base object */
-	p_base = x_base_ts_make(NULL, NULL);
+	p_base = x_interp_make(NULL, NULL);
 	p_str = x_mksatom(p_base, X_OBJ_FLAG_NONE, value);
 	p_args = x_mkspair(p_base, X_OBJ_FLAG_NONE, p_str, NULL);
 
@@ -460,7 +460,7 @@ static char *test_type_str_length(void)
 
 	helper_alloc_reset();
 
-	p_base = x_base_ts_make(NULL, NULL);
+	p_base = x_interp_make(NULL, NULL);
 	p_str = x_mkstr(p_base, "hello");
 	p_args = x_mkspair(p_base, X_OBJ_FLAG_NONE, p_str, NULL);
 
@@ -477,7 +477,7 @@ static char *test_type_str_call(void)
 
 	helper_alloc_reset();
 
-	p_base = x_base_ts_make(NULL, NULL);
+	p_base = x_interp_make(NULL, NULL);
 
 	p_str = x_mksatom(p_base, X_OBJ_FLAG_NONE, X_TYPE_STR_NAME);
 
