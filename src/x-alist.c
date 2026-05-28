@@ -14,7 +14,7 @@
  * # Includes
  */
 #include "x-alist.h"
-#include "x-base-typesystem.h"
+#include "x-interp.h"
 #include "x-type/symbol.h"
 
 /**
@@ -50,13 +50,13 @@ x_obj_t *x_alist_assoc(x_obj_t *p_base, x_obj_t *p_args)
 
 #ifdef X_PROFILE
 	if (x_base_isset(p_base))
-		x_atomint(x_firstobj(x_base_field_profile_assoc_calls(p_base)))++;
+		x_atomint(x_firstobj(x_interp_field_profile_assoc_calls(p_base)))++;
 #endif
 
 	while ( ! x_obj_isnil(p_base, p_alist)) {
 #ifdef X_PROFILE
 		if (x_base_isset(p_base))
-			x_atomint(x_firstobj(x_base_field_profile_assoc_steps(p_base)))++;
+			x_atomint(x_firstobj(x_interp_field_profile_assoc_steps(p_base)))++;
 #endif
 		if (x_firstobj(x_firstobj(x_firstobj(p_alist))) == x_firstobj(p_obj)) {
 			return x_firstobj(p_alist);
@@ -93,7 +93,7 @@ x_obj_t *x_alist_bst_lookup(x_obj_t *p_base, x_obj_t *p_tree,
 		if (x_firstobj(p_entry) == p_sym) {
 #ifdef X_PROFILE
 			if (x_base_isset(p_base))
-				x_atomint(x_firstobj(x_base_field_profile_bst_hits(p_base)))++;
+				x_atomint(x_firstobj(x_interp_field_profile_bst_hits(p_base)))++;
 #endif
 			return p_entry;
 		}
@@ -102,7 +102,7 @@ x_obj_t *x_alist_bst_lookup(x_obj_t *p_base, x_obj_t *p_tree,
 		if (cmp == 0) {
 #ifdef X_PROFILE
 			if (x_base_isset(p_base))
-				x_atomint(x_firstobj(x_base_field_profile_bst_hits(p_base)))++;
+				x_atomint(x_firstobj(x_interp_field_profile_bst_hits(p_base)))++;
 #endif
 			return p_entry;
 		}
@@ -114,7 +114,7 @@ x_obj_t *x_alist_bst_lookup(x_obj_t *p_base, x_obj_t *p_tree,
 
 #ifdef X_PROFILE
 	if (x_base_isset(p_base))
-		x_atomint(x_firstobj(x_base_field_profile_bst_misses(p_base)))++;
+		x_atomint(x_firstobj(x_interp_field_profile_bst_misses(p_base)))++;
 #endif
 	return NULL;
 }
@@ -176,49 +176,59 @@ static x_obj_t *bst_pair(x_obj_t *p_base, x_obj_t *a, x_obj_t *b)
  * @return x_obj_t* -- New BST root
  *
  * @see x_alist_bst_lookup
- * @see x_base_field_env_global_tree
+ * @see x_interp_field_env_global_tree
  */
 x_obj_t *x_alist_bst_insert(x_obj_t *p_base, x_obj_t *p_tree,
 	x_obj_t *p_entry)
 {
-	x_obj_t *p_node, *p_children, *p_left, *p_right;
+	x_obj_t *p_children;
 	int cmp;
 
-	/* Empty tree: create leaf node */
+	/* Empty tree: caller must update their root with the returned node. */
 	if (x_obj_isnil(p_base, p_tree)) {
 		return bst_pair(p_base, p_entry,
 			bst_pair(p_base, NULL, NULL));
 	}
 
-	p_node = x_firstobj(p_tree);
-	p_children = x_restobj(p_tree);
-	p_left = x_firstobj(p_children);
-	p_right = x_restobj(p_children);
+	/* Non-empty: MUTATE the existing tree in place so all captured BST
+	 * snapshots (in fn closures) see the new entry.  The previous
+	 * implementation was path-copying and returned a new root, which
+	 * made every closure created before the insertion silently miss any
+	 * later top-level def. */
 
-	/* Pointer equality (fast path) */
-	if (x_firstobj(p_node) == x_firstobj(p_entry)) {
-		/* Re-def: copy this node with new entry, share children */
-		return bst_pair(p_base, p_entry,
-			bst_pair(p_base, p_left, p_right));
+	p_children = x_restobj(p_tree);
+
+	/* Pointer equality (fast path): re-def -- replace entry in place. */
+	if (x_firstobj(x_firstobj(p_tree)) == x_firstobj(p_entry)) {
+		x_firstobj(p_tree) = p_entry;
+		return p_tree;
 	}
 
 	cmp = x_lib_strcmp(x_symbolval(x_firstobj(p_entry)),
-		x_symbolval(x_firstobj(p_node)));
+		x_symbolval(x_firstobj(x_firstobj(p_tree))));
 
 	if (cmp == 0) {
-		return bst_pair(p_base, p_entry,
-			bst_pair(p_base, p_left, p_right));
+		x_firstobj(p_tree) = p_entry;
+		return p_tree;
 	}
 
-	/* Recurse into subtree, copy this node with new child */
+	/* Walk into the appropriate child; either recurse (mutates the
+	 * subtree in place) or attach a new leaf directly. */
 	if (cmp < 0) {
-		return bst_pair(p_base, p_node,
-			bst_pair(p_base,
-				x_alist_bst_insert(p_base, p_left, p_entry),
-				p_right));
+		if (x_obj_isnil(p_base, x_firstobj(p_children))) {
+			x_firstobj(p_children) = bst_pair(p_base, p_entry,
+				bst_pair(p_base, NULL, NULL));
+		} else {
+			x_alist_bst_insert(p_base, x_firstobj(p_children), p_entry);
+		}
 	} else {
-		return bst_pair(p_base, p_node,
-			bst_pair(p_base, p_left,
-				x_alist_bst_insert(p_base, p_right, p_entry)));
+		if (x_obj_isnil(p_base, x_restobj(p_children))) {
+			x_restobj(p_children) = bst_pair(p_base, p_entry,
+				bst_pair(p_base, NULL, NULL));
+		} else {
+			x_alist_bst_insert(p_base, x_restobj(p_children), p_entry);
+		}
 	}
+	return p_tree;
 }
+

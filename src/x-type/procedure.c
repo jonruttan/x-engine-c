@@ -12,7 +12,7 @@
  *      " "
  */
 #include "x-type/procedure.h"
-#include "x-base-typesystem.h"
+#include "x-interp.h"
 #include "x-heap.h"
 #include "x-obj/prim.h"
 #include "x-prim.h"
@@ -198,17 +198,20 @@ x_obj_t *x_type_procedure_call(x_obj_t *p_base, x_obj_t *p_args)
 
 	{
 		/* Push ((env . boundary) . (bst . shadow_head)) onto save-stack */
-		x_base_field_save_stack(p_base) = x_mkspair(p_base, X_OBJ_FLAG_NONE,
+		x_interp_field_save_stack(p_base) = x_mkspair(p_base, X_OBJ_FLAG_NONE,
 			x_mkspair(p_base, X_OBJ_FLAG_NONE,
-				x_mkspair(p_base, X_OBJ_FLAG_NONE, x_firstobj(x_base_field_env_alist(p_base)),
-				                   x_base_field_env_local_boundary(p_base)),
-				x_mkspair(p_base, X_OBJ_FLAG_NONE, x_base_field_env_global_tree(p_base),
-				                   x_base_field_shadow_list(p_base))),
-			x_base_field_save_stack(p_base));
+				x_mkspair(p_base, X_OBJ_FLAG_NONE, x_firstobj(x_interp_field_env_alist(p_base)),
+				                   x_interp_field_env_local_boundary(p_base)),
+				x_mkspair(p_base, X_OBJ_FLAG_NONE, x_interp_field_env_global_tree(p_base),
+				                   x_interp_field_shadow_list(p_base))),
+			x_interp_field_save_stack(p_base));
 
-		/* Set boundary to closure env and BST to closure's captured BST */
-		x_base_field_env_local_boundary(p_base) = x_procenv(p_proc);
-		x_base_field_env_global_tree(p_base) = x_procbst(p_proc);
+		/* Set boundary to closure env and BST to closure's captured BST.
+		 * Skip BST swap if captured is NULL -- see x_obj_prim_call. */
+		x_interp_field_env_local_boundary(p_base) = x_procenv(p_proc);
+		if (x_procbst(p_proc) != NULL) {
+			x_interp_field_env_global_tree(p_base) = x_procbst(p_proc);
+		}
 
 		/* Self-passing via stack pair (zero allocation) */
 		{
@@ -216,7 +219,7 @@ x_obj_t *x_type_procedure_call(x_obj_t *p_base, x_obj_t *p_args)
 			{ p_proc }, { p_evaled_args });
 		p_evaled_args = (x_obj_t *)&sp;
 
-		x_firstobj(x_base_field_env_alist(p_base)) = x_env_extend(
+		x_firstobj(x_interp_field_env_alist(p_base)) = x_env_extend(
 			p_base, x_procenv(p_proc), x_procparams(p_proc),
 			p_evaled_args);
 		}
@@ -259,20 +262,23 @@ x_obj_t *x_type_procedure_apply(x_obj_t *p_base, x_obj_t *p_args)
 {
 	x_obj_t *p_proc = x_firstobj(p_args),
 		*p_result,
-		*p_saved_alist = x_firstobj(x_base_field_env_alist(p_base)),
-		*p_saved_boundary = x_base_field_env_local_boundary(p_base),
-		*p_saved_bst = x_base_field_env_global_tree(p_base),
-		*p_saved_shadow = x_base_field_shadow_list(p_base);
+		*p_saved_alist = x_firstobj(x_interp_field_env_alist(p_base)),
+		*p_saved_boundary = x_interp_field_env_local_boundary(p_base),
+		*p_saved_bst = x_interp_field_env_global_tree(p_base),
+		*p_saved_shadow = x_interp_field_shadow_list(p_base);
 
-	/* Set boundary and BST from closure */
-	x_base_field_env_local_boundary(p_base) = x_procenv(p_proc);
-	x_base_field_env_global_tree(p_base) = x_procbst(p_proc);
+	/* Set boundary and BST from closure.  Skip BST swap if captured is
+	 * NULL -- see x_obj_prim_call. */
+	x_interp_field_env_local_boundary(p_base) = x_procenv(p_proc);
+	if (x_procbst(p_proc) != NULL) {
+		x_interp_field_env_global_tree(p_base) = x_procbst(p_proc);
+	}
 
 	/* Self-passing + extend env */
 	{
 	x_spair_t sp = x_obj_set(NULL, X_OBJ_FLAG_NONE,
 		{ p_proc }, { x_restobj(p_args) });
-	x_firstobj(x_base_field_env_alist(p_base)) = x_env_extend(
+	x_firstobj(x_interp_field_env_alist(p_base)) = x_env_extend(
 		p_base, x_procenv(p_proc), x_procparams(p_proc),
 		(x_obj_t *)&sp);
 	}
@@ -280,9 +286,9 @@ x_obj_t *x_type_procedure_apply(x_obj_t *p_base, x_obj_t *p_args)
 	p_result = x_eval_body(p_base, x_procbody(p_proc));
 
 	/* Restore env, boundary, BST, and shadow */
-	x_firstobj(x_base_field_env_alist(p_base)) = p_saved_alist;
-	x_base_field_env_local_boundary(p_base) = p_saved_boundary;
-	x_base_field_env_global_tree(p_base) = p_saved_bst;
+	x_firstobj(x_interp_field_env_alist(p_base)) = p_saved_alist;
+	x_interp_field_env_local_boundary(p_base) = p_saved_boundary;
+	x_interp_field_env_global_tree(p_base) = p_saved_bst;
 	x_prim_clear_shadows_to(p_base, p_saved_shadow);
 
 	return p_result;
@@ -301,7 +307,7 @@ x_obj_t *x_type_procedure_write(x_obj_t *p_base, x_obj_t *p_args)
 		{ .s = (x_char_t *)X_TYPE_PROCEDURE_WRITE_STR });
 	x_spair_t wrap = x_obj_set(NULL, X_OBJ_FLAG_NONE, { str }, { NULL });
 
-	x_base_write_str(p_base, (x_obj_t *)&wrap);
+	x_interp_write_str(p_base, (x_obj_t *)&wrap);
 
 	return x_firstobj(p_args);
 }
