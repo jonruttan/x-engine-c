@@ -81,6 +81,7 @@ endif
 BASEDIR=.
 INCDIR=$(BASEDIR)/include
 SRCDIR=$(BASEDIR)/src
+OPTDIR=$(BASEDIR)/opt
 
 # x-expr foundation library
 X_EXPR_DIR=ext/x-expr
@@ -97,6 +98,18 @@ OUTPUT=$(EXECUTABLE)
 
 # Options to be added to $(DEFS)
 DEFS?=$(OSDEF) -DX_MACHINE="$(X_MACHINE)" -DX_SYSCALL -DX_INCLUDE -DSYMBOL_FIND_REORDER
+
+# SIGINT (Ctrl-C) handling, on by default (X_SIGNAL carries the -DX_SIGNAL
+# flag).  The signal module lives under opt/ and is built only when enabled;
+# `make X_SIGNAL=` leaves it out of the build and compiles the eval poll out
+# too (x-lang REPLs fall back to no-ops).  DEFS is absent from TEST_CFLAGS, so
+# the C unit tests always build without it.
+X_SIGNAL?=-DX_SIGNAL
+ifdef X_SIGNAL
+DEFS+=$(X_SIGNAL)
+SOURCES+=$(OPTDIR)/x-prim/signal.c
+endif
+
 EXTRA_LIBS+=-ldl
 
 # Where to install the stuff
@@ -144,7 +157,7 @@ x-profile: ## Build profiling binary (includes coverage)
 	$(MAKE) OUTPUT=$@ CFLAGS="$(CFLAGS) -DX_PROFILE -DX_COV" $(EXECUTABLE)
 
 clean-obj:
-	rm -f $(SRCDIR)/*.o $(SRCDIR)/**/*.o $(SRCDIR)/**/**/*.o $(X_EXPR_DIR)/src/*.o
+	rm -f $(SRCDIR)/*.o $(SRCDIR)/**/*.o $(SRCDIR)/**/**/*.o $(OPTDIR)/**/*.o $(X_EXPR_DIR)/src/*.o
 
 .c.o:
 	$(CC) -c $(CFLAGS) $(DEFS) -o $@ $<
@@ -285,7 +298,7 @@ uninstall: ## Uninstall from PREFIX
 .PHONY: uninstall
 
 clean: cov-clean ## Clean build artifacts
-	rm -f $(EXECUTABLE) x-debug x-profile *.out $(SRCDIR)/*.o $(SRCDIR)/**/*.o $(SRCDIR)/**/**/*.o $(X_EXPR_DIR)/src/*.o *.core core
+	rm -f $(EXECUTABLE) x-debug x-profile *.out $(SRCDIR)/*.o $(SRCDIR)/**/*.o $(SRCDIR)/**/**/*.o $(OPTDIR)/**/*.o $(X_EXPR_DIR)/src/*.o *.core core
 .PHONY: clean
 
 help: ## Show targets

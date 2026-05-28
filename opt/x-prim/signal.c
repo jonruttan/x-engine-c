@@ -1,10 +1,15 @@
 /** @file signal.c
  *  @brief SIGINT signal handling primitives.
  *
- *  One static atom whose .i field is the SIGINT flag (unavoidable:
- *  POSIX handlers receive only the signal number, not an application
- *  context).  Bound as %sigint-flag so x-lang can read/clear it
- *  directly with first-int / set-first-int!.
+ *  A static atom's .i field is the SIGINT flag (unavoidable: POSIX handlers
+ *  receive only the signal number, not an application context).  Its pointer
+ *  is published into the base (x_interp_field_sigint) so x_eval can poll it via
+ *  p_base rather than naming this module's global.  Bound as %sigint-flag so
+ *  x-lang can read/clear it with first-int / set-first-int!.
+ *
+ *  This is the signal-support module: it is compiled and linked only when
+ *  X_SIGNAL is enabled (the Makefile drops it from the build otherwise, and
+ *  the x-lang library falls back to inert no-ops).
  *
  *  @author Jon Ruttan (jonruttan@gmail.com)
  *  @copyright 2024 Jon Ruttan
@@ -17,12 +22,14 @@
  *      " "
  */
 #include "x-prim.h"
-#include "x-base-typesystem.h"
+#include "x-interp.h"
 
 #include <signal.h>
 
-/** Static atom whose .i field is the SIGINT flag. */
-x_satom_t x_sigint_flag = x_obj_set(x_type_atom_obj, X_OBJ_FLAG_NONE, { .i = 0 });
+/** Static atom whose .i field is the SIGINT flag.  Kept in static (non-heap)
+ *  storage so the handler can write it without risk of a GC relocation moving
+ *  it mid-store. */
+static x_satom_t x_sigint_flag = x_obj_set(x_type_atom_obj, X_OBJ_FLAG_NONE, { .i = 0 });
 
 static void x_sigint_handler(int sig)
 {
@@ -66,9 +73,11 @@ x_obj_t *x_prim_signal_register(x_obj_t *p_base, x_obj_t *p_args)
 	};
 
 	(void)p_args;
-	x_callable_bind_table(p_base, entries,
-		sizeof(entries) / sizeof(entries[0]));
+	x_callable_bind_table(p_base, entries, sizeof(entries) / sizeof(entries[0]));
 
+	/* Publish the flag pointer onto the base so x_eval can poll it without
+	 * naming this module's global, and bind it for x-lang (%sigint-flag). */
+	x_firstobj(x_interp_field_sigint(p_base)) = (x_obj_t *)&x_sigint_flag;
 	x_value_bind(p_base, "%sigint-flag", (x_obj_t *)&x_sigint_flag);
 
 	return p_base;
