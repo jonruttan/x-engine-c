@@ -171,15 +171,17 @@ static char *test_operative_make(void)
 static char *test_operative_call(void)
 {
 	x_obj_t *p_base, *p_op;
-	x_obj_t *p_params, *p_body, *p_args;
-	x_obj_t *p_saved_env, *p_new_env;
+	x_obj_t *p_params, *p_body, *p_args, *p_result;
+	x_obj_t *p_saved_env;
 
 	p_base = x_interp_make(NULL, NULL);
 	x_prim_register(p_base, NULL);
 
-	/* Create operative: (op x 42) — variadic param, body is (42).
-	 * body_eval_tco_simple sets tco_expr for last form and returns NULL.
-	 * We verify env binding happened correctly. */
+	/* Create operative: (op x 99) — variadic param, body is (99).
+	 * Ops are lexically scoped: body runs synchronously via x_eval_body
+	 * in extend(captured_env, formals); return value is the last form's
+	 * value.  After the body the formal frame is shed (op_chain_head
+	 * still reachable from env_alist => restore to caller_env). */
 	p_params = x_mksymbol(p_base, "x");
 	p_body = x_mkspair(p_base, X_OBJ_FLAG_NONE, x_mksatom(p_base, X_OBJ_FLAG_NONE, 99), NULL);
 
@@ -192,20 +194,13 @@ static char *test_operative_call(void)
 	p_args = x_mkspair(p_base, X_OBJ_FLAG_NONE, p_op,
 		x_mkspair(p_base, X_OBJ_FLAG_NONE, x_mksatom(p_base, X_OBJ_FLAG_NONE, 42), NULL));
 
-	x_type_operative_call(p_base, p_args);
+	p_result = x_type_operative_call(p_base, p_args);
 
-	/* After call, env should have been extended with x binding.
-	 * operative_call uses dynamic scoping — sets env in p_base. */
-	p_new_env = x_firstobj(x_interp_field_env_alist(p_base));
-	_it_should("extend env with param binding",
-		p_new_env != p_saved_env);
-	_it_should("bind x to unevaluated args",
-		x_firstobj(x_firstobj(p_new_env)) == p_params);
+	_it_should("body's tail value is returned",
+		p_result != NULL && x_atomint(p_result) == 99);
 
-	/* TCO expr should be set to 99 (last body form) */
-	_it_should("set tco_expr for tail call",
-		x_firstobj(x_interp_field_tco_expr(p_base)) != NULL
-		&& x_atomint(x_firstobj(x_interp_field_tco_expr(p_base))) == 99);
+	_it_should("env_alist restored to caller (formals shed)",
+		x_firstobj(x_interp_field_env_alist(p_base)) == p_saved_env);
 
 	test_cleanup(p_base);
 
@@ -215,15 +210,18 @@ static char *test_operative_call(void)
 static char *test_operative_call_envparam(void)
 {
 	x_obj_t *p_base, *p_op;
-	x_obj_t *p_envparam, *p_body, *p_args;
-	x_obj_t *p_caller_env, *p_new_env;
+	x_obj_t *p_envparam, *p_body, *p_args, *p_result;
+	x_obj_t *p_caller_env;
 
 	p_base = x_interp_make(NULL, NULL);
 	x_prim_register(p_base, NULL);
 
 	p_caller_env = x_firstobj(x_interp_field_env_alist(p_base));
 
-	/* Create operative with env-param 'e', no params, body is (42). */
+	/* Op with env-param 'e', no params, body is (42).  Lexical scope:
+	 * env-param is bound to caller's env during body execution but the
+	 * formal frame (which includes the env-param binding) is shed on
+	 * unwind since the body doesn't tail-eval away.  Body returns 42. */
 	p_envparam = x_mksymbol(p_base, "e");
 	p_body = x_mkspair(p_base, X_OBJ_FLAG_NONE, x_mksatom(p_base, X_OBJ_FLAG_NONE, 42), NULL);
 
@@ -232,16 +230,13 @@ static char *test_operative_call_envparam(void)
 
 	p_args = x_mkspair(p_base, X_OBJ_FLAG_NONE, p_op, NULL);
 
-	x_type_operative_call(p_base, p_args);
+	p_result = x_type_operative_call(p_base, p_args);
 
-	/* After call, env should have e bound to caller env */
-	p_new_env = x_firstobj(x_interp_field_env_alist(p_base));
-	_it_should("env contains env-param binding",
-		p_new_env != NULL);
-	_it_should("env-param key is the symbol e",
-		x_firstobj(x_firstobj(p_new_env)) == p_envparam);
-	_it_should("env-param value is caller env",
-		x_restobj(x_firstobj(p_new_env)) == p_caller_env);
+	_it_should("body's tail value is returned",
+		p_result != NULL && x_atomint(p_result) == 42);
+
+	_it_should("env_alist restored to caller (env-param frame shed)",
+		x_firstobj(x_interp_field_env_alist(p_base)) == p_caller_env);
 
 	test_cleanup(p_base);
 

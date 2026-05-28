@@ -203,12 +203,12 @@ static char *test_procedure_call(void)
 static char *test_procedure_call_wrapped(void)
 {
 	x_obj_t *p_base, *p_op, *p_proc;
-	x_obj_t *p_body, *p_args;
+	x_obj_t *p_body, *p_args, *p_result;
 
 	p_base = x_interp_make(NULL, NULL);
 	x_prim_register(p_base, NULL);
 
-	/* Create an operative that returns 77 */
+	/* Create an operative whose body returns 77. */
 	p_body = x_mkspair(p_base, X_OBJ_FLAG_NONE, x_mksatom(p_base, X_OBJ_FLAG_NONE, 77), NULL);
 	p_op = x_make_operative(p_base, X_OBJ_FLAG_NONE,
 		NULL, NULL, p_body, x_firstobj(x_interp_field_env_alist(p_base)));
@@ -217,16 +217,15 @@ static char *test_procedure_call_wrapped(void)
 	p_proc = x_make_procedure(p_base, X_OBJ_FLAG_WRAP,
 		NULL, NULL, p_op, NULL);
 
-	/* Call: (proc) — wrapped combiner dispatches to underlying */
+	/* Call: (proc) — wrapped combiner dispatches to underlying. */
 	p_args = x_mkspair(p_base, X_OBJ_FLAG_NONE, p_proc, NULL);
 
-	x_type_procedure_call(p_base, p_args);
+	p_result = x_type_procedure_call(p_base, p_args);
 
-	/* The wrapped path calls x_obj_prim_call on the combiner,
-	 * which calls operative_call, which sets tco_expr = 77 */
-	_it_should("wrapped combiner dispatches to operative",
-		x_firstobj(x_interp_field_tco_expr(p_base)) != NULL
-		&& x_atomint(x_firstobj(x_interp_field_tco_expr(p_base))) == 77);
+	/* WRAP path calls x_obj_prim_call on the combiner; ops are lexically
+	 * scoped and return body's tail value synchronously (no tco_expr). */
+	_it_should("wrapped combiner dispatches to operative and returns its value",
+		p_result != NULL && x_atomint(p_result) == 77);
 
 	test_cleanup(p_base);
 
