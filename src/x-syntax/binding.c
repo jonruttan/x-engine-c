@@ -12,7 +12,7 @@
  */
 #include "x-prim.h"
 #include "x-alist.h"
-#include "x-base-typesystem.h"
+#include "x-interp.h"
 #include "x-type/symbol.h"
 
 /**
@@ -67,23 +67,23 @@ static x_obj_t *x_prim_define(x_obj_t *p_base, x_obj_t *p_args)
 	p_val = x_eval_arg(p_base, x_011(p_args));
 	p_pair = x_mkspair(p_base, X_OBJ_FLAG_NONE, p_name, p_val);
 
-	x_base_env_alist_extend(p_base, p_pair);
+	x_interp_env_alist_extend(p_base, p_pair);
 
 	/* Top-level: insert into BST and advance boundary.
 	 * Inside closure: flag symbol if it shadows a BST global. */
 	if (x_base_isset(p_base)
-		&& x_obj_isnil(p_base, x_base_field_save_stack(p_base))) {
-		x_base_field_env_global_tree(p_base) = x_alist_bst_insert(
-			p_base, x_base_field_env_global_tree(p_base), p_pair);
-		x_base_field_env_local_boundary(p_base)
-			= x_firstobj(x_base_field_env_alist(p_base));
+		&& x_obj_isnil(p_base, x_interp_field_save_stack(p_base))) {
+		x_interp_field_env_global_tree(p_base) = x_alist_bst_insert(
+			p_base, x_interp_field_env_global_tree(p_base), p_pair);
+		x_interp_field_env_local_boundary(p_base)
+			= x_firstobj(x_interp_field_env_alist(p_base));
 	} else if (x_base_isset(p_base)) {
 		if (x_alist_bst_lookup(p_base,
-			x_base_field_env_global_tree(p_base), p_name) != NULL) {
+			x_interp_field_env_global_tree(p_base), p_name) != NULL) {
 			if ( ! (x_obj_flags(p_name) & X_OBJ_FLAG_SHADOW)) {
 				x_obj_flags(p_name) |= X_OBJ_FLAG_SHADOW;
-				x_base_field_shadow_list(p_base) = x_mkspair(p_base, X_OBJ_FLAG_NONE,
-					p_name, x_base_field_shadow_list(p_base));
+				x_interp_field_shadow_list(p_base) = x_mkspair(p_base, X_OBJ_FLAG_NONE,
+					p_name, x_interp_field_shadow_list(p_base));
 			}
 		}
 	}
@@ -113,8 +113,8 @@ static x_obj_t *x_prim_set(x_obj_t *p_base, x_obj_t *p_args)
 	x_args(p_args, 2, NULL, &p_name);
 	p_val = x_eval_arg(p_base, x_011(p_args));
 
-	p_alist = x_firstobj(x_base_field_env_alist(p_base));
-	p_boundary = x_base_field_env_local_boundary(p_base);
+	p_alist = x_firstobj(x_interp_field_env_alist(p_base));
+	p_boundary = x_interp_field_env_local_boundary(p_base);
 
 	/* Step 1: walk locals (up to AND INCLUDING boundary) */
 	while ( ! x_obj_isnil(p_base, p_alist)) {
@@ -132,7 +132,7 @@ static x_obj_t *x_prim_set(x_obj_t *p_base, x_obj_t *p_args)
 	/* Step 2: BST lookup (skip re-defined symbols) */
 	if ( ! (x_obj_flags(p_name) & X_OBJ_FLAG_SHADOW)) {
 		p_entry = x_alist_bst_lookup(p_base,
-			x_base_field_env_global_tree(p_base), p_name);
+			x_interp_field_env_global_tree(p_base), p_name);
 		if ( ! x_obj_isnil(p_base, p_entry)) {
 			x_restobj(p_entry) = p_val;
 			return p_val;

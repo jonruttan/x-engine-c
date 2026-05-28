@@ -23,7 +23,7 @@
  * # Includes
  */
 #include "x-prim.h"
-#include "x-base-typesystem.h"
+#include "x-interp.h"
 #include "x-type/int.h"
 #include "x-type/prim.h"
 #include "x-type/ptr.h"
@@ -251,7 +251,7 @@ static x_obj_t *x_prim_ffi_call(x_obj_t *p_base, x_obj_t *p_args)
 		p_b = x_eval_arg(p_base, x_firstobj(x_restobj(p_rest)));
 		x_ffi_to_double(p_base, p_a, &a);
 		x_ffi_to_double(p_base, p_b, &b);
-		return a < b ? x_firstobj(x_base_field_true(p_base)) : x_firstobj(x_base_field_false(p_base));
+		return a < b ? x_firstobj(x_interp_field_true(p_base)) : x_firstobj(x_interp_field_false(p_base));
 	}
 
 	if (x_lib_strcmp(conv, "d>d") == 0) {
@@ -259,7 +259,7 @@ static x_obj_t *x_prim_ffi_call(x_obj_t *p_base, x_obj_t *p_args)
 		p_b = x_eval_arg(p_base, x_firstobj(x_restobj(p_rest)));
 		x_ffi_to_double(p_base, p_a, &a);
 		x_ffi_to_double(p_base, p_b, &b);
-		return a > b ? x_firstobj(x_base_field_true(p_base)) : x_firstobj(x_base_field_false(p_base));
+		return a > b ? x_firstobj(x_interp_field_true(p_base)) : x_firstobj(x_interp_field_false(p_base));
 	}
 
 	if (x_lib_strcmp(conv, "d=d") == 0) {
@@ -267,7 +267,7 @@ static x_obj_t *x_prim_ffi_call(x_obj_t *p_base, x_obj_t *p_args)
 		p_b = x_eval_arg(p_base, x_firstobj(x_restobj(p_rest)));
 		x_ffi_to_double(p_base, p_a, &a);
 		x_ffi_to_double(p_base, p_b, &b);
-		return a == b ? x_firstobj(x_base_field_true(p_base)) : x_firstobj(x_base_field_false(p_base));
+		return a == b ? x_firstobj(x_interp_field_true(p_base)) : x_firstobj(x_interp_field_false(p_base));
 	}
 
 	if (x_lib_strcmp(conv, "d<=d") == 0) {
@@ -275,7 +275,7 @@ static x_obj_t *x_prim_ffi_call(x_obj_t *p_base, x_obj_t *p_args)
 		p_b = x_eval_arg(p_base, x_firstobj(x_restobj(p_rest)));
 		x_ffi_to_double(p_base, p_a, &a);
 		x_ffi_to_double(p_base, p_b, &b);
-		return a <= b ? x_firstobj(x_base_field_true(p_base)) : x_firstobj(x_base_field_false(p_base));
+		return a <= b ? x_firstobj(x_interp_field_true(p_base)) : x_firstobj(x_interp_field_false(p_base));
 	}
 
 	if (x_lib_strcmp(conv, "d>=d") == 0) {
@@ -283,7 +283,7 @@ static x_obj_t *x_prim_ffi_call(x_obj_t *p_base, x_obj_t *p_args)
 		p_b = x_eval_arg(p_base, x_firstobj(x_restobj(p_rest)));
 		x_ffi_to_double(p_base, p_a, &a);
 		x_ffi_to_double(p_base, p_b, &b);
-		return a >= b ? x_firstobj(x_base_field_true(p_base)) : x_firstobj(x_base_field_false(p_base));
+		return a >= b ? x_firstobj(x_interp_field_true(p_base)) : x_firstobj(x_interp_field_false(p_base));
 	}
 
 	/* Cast conventions */

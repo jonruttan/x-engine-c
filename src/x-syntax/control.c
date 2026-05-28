@@ -11,7 +11,7 @@
  *      " "
  */
 #include "x-prim.h"
-#include "x-base-typesystem.h"
+#include "x-interp.h"
 #include "x-type/ptr.h"
 #include "x-type/str.h"
 #include <setjmp.h>
@@ -52,8 +52,8 @@ static x_obj_t *x_prim_match(x_obj_t *p_base, x_obj_t *p_args)
 		p_test = x_eval_arg(p_base, x_firstobj(p_clause));
 
 		if ( ! x_obj_isnil(p_base, p_test)
-				&& p_test != x_firstobj(x_base_field_false(p_base))) {
-			x_firstobj(x_base_field_tco_expr(p_base)) =
+				&& p_test != x_firstobj(x_interp_field_false(p_base))) {
+			x_firstobj(x_interp_field_tco_expr(p_base)) =
 				x_firstobj(x_restobj(p_clause));
 
 			return NULL;
@@ -85,7 +85,7 @@ static x_obj_t *x_prim_match(x_obj_t *p_base, x_obj_t *p_args)
  *          - jmp-ptr: x_ptr wrapping a jmp_buf on the C stack
  *          - saved-env: env-alist snapshot at guard installation
  *          - saved-boundary: local-boundary snapshot at guard installation
- *          - error-value: initially nil, filled by x_base_error or
+ *          - error-value: initially nil, filled by x_interp_error or
  *            x_prim_error before longjmp
  *
  * @details **Handler stack.**  The handler is pushed onto
@@ -96,7 +96,7 @@ static x_obj_t *x_prim_match(x_obj_t *p_base, x_obj_t *p_args)
  *
  * @details **setjmp/longjmp protocol.**  setjmp(jmp) returns 0 on
  *          installation (normal path: evaluate body).  When
- *          x_base_error or x_prim_error calls longjmp, setjmp returns
+ *          x_interp_error or x_prim_error calls longjmp, setjmp returns
  *          non-zero (error path).  On the error path:
  *          1. save_stack is restored to the guard point (unwinding
  *             any fn/let frames entered since guard)
@@ -115,15 +115,15 @@ static x_obj_t *x_prim_match(x_obj_t *p_base, x_obj_t *p_args)
  *       x_eval_body_tco.  This ensures the guard's C frame (and its
  *       jmp_buf) remains valid throughout body execution.
  *
- * @see x_base_error   -- C-level error that longjmps to this handler
+ * @see x_interp_error   -- C-level error that longjmps to this handler
  * @see x_prim_error   -- x-lang (error msg) that longjmps to this handler
  */
 static x_obj_t *x_prim_guard(x_obj_t *p_base, x_obj_t *p_args)
 {
 	jmp_buf jmp;
 	x_obj_t *p_clause, *p_var, *p_handler_body, *p_body,
-		*p_prev_handler = x_firstobj(x_base_field_error_handler(p_base)),
-		*p_saved_save_stack = x_base_field_save_stack(p_base),
+		*p_prev_handler = x_firstobj(x_interp_field_error_handler(p_base)),
+		*p_saved_save_stack = x_interp_field_save_stack(p_base),
 		*p_handler, *p_result = NULL;
 	x_args(p_args, 2, NULL, &p_clause);
 	p_var = x_firstobj(p_clause);
@@ -134,10 +134,10 @@ static x_obj_t *x_prim_guard(x_obj_t *p_base, x_obj_t *p_args)
 	p_handler = x_mkspair(p_base, X_OBJ_FLAG_NONE,
 		x_mkptr(p_base, &jmp),
 		x_mkspair(p_base, X_OBJ_FLAG_NONE,
-			x_mkspair(p_base, X_OBJ_FLAG_NONE, x_firstobj(x_base_field_env_alist(p_base)),
-			                   x_base_field_env_local_boundary(p_base)),
+			x_mkspair(p_base, X_OBJ_FLAG_NONE, x_firstobj(x_interp_field_env_alist(p_base)),
+			                   x_interp_field_env_local_boundary(p_base)),
 			x_mkspair(p_base, X_OBJ_FLAG_NONE, NULL, NULL)));
-	x_firstobj(x_base_field_error_handler(p_base)) = p_handler;
+	x_firstobj(x_interp_field_error_handler(p_base)) = p_handler;
 
 	if (setjmp(jmp) == 0) {
 		/* Normal execution: evaluate body. */
@@ -147,17 +147,17 @@ static x_obj_t *x_prim_guard(x_obj_t *p_base, x_obj_t *p_args)
 		x_obj_t *p_err = x_error_handler_error(p_handler);
 		x_obj_t *p_pair = x_mkspair(p_base, X_OBJ_FLAG_NONE, p_var, p_err);
 
-		x_base_field_save_stack(p_base) = p_saved_save_stack;
-		x_base_env_alist_extend(p_base, p_pair);
+		x_interp_field_save_stack(p_base) = p_saved_save_stack;
+		x_interp_env_alist_extend(p_base, p_pair);
 		p_result = x_eval_body(p_base, p_handler_body);
-		x_firstobj(x_base_field_env_alist(p_base))
+		x_firstobj(x_interp_field_env_alist(p_base))
 			= x_error_handler_saved_env(p_handler);
-		x_base_field_env_local_boundary(p_base)
+		x_interp_field_env_local_boundary(p_base)
 			= x_error_handler_saved_boundary(p_handler);
 	}
 
 	/* Pop handler. */
-	x_firstobj(x_base_field_error_handler(p_base)) = p_prev_handler;
+	x_firstobj(x_interp_field_error_handler(p_base)) = p_prev_handler;
 
 	return p_result;
 }
@@ -177,17 +177,17 @@ static x_obj_t *x_prim_guard(x_obj_t *p_base, x_obj_t *p_args)
  */
 static x_obj_t *x_prim_error(x_obj_t *p_base, x_obj_t *p_args)
 {
-	x_obj_t *p_msg, *p_handler = x_firstobj(x_base_field_error_handler(p_base));
+	x_obj_t *p_msg, *p_handler = x_firstobj(x_interp_field_error_handler(p_base));
 	x_eargs(p_base, p_args, 2, NULL, &p_msg);
 
 	/* If handler installed, use it. */
 	if ( ! x_obj_isnil(p_base, p_handler)) {
 		x_error_handler_error(p_handler) = p_msg;
 		x_error_handler_line(p_handler)
-			= (x_obj_t *)(x_int_t)x_atomint(x_firstobj(x_base_field_line(p_base)));
-		x_firstobj(x_base_field_env_alist(p_base))
+			= (x_obj_t *)(x_int_t)x_atomint(x_firstobj(x_interp_field_line(p_base)));
+		x_firstobj(x_interp_field_env_alist(p_base))
 			= x_error_handler_saved_env(p_handler);
-		x_base_field_env_local_boundary(p_base)
+		x_interp_field_env_local_boundary(p_base)
 			= x_error_handler_saved_boundary(p_handler);
 		longjmp(*(jmp_buf *)x_error_handler_jmp(p_handler), 1);
 	}
@@ -221,13 +221,13 @@ static x_obj_t *x_prim_seq(x_obj_t *p_base, x_obj_t *p_args)
 	x_args(p_args, 3, NULL, &p_a, &p_b);
 
 	/* Root args so GC doesn't free them during eval of first arg */
-	x_obj_push_field(p_base, &x_base_field_eval_list(p_base), x_1(p_args), X_OBJ_FLAG_NONE);
+	x_obj_push_field(p_base, &x_interp_field_eval_list(p_base), x_1(p_args), X_OBJ_FLAG_NONE);
 
 	x_eval_arg(p_base, p_a);
-	x_firstobj(x_base_field_tco_expr(p_base)) = p_b;
+	x_firstobj(x_interp_field_tco_expr(p_base)) = p_b;
 
 	/* Unroot */
-	x_obj_pop_field(p_base, &x_base_field_eval_list(p_base));
+	x_obj_pop_field(p_base, &x_interp_field_eval_list(p_base));
 
 	return NULL;
 }

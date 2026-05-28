@@ -14,13 +14,10 @@
  * # Includes
  */
 #include "x-eval.h"
-#include "x-base-typesystem.h"
+#include "x-interp.h"
 #include "x-obj.h"
 #include "x-prim.h"
 #include "x-type.h"
-
-/** SIGINT flag -- set by signal handler, checked in TCO trampoline. */
-extern x_satom_t x_sigint_flag;
 
 #include "x-type/prim.h"
 
@@ -86,26 +83,35 @@ x_obj_t *x_eval(x_obj_t *p_base, x_obj_t *p_args)
 	x_obj_t *p_tco_env_save = NULL;
 	x_spair_t prim_args = x_obj_set(NULL, X_OBJ_FLAG_NONE, { NULL }, { NULL });
 	int trampolining = 0;
+#ifdef X_SIGNAL
+	/* Interrupt-flag pointer, resolved once from the base (signal-register
+	 * publishes signal.c's static atom here).  Cached so the trampoline pays
+	 * a single load per iteration, and so a GC relocation of the base spine
+	 * mid-eval can't invalidate it -- the target is a non-heap static. */
+	x_obj_t *p_sigint = x_base_isset(p_base)
+		? x_firstobj(x_interp_field_sigint(p_base)) : NULL;
+#endif
 
 eval_start:
-	/* SIGINT: throw STOP if a guard is active.
-	 * Volatile cast forces re-read from memory; without it
-	 * -O2 hoists the read out of the goto loop. */
-	if (x_base_isset(p_base)
-		&& *(volatile x_int_t *)&x_atomint(x_sigint_flag)
+#ifdef X_SIGNAL
+	/* SIGINT: throw STOP if a guard is active.  Volatile cast forces a
+	 * re-read each iteration; without it -O2 hoists it out of the loop. */
+	if (p_sigint != NULL
+		&& *(volatile x_int_t *)&x_atomint(p_sigint)
 		&& ! x_obj_isnil(p_base,
-			x_firstobj(x_base_field_error_handler(p_base)))) {
-		x_atomint(x_sigint_flag) = 0;
-		x_base_error(p_base, "STOP", NULL);
+			x_firstobj(x_interp_field_error_handler(p_base)))) {
+		x_atomint(p_sigint) = 0;
+		x_interp_error(p_base, "STOP", NULL);
 	}
+#endif
 	if (x_base_isset(p_base))
-		x_atomint(x_firstobj(x_base_field_profile_evals(p_base)))++;
+		x_atomint(x_firstobj(x_interp_field_profile_evals(p_base)))++;
 	p_exp = x_firstobj(x_eval_arg_exp(p_args));
 
 	/* Update base line counter from expression's source line metadata.
 	 * After this, current-line reflects the eval site (useful for errors). */
 	if (p_exp != NULL && (x_obj_flags(p_exp) & X_OBJ_FLAG_META))
-		x_atomint(x_firstobj(x_base_field_line(p_base)))
+		x_atomint(x_firstobj(x_interp_field_line(p_base)))
 			= x_obj_meta_i(p_exp, 0).i;
 
 #ifdef X_COV
@@ -137,41 +143,41 @@ eval_start:
 
 	/* TCO trampoline: re-evaluate tail expression if set. */
 	if (x_base_isset(p_base)
-		&& ! x_obj_isnil(p_base, x_firstobj(x_base_field_tco_expr(p_base)))) {
+		&& ! x_obj_isnil(p_base, x_firstobj(x_interp_field_tco_expr(p_base)))) {
 		if ( ! trampolining) {
 			/* First entry: snapshot tco_env and clear global
 			 * so nested x_eval calls don't see it. */
-			p_tco_env_save = x_firstobj(x_base_field_tco_env(p_base));
+			p_tco_env_save = x_firstobj(x_interp_field_tco_env(p_base));
 			trampolining = 1;
 		} else if ((p_tco_env_save == NULL
 			|| x_obj_isnil(p_base, p_tco_env_save))
-			&& ! x_obj_isnil(p_base, x_firstobj(x_base_field_tco_env(p_base)))) {
+			&& ! x_obj_isnil(p_base, x_firstobj(x_interp_field_tco_env(p_base)))) {
 			/* Later iteration: initial tco_env was nil (from
 			 * if/do/match/and/or) but an inner form (fn/let)
 			 * now provides tco_env for env restoration. */
-			p_tco_env_save = x_firstobj(x_base_field_tco_env(p_base));
+			p_tco_env_save = x_firstobj(x_interp_field_tco_env(p_base));
 		}
 
-		x_firstobj(x_base_field_tco_env(p_base)) = NULL;
-		x_firstobj(x_eval_arg_exp(p_args)) = x_firstobj(x_base_field_tco_expr(p_base));
-		x_firstobj(x_base_field_tco_expr(p_base)) = NULL;
-		x_atomint(x_firstobj(x_base_field_profile_tco(p_base)))++;
+		x_firstobj(x_interp_field_tco_env(p_base)) = NULL;
+		x_firstobj(x_eval_arg_exp(p_args)) = x_firstobj(x_interp_field_tco_expr(p_base));
+		x_firstobj(x_interp_field_tco_expr(p_base)) = NULL;
+		x_atomint(x_firstobj(x_interp_field_profile_tco(p_base)))++;
 
 		goto eval_start;
 	}
 
 	/* TCO env restore: only the x_eval that trampolined restores env. */
 	if (trampolining && x_base_isset(p_base)) {
-		x_firstobj(x_base_field_tco_env(p_base)) = NULL;
+		x_firstobj(x_interp_field_tco_env(p_base)) = NULL;
 
 		/* Restore from compound ((env . boundary) . (bst . shadow)) */
 		if (p_tco_env_save != NULL
 			&& ! x_obj_isnil(p_base, p_tco_env_save)) {
-			x_firstobj(x_base_field_env_alist(p_base))
+			x_firstobj(x_interp_field_env_alist(p_base))
 				= x_firstobj(x_firstobj(p_tco_env_save));
-			x_base_field_env_local_boundary(p_base)
+			x_interp_field_env_local_boundary(p_base)
 				= x_restobj(x_firstobj(p_tco_env_save));
-			x_base_field_env_global_tree(p_base)
+			x_interp_field_env_global_tree(p_base)
 				= x_firstobj(x_restobj(p_tco_env_save));
 			x_prim_clear_shadows_to(p_base,
 				x_restobj(x_restobj(p_tco_env_save)));

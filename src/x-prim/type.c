@@ -23,7 +23,7 @@
  */
 #include "x-prim.h"
 #include "x-alist.h"
-#include "x-base-typesystem.h"
+#include "x-interp.h"
 #include "x-heap.h"
 #include "x-type.h"
 #include <stddef.h>
@@ -128,7 +128,7 @@ static x_obj_t *x_prim_make_type(x_obj_t *p_base, x_obj_t *p_args)
 		X_OBJ_FLAG_OWN, X_OBJ_LENGTH_ATOM, name);
 
 	p_type = x_prim_type_build_struct(p_base, p_name_atom, p_handlers);
-	x_base_type_alist_extend(p_base, p_type);
+	x_interp_type_alist_extend(p_base, p_type);
 
 	return p_name_atom;
 }
@@ -162,7 +162,7 @@ static x_obj_t *x_prim_base_make_type(x_obj_t *p_base, x_obj_t *p_args)
 
 	/* Build type using calling base; register on target. */
 	p_type = x_prim_type_build_struct(p_base, p_name_atom, p_handlers);
-	x_base_type_alist_extend(p_target, p_type);
+	x_interp_type_alist_extend(p_target, p_type);
 
 	/* Mark target base and its tree with SHARED so calling base's GC
 	 * won't sweep handler closures referenced cross-base. */
@@ -194,7 +194,7 @@ static x_obj_t *x_prim_make_instance(x_obj_t *p_base, x_obj_t *p_args)
 
 	x_eargs(p_base, p_args, 3, NULL, &p_handle, &p_data);
 	x_firstobj((x_obj_t *)lookup_args) = p_handle;
-	p_type = x_base_type_alist_assoc(p_base, (x_obj_t *)lookup_args);
+	p_type = x_interp_type_alist_assoc(p_base, (x_obj_t *)lookup_args);
 
 	if (x_obj_isnil(p_base, p_type)) {
 		return NULL;
@@ -221,11 +221,11 @@ static x_obj_t *x_prim_typep(x_obj_t *p_base, x_obj_t *p_args)
 	x_eargs(p_base, p_args, 3, NULL, &p_obj, &p_handle);
 
 	if (x_obj_isnil(p_base, p_obj) || x_obj_isnil(p_base, x_obj_type(p_obj))) {
-		return x_firstobj(x_base_field_false(p_base));
+		return x_firstobj(x_interp_field_false(p_base));
 	}
 
 	return x_type_field_name(x_obj_type(p_obj)) == p_handle
-		? x_firstobj(x_base_field_true(p_base)) : x_firstobj(x_base_field_false(p_base));
+		? x_firstobj(x_interp_field_true(p_base)) : x_firstobj(x_interp_field_false(p_base));
 }
 
 /**
@@ -301,12 +301,12 @@ static x_obj_t *x_prim_type_name(x_obj_t *p_base, x_obj_t *p_args)
  */
 static x_obj_t *x_prim_make_token_base(x_obj_t *p_base, x_obj_t *p_args)
 {
-	x_obj_t *p_new = x_base_ts_make(NULL, NULL);
+	x_obj_t *p_new = x_interp_make(NULL, NULL);
 	(void)p_args;
 
 	/* Inherit boolean singletons from calling base. */
-	x_base_field_true(p_new) = x_firstobj(x_base_field_true(p_base));
-	x_base_field_false(p_new) = x_firstobj(x_base_field_false(p_base));
+	x_interp_field_true(p_new) = x_firstobj(x_interp_field_true(p_base));
+	x_interp_field_false(p_new) = x_firstobj(x_interp_field_false(p_base));
 
 	return p_new;
 }
@@ -333,7 +333,7 @@ static x_obj_t *x_prim_make_base(x_obj_t *p_base, x_obj_t *p_args)
 	(void)p_args;
 
 	buffer = (x_char_t *)x_sys_malloc(256);
-	p_new_base = x_base_ts_make(NULL, NULL);
+	p_new_base = x_interp_make(NULL, NULL);
 
 	/* Register types. */
 	x_type_prim_register(p_new_base, p_new_base);
@@ -386,12 +386,12 @@ static x_obj_t *x_prim_base_eval(x_obj_t *p_base, x_obj_t *p_args)
 	p_handler = x_mkspair(p_target, X_OBJ_FLAG_NONE,
 		x_mkptr(p_target, &jmp),
 		x_mkspair(p_target, X_OBJ_FLAG_NONE,
-			x_firstobj(x_base_field_env_alist(p_target)),
+			x_firstobj(x_interp_field_env_alist(p_target)),
 			x_mkspair(p_target, X_OBJ_FLAG_NONE, NULL, NULL)));
 
 	/* Push handler onto error_handler_stack */
-	x_base_field_error_handler(p_target) = x_mkspair(p_target, X_OBJ_FLAG_NONE,
-		p_handler, x_base_field_error_handler(p_target));
+	x_interp_field_error_handler(p_target) = x_mkspair(p_target, X_OBJ_FLAG_NONE,
+		p_handler, x_interp_field_error_handler(p_target));
 
 	if (setjmp(jmp) == 0) {
 		p_result = x_eval_arg(p_target, p_expr);
@@ -399,17 +399,17 @@ static x_obj_t *x_prim_base_eval(x_obj_t *p_base, x_obj_t *p_args)
 		x_obj_t *p_err = x_error_handler_error(p_handler);
 
 		/* Error caught from target: pop handler, restore env, re-signal. */
-		x_base_field_error_handler(p_target)
-			= x_restobj(x_base_field_error_handler(p_target));
-		x_firstobj(x_base_field_env_alist(p_target))
+		x_interp_field_error_handler(p_target)
+			= x_restobj(x_interp_field_error_handler(p_target));
+		x_firstobj(x_interp_field_env_alist(p_target))
 			= x_error_handler_saved_env(p_handler);
 
-		if ( ! x_obj_isnil(p_base, x_firstobj(x_base_field_error_handler(p_base)))) {
-			x_obj_t *p_parent = x_firstobj(x_base_field_error_handler(p_base));
+		if ( ! x_obj_isnil(p_base, x_firstobj(x_interp_field_error_handler(p_base)))) {
+			x_obj_t *p_parent = x_firstobj(x_interp_field_error_handler(p_base));
 
 			x_error_handler_error(p_parent) = p_err;
 			x_error_handler_line(p_parent) = x_error_handler_line(p_handler);
-			x_firstobj(x_base_field_env_alist(p_base))
+			x_firstobj(x_interp_field_env_alist(p_base))
 				= x_error_handler_saved_env(p_parent);
 			longjmp(*(jmp_buf *)x_error_handler_jmp(p_parent), 1);
 		}
@@ -420,8 +420,8 @@ static x_obj_t *x_prim_base_eval(x_obj_t *p_base, x_obj_t *p_args)
 	}
 
 	/* Pop error_handler_stack */
-	x_base_field_error_handler(p_target)
-		= x_restobj(x_base_field_error_handler(p_target));
+	x_interp_field_error_handler(p_target)
+		= x_restobj(x_interp_field_error_handler(p_target));
 
 	return p_result;
 }
@@ -446,7 +446,7 @@ static x_obj_t *x_prim_base_bind(x_obj_t *p_base, x_obj_t *p_args)
 	x_eargs(p_base, p_args, 4, NULL, &p_target, &p_name, &p_val);
 
 	p_pair = x_mkspair(p_target, X_OBJ_FLAG_NONE, p_name, p_val);
-	x_base_env_alist_extend(p_target, p_pair);
+	x_interp_env_alist_extend(p_target, p_pair);
 
 	return p_val;
 }
@@ -593,7 +593,7 @@ static x_obj_t *x_prim_make_obj(x_obj_t *p_base, x_obj_t *p_args)
 
 	x_eargs(p_base, p_args, 3, NULL, &p_handle, &p_n);
 	x_firstobj((x_obj_t *)lookup_args) = p_handle;
-	p_type = x_base_type_alist_assoc(p_base, (x_obj_t *)lookup_args);
+	p_type = x_interp_type_alist_assoc(p_base, (x_obj_t *)lookup_args);
 
 	if (x_obj_isnil(p_base, p_type)) {
 		return NULL;

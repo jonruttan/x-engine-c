@@ -13,7 +13,7 @@
 
 #include "x-type/buffer.h"
 #include "x-type/char.h"
-#include "x-base-typesystem.h"
+#include "x-interp.h"
 #include "x-heap.h"
 
 x_satom_t x_type_buffer_name = x_obj_set(x_type_atom_obj, X_OBJ_FLAG_NONE, { .s = (x_char_t *)X_TYPE_BUFFER_NAME }),
@@ -148,7 +148,7 @@ x_obj_t *x_type_buffer_write(x_obj_t *p_base, x_obj_t *p_args)
 		{ .s = (x_char_t *)X_TYPE_BUFFER_WRITE_STR });
 	x_spair_t wrap = x_obj_set(NULL, X_OBJ_FLAG_NONE, { str }, { NULL });
 
-	x_base_write_str(p_base, (x_obj_t *)&wrap);
+	x_interp_write_str(p_base, (x_obj_t *)&wrap);
 
 	return x_firstobj(p_args);
 }
@@ -260,7 +260,7 @@ x_obj_t *x_type_buffer_read(x_obj_t *p_base, x_obj_t *p_args)
 
 	/* Track line numbers for error reporting. */
 	if (x_bufferlastchar(p_buffer) == '\n' && x_base_isset(p_base)) {
-		x_atomint(x_firstobj(x_base_field_line(p_base))) += 1;
+		x_atomint(x_firstobj(x_interp_field_line(p_base))) += 1;
 	}
 
 	return p_buffer;

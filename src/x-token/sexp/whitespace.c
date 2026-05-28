@@ -13,7 +13,7 @@
  */
 
 #include "x-token/sexp/whitespace.h"
-#include "x-base-typesystem.h"
+#include "x-interp.h"
 #include "x-token.h"
 #include "x-type/buffer.h"
 #include "x-type/char.h"

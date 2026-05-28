@@ -54,7 +54,7 @@
  *      " "
  */
 
-#include "x-base-typesystem.h"
+#include "x-interp.h"
 
 /** @name Type Construction
  * @{ */

@@ -13,7 +13,7 @@
 /*
  * # Includes
  */
-#include "x-base-typesystem.h"
+#include "x-interp.h"
 #include "x-obj.h"
 #include "x-token.h"
 #include "x-type.h"
@@ -44,7 +44,7 @@ x_obj_t *x_token_delimit(x_obj_t *p_base, x_obj_t *p_args)
 {
 	x_obj_t *p_buffer = x_firstobj(p_args),
 		*p_type = x_01(p_args),
-		*p_types = x_firstobj(x_base_field_type_alist(p_base));
+		*p_types = x_firstobj(x_interp_field_type_alist(p_base));
 	x_spair_t prim_args[1] = {
 			x_obj_set(NULL, X_OBJ_FLAG_NONE, { NULL }, { p_args }),
 		};
@@ -121,7 +121,7 @@ x_obj_t *x_token_analyse(x_obj_t *p_base, x_obj_t *p_args)
 		arg_chr = x_obj_set(NULL, X_OBJ_FLAG_NONE, { .i = 0 });
 	x_spair_t
 		score = x_obj_set(NULL, X_OBJ_FLAG_NONE, {}),
-		type_iter = x_obj_set(NULL, X_OBJ_FLAG_NONE, { x_type_list_iter_prim }, { x_firstobj(x_base_field_type_alist(p_base)) }),
+		type_iter = x_obj_set(NULL, X_OBJ_FLAG_NONE, { x_type_list_iter_prim }, { x_firstobj(x_interp_field_type_alist(p_base)) }),
 		iter_args[2] = {
 			x_obj_set(NULL, X_OBJ_FLAG_NONE, { type_iter }, { (x_obj_t *)(iter_args + 1) }),
 			x_obj_set(NULL, X_OBJ_FLAG_NONE, { NULL }, { NULL }),
@@ -356,18 +356,18 @@ x_obj_t *x_token_write(x_obj_t *p_base, x_obj_t *p_args)
 		x_spair_t nil_args[1] = {
 			x_obj_set(NULL, X_OBJ_FLAG_NONE, { nil_str }, { NULL })
 		};
-		x_base_write_str(p_base, (x_obj_t *)nil_args);
+		x_interp_write_str(p_base, (x_obj_t *)nil_args);
 		return NULL;
 	}
 
-	if (p_obj == x_firstobj(x_base_field_true(p_base))
-			|| p_obj == x_firstobj(x_base_field_false(p_base))) {
+	if (p_obj == x_firstobj(x_interp_field_true(p_base))
+			|| p_obj == x_firstobj(x_interp_field_false(p_base))) {
 		x_satom_t bool_str = x_obj_set(x_type_atom_obj,
 			X_OBJ_FLAG_NONE, { .s = x_atomstr(p_obj) });
 		x_spair_t bool_args[1] = {
 			x_obj_set(NULL, X_OBJ_FLAG_NONE, { bool_str }, { NULL })
 		};
-		x_base_write_str(p_base, (x_obj_t *)bool_args);
+		x_interp_write_str(p_base, (x_obj_t *)bool_args);
 		return NULL;
 	}
 
@@ -410,18 +410,18 @@ x_obj_t *x_token_display(x_obj_t *p_base, x_obj_t *p_args)
 		x_spair_t nil_args[1] = {
 			x_obj_set(NULL, X_OBJ_FLAG_NONE, { nil_str }, { NULL })
 		};
-		x_base_write_str(p_base, (x_obj_t *)nil_args);
+		x_interp_write_str(p_base, (x_obj_t *)nil_args);
 		return NULL;
 	}
 
-	if (p_obj == x_firstobj(x_base_field_true(p_base))
-			|| p_obj == x_firstobj(x_base_field_false(p_base))) {
+	if (p_obj == x_firstobj(x_interp_field_true(p_base))
+			|| p_obj == x_firstobj(x_interp_field_false(p_base))) {
 		x_satom_t bool_str = x_obj_set(x_type_atom_obj,
 			X_OBJ_FLAG_NONE, { .s = x_atomstr(p_obj) });
 		x_spair_t bool_args[1] = {
 			x_obj_set(NULL, X_OBJ_FLAG_NONE, { bool_str }, { NULL })
 		};
-		x_base_write_str(p_base, (x_obj_t *)bool_args);
+		x_interp_write_str(p_base, (x_obj_t *)bool_args);
 		return NULL;
 	}
 

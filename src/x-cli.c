@@ -13,7 +13,7 @@
 /*
  * # Includes
  */
-#include "x-base-typesystem.h"
+#include "x-interp.h"
 #include "x-heap.h"
 #include "x-prim.h"
 #include "x-type/buffer.h"
@@ -81,7 +81,7 @@ static x_obj_t *x_prim_syscall(x_obj_t *p_base, x_obj_t *p_args)
  *
  * Opens the file at path, pushes a new input state (fd, line counter,
  * read buffer) onto the base stacks, evaluates all expressions via
- * x_base_load, then pops and restores the previous input state.
+ * x_interp_load, then pops and restores the previous input state.
  *
  * @param p_base  x_obj_t* -- Execution context
  * @param p_args  x_obj_t* -- Unevaluated args; path is a string
@@ -108,8 +108,8 @@ static x_obj_t *x_prim_include(x_obj_t *p_base, x_obj_t *p_args)
 	}
 
 	/* Push line counter for included file. */
-	x_base_field_line(p_base) = x_mkspair(p_base, X_OBJ_FLAG_NONE,
-		x_mksatom(p_base, X_OBJ_FLAG_NONE, 1), x_base_field_line(p_base));
+	x_interp_field_line(p_base) = x_mkspair(p_base, X_OBJ_FLAG_NONE,
+		x_mksatom(p_base, X_OBJ_FLAG_NONE, 1), x_interp_field_line(p_base));
 
 	/* Push new input state. */
 	x_base_field_filein(p_base) = x_mkspair(p_base, X_OBJ_FLAG_NONE,
@@ -124,7 +124,7 @@ static x_obj_t *x_prim_include(x_obj_t *p_base, x_obj_t *p_args)
 #ifdef X_PROFILE
 	t0 = x_sys_clock();
 #endif
-	p_result = x_base_load(p_base, p_base);
+	p_result = x_interp_load(p_base, p_base);
 #ifdef X_PROFILE
 	t1 = x_sys_clock();
 	err_fd = x_atomint(x_firstobj(x_base_field_fileerr(p_base)));
@@ -143,8 +143,8 @@ static x_obj_t *x_prim_include(x_obj_t *p_base, x_obj_t *p_args)
 	x_base_field_buffer(p_base)
 		= x_restobj(x_base_field_buffer(p_base));
 	x_sys_close(fd);
-	x_base_field_line(p_base)
-		= x_restobj(x_base_field_line(p_base));
+	x_interp_field_line(p_base)
+		= x_restobj(x_interp_field_line(p_base));
 
 	return p_result;
 }
@@ -168,7 +168,7 @@ x_obj_t * init(x_obj_t *p_base, x_char_t *buffer)
 	x_obj_t *p_buffer;
 
 	/* Create base object. */
-	p_base = x_base_ts_make(NULL, NULL);
+	p_base = x_interp_make(NULL, NULL);
 
 	/* Enable 1 metadata slot per object for source line tracking.
 	 * Must be set before the first buffer is created so the buffer

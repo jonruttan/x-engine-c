@@ -129,6 +129,7 @@ x_obj_t *jit_build_args(x_obj_t *p_base, long nargs,
 x_obj_t *jit_score_set(x_obj_t *score, long sign, x_obj_t *buffer)
 {
 	x_firstint(score) = (x_int_t)(sign * (long)x_bufferlen(buffer));
+
 	return score;
 }
 
@@ -141,6 +142,7 @@ x_obj_t *jit_score_set(x_obj_t *score, long sign, x_obj_t *buffer)
 x_obj_t *jit_buffer_unread(x_obj_t *buffer)
 {
 	x_bufferread(buffer)--;
+
 	return buffer;
 }
 
@@ -169,6 +171,5 @@ x_obj_t *jit_make_prim(x_obj_t *p_base, x_obj_t *p_args)
 {
 	x_obj_t *p_addr = x_eval_arg(p_base, x_01(p_args));
 
-	return x_make_prim(p_base, X_OBJ_FLAG_NONE,
-		(x_fn_t)x_ptrval(p_addr));
+	return x_make_prim(p_base, X_OBJ_FLAG_NONE, (x_fn_t)x_ptrval(p_addr));
 }

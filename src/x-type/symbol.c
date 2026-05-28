@@ -14,7 +14,7 @@
 #include "x-type/symbol.h"
 #include "x-type/str.h"
 #include "x-alist.h"
-#include "x-base-typesystem.h"
+#include "x-interp.h"
 #include "x-eval.h"
 #include "x-token/sexp/symbol.h"
 
@@ -312,7 +312,7 @@ x_obj_t *x_type_symbol_find(x_obj_t *p_base, x_obj_t *p_args)
  *
  * @see x_alist_bst_lookup for the BST search used in step 2
  * @see X_OBJ_FLAG_SHADOW for the shadow flag that bypasses BST lookup
- * @see x_base_field_env_local_boundary for the boundary pointer
+ * @see x_interp_field_env_local_boundary for the boundary pointer
  */
 x_obj_t *x_type_symbol_eval(x_obj_t *p_base, x_obj_t *p_args)
 {
@@ -323,8 +323,8 @@ x_obj_t *x_type_symbol_eval(x_obj_t *p_base, x_obj_t *p_args)
 		return NULL;
 	}
 
-	p_alist = x_firstobj(x_base_field_env_alist(p_base));
-	p_boundary = x_base_field_env_local_boundary(p_base);
+	p_alist = x_firstobj(x_interp_field_env_alist(p_base));
+	p_boundary = x_interp_field_env_local_boundary(p_base);
 
 	/* Step 1: walk locals (head of alist up to AND INCLUDING boundary) */
 	while ( ! x_obj_isnil(p_base, p_alist)) {
@@ -341,7 +341,7 @@ x_obj_t *x_type_symbol_eval(x_obj_t *p_base, x_obj_t *p_args)
 	/* Step 2: BST lookup (skip if symbol has local shadow flag) */
 	if ( ! (x_obj_flags(p_sym_obj) & X_OBJ_FLAG_SHADOW)) {
 		p_entry = x_alist_bst_lookup(p_base,
-			x_base_field_env_global_tree(p_base), p_sym_obj);
+			x_interp_field_env_global_tree(p_base), p_sym_obj);
 		if ( ! x_obj_isnil(p_base, p_entry)) {
 			return x_restobj(p_entry);
 		}
