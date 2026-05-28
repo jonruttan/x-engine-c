@@ -12,7 +12,7 @@
  *      " "
  */
 #include "x-type/operative.h"
-#include "x-base-typesystem.h"
+#include "x-interp.h"
 #include "x-heap.h"
 #include "x-prim.h"
 
@@ -130,11 +130,41 @@ x_obj_t *x_type_operative_make(x_obj_t *p_base, x_obj_t *p_args)
 }
 
 /**
- * Type-dispatch call callback: evaluate an operative application (TCO).
+ * Type-dispatch call callback: evaluate an operative application.
  *
- * Operatives use dynamic scoping -- the body runs in the caller's
- * environment so that def/set naturally affect it.  The env-param
- * (if non-nil) is bound to the caller's environment.
+ * Operatives are lexically scoped: the body runs in the env captured at
+ * (op ...) creation time, extended with the formals bound to the
+ * UNEVALUATED arguments.  The caller's environment is exposed only
+ * through the named env-param (when the op declares one), so that
+ * (eval expr e) or (tail-eval expr e) inside the body can reach back
+ * into the caller's scope explicitly.  Caller-local names cannot
+ * silently shadow the globals the body relies on.  Operatives do NOT
+ * get self-passing.
+ *
+ * Implementation: the "boundary-only" design.
+ *
+ * - env_alist is set to extend(captured_env, formals).  The new chain
+ *   branches off the captured-env head; caller's locals are not on
+ *   this chain.
+ * - local_boundary is set to captured_env so symbol-lookup Step 1
+ *   stops at the captured-env head (caller's locals invisible) and
+ *   Step 3 walks past into older top-level entries.
+ *
+ * Body is run via x_eval_body (NOT a TCO body evaluator).  Each body
+ * form is evaluated synchronously to completion -- tail-eval inside a
+ * form still TCOs via x_eval's own trampoline, so common patterns like
+ * (tail-eval (...) e) work without growing the C stack.  The op itself
+ * doesn't TCO into its caller, but lib ops typically dispatch the
+ * heavy work via tail-eval into the caller's env, so the op frame
+ * isn't on the recursion path.
+ *
+ * After the body returns, env/boundary/shadow are restored with one
+ * subtlety: top-level (def ...) forms run by tail-eval'd code legitimately
+ * grow the caller's env_alist chain.  If env_alist's current head reaches
+ * the saved head by walking rest pointers, the chain has grown along
+ * the saved branch -- keep current to preserve the new defs.  If the
+ * saved head isn't on the current chain, the body branched off (op's
+ * own formals frame); restore to saved.
  *
  * @param p_base  x_obj_t* -- Execution context
  * @param p_args  x_obj_t* -- (operative . unevaluated-args)
@@ -147,30 +177,68 @@ x_obj_t *x_type_operative_call(x_obj_t *p_base, x_obj_t *p_args)
 		*p_params = x_opparams(p_op),
 		*p_envparam = x_openvparam(p_op),
 		*p_body = x_opbody(p_op),
+		*p_captured_env = x_openv(p_op),
 		*p_caller_env,
-		*p_env;
+		*p_env,
+		*p_op_chain_head,
+		*p_saved_boundary,
+		*p_saved_shadow,
+		*p_walk,
+		*p_result;
 
-	/* Capture the caller's environment. */
-	p_caller_env = x_firstobj(x_base_field_env_alist(p_base));
+	/* Capture caller's env (also the saved env for non-tail-eval restore). */
+	p_caller_env = x_firstobj(x_interp_field_env_alist(p_base));
+	p_saved_boundary = x_interp_field_env_local_boundary(p_base);
+	p_saved_shadow = x_interp_field_shadow_list(p_base);
 
-	/* Operatives do NOT get self-passing — they use dynamic scoping
-	 * and need source-form stability for compile-on-first-use (and/or). */
-
-	/* Extend caller's env with param bindings (unevaluated args).
-	 * Operatives use dynamic scoping — body runs in caller's context
-	 * so that def/set naturally affect the caller's environment. */
+	/* Extend captured env with formals bound to unevaluated args. */
 	p_env = x_env_extend(
-		p_base, p_caller_env, p_params, p_unevaluated_args);
+		p_base, p_captured_env, p_params, p_unevaluated_args);
 
-	/* Bind the env-param to the caller's environment. */
+	/* Bind the env-param to the caller's env.  Only route from body
+	 * back into caller's scope (via eval/tail-eval). */
 	if ( ! x_obj_isnil(p_base, p_envparam)) {
 		p_env = x_mkspair(p_base, X_OBJ_FLAG_NONE,
 			x_mkspair(p_base, X_OBJ_FLAG_NONE, p_envparam, p_caller_env), p_env);
 	}
 
-	x_firstobj(x_base_field_env_alist(p_base)) = p_env;
+	/* p_op_chain_head is the pointer to the op's formal frame.  After
+	 * the body runs, we detect whether it tail-eval'd off this chain
+	 * by checking whether this pointer is still reachable from the
+	 * current env_alist firstobj. */
+	p_op_chain_head = p_env;
 
-	return x_eval_body_tco_simple(p_base, p_body);
+	/* Install op's chain.  Boundary at captured_env makes caller's
+	 * locals invisible to symbol lookup. */
+	x_firstobj(x_interp_field_env_alist(p_base)) = p_env;
+	x_interp_field_env_local_boundary(p_base) = p_captured_env;
+
+	/* Evaluate body synchronously.  x_eval_arg -> x_eval runs its own
+	 * TCO trampoline per body form, so tail-eval inside any form still
+	 * TCOs internally; only the op frame itself sits on the C stack. */
+	p_result = x_eval_body(p_base, p_body);
+
+	/* Restore env_alist with tail-eval detection: if the op's formal
+	 * frame is still reachable from the current head, the body did NOT
+	 * tail-eval away -- restore env_alist to caller_env to shed the
+	 * formals (top-level defs done in the body persist in BST).  If
+	 * the formal frame is NOT in the chain, the body tail-eval'd to a
+	 * different env (typically the caller's `e`), and the current head
+	 * may be (def-pair . ... . e) preserving real top-level growth on
+	 * caller's chain; keep it. */
+	p_walk = x_firstobj(x_interp_field_env_alist(p_base));
+	while ( ! x_obj_isnil(p_base, p_walk) && p_walk != p_op_chain_head) {
+		p_walk = x_restobj(p_walk);
+	}
+	if (p_walk == p_op_chain_head) {
+		x_firstobj(x_interp_field_env_alist(p_base)) = p_caller_env;
+	}
+
+	/* Boundary and shadow are always restored.  BST is never touched. */
+	x_interp_field_env_local_boundary(p_base) = p_saved_boundary;
+	x_prim_clear_shadows_to(p_base, p_saved_shadow);
+
+	return p_result;
 }
 
 /**
@@ -186,7 +254,7 @@ x_obj_t *x_type_operative_write(x_obj_t *p_base, x_obj_t *p_args)
 		{ .s = (x_char_t *)X_TYPE_OPERATIVE_WRITE_STR });
 	x_spair_t wrap = x_obj_set(NULL, X_OBJ_FLAG_NONE, { str }, { NULL });
 
-	x_base_write_str(p_base, (x_obj_t *)&wrap);
+	x_interp_write_str(p_base, (x_obj_t *)&wrap);
 
 	return x_firstobj(p_args);
 }
