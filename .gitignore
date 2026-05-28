@@ -79,3 +79,6 @@ docs/ref/x/
 
 # Agent / editor local state (Claude Code, etc.)
 .claude/
+
+# ctags output (regenerate locally with `ctags -R --exclude=docs/ref`)
+tags
