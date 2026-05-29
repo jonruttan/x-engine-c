@@ -169,5 +169,8 @@ x_obj_t *x_type_str_call(x_obj_t *p_base, x_obj_t *p_args)
 		n += x_lib_strlen(x_strval(proc));
 	}
 
-	return x_mkchar(p_base, x_strval(proc)[n]);
+	/* Byte-indexed access: return the raw byte (0-255) as a CHARACTER.
+	 * The UTF-8 / code-point layer is built on top of this in the
+	 * x-lang string library (str->list, etc.). */
+	return x_mkchar(p_base, (unsigned char)x_strval(proc)[n]);
 }

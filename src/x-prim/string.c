@@ -72,23 +72,31 @@ static x_obj_t *x_prim_symbol_to_string(x_obj_t *p_base, x_obj_t *p_args)
  *  x-lang: (list->str list-of-chars)
  *  @param p_base Interpreter base context.
  *  @param p_args Unevaluated argument list: (list->str list-of-chars).
- *  @return A newly allocated string composed of the characters in the list.
- *  @note Walks the list twice: once to measure length, once to copy.
- *        Safe inside tokenizer callbacks (no x-lang dispatch).
+ *  @return A newly allocated UTF-8 string encoding the code points in the list.
+ *  @note Walks the list twice: once to measure length, once to encode.
+ *        Each CHARACTER is a code point; ASCII (< 0x80) encodes to one byte,
+ *        so tokenizer use (ASCII only) is unaffected and stays dispatch-free.
  */
 static x_obj_t *x_prim_list_to_string(x_obj_t *p_base, x_obj_t *p_args)
 {
 	x_obj_t *p_list, *p_cur;
 	x_char_t *s;
+	x_char_t enc[4];
+	x_int_t n, k;
 	size_t len = 0;
 
 	x_eargs(p_base, p_args, 2, NULL, &p_list);
+	/* Pass 1: sum the UTF-8 byte length of every code point. */
 	for (p_cur = p_list; !x_obj_isnil(p_base, p_cur); p_cur = x_restobj(p_cur))
-		len++;
+		len += (size_t)x_char_utf8_len(x_atomint(x_firstobj(p_cur)));
 	s = (x_char_t *)x_sys_malloc(len + 1);
+	/* Pass 2: UTF-8 encode each code point into the buffer. */
 	len = 0;
-	for (p_cur = p_list; !x_obj_isnil(p_base, p_cur); p_cur = x_restobj(p_cur))
-		s[len++] = x_charval(x_firstobj(p_cur));
+	for (p_cur = p_list; !x_obj_isnil(p_base, p_cur); p_cur = x_restobj(p_cur)) {
+		n = x_char_utf8_encode(x_atomint(x_firstobj(p_cur)), enc);
+		for (k = 0; k < n; k++)
+			s[len++] = enc[k];
+	}
 	s[len] = '\0';
 
 	return x_mkstrown(p_base, s);

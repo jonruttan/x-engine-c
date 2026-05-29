@@ -71,7 +71,7 @@ static x_obj_t *x_prim_char_to_integer(x_obj_t *p_base, x_obj_t *p_args)
 	x_obj_t *c;
 	x_eargs(p_base, p_args, 2, NULL, &c);
 
-	return x_mkint(p_base, (x_int_t)x_charval(c));
+	return x_mkint(p_base, x_atomint(c));
 }
 
 /** Convert an integer code point to a character.
@@ -86,7 +86,7 @@ static x_obj_t *x_prim_integer_to_char(x_obj_t *p_base, x_obj_t *p_args)
 	x_obj_t *n;
 	x_eargs(p_base, p_args, 2, NULL, &n);
 
-	return x_mkchar(p_base, (x_char_t)x_intval(n));
+	return x_mkchar(p_base, x_intval(n));
 }
 
 /** Register predicate and type-conversion primitives.
