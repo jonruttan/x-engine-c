@@ -116,7 +116,8 @@ static x_obj_t *x_prim_read_char(x_obj_t *p_base, x_obj_t *p_args)
 		return NULL;
 	}
 
-	return x_mkchar(p_base, x_bufferlastchar(p_buffer));
+	/* Byte-level read: a CHARACTER holding the raw byte (0-255). */
+	return x_mkchar(p_base, (unsigned char)x_bufferlastchar(p_buffer));
 }
 
 /** Capture output of a dispatch function (write or display) into a string.
@@ -211,26 +212,66 @@ static x_obj_t *x_prim_clock(x_obj_t *p_base, x_obj_t *p_args)
 }
 #endif /* X_CLOCK */
 
-/** Sweep unmarked objects from the heap (garbage collection phase 2).
- *  x-lang: (heap-sweep)
- *  @param p_base  Execution context.
- *  @param p_args  Unused.
- *  @return NULL.
- *  @note Calls registered free hooks before sweeping.
- *  @note Increments GC run counter when X_PROFILE is defined.
- *  @see x_prim_heap_mark, x_prim_heap_count
+/** Mark phase: trace live objects from every root (GC phase 1).
+ *
+ *  Four passes: (1) tree-mark from the base data tree, (2) conservative
+ *  C-stack scan, (3) tree-mark each registered GC root, (4) fire mark
+ *  hooks.  The hook/root lists live in x-expr's heap-group; x-expr stores
+ *  but cannot dispatch (no callable mechanism at that layer), so the walk
+ *  + invoke happens here.
+ *
+ *  @note Pass (2) is currently a no-op: x_interp_make leaves p_stack_base
+ *        nil, so x_heap_callstack_mark returns immediately.  Liveness is
+ *        therefore tree + roots + hooks only -- which is why a sweep must
+ *        run with no allocation between it and this mark (see
+ *        x_prim_heap_collect).
+ *  @see x_heap_sweep_phase
  */
-static x_obj_t *x_prim_heap_sweep(x_obj_t *p_base, x_obj_t *p_args)
+static void x_heap_mark_phase(x_obj_t *p_base)
 {
-	(void)p_args;
-#ifdef X_PROFILE
-	if (x_base_isset(p_base))
-		x_atomint(x_firstobj(x_interp_field_profile_gc_runs(p_base)))++;
-#endif
+	x_heap_tree_mark(p_base, x_atomobj(p_base), X_OBJ_FLAG_HEAP);
+	x_heap_callstack_mark(p_base, X_OBJ_FLAG_HEAP);
 
-	/* Call free hooks before sweep.  The list lives in x-expr's
-	 * heap-group; x-expr stores but cannot dispatch (no callable
-	 * mechanism at that layer), so the walk + invoke happens here. */
+	if (x_base_isset(p_base)) {
+		x_obj_t *p_roots = x_firstobj(x_base_field_heap_mark_roots(p_base));
+
+		while ( ! x_obj_isnil(p_base, p_roots)) {
+			x_heap_tree_mark(p_base, x_firstobj(p_roots),
+				X_OBJ_FLAG_HEAP);
+			p_roots = x_restobj(p_roots);
+		}
+	}
+
+	if (x_base_isset(p_base)) {
+		x_obj_t *p_hooks = x_firstobj(x_base_field_heap_mark_hooks(p_base));
+		x_spair_t hook_args[1];
+
+		hook_args[0][X_OBJ_META_TYPE].p = NULL;
+		hook_args[0][X_OBJ_META_FLAGS].i = X_OBJ_FLAG_NONE;
+
+		while ( ! x_obj_isnil(p_base, p_hooks)) {
+			x_firstobj((x_obj_t *)hook_args) = x_firstobj(p_hooks);
+			x_restobj((x_obj_t *)hook_args) = NULL;
+			/* Drain any deferred tail call: a procedure hook that
+			 * returns a non-nil tail leaves the env extended and
+			 * tco_expr/tco_env set, expecting an outer trampoline.
+			 * There is none here, so run it -- otherwise the env
+			 * frame the hook left live is freed by the sweep and
+			 * the next eval dereferences it. */
+			x_eval_tco_trampoline(p_base,
+				x_obj_prim_call(p_base, (x_obj_t *)hook_args));
+			p_hooks = x_restobj(p_hooks);
+		}
+	}
+}
+
+/** Sweep phase: fire free hooks, then reclaim unmarked objects (GC phase
+ *  2).  x_heap_sweep also clears the mark flag on retained objects, readying
+ *  them for the next cycle.
+ *  @see x_heap_mark_phase
+ */
+static void x_heap_sweep_phase(x_obj_t *p_base)
+{
 	if (x_base_isset(p_base)) {
 		x_obj_t *p_hooks = x_firstobj(x_base_field_heap_free_hooks(p_base));
 		x_spair_t hook_args[1];
@@ -241,12 +282,41 @@ static x_obj_t *x_prim_heap_sweep(x_obj_t *p_base, x_obj_t *p_args)
 		while ( ! x_obj_isnil(p_base, p_hooks)) {
 			x_firstobj((x_obj_t *)hook_args) = x_firstobj(p_hooks);
 			x_restobj((x_obj_t *)hook_args) = NULL;
-			x_obj_prim_call(p_base, (x_obj_t *)hook_args);
+			/* Drain deferred tail call (see x_heap_mark_phase). */
+			x_eval_tco_trampoline(p_base,
+				x_obj_prim_call(p_base, (x_obj_t *)hook_args));
 			p_hooks = x_restobj(p_hooks);
 		}
 	}
 
 	x_heap_sweep(p_base, x_obj_heap(p_base), X_OBJ_FLAG_HEAP);
+}
+
+/** Sweep unmarked objects from the heap (GC phase 2, low-level).
+ *  x-lang: (heap-sweep)
+ *
+ *  LOW-LEVEL / UNSAFE on its own.  A sweep frees every object not marked
+ *  by a *preceding* mark, so calling (heap-sweep) without an immediately
+ *  preceding (heap-mark) -- or with any allocation in between -- frees
+ *  live data, including the eval-list cell the evaluator is mid-traversal
+ *  on.  Use (heap-collect) for a safe, atomic mark+sweep.  This primitive
+ *  is exposed only for instrumentation that controls the phases manually
+ *  with no intervening allocation.
+ *
+ *  @param p_base  Execution context.
+ *  @param p_args  Unused.
+ *  @return NULL.
+ *  @see x_prim_heap_collect, x_prim_heap_mark, x_prim_heap_count
+ */
+static x_obj_t *x_prim_heap_sweep(x_obj_t *p_base, x_obj_t *p_args)
+{
+	(void)p_args;
+#ifdef X_PROFILE
+	if (x_base_isset(p_base))
+		x_atomint(x_firstobj(x_interp_field_profile_gc_runs(p_base)))++;
+#endif
+
+	x_heap_sweep_phase(p_base);
 
 	return NULL;
 }
@@ -256,7 +326,7 @@ static x_obj_t *x_prim_heap_sweep(x_obj_t *p_base, x_obj_t *p_args)
  *  @param p_base  Execution context.
  *  @param p_args  Unused.
  *  @return Integer with the heap object count.
- *  @see x_prim_heap_mark, x_prim_heap_sweep
+ *  @see x_prim_heap_collect, x_prim_heap_mark, x_prim_heap_sweep
  */
 static x_obj_t *x_prim_heap_count(x_obj_t *p_base, x_obj_t *p_args)
 {
@@ -272,54 +342,57 @@ static x_obj_t *x_prim_heap_count(x_obj_t *p_base, x_obj_t *p_args)
 	return x_mkint(p_base, count);
 }
 
-/** Mark all reachable objects on the heap (garbage collection phase 1).
+/** Mark all reachable objects on the heap (GC phase 1, low-level).
  *  x-lang: (heap-mark)
+ *
+ *  LOW-LEVEL.  Marking alone is harmless (it frees nothing), but a mark
+ *  is only useful paired with a sweep that runs with no allocation in
+ *  between.  Use (heap-collect) for a safe, atomic mark+sweep.
+ *
  *  @param p_base  Execution context.
  *  @param p_args  Unused.
  *  @return NULL.
- *  @note Performs three marking passes: tree mark from base, conservative
- *        C stack scan, and registered GC root traversal.
- *  @note Calls registered mark hooks after root marking.
- *  @see x_prim_heap_sweep, x_prim_heap_count
+ *  @see x_prim_heap_collect, x_prim_heap_sweep, x_prim_heap_count
  */
 static x_obj_t *x_prim_heap_mark(x_obj_t *p_base, x_obj_t *p_args)
 {
 	(void)p_args;
-	/* Normal mark: trace from base data tree */
-	x_heap_tree_mark(p_base, x_atomobj(p_base), X_OBJ_FLAG_HEAP);
+	x_heap_mark_phase(p_base);
 
-	/* Conservative stack scan: mark objects referenced from C stack */
-	x_heap_callstack_mark(p_base, X_OBJ_FLAG_HEAP);
+	return NULL;
+}
 
-	/* Mark all registered GC roots.  The list lives in x-expr's
-	 * heap-group; we walk it here because we already have the
-	 * collection-phase context. */
-	if (x_base_isset(p_base)) {
-		x_obj_t *p_roots = x_firstobj(x_base_field_heap_mark_roots(p_base));
+/** Run a full, atomic garbage collection cycle (mark then sweep).
+ *  x-lang: (heap-collect)
+ *
+ *  This is the safe GC entry point.  Mark and sweep run back-to-back in
+ *  one C call with no x-lang-level evaluation -- and therefore no
+ *  allocation -- between them.  That matters because eval-list scratch
+ *  cells (and the env/ctrl/extras half of the base tree) are allocated
+ *  X_OBJ_FLAG_NONE and survive a sweep only by being marked.  The mark
+ *  phase here runs while the (heap-collect) call's own eval-list frame is
+ *  live, so that frame is marked and survives the immediately following
+ *  sweep.  Splitting mark and sweep into two separate evaluations (e.g.
+ *  (begin (heap-mark) (heap-sweep))) reintroduces an allocation between
+ *  them and frees the in-flight frame -- hence (heap-collect), not the
+ *  raw phases, is the supported API.
+ *
+ *  @param p_base  Execution context.
+ *  @param p_args  Unused.
+ *  @return NULL.
+ *  @note Increments the GC run counter when X_PROFILE is defined.
+ *  @see x_prim_heap_mark, x_prim_heap_sweep, x_prim_heap_count
+ */
+static x_obj_t *x_prim_heap_collect(x_obj_t *p_base, x_obj_t *p_args)
+{
+	(void)p_args;
+#ifdef X_PROFILE
+	if (x_base_isset(p_base))
+		x_atomint(x_firstobj(x_interp_field_profile_gc_runs(p_base)))++;
+#endif
 
-		while ( ! x_obj_isnil(p_base, p_roots)) {
-			x_heap_tree_mark(p_base, x_firstobj(p_roots),
-				X_OBJ_FLAG_HEAP);
-			p_roots = x_restobj(p_roots);
-		}
-	}
-
-	/* Call mark hooks (each is a callable).  Storage in x-expr,
-	 * dispatch here (x-expr has no callable mechanism). */
-	if (x_base_isset(p_base)) {
-		x_obj_t *p_hooks = x_firstobj(x_base_field_heap_mark_hooks(p_base));
-		x_spair_t hook_args[1];
-
-		hook_args[0][X_OBJ_META_TYPE].p = NULL;
-		hook_args[0][X_OBJ_META_FLAGS].i = X_OBJ_FLAG_NONE;
-
-		while ( ! x_obj_isnil(p_base, p_hooks)) {
-			x_firstobj((x_obj_t *)hook_args) = x_firstobj(p_hooks);
-			x_restobj((x_obj_t *)hook_args) = NULL;
-			x_obj_prim_call(p_base, (x_obj_t *)hook_args);
-			p_hooks = x_restobj(p_hooks);
-		}
-	}
+	x_heap_mark_phase(p_base);
+	x_heap_sweep_phase(p_base);
 
 	return NULL;
 }
@@ -495,6 +568,7 @@ x_obj_t *x_prim_io_register(x_obj_t *p_base, x_obj_t *p_args)
 		{ "read-char", x_prim_read_char },
 		{ "write-to-str", x_prim_write_to_string },
 		{ "display-to-str", x_prim_display_to_string },
+		{ "heap-collect", x_prim_heap_collect },
 		{ "heap-mark", x_prim_heap_mark },
 		{ "heap-sweep", x_prim_heap_sweep },
 		{ "heap-count", x_prim_heap_count },

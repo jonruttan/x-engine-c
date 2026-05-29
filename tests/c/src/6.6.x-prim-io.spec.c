@@ -340,6 +340,15 @@ static char *test_io_heap_mark_sweep_collect(void)
 	count2 = x_intval(x_prim_heap_count(p_base, NULL));
 	_it_should("heap shrank after mark+sweep", count2 < count1);
 
+	/* Atomic collect: re-allocate garbage, one C call marks+sweeps. */
+	x_mkint(p_base, 444);
+	x_mkint(p_base, 555);
+	_it_should("heap grew after allocating garbage",
+		x_intval(x_prim_heap_count(p_base, NULL)) > count2);
+	x_prim_heap_collect(p_base, NULL);
+	_it_should("heap-collect reclaims unreachable garbage",
+		x_intval(x_prim_heap_count(p_base, NULL)) == count2);
+
 	test_cleanup(p_base);
 	return NULL;
 }
