@@ -30,50 +30,28 @@ static x_obj_t *x_prim_same(x_obj_t *p_base, x_obj_t *p_args)
 	return a == b ? x_firstobj(x_interp_field_true(p_base)) : x_firstobj(x_interp_field_false(p_base));
 }
 
-/** Value equality test.
- *  x-lang: (eq? a b)
+/** Value equality test (also bound as @c =).
+ *  x-lang: (eq? a b) / (= a b)
  *  @param p_base Interpreter base context.
  *  @param p_args Unevaluated argument list: (eq? a b).
- *  @return #t if @p a and @p b are equal, #f otherwise.
- *  @note Identity is the base case (covers interned symbols, nil, booleans,
- *        and identity sentinels via the @c a==b fast path). Beyond that, the
- *        immediate scalar types are compared by value, so equal integers or
- *        equal characters are eq?. Compound values (pairs, strings, ...) are
- *        NOT deep-compared -- they stay identity-only, keeping pair sentinels
- *        distinct. No cross-type coercion (deferred to a future eqv?).
+ *  @return #t if @p a and @p b are equal by value, #f otherwise.
+ *  @note Compares the object's value word. The union slot is pointer-width
+ *        (x_assert_int_ptr_size), so one comparison serves integers,
+ *        characters, and any pointer-valued scalar. The @c a==b fast path
+ *        covers nil, booleans, and interned symbols -- and, being checked
+ *        before any dereference, keeps @c (eq? x ()) from reading a nil
+ *        value slot. Use same? for strict object identity.
  */
 static x_obj_t *x_prim_eq(x_obj_t *p_base, x_obj_t *p_args)
 {
 	x_obj_t *a, *b;
-	int equal;
 	x_eargs(p_base, p_args, 3, NULL, &a, &b);
 
-	equal = (a == b);
-	if (!equal && !x_obj_isnil(p_base, a) && !x_obj_isnil(p_base, b)) {
-		if (x_obj_type_isint(p_base, a) && x_obj_type_isint(p_base, b))
-			equal = (x_intval(a) == x_intval(b));
-		else if (x_obj_type_ischar(p_base, a) && x_obj_type_ischar(p_base, b))
-			equal = (x_charval(a) == x_charval(b));
-	}
-
-	return equal ? x_firstobj(x_interp_field_true(p_base))
+	return (a == b
+		|| (!x_obj_isnil(p_base, a) && !x_obj_isnil(p_base, b)
+			&& x_intval(a) == x_intval(b)))
+		? x_firstobj(x_interp_field_true(p_base))
 		: x_firstobj(x_interp_field_false(p_base));
-}
-
-/** Integer value equality.
- *  x-lang: (= a b)
- *  @param p_base Interpreter base context.
- *  @param p_args Unevaluated argument list: (= a b).
- *  @return The @c t symbol if the integer values of @p a and @p b are equal,
- *          @c f otherwise.
- */
-static x_obj_t *x_prim_numeq(x_obj_t *p_base, x_obj_t *p_args)
-{
-	x_obj_t *a, *b;
-	x_eargs(p_base, p_args, 3, NULL, &a, &b);
-
-	return x_intval(a) == x_intval(b)
-		? x_firstobj(x_interp_field_true(p_base)) : x_firstobj(x_interp_field_false(p_base));
 }
 
 /** Integer less-than comparison.
@@ -134,7 +112,7 @@ x_obj_t *x_prim_pred_register(x_obj_t *p_base, x_obj_t *p_args)
 	static const x_callable_entry_t entries[] = {
 		{ "same?", x_prim_same },
 		{ "eq?", x_prim_eq },
-		{ "=", x_prim_numeq },
+		{ "=", x_prim_eq },
 		{ "<", x_prim_lt },
 		{ "char->integer", x_prim_char_to_integer },
 		{ "integer->char", x_prim_integer_to_char }
