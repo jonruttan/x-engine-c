@@ -198,13 +198,7 @@ x_obj_t *x_type_procedure_call(x_obj_t *p_base, x_obj_t *p_args)
 
 	{
 		/* Push ((env . boundary) . (bst . shadow_head)) onto save-stack */
-		x_interp_field_save_stack(p_base) = x_mkspair(p_base, X_OBJ_FLAG_NONE,
-			x_mkspair(p_base, X_OBJ_FLAG_NONE,
-				x_mkspair(p_base, X_OBJ_FLAG_NONE, x_firstobj(x_interp_field_env_alist(p_base)),
-				                   x_interp_field_env_local_boundary(p_base)),
-				x_mkspair(p_base, X_OBJ_FLAG_NONE, x_interp_field_env_global_tree(p_base),
-				                   x_interp_field_shadow_list(p_base))),
-			x_interp_field_save_stack(p_base));
+		x_tco_compound_save(p_base);
 
 		/* Set boundary to closure env and BST to closure's captured BST.
 		 * Skip BST swap if captured is NULL -- see x_obj_prim_call. */

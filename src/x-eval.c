@@ -22,6 +22,59 @@
 #include "x-type/prim.h"
 
 /**
+ * Push the current environment state as a TCO restore compound.
+ *
+ * Snapshots env-alist, local-boundary, global-bst, and shadow-head into a
+ * compound @c ((env . boundary) . (bst . shadow)) and pushes it onto the
+ * save-stack.  Procedure calls and eval-with-env use this to capture the
+ * environment before extending it; the trampoline (or x_eval_body_tco's
+ * early-exit paths) restores from it via x_tco_restore().
+ *
+ * @param p_base  x_obj_t* -- Execution context
+ * @return x_obj_t* -- The pushed compound
+ * @see x_tco_restore
+ */
+x_obj_t *x_tco_compound_save(x_obj_t *p_base)
+{
+	x_obj_t *p_compound = x_mkspair(p_base, X_OBJ_FLAG_NONE,
+		x_mkspair(p_base, X_OBJ_FLAG_NONE,
+			x_firstobj(x_interp_field_env_alist(p_base)),
+			x_interp_field_env_local_boundary(p_base)),
+		x_mkspair(p_base, X_OBJ_FLAG_NONE,
+			x_interp_field_env_global_tree(p_base),
+			x_interp_field_shadow_list(p_base)));
+
+	x_interp_field_save_stack(p_base) = x_mkspair(p_base, X_OBJ_FLAG_NONE,
+		p_compound, x_interp_field_save_stack(p_base));
+
+	return p_compound;
+}
+
+/**
+ * Restore env-alist, local-boundary, global-bst, and shadow list from a TCO
+ * compound @c ((env . boundary) . (bst . shadow)).
+ *
+ * Does NOT touch the save-stack -- callers that took the compound from the
+ * save-stack top pop it separately.  This is the single restore used by both
+ * trampoline exit points (x_eval, x_eval_tco_trampoline), x_eval_body_tco's
+ * early-exit paths, and eval-with-env.
+ *
+ * @param p_base      x_obj_t* -- Execution context
+ * @param p_compound  x_obj_t* -- Compound built by x_tco_compound_save()
+ * @see x_tco_compound_save
+ */
+void x_tco_restore(x_obj_t *p_base, x_obj_t *p_compound)
+{
+	x_firstobj(x_interp_field_env_alist(p_base))
+		= x_firstobj(x_firstobj(p_compound));
+	x_interp_field_env_local_boundary(p_base)
+		= x_restobj(x_firstobj(p_compound));
+	x_interp_field_env_global_tree(p_base)
+		= x_firstobj(x_restobj(p_compound));
+	x_prim_clear_shadows_to(p_base, x_restobj(x_restobj(p_compound)));
+}
+
+/**
  * Evaluate an expression with tail-call optimization.
  *
  * Dispatches to the expression's type-level eval handler. If the handler
@@ -170,19 +223,10 @@ eval_start:
 	if (trampolining && x_base_isset(p_base)) {
 		x_firstobj(x_interp_field_tco_env(p_base)) = NULL;
 
-		/* Restore from compound ((env . boundary) . (bst . shadow)) */
 		if (p_tco_env_save != NULL
 			&& ! x_obj_isnil(p_base, p_tco_env_save)) {
-			x_firstobj(x_interp_field_env_alist(p_base))
-				= x_firstobj(x_firstobj(p_tco_env_save));
-			x_interp_field_env_local_boundary(p_base)
-				= x_restobj(x_firstobj(p_tco_env_save));
-			x_interp_field_env_global_tree(p_base)
-				= x_firstobj(x_restobj(p_tco_env_save));
-			x_prim_clear_shadows_to(p_base,
-				x_restobj(x_restobj(p_tco_env_save)));
+			x_tco_restore(p_base, p_tco_env_save);
 		}
-
 	}
 
 	return p_exp;

@@ -331,19 +331,11 @@ x_obj_t *x_eval_body_tco(x_obj_t *p_base, x_obj_t *p_body)
 
 			if (x_obj_isnil(p_base,
 				x_firstobj(x_interp_field_tco_expr(p_base)))) {
-				/* Pop compound ((env . boundary) . (bst . shadow)) and restore */
-				{
-					x_obj_t *p_saved = x_firstobj(x_interp_field_save_stack(p_base));
-					x_firstobj(x_interp_field_env_alist(p_base)) = x_firstobj(x_firstobj(p_saved));
-					x_interp_field_env_local_boundary(p_base)
-						= x_restobj(x_firstobj(p_saved));
-					x_interp_field_env_global_tree(p_base)
-						= x_firstobj(x_restobj(p_saved));
-					x_prim_clear_shadows_to(p_base,
-						x_restobj(x_restobj(p_saved)));
-					x_interp_field_save_stack(p_base)
-						= x_restobj(x_interp_field_save_stack(p_base));
-				}
+				/* Nil tail: restore from save-stack top and pop. */
+				x_tco_restore(p_base,
+					x_firstobj(x_interp_field_save_stack(p_base)));
+				x_interp_field_save_stack(p_base)
+					= x_restobj(x_interp_field_save_stack(p_base));
 				return NULL;
 			}
 
@@ -371,17 +363,10 @@ x_obj_t *x_eval_body_tco(x_obj_t *p_base, x_obj_t *p_body)
 		p_body = x_restobj(p_body);
 	}
 
-	/* Pop compound ((env . boundary) . (bst . shadow)) and restore */
-	{
-		x_obj_t *p_saved = x_firstobj(x_interp_field_save_stack(p_base));
-		x_firstobj(x_interp_field_env_alist(p_base)) = x_firstobj(x_firstobj(p_saved));
-		x_interp_field_env_local_boundary(p_base) = x_restobj(x_firstobj(p_saved));
-		x_interp_field_env_global_tree(p_base)
-			= x_firstobj(x_restobj(p_saved));
-		x_prim_clear_shadows_to(p_base, x_restobj(x_restobj(p_saved)));
-		x_interp_field_save_stack(p_base)
-			= x_restobj(x_interp_field_save_stack(p_base));
-	}
+	/* Empty body: restore from save-stack top and pop. */
+	x_tco_restore(p_base, x_firstobj(x_interp_field_save_stack(p_base)));
+	x_interp_field_save_stack(p_base)
+		= x_restobj(x_interp_field_save_stack(p_base));
 
 	return p_result;
 }
@@ -456,14 +441,9 @@ x_obj_t *x_eval_tco_trampoline(x_obj_t *p_base, x_obj_t *p_result)
 		p_result = x_eval_arg(p_base, p_tco);
 	}
 
-	/* Restore env + boundary + bst + shadow from compound
-	 * ((env . boundary) . (bst . shadow_head)) */
+	/* Restore env + boundary + bst + shadow from the TCO compound. */
 	if (p_tco_env != NULL && ! x_obj_isnil(p_base, p_tco_env)) {
-		x_firstobj(x_interp_field_env_alist(p_base)) = x_firstobj(x_firstobj(p_tco_env));
-		x_interp_field_env_local_boundary(p_base) = x_restobj(x_firstobj(p_tco_env));
-		x_interp_field_env_global_tree(p_base)
-			= x_firstobj(x_restobj(p_tco_env));
-		x_prim_clear_shadows_to(p_base, x_restobj(x_restobj(p_tco_env)));
+		x_tco_restore(p_base, p_tco_env);
 	}
 
 	return p_result;

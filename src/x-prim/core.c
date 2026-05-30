@@ -173,30 +173,16 @@ static x_obj_t *x_prim_eval(x_obj_t *p_base, x_obj_t *p_args)
 		x_obj_t *p_result;
 
 		/* Push ((env . boundary) . (bst . shadow_head)) onto save-stack */
-		x_interp_field_save_stack(p_base) = x_mkspair(p_base, X_OBJ_FLAG_NONE,
-			x_mkspair(p_base, X_OBJ_FLAG_NONE,
-				x_mkspair(p_base, X_OBJ_FLAG_NONE, x_firstobj(x_interp_field_env_alist(p_base)),
-				                   x_interp_field_env_local_boundary(p_base)),
-				x_mkspair(p_base, X_OBJ_FLAG_NONE, x_interp_field_env_global_tree(p_base),
-				                   x_interp_field_shadow_list(p_base))),
-			x_interp_field_save_stack(p_base));
+		x_tco_compound_save(p_base);
 
 		x_firstobj(x_interp_field_env_alist(p_base)) = p_env;
 		/* Don't change boundary or BST — eval-with-env preserves scope context */
 		p_result = x_eval_arg(p_base, p_expr);
 
 		/* Pop save-stack and restore env + boundary + bst + shadow */
-		{
-			x_obj_t *p_saved = x_firstobj(x_interp_field_save_stack(p_base));
-			x_firstobj(x_interp_field_env_alist(p_base)) = x_firstobj(x_firstobj(p_saved));
-			x_interp_field_env_local_boundary(p_base)
-				= x_restobj(x_firstobj(p_saved));
-			x_interp_field_env_global_tree(p_base)
-				= x_firstobj(x_restobj(p_saved));
-			x_prim_clear_shadows_to(p_base, x_restobj(x_restobj(p_saved)));
-			x_interp_field_save_stack(p_base)
-				= x_restobj(x_interp_field_save_stack(p_base));
-		}
+		x_tco_restore(p_base, x_firstobj(x_interp_field_save_stack(p_base)));
+		x_interp_field_save_stack(p_base)
+			= x_restobj(x_interp_field_save_stack(p_base));
 
 		return p_result;
 	}

@@ -114,6 +114,18 @@ x_obj_t *x_eval_body_tco_simple(x_obj_t *p_base, x_obj_t *p_body);
 /** Execute the TCO trampoline loop until a non-TCO result is produced. */
 x_obj_t *x_eval_tco_trampoline(x_obj_t *p_base, x_obj_t *p_result);
 
+/** Push the current env state as a TCO restore compound onto the save-stack.
+ *  The compound shape is @c ((env-alist . local-boundary) . (global-bst .
+ *  shadow-head)); returns the pushed compound.  Used by procedure calls and
+ *  eval-with-env to snapshot the environment before extending it. */
+x_obj_t *x_tco_compound_save(x_obj_t *p_base);
+
+/** Restore env-alist, local-boundary, global-bst, and shadow list from a TCO
+ *  compound previously built by x_tco_compound_save().  Does NOT pop the
+ *  save-stack (callers that took the compound from the save-stack pop
+ *  separately). */
+void x_tco_restore(x_obj_t *p_base, x_obj_t *p_compound);
+
 /** @} */
 
 /**
