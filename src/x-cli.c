@@ -58,19 +58,22 @@ static x_obj_t *x_prim_syscall(x_obj_t *p_base, x_obj_t *p_args)
 	p_args = x_1(p_args); /* variadic: skip self, walk rest */
 	p[0] = p[1] = p[2] = p[3] = p[4] = p[5] = p[6] = 0;
 
-	while (!x_obj_isnil(p_base, p_args) && i < 7) {
+	while ( ! x_obj_isnil(p_base, p_args) && i < 7) {
 		arg = x_eval_arg(p_base, x_firstobj(p_args));
-		if (x_obj_type_isint(p_base, arg))
+
+		if (x_obj_type_isint(p_base, arg)) {
 			p[i++] = x_intval(arg);
-		else if (x_obj_type_isstr(p_base, arg))
+		}
+		else if (x_obj_type_isstr(p_base, arg)) {
 			p[i++] = (long)x_strval(arg);
+		}
+
 		p_args = x_restobj(p_args);
 	}
 
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wdeprecated-declarations"
-	return x_mkint(p_base,
-		syscall(p[0], p[1], p[2], p[3], p[4], p[5], p[6]));
+	return x_mkint(p_base, syscall(p[0], p[1], p[2], p[3], p[4], p[5], p[6]));
 #pragma GCC diagnostic pop
 }
 #endif
@@ -93,8 +96,6 @@ static x_obj_t *x_prim_include(x_obj_t *p_base, x_obj_t *p_args)
 {
 	x_obj_t *p_path, *p_buffer, *p_result;
 	int fd;
-	x_eargs(p_base, p_args, 2, NULL, &p_path);
-	fd = x_sys_open(x_strval(p_path), 0 /* O_RDONLY */);
 	x_char_t *buf;
 #ifdef X_PROFILE
 	x_int_t t0, t1;
@@ -102,8 +103,12 @@ static x_obj_t *x_prim_include(x_obj_t *p_base, x_obj_t *p_args)
 	x_char_t tbuf[24];
 #endif
 
+	x_eargs(p_base, p_args, 2, NULL, &p_path);
+	fd = x_sys_open(x_strval(p_path), 0 /* O_RDONLY */);
+
 	if (fd < 0) {
 		x_obj_error(p_base, "include: cannot open", p_path);
+
 		return NULL;
 	}
 
@@ -129,8 +134,7 @@ static x_obj_t *x_prim_include(x_obj_t *p_base, x_obj_t *p_args)
 	t1 = x_sys_clock();
 	err_fd = x_atomint(x_firstobj(x_base_field_fileerr(p_base)));
 	x_sys_write(err_fd, "[include] ", 10);
-	x_sys_write(err_fd, x_strval(p_path),
-		x_lib_strlen(x_strval(p_path)));
+	x_sys_write(err_fd, x_strval(p_path), x_lib_strlen(x_strval(p_path)));
 	x_sys_write(err_fd, ": ", 2);
 	x_lib_inttostr(t1 - t0, tbuf, 10);
 	x_sys_write(err_fd, tbuf, x_lib_strlen(tbuf));
@@ -138,13 +142,10 @@ static x_obj_t *x_prim_include(x_obj_t *p_base, x_obj_t *p_args)
 #endif
 
 	/* Pop and close, restore line counter. */
-	x_base_field_filein(p_base)
-		= x_restobj(x_base_field_filein(p_base));
-	x_base_field_buffer(p_base)
-		= x_restobj(x_base_field_buffer(p_base));
+	x_base_field_filein(p_base) = x_restobj(x_base_field_filein(p_base));
+	x_base_field_buffer(p_base) = x_restobj(x_base_field_buffer(p_base));
 	x_sys_close(fd);
-	x_interp_field_line(p_base)
-		= x_restobj(x_interp_field_line(p_base));
+	x_interp_field_line(p_base) = x_restobj(x_interp_field_line(p_base));
 
 	return p_result;
 }
@@ -251,10 +252,8 @@ int main(int argc, char *argv[])
 	x_value_bind(p_base, "args", p_list);
 
 	/* Bind platform constants. */
-	x_value_bind(p_base, "x-machine",
-		x_mkstr(p_base, (x_char_t *)X_MACHINE));
-	x_value_bind(p_base, "x-version",
-		x_mkstr(p_base, (x_char_t *)X_VERSION));
+	x_value_bind(p_base, "x-machine", x_mkstr(p_base, (x_char_t *)X_MACHINE));
+	x_value_bind(p_base, "x-version", x_mkstr(p_base, (x_char_t *)X_VERSION));
 
 	/* REPL. */
 	x_prim_repl(p_base, NULL);
