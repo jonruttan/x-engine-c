@@ -180,13 +180,10 @@ x_obj_t *x_type_operative_call(x_obj_t *p_base, x_obj_t *p_args)
 		*p_captured_env = x_openv(p_op),
 		*p_caller_env,
 		*p_env,
-		*p_op_chain_head,
 		*p_saved_boundary,
-		*p_saved_shadow,
-		*p_walk,
-		*p_result;
+		*p_saved_shadow;
 
-	/* Capture caller's env (also the saved env for non-tail-eval restore). */
+	/* Capture caller's env (the head the operative restores to on exit). */
 	p_caller_env = x_firstobj(x_interp_field_env_alist(p_base));
 	p_saved_boundary = x_interp_field_env_local_boundary(p_base);
 	p_saved_shadow = x_interp_field_shadow_list(p_base);
@@ -202,43 +199,21 @@ x_obj_t *x_type_operative_call(x_obj_t *p_base, x_obj_t *p_args)
 			x_mkspair(p_base, X_OBJ_FLAG_NONE, p_envparam, p_caller_env), p_env);
 	}
 
-	/* p_op_chain_head is the pointer to the op's formal frame.  After
-	 * the body runs, we detect whether it tail-eval'd off this chain
-	 * by checking whether this pointer is still reachable from the
-	 * current env_alist firstobj. */
-	p_op_chain_head = p_env;
-
 	/* Install op's chain.  Boundary at captured_env makes caller's
 	 * locals invisible to symbol lookup. */
 	x_firstobj(x_interp_field_env_alist(p_base)) = p_env;
 	x_interp_field_env_local_boundary(p_base) = p_captured_env;
 
-	/* Evaluate body synchronously.  x_eval_arg -> x_eval runs its own
-	 * TCO trampoline per body form, so tail-eval inside any form still
-	 * TCOs internally; only the op frame itself sits on the C stack. */
-	p_result = x_eval_body(p_base, p_body);
-
-	/* Restore env_alist with tail-eval detection: if the op's formal
-	 * frame is still reachable from the current head, the body did NOT
-	 * tail-eval away -- restore env_alist to caller_env to shed the
-	 * formals (top-level defs done in the body persist in BST).  If
-	 * the formal frame is NOT in the chain, the body tail-eval'd to a
-	 * different env (typically the caller's `e`), and the current head
-	 * may be (def-pair . ... . e) preserving real top-level growth on
-	 * caller's chain; keep it. */
-	p_walk = x_firstobj(x_interp_field_env_alist(p_base));
-	while ( ! x_obj_isnil(p_base, p_walk) && p_walk != p_op_chain_head) {
-		p_walk = x_restobj(p_walk);
-	}
-	if (p_walk == p_op_chain_head) {
-		x_firstobj(x_interp_field_env_alist(p_base)) = p_caller_env;
-	}
-
-	/* Boundary and shadow are always restored.  BST is never touched. */
-	x_interp_field_env_local_boundary(p_base) = p_saved_boundary;
-	x_prim_clear_shadows_to(p_base, p_saved_shadow);
-
-	return p_result;
+	/* Defer the body's tail to the outer trampoline (TCO) instead of
+	 * resolving it synchronously, so operative calls stay O(1) on the C
+	 * stack: deep tail recursion through operatives (if/let/cond, all built
+	 * on op) no longer accumulates a frame per level.  x_eval_op_body sets
+	 * tco_expr and a tagged operative record in tco_env; the trampoline runs
+	 * x_op_restore after the tail (unconditional env + boundary + shadow
+	 * restore to the caller, BST untouched), after any procedure env restore
+	 * the tail's own evaluation left behind. */
+	return x_eval_op_body(p_base, p_body, p_caller_env, p_env,
+		p_saved_boundary, p_saved_shadow);
 }
 
 /**

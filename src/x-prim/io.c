@@ -491,7 +491,11 @@ static x_obj_t *x_prim_atomic(x_obj_t *p_base, x_obj_t *p_args)
 	while ( ! x_obj_isnil(p_base, p_args)) {
 		x_firstobj((x_obj_t *)call_args) = x_firstobj(p_args);
 		x_restobj((x_obj_t *)call_args) = NULL;
-		p_result = x_obj_prim_call(p_base, (x_obj_t *)call_args);
+		/* Drive the combiner to completion: a procedure or operative
+		 * combiner defers its tail via tco_expr; the trampoline resolves
+		 * it (a no-op for C primitives, which return their value). */
+		p_result = x_eval_tco_trampoline(p_base,
+			x_obj_prim_call(p_base, (x_obj_t *)call_args));
 		p_args = x_restobj(p_args);
 	}
 

@@ -220,10 +220,12 @@ static char *test_procedure_call_wrapped(void)
 	/* Call: (proc) — wrapped combiner dispatches to underlying. */
 	p_args = x_mkspair(p_base, X_OBJ_FLAG_NONE, p_proc, NULL);
 
-	p_result = x_type_procedure_call(p_base, p_args);
+	/* WRAP path calls x_obj_prim_call on the combiner; the operative now
+	 * defers its body's tail via tco_expr (O(1) C stack), so drive the
+	 * trampoline to resolve it. */
+	p_result = x_eval_tco_trampoline(p_base,
+		x_type_procedure_call(p_base, p_args));
 
-	/* WRAP path calls x_obj_prim_call on the combiner; ops are lexically
-	 * scoped and return body's tail value synchronously (no tco_expr). */
 	_it_should("wrapped combiner dispatches to operative and returns its value",
 		p_result != NULL && x_atomint(p_result) == 77);
 

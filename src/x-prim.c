@@ -425,15 +425,26 @@ x_obj_t *x_eval_body_tco_simple(x_obj_t *p_base, x_obj_t *p_body)
  */
 x_obj_t *x_eval_tco_trampoline(x_obj_t *p_base, x_obj_t *p_result)
 {
-	x_obj_t *p_tco, *p_tco_env;
-
-	p_tco_env = NULL;
+	x_obj_t *p_tco, *p_te, *p_tco_env = NULL, *p_op_save = NULL;
+	int op_outermost = 0, kept_any = 0;
 
 	while ( ! x_obj_isnil(p_base, x_firstobj(x_interp_field_tco_expr(p_base)))) {
 		p_tco = x_firstobj(x_interp_field_tco_expr(p_base));
 
-		if ( ! x_obj_isnil(p_base, x_firstobj(x_interp_field_tco_env(p_base)))) {
-			p_tco_env = x_firstobj(x_interp_field_tco_env(p_base));
+		/* Keep the first procedure compound and the first operative record,
+		 * distinguished by the op tag, and note which was kept first (mirrors
+		 * x_eval's trampoline). */
+		p_te = x_firstobj(x_interp_field_tco_env(p_base));
+		if ( ! x_obj_isnil(p_base, p_te)) {
+			int is_op = (x_firstobj(p_te) == (x_obj_t *)&x_tco_op_tag);
+
+			if ( ! kept_any) { op_outermost = is_op; kept_any = 1; }
+			if (is_op) {
+				if (p_op_save == NULL || x_obj_isnil(p_base, p_op_save))
+					p_op_save = p_te;
+			} else if (p_tco_env == NULL || x_obj_isnil(p_base, p_tco_env)) {
+				p_tco_env = p_te;
+			}
 		}
 
 		x_firstobj(x_interp_field_tco_expr(p_base)) = NULL;
@@ -441,9 +452,24 @@ x_obj_t *x_eval_tco_trampoline(x_obj_t *p_base, x_obj_t *p_result)
 		p_result = x_eval_arg(p_base, p_tco);
 	}
 
-	/* Restore env + boundary + bst + shadow from the TCO compound. */
-	if (p_tco_env != NULL && ! x_obj_isnil(p_base, p_tco_env)) {
-		x_tco_restore(p_base, p_tco_env);
+	/* Apply the two channels in REVERSE capture order so the outermost frame
+	 * (captured first) wins env-alist; see x_eval for the rationale.  has_proc
+	 * forces the op record's env restore to the caller (applied-procedure tail). */
+	{
+		int has_proc = (p_tco_env != NULL && ! x_obj_isnil(p_base, p_tco_env));
+		int has_op = (p_op_save != NULL && ! x_obj_isnil(p_base, p_op_save));
+
+		if (op_outermost) {
+			if (has_proc)
+				x_tco_restore(p_base, p_tco_env);
+			if (has_op)
+				x_op_restore(p_base, p_op_save, has_proc);
+		} else {
+			if (has_op)
+				x_op_restore(p_base, p_op_save, has_proc);
+			if (has_proc)
+				x_tco_restore(p_base, p_tco_env);
+		}
 	}
 
 	return p_result;

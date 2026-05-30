@@ -126,6 +126,21 @@ x_obj_t *x_tco_compound_save(x_obj_t *p_base);
  *  separately). */
 void x_tco_restore(x_obj_t *p_base, x_obj_t *p_compound);
 
+/** Discriminator atom whose address tags a tco_env value as an operative
+ *  restore record (vs a procedure env compound).  See x_eval_op_body. */
+extern x_satom_t x_tco_op_tag;
+
+/** Restore env-alist, local-boundary, and shadow from an operative record
+ *  @c (TAG . ((caller . op_head) . (boundary . shadow))).  Env restore is
+ *  conditional on op_head reachability; never touches the BST. */
+void x_op_restore(x_obj_t *p_base, x_obj_t *p_record, int force_caller);
+
+/** Defer an operative body's tail to the outer trampoline: evaluate non-tail
+ *  forms, then set tco_expr (tail) and a tagged restore record in tco_env. */
+x_obj_t *x_eval_op_body(x_obj_t *p_base, x_obj_t *p_body,
+	x_obj_t *p_caller, x_obj_t *p_op_head,
+	x_obj_t *p_boundary, x_obj_t *p_shadow);
+
 /** @} */
 
 /**

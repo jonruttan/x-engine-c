@@ -74,6 +74,124 @@ void x_tco_restore(x_obj_t *p_base, x_obj_t *p_compound)
 	x_prim_clear_shadows_to(p_base, x_restobj(x_restobj(p_compound)));
 }
 
+/** Discriminator whose address tags a tco_env value as an operative restore
+ *  record @c (TAG . ((caller . op_head) . (boundary . shadow))) rather than a
+ *  procedure env compound.  The trampolines route a tco_env by testing
+ *  @c x_firstobj(tco_env) == &x_tco_op_tag. */
+x_satom_t x_tco_op_tag = x_obj_set(x_type_atom_obj, X_OBJ_FLAG_NONE, { NULL });
+
+/**
+ * Restore env-alist, local-boundary, and shadow from an operative record
+ * @c (TAG . ((caller . op_head) . (boundary . shadow))).
+ *
+ * The env-alist restore is CONDITIONAL on whether the op's formal frame
+ * (op_head) is still reachable from the current head (see the body).  Boundary
+ * and shadow always restore; the global BST is never touched (procedures own
+ * it, and the trampoline applies the proc compound around this call).
+ *
+ * @param p_base    x_obj_t* -- Execution context
+ * @param p_record  x_obj_t* -- Operative record built by x_eval_op_body()
+ * @see x_eval_op_body
+ */
+void x_op_restore(x_obj_t *p_base, x_obj_t *p_record, int force_caller)
+{
+	x_obj_t *p_rest = x_restobj(p_record),
+		*p_caller = x_firstobj(x_firstobj(p_rest)),
+		*p_head = x_restobj(x_firstobj(p_rest)),
+		*p_boundary = x_firstobj(x_restobj(p_rest)),
+		*p_shadow = x_restobj(x_restobj(p_rest)),
+		*p_walk;
+
+	/* Env-alist restore.  @p force_caller (set by the trampoline iff a procedure
+	 * compound was ALSO captured here) means the op's tail resolved to an
+	 * APPLIED procedure -- e.g. let, which expands to (apply (fn ...) ...).  That
+	 * tail leaves env on a branched closure frame that must be shed, so restore
+	 * to the caller unconditionally.
+	 *
+	 * Otherwise the op tail-eval'd into the caller's `e`.  Walk toward the op's
+	 * formal frame: still on the chain -> the body computed a value in the
+	 * formals without tail-eval'ing away, restore to caller to shed them; gone
+	 * -> the body tail-eval'd and may have grown `e` with a (def ...) the caller
+	 * must keep seeing (define-sugar, do-sequenced defs), so keep the head.
+	 *
+	 * Boundary and shadow always restore; the BST is never touched (procedures
+	 * own it, and the trampoline applies the proc compound around this call). */
+	if (force_caller) {
+		x_firstobj(x_interp_field_env_alist(p_base)) = p_caller;
+	} else {
+		p_walk = x_firstobj(x_interp_field_env_alist(p_base));
+		while ( ! x_obj_isnil(p_base, p_walk) && p_walk != p_head) {
+			p_walk = x_restobj(p_walk);
+		}
+		if (p_walk == p_head) {
+			x_firstobj(x_interp_field_env_alist(p_base)) = p_caller;
+		}
+	}
+
+	x_interp_field_env_local_boundary(p_base) = p_boundary;
+	x_prim_clear_shadows_to(p_base, p_shadow);
+}
+
+/**
+ * Defer an operative body's tail to the outer trampoline (TCO).
+ *
+ * Evaluates the non-tail body forms synchronously, then stores the tail form in
+ * tco_expr and a tagged operative restore record in tco_env.  Deliberately does
+ * NOT push the save-stack -- operatives stay invisible to it, so a top-level
+ * (def ...) run by tail-eval'd body code still classifies as top-level (BST),
+ * and the operative does not block the procedure env channel.  The trampoline
+ * keeps the first procedure compound and the first operative record separately,
+ * applying x_tco_restore then x_op_restore at exit.
+ *
+ * @param p_base      x_obj_t* -- Execution context
+ * @param p_body      x_obj_t* -- Operative body (sequence of forms)
+ * @param p_caller    x_obj_t* -- env-alist head before the op extended it
+ * @param p_op_head   x_obj_t* -- the op's installed formal-frame head
+ * @param p_boundary  x_obj_t* -- local-boundary to restore
+ * @param p_shadow    x_obj_t* -- shadow-list head to clear back to
+ * @return x_obj_t* -- NULL (result delivered via the trampoline)
+ * @see x_op_restore
+ */
+x_obj_t *x_eval_op_body(x_obj_t *p_base, x_obj_t *p_body,
+	x_obj_t *p_caller, x_obj_t *p_op_head,
+	x_obj_t *p_boundary, x_obj_t *p_shadow)
+{
+	x_obj_t *p_record = x_mkspair(p_base, X_OBJ_FLAG_NONE,
+		(x_obj_t *)&x_tco_op_tag,
+		x_mkspair(p_base, X_OBJ_FLAG_NONE,
+			x_mkspair(p_base, X_OBJ_FLAG_NONE, p_caller, p_op_head),
+			x_mkspair(p_base, X_OBJ_FLAG_NONE, p_boundary, p_shadow)));
+
+	while ( ! x_obj_isnil(p_base, p_body)) {
+		if (x_obj_isnil(p_base, x_restobj(p_body))) {
+			x_firstobj(x_interp_field_tco_expr(p_base)) = x_firstobj(p_body);
+
+			/* Nil tail: no trampoline will run -- restore synchronously. */
+			if (x_obj_isnil(p_base,
+				x_firstobj(x_interp_field_tco_expr(p_base)))) {
+				x_op_restore(p_base, p_record, 0);
+				return NULL;
+			}
+
+			x_firstobj(x_interp_field_tco_env(p_base)) = p_record;
+
+			return NULL;
+		}
+
+		x_obj_push_field(p_base, &x_interp_field_eval_list(p_base),
+			p_body, X_OBJ_FLAG_NONE);
+		x_eval_arg(p_base, x_firstobj(p_body));
+		x_obj_pop_field(p_base, &x_interp_field_eval_list(p_base));
+
+		p_body = x_restobj(p_body);
+	}
+
+	/* Empty body: restore synchronously. */
+	x_op_restore(p_base, p_record, 0);
+
+	return NULL;
+}
+
 /**
  * Evaluate an expression with tail-call optimization.
  *
@@ -133,9 +251,12 @@ void x_tco_restore(x_obj_t *p_base, x_obj_t *p_compound)
 x_obj_t *x_eval(x_obj_t *p_base, x_obj_t *p_args)
 {
 	x_obj_t *p_exp;
-	x_obj_t *p_tco_env_save = NULL;
+	x_obj_t *p_tco_env_save = NULL;   /* first procedure env compound */
+	x_obj_t *p_op_save = NULL;        /* first operative restore record */
 	x_spair_t prim_args = x_obj_set(NULL, X_OBJ_FLAG_NONE, { NULL }, { NULL });
 	int trampolining = 0;
+	int op_outermost = 0;             /* the first record kept is an op record */
+	int kept_any = 0;                 /* a tco_env (either channel) was kept */
 #ifdef X_SIGNAL
 	/* Interrupt-flag pointer, resolved once from the base (signal-register
 	 * publishes signal.c's static atom here).  Cached so the trampoline pays
@@ -197,18 +318,29 @@ eval_start:
 	/* TCO trampoline: re-evaluate tail expression if set. */
 	if (x_base_isset(p_base)
 		&& ! x_obj_isnil(p_base, x_firstobj(x_interp_field_tco_expr(p_base)))) {
-		if ( ! trampolining) {
-			/* First entry: snapshot tco_env and clear global
-			 * so nested x_eval calls don't see it. */
-			p_tco_env_save = x_firstobj(x_interp_field_tco_env(p_base));
-			trampolining = 1;
-		} else if ((p_tco_env_save == NULL
-			|| x_obj_isnil(p_base, p_tco_env_save))
-			&& ! x_obj_isnil(p_base, x_firstobj(x_interp_field_tco_env(p_base)))) {
-			/* Later iteration: initial tco_env was nil (from
-			 * if/do/match/and/or) but an inner form (fn/let)
-			 * now provides tco_env for env restoration. */
-			p_tco_env_save = x_firstobj(x_interp_field_tco_env(p_base));
+		x_obj_t *p_te = x_firstobj(x_interp_field_tco_env(p_base));
+
+		trampolining = 1;
+
+		/* Keep the first (outermost) of each channel: procedures provide an
+		 * env compound, operatives a tagged restore record.  if/do/match/and/or
+		 * set neither (tco_env nil) -- an inner fn/let/op fills it later.
+		 * op_outermost records whether the very first kept record is an op, so
+		 * the exit can apply the records in reverse capture order. */
+		if ( ! x_obj_isnil(p_base, p_te)) {
+			int is_op = (x_firstobj(p_te) == (x_obj_t *)&x_tco_op_tag);
+
+			if ( ! kept_any) {
+				op_outermost = is_op;
+				kept_any = 1;
+			}
+			if (is_op) {
+				if (p_op_save == NULL || x_obj_isnil(p_base, p_op_save))
+					p_op_save = p_te;
+			} else if (p_tco_env_save == NULL
+				|| x_obj_isnil(p_base, p_tco_env_save)) {
+				p_tco_env_save = p_te;
+			}
 		}
 
 		x_firstobj(x_interp_field_tco_env(p_base)) = NULL;
@@ -219,13 +351,38 @@ eval_start:
 		goto eval_start;
 	}
 
-	/* TCO env restore: only the x_eval that trampolined restores env. */
+	/* TCO env restore: only the x_eval that trampolined restores env.
+	 * Apply the two channels in REVERSE capture order so the OUTERMOST frame
+	 * (captured first) wins env-alist: the inner record is applied first and
+	 * then overridden.  This matters because a procedure's tail can be an
+	 * operative (proc outer) or an operative's tail a procedure (op outer);
+	 * a fixed order would leave one of those with the inner frame.  The proc
+	 * compound always restores the BST (ops leave it alone), so whichever
+	 * order, the inner proc still re-establishes the correct BST.
+	 *
+	 * has_proc -> force the op record's env restore to the caller: a proc
+	 * compound here means the op's tail resolved to an applied procedure (let),
+	 * whose closure frame must be shed rather than kept. */
 	if (trampolining && x_base_isset(p_base)) {
+		int has_proc = (p_tco_env_save != NULL
+			&& ! x_obj_isnil(p_base, p_tco_env_save));
+		int has_op = (p_op_save != NULL
+			&& ! x_obj_isnil(p_base, p_op_save));
+
 		x_firstobj(x_interp_field_tco_env(p_base)) = NULL;
 
-		if (p_tco_env_save != NULL
-			&& ! x_obj_isnil(p_base, p_tco_env_save)) {
-			x_tco_restore(p_base, p_tco_env_save);
+		if (op_outermost) {
+			/* op outermost -> apply inner proc first, outer op last. */
+			if (has_proc)
+				x_tco_restore(p_base, p_tco_env_save);
+			if (has_op)
+				x_op_restore(p_base, p_op_save, has_proc);
+		} else {
+			/* proc outermost (or no op) -> apply inner op first, outer proc last. */
+			if (has_op)
+				x_op_restore(p_base, p_op_save, has_proc);
+			if (has_proc)
+				x_tco_restore(p_base, p_tco_env_save);
 		}
 	}
 

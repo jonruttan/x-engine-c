@@ -148,6 +148,12 @@ static x_obj_t *x_prim_guard(x_obj_t *p_base, x_obj_t *p_args)
 		x_obj_t *p_pair = x_mkspair(p_base, X_OBJ_FLAG_NONE, p_var, p_err);
 
 		x_interp_field_save_stack(p_base) = p_saved_save_stack;
+		/* Drop any tail a longjmp'd-out-of procedure or operative left
+		 * deferred: its restore record rode the unwound save-stack / a
+		 * tco register, so the stale tco_expr/tco_env must not leak into
+		 * the handler body. */
+		x_firstobj(x_interp_field_tco_expr(p_base)) = NULL;
+		x_firstobj(x_interp_field_tco_env(p_base)) = NULL;
 		x_interp_env_alist_extend(p_base, p_pair);
 		p_result = x_eval_body(p_base, p_handler_body);
 		x_firstobj(x_interp_field_env_alist(p_base))

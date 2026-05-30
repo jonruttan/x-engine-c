@@ -194,7 +194,10 @@ static char *test_operative_call(void)
 	p_args = x_mkspair(p_base, X_OBJ_FLAG_NONE, p_op,
 		x_mkspair(p_base, X_OBJ_FLAG_NONE, x_mksatom(p_base, X_OBJ_FLAG_NONE, 42), NULL));
 
-	p_result = x_type_operative_call(p_base, p_args);
+	/* Operatives now defer their tail to the trampoline (O(1) C stack);
+	 * drive it to completion the way the main eval / apply paths do. */
+	p_result = x_eval_tco_trampoline(p_base,
+		x_type_operative_call(p_base, p_args));
 
 	_it_should("body's tail value is returned",
 		p_result != NULL && x_atomint(p_result) == 99);
@@ -230,7 +233,8 @@ static char *test_operative_call_envparam(void)
 
 	p_args = x_mkspair(p_base, X_OBJ_FLAG_NONE, p_op, NULL);
 
-	p_result = x_type_operative_call(p_base, p_args);
+	p_result = x_eval_tco_trampoline(p_base,
+		x_type_operative_call(p_base, p_args));
 
 	_it_should("body's tail value is returned",
 		p_result != NULL && x_atomint(p_result) == 42);
