@@ -220,10 +220,14 @@ static x_obj_t *x_prim_clock(x_obj_t *p_base, x_obj_t *p_args)
  *  but cannot dispatch (no callable mechanism at that layer), so the walk
  *  + invoke happens here.
  *
- *  @note Pass (2) is currently a no-op: x_interp_make leaves p_stack_base
- *        nil, so x_heap_callstack_mark returns immediately.  Liveness is
- *        therefore tree + roots + hooks only -- which is why a sweep must
- *        run with no allocation between it and this mark (see
+ *  @note Conservative C-stack scanning (pass 2) is active for the CLI --
+ *        main() records &p_base as the stack base -- but inert in unit
+ *        tests that build a base via x_interp_make directly (it leaves the
+ *        stack-base atom nil).  Either way, a sweep must run with no
+ *        allocation between it and this mark: a transient eval-list cell
+ *        pushed *after* the mark is unmarked (and the stack scan, being
+ *        part of this mark, already ran), so an intervening sweep frees it
+ *        while the evaluator is still traversing it (see
  *        x_prim_heap_collect).
  *  @see x_heap_sweep_phase
  */
