@@ -418,6 +418,7 @@ x_obj_t *x_interp_load(x_obj_t *p_base, x_obj_t *p_args)
 {
 	x_obj_t *p_buffer = x_firstobj(x_base_field_buffer(p_base));
 	x_obj_t *p_exp, *p_result = NULL;
+	x_obj_t *p_saved_stack;
 	x_satom_t exp_wrap = x_obj_set(NULL, X_OBJ_FLAG_NONE, { NULL });
 	x_spair_t eval_args[1] = {
 		x_obj_set(NULL, X_OBJ_FLAG_NONE, { exp_wrap }, { NULL })
@@ -426,6 +427,22 @@ x_obj_t *x_interp_load(x_obj_t *p_base, x_obj_t *p_args)
 		x_obj_set(NULL, X_OBJ_FLAG_NONE, { p_buffer }, { p_base })
 	};
 
+	/* Each form read from the file is a TOP-LEVEL form: its top-level `def`s
+	 * must bind globally (BST), not as locals of whatever was being evaluated
+	 * when this load was triggered.  x_prim_define decides global-vs-local by
+	 * testing whether the save-stack is empty, so when `include` runs under a
+	 * (eval form env) -- which leaves a restore compound on the save-stack --
+	 * a loaded file's defs would otherwise land in a transient local scope and
+	 * vanish on restore (e.g. a module whose `def-class` is then Unbound).
+	 * Hide the outer save-stack for the duration of the load so each form sees
+	 * an empty stack, exactly as at the true top level.  Each x_eval call below
+	 * balances its own pushes, so the stack is back to nil between iterations.
+	 * On error the loaded form longjmps to its guard, which restores the
+	 * interpreter state from guard's own snapshot -- this abandoned C frame's
+	 * saved value is moot -- so a plain save/restore around the loop is safe. */
+	p_saved_stack = x_interp_field_save_stack(p_base);
+	x_interp_field_save_stack(p_base) = NULL;
+
 	for (;;) {
 		p_exp = x_token_read(p_base, (x_obj_t *)read_args);
 		if (x_obj_isnil(p_base, p_exp)) break;
@@ -433,6 +450,8 @@ x_obj_t *x_interp_load(x_obj_t *p_base, x_obj_t *p_args)
 		x_firstobj((x_obj_t *)exp_wrap) = p_exp;
 		p_result = x_eval(p_base, (x_obj_t *)eval_args);
 	}
+
+	x_interp_field_save_stack(p_base) = p_saved_stack;
 
 	return p_result;
 }
