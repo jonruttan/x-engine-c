@@ -276,14 +276,15 @@ x_obj_t *x_sexp_char_write(x_obj_t *p_base, x_obj_t *p_args)
 		}
 	}
 
-	/* Code point: write its UTF-8 encoding (explicit length, no NUL term) */
+	/* Glyph: emit the code point's low byte (ASCII-correct). Boot fallback --
+	 * the x-lang write handler (type-push-write) emits full UTF-8 for non-ASCII
+	 * via x/codec/utf8 and shadows this before any non-ASCII char is written.
+	 * No UTF-8 encoding in C. */
 	{
-		x_char_t enc[4];
-		x_int_t enc_len = x_char_utf8_encode(cp, enc);
+		x_char_t byte = (x_char_t)(cp & 0xFF);
 		x_satom_t str = x_obj_set(x_type_atom_obj, X_OBJ_FLAG_NONE,
-			{ .s = enc }),
-			sz = x_obj_set(x_type_atom_obj, X_OBJ_FLAG_NONE,
-				{ .i = enc_len });
+			{ .s = &byte }),
+			sz = x_obj_set(x_type_atom_obj, X_OBJ_FLAG_NONE, { .i = 1 });
 		x_spair_t wrap[2] = {
 			x_obj_set(NULL, X_OBJ_FLAG_NONE,
 				{ str }, { (x_obj_t *)(wrap + 1) }),
@@ -301,10 +302,14 @@ x_obj_t *x_sexp_char_write(x_obj_t *p_base, x_obj_t *p_args)
 }
 
 /**
- * Display a character as its UTF-8 encoding (no @c #\\ prefix).
+ * Display a character as a single raw byte (its code point's low 8 bits).
  *
- * Writes the 1-4 UTF-8 bytes of the character's code point using an
- * explicit size parameter so that NUL is handled correctly.
+ * Protocol-agnostic boot fallback: this is the bottom of the CHARACTER
+ * display stack, correct for ASCII (code point < 0x80). The x-lang layer
+ * pushes a display handler (via type-push-display) that emits the full
+ * 1-4 byte UTF-8 encoding for non-ASCII code points using the x/codec/utf8
+ * encoder; that handler shadows this one before any non-ASCII char is shown.
+ * Keeping UTF-8 out of C: this fallback never encodes.
  *
  * @param p_base  Execution context.
  * @param p_args  Pair whose first element is the character to display.
@@ -312,10 +317,9 @@ x_obj_t *x_sexp_char_write(x_obj_t *p_base, x_obj_t *p_args)
  */
 x_obj_t *x_sexp_char_display(x_obj_t *p_base, x_obj_t *p_args)
 {
-	x_char_t enc[4];
-	x_int_t enc_len = x_char_utf8_encode(x_atomint(x_firstobj(p_args)), enc);
-	x_satom_t str = x_obj_set(x_type_atom_obj, X_OBJ_FLAG_NONE, { .s = enc }),
-		sz = x_obj_set(x_type_atom_obj, X_OBJ_FLAG_NONE, { .i = enc_len });
+	x_char_t byte = (x_char_t)(x_atomint(x_firstobj(p_args)) & 0xFF);
+	x_satom_t str = x_obj_set(x_type_atom_obj, X_OBJ_FLAG_NONE, { .s = &byte }),
+		sz = x_obj_set(x_type_atom_obj, X_OBJ_FLAG_NONE, { .i = 1 });
 	x_spair_t wrap[2] = {
 		x_obj_set(NULL, X_OBJ_FLAG_NONE,
 			{ str }, { (x_obj_t *)(wrap + 1) }),
