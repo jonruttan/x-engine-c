@@ -72,7 +72,7 @@ tmp/
 /x
 /x-debug
 /x-profile
-core
+/core
 *.core
 docs/ref/c/
 docs/ref/x/
