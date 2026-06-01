@@ -12,6 +12,7 @@
  */
 #include "x-prim.h"
 #include "x-type/char.h"
+#include "x-type/int.h"
 #include "x-type/str.h"
 #include "x-type/symbol.h"
 
@@ -98,10 +99,66 @@ static x_obj_t *x_prim_list_to_string(x_obj_t *p_base, x_obj_t *p_args)
 	return x_mkstrown(p_base, s);
 }
 
+/** Raw byte length of a string.
+ *  x-lang: (str-byte-len s)
+ *  @param p_base Interpreter base context.
+ *  @param p_args Unevaluated argument list: (str-byte-len s).
+ *  @return Integer: the number of bytes in @p s.
+ *  @note Always byte-level, independent of any pushed string-call handler.
+ *        This is the explicit 8-bit accessor the Str8 protocol bottoms out in;
+ *        readers/tokenizers that need bytes must use this, not the ambient
+ *        (s) call (whose meaning depends on the installed protocol).
+ */
+static x_obj_t *x_prim_str_byte_len(x_obj_t *p_base, x_obj_t *p_args)
+{
+	x_obj_t *p_str;
+	x_eargs(p_base, p_args, 2, NULL, &p_str);
+
+	return x_mkint(p_base, (x_int_t)x_lib_strlen(x_strval(p_str)));
+}
+
+/** Byte at index i of a string, as a CHARACTER (0-255).
+ *  x-lang: (str-byte-ref s i)
+ *  @param p_base Interpreter base context.
+ *  @param p_args Unevaluated argument list: (str-byte-ref s i).
+ *  @return The i-th byte as a CHARACTER. Negative i counts from the end.
+ *  @note Always byte-level, independent of any pushed string-call handler.
+ */
+static x_obj_t *x_prim_str_byte_ref(x_obj_t *p_base, x_obj_t *p_args)
+{
+	x_obj_t *p_str, *p_idx;
+	x_char_t *s;
+	x_int_t n;
+	x_eargs(p_base, p_args, 3, NULL, &p_str, &p_idx);
+
+	s = x_strval(p_str);
+	n = x_atomint(p_idx);
+	if (n < 0)
+		n += (x_int_t)x_lib_strlen(s);
+
+	return x_mkchar(p_base, (unsigned char)s[n]);
+}
+
+/** Byte substring: len bytes of s starting at byte offset start.
+ *  x-lang: (str-byte-sub s start len)
+ *  @param p_base Interpreter base context.
+ *  @param p_args Unevaluated argument list: (str-byte-sub s start len).
+ *  @return A newly allocated string of @p len bytes from byte offset @p start.
+ *  @note Always byte-level, independent of any pushed string-call handler.
+ */
+static x_obj_t *x_prim_str_byte_sub(x_obj_t *p_base, x_obj_t *p_args)
+{
+	x_obj_t *p_str, *p_start, *p_len;
+	x_eargs(p_base, p_args, 4, NULL, &p_str, &p_start, &p_len);
+
+	return x_mkstr(p_base, x_lib_strndup(
+		x_strval(p_str) + x_atomint(p_start), x_atomint(p_len)));
+}
+
 /** Register string manipulation primitives.
  *
  *  Binds: @c str-append, @c str->symbol, @c symbol->str, @c bytes->str,
- *  @c list->str.
+ *  @c list->str, @c str-byte-len, @c str-byte-ref, @c str-byte-sub.
  *
  *  @note @c bytes->str and @c list->str are the SAME byte-packer here. The
  *        x-lang string layer (x/type/string) redefines @c list->str to be
@@ -121,7 +178,10 @@ x_obj_t *x_prim_string_register(x_obj_t *p_base, x_obj_t *p_args)
 		{ "str->symbol", x_prim_string_to_symbol },
 		{ "symbol->str", x_prim_symbol_to_string },
 		{ "bytes->str", x_prim_list_to_string },
-		{ "list->str", x_prim_list_to_string }
+		{ "list->str", x_prim_list_to_string },
+		{ "str-byte-len", x_prim_str_byte_len },
+		{ "str-byte-ref", x_prim_str_byte_ref },
+		{ "str-byte-sub", x_prim_str_byte_sub }
 	};
 
 	x_callable_bind_table(p_base, entries,
