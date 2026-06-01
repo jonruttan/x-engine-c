@@ -123,16 +123,23 @@ extern x_satom_t x_interp_obj;
 #define x_interp_field_profile_bst_misses(X)		x_01(x_1111(x_1111(x_base_field_profile(X))))
 /** @} */
 
+/** Capacity of the error-message scratch buffer (see x_interp_field_error_str).
+ *  The buffer is a static in x_interp_make, but is only ever reached through
+ *  the base via x_interp_field_error_str, so all access goes through p_base. */
+#define X_ERROR_BUF_SIZE	256
+
 /** @name Project extras -- base.rest.rest.rest.rest
  *  Holds the project-specific bookkeeping that has nowhere better to go:
- *  the eval-roots stack, the reader's token cache, and the inherited
- *  sigint flag.  GC hook + root lists now live in x-expr's heap-group
- *  (see @c x_base_field_heap_mark_hooks etc.).
+ *  the eval-roots stack, the reader's token cache, the inherited sigint flag,
+ *  and the error-message atom (its string is the X_ERROR_BUF_SIZE scratch
+ *  buffer).  GC hook + root lists now live in x-expr's heap-group (see
+ *  @c x_base_field_heap_mark_hooks etc.).
  * @{ */
 #define x_interp_extras(X)						x_11(x_base_field_meta_group(X))
 #define x_interp_field_eval_list(X)				x_0(x_interp_extras(X))
 #define x_interp_field_token_cache(X)			x_01(x_interp_extras(X))
-#define x_interp_field_sigint(X)				x_11(x_interp_extras(X))
+#define x_interp_field_sigint(X)				x_011(x_interp_extras(X))
+#define x_interp_field_error_str(X)				x_111(x_interp_extras(X))
 /** @} */
 
 /** @} */ /* end base_field */
