@@ -213,10 +213,18 @@ x_obj_t *x_env_extend(x_obj_t *p_base, x_obj_t *p_env,
 		return p_env;
 	}
 
-	/* Recursive case: bind first param to first val, continue. */
+	/* Recursive case: bind first param to first val, continue.
+	 * When the args run out before the params do (fewer args than params),
+	 * bind the remaining params to nil -- symmetric with surplus args, which
+	 * are ignored once params run out.  Without this guard x_firstobj/
+	 * x_restobj would dereference a nil p_vals and crash. */
 	{
+		x_obj_t *p_val  = x_obj_isnil(p_base, p_vals)
+			? NULL : x_firstobj(p_vals);
+		x_obj_t *p_rest = x_obj_isnil(p_base, p_vals)
+			? NULL : x_restobj(p_vals);
 		x_obj_t *p_pair = x_mkspair(p_base, X_OBJ_FLAG_NONE,
-			x_firstobj(p_params), x_firstobj(p_vals));
+			x_firstobj(p_params), p_val);
 
 		/* Flag if param shadows a BST global; track for clearing */
 		if (x_base_isset(p_base)
@@ -235,7 +243,7 @@ x_obj_t *x_env_extend(x_obj_t *p_base, x_obj_t *p_env,
 		return x_env_extend(p_base,
 			x_mkspair(p_base, X_OBJ_FLAG_NONE, p_pair, p_env),
 			x_restobj(p_params),
-			x_restobj(p_vals));
+			p_rest);
 	}
 }
 
