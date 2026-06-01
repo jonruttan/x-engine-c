@@ -132,6 +132,13 @@ static x_obj_t *x_prim_include(x_obj_t *p_base, x_obj_t *p_args)
 	x_base_field_buffer(p_base) = x_mkspair(p_base, X_OBJ_FLAG_NONE,
 		p_buffer, x_base_field_buffer(p_base));
 
+	/* Number the file's source lines from 1 so error lines match the file.
+	 * The buffer's line metadata otherwise starts at 0, leaving file errors
+	 * off by one (the REPL is 1-based via repl-read + the leftover newline). */
+	if (x_obj_flags(p_buffer) & X_OBJ_FLAG_META) {
+		x_obj_meta_i(p_buffer, 0).i = 1;
+	}
+
 	/* Load all expressions. */
 #ifdef X_PROFILE
 	t0 = x_sys_clock();

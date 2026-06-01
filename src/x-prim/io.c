@@ -550,10 +550,43 @@ static x_obj_t *x_prim_error_line(x_obj_t *p_base, x_obj_t *p_args)
 	(void)p_args;
 
 	p_handler = x_firstobj(x_interp_field_error_handler(p_base));
-	if (x_obj_isnil(p_base, p_handler))
+	if (x_obj_isnil(p_base, p_handler)) {
 		return x_mkint(p_base, 0);
+	}
 
 	return x_mkint(p_base, (x_int_t)x_error_handler_line(p_handler));
+}
+
+/**
+ * Read one expression, after resetting the source-line counter to 0.
+ *
+ * The REPL uses this instead of plain read so that forms typed at the prompt
+ * are tagged with lines relative to THIS input rather than the cumulative
+ * boot+session stream.  The reset must happen here, inside the read primitive:
+ * eval updates the line counter from each form's source-line metadata
+ * (x-eval.c) when it evaluates the (repl-read) call, so an earlier reset would
+ * be clobbered before the read runs.  (include pushes its own counter, so file
+ * lines are unaffected.)
+ *
+ * x-lang form: @code (repl-read) @endcode
+ *
+ * @param p_base  Execution context.
+ * @param p_args  Passed through to read.
+ * @return The expression read, or nil at end of input.
+ */
+static x_obj_t *x_prim_repl_read(x_obj_t *p_base, x_obj_t *p_args)
+{
+	x_obj_t *p_buffer = x_firstobj(x_base_field_buffer(p_base));
+
+	/* The tokenizer tags each form's source line from the buffer's line
+	 * metadata (x-token.c), which eval then copies into the counter that
+	 * error-line reports.  Reset it to 0 so forms typed here are numbered
+	 * relative to this input, not the cumulative boot+session stream. */
+	if (p_buffer != NULL && (x_obj_flags(p_buffer) & X_OBJ_FLAG_META)) {
+		x_obj_meta_i(p_buffer, 0).i = 0;
+	}
+
+	return x_prim_read_expr(p_base, p_args);
 }
 
 /** Register I/O primitives into the environment.
@@ -584,7 +617,8 @@ x_obj_t *x_prim_io_register(x_obj_t *p_base, x_obj_t *p_args)
 		{ "heap-free-hook!", x_prim_heap_free_hook },
 		{ "heap-mark-root!", x_prim_heap_mark_root },
 		{ "gc-pin!", x_prim_system_mark },
-		{ "error-line", x_prim_error_line }
+		{ "error-line", x_prim_error_line },
+		{ "repl-read", x_prim_repl_read }
 	};
 #ifdef X_CLOCK
 	static const x_callable_entry_t clock_entry[] = {
