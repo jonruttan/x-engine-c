@@ -13,6 +13,13 @@
 /*
  * # Includes
  */
+/* syscall(2) is a Linux/glibc extension, not ISO C.  This file builds under
+ * -ansi, which defines __STRICT_ANSI__; on glibc that makes <features.h> hide
+ * non-ISO-C declarations, so without this syscall() is only implicitly
+ * declared (int-returning), which breaks the 64-bit return value.  Must
+ * precede all #includes.  (No effect on macOS.) */
+#define _GNU_SOURCE
+
 #include "x-interp.h"
 #include "x-heap.h"
 #include "x-prim.h"

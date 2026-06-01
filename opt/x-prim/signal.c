@@ -21,6 +21,14 @@
  *     (   )
  *      " "
  */
+/* sigaction(2)/sigemptyset(3) are POSIX, not ISO C.  This module builds under
+ * -ansi, which defines __STRICT_ANSI__; on glibc that makes <features.h> hide
+ * every non-ISO-C declaration unless a feature-test macro asks for them, so
+ * without this `struct sigaction` is an unknown type.  Must precede all
+ * #includes.  (No effect on macOS, whose headers stay at __DARWIN_C_FULL
+ * because -ansi does not define _ANSI_SOURCE.) */
+#define _GNU_SOURCE
+
 #include "x-prim.h"
 #include "x-interp.h"
 
