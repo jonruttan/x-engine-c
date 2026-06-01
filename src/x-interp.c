@@ -214,6 +214,10 @@ x_obj_t *x_interp_make(x_obj_t *p_base, x_obj_t *p_args)
 void x_interp_error(x_obj_t *p_base, x_char_t *message, x_obj_t *p_obj)
 {
 	static x_satom_t err_str = x_obj_set(x_type_atom_obj, X_OBJ_FLAG_NONE, { .s = NULL });
+	/* Scratch for "<message> '<symbol>'".  Static so it outlives the longjmp
+	 * that unwinds the C stack (exactly like err_str); the guard handler
+	 * consumes it immediately, so reuse across errors is safe. */
+	static x_char_t err_buf[256];
 	int fd;
 	x_char_t *symbol = NULL;
 
@@ -226,9 +230,29 @@ void x_interp_error(x_obj_t *p_base, x_char_t *message, x_obj_t *p_obj)
 	if (x_base_isset(p_base)
 		&& ! x_obj_isnil(p_base, x_firstobj(x_interp_field_error_handler(p_base)))) {
 		x_obj_t *p_handler = x_firstobj(x_interp_field_error_handler(p_base));
+		x_char_t *p_msg = message;
 
-		/* Store message in static atom — zero allocation */
-		x_atomstr(err_str) = message;
+		/* If the error names a symbol, append " '<symbol>'" so the guard/REPL
+		 * message reads e.g. "Unbound SYMBOL 'str'" instead of the bare generic
+		 * text.  Built into err_buf -- no heap allocation, survives the longjmp.
+		 * The leading message is always a short string literal; the symbol is
+		 * truncated to fit, leaving room for the closing quote and terminator. */
+		if (symbol != NULL) {
+			int n = 0;
+			int cap = (int)sizeof(err_buf) - 2;	/* room for "'" + '\0' */
+			x_char_t *p_src = message;
+			while (*p_src != '\0' && n < cap) err_buf[n++] = *p_src++;
+			if (n < cap) err_buf[n++] = ' ';
+			if (n < cap) err_buf[n++] = '\'';
+			p_src = symbol;
+			while (*p_src != '\0' && n < cap) err_buf[n++] = *p_src++;
+			err_buf[n++] = '\'';
+			err_buf[n] = '\0';
+			p_msg = err_buf;
+		}
+
+		/* Store message in the static atom — zero heap allocation */
+		x_atomstr(err_str) = p_msg;
 		x_error_handler_error(p_handler) = (x_obj_t *)err_str;
 
 		/* Save error line — raw int in rest slot, zero allocation */
