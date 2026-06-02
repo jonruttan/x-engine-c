@@ -38,6 +38,7 @@
 #include "x-type/prim.h"
 #include "x-type/procedure.h"
 #include "x-type/ptr.h"
+#include "x-type/iter.h"
 #include "x-type/str.h"
 #include "x-type/symbol.h"
 #include "x-type/whitespace.h"
@@ -721,6 +722,111 @@ static x_obj_t *x_prim_token_read(x_obj_t *p_base, x_obj_t *p_args)
 }
 
 /**
+ * Evaluate one argument and pass it as a 1-element list to a type operation.
+ *
+ * The argument list is built on the stack (no heap allocation), so these
+ * wrappers stay safe inside reader/tokenizer callbacks.  C primitives receive
+ * unevaluated args, hence the explicit x_eargs before delegating.
+ *
+ * @param p_base  Execution context.
+ * @param p_args  Unevaluated: (self obj).
+ * @param op      The type operation to drive with the evaluated object.
+ * @return Whatever the operation returns.
+ */
+static x_obj_t *x_prim_op1(x_obj_t *p_base, x_obj_t *p_args,
+	x_obj_t *(*op)(x_obj_t *, x_obj_t *))
+{
+	x_obj_t *p_obj;
+	x_spair_t args[1];
+
+	x_eargs(p_base, p_args, 2, NULL, &p_obj);
+
+	args[0][X_OBJ_META_TYPE].p = NULL;
+	args[0][X_OBJ_META_FLAGS].i = X_OBJ_FLAG_NONE;
+	x_firstobj((x_obj_t *)args) = p_obj;
+	x_restobj((x_obj_t *)args) = NULL;
+
+	return op(p_base, (x_obj_t *)args);
+}
+
+/** x-lang (make-iter step-fn value): build an iterator.  Driven by iter-next,
+ *  which calls (step-fn iter); the step-fn reads the current item from the
+ *  iterator's value cell, advances it (e.g. via set-rest!), and returns the
+ *  item -- value going nil marks exhaustion (iter-empty?). */
+static x_obj_t *x_prim_make_iter(x_obj_t *p_base, x_obj_t *p_args)
+{
+	x_obj_t *p_fn, *p_val;
+
+	x_eargs(p_base, p_args, 3, NULL, &p_fn, &p_val);
+
+	return x_make_iter(p_base, X_OBJ_FLAG_NONE, p_fn, p_val);
+}
+
+/** x-lang (iter-next iter): advance an iterator, returning its next element. */
+static x_obj_t *x_prim_iter_next(x_obj_t *p_base, x_obj_t *p_args)
+{
+	return x_prim_op1(p_base, p_args, x_type_iter_next);
+}
+
+/** x-lang (iter-empty? iter): #t when the iterator is exhausted, else #f.
+ *  Wrapped (not x_type_iter_isempty directly) so it returns a real boolean
+ *  rather than the p_base/p_args truthy convention. */
+static x_obj_t *x_prim_iter_empty(x_obj_t *p_base, x_obj_t *p_args)
+{
+	x_obj_t *p_iter;
+
+	x_eargs(p_base, p_args, 2, NULL, &p_iter);
+
+	return x_iterempty(p_base, p_iter)
+		? x_firstobj(x_interp_field_true(p_base))
+		: x_firstobj(x_interp_field_false(p_base));
+}
+
+/** x-lang (buffer-reset buffer): empty the buffer (cursors back to base). */
+static x_obj_t *x_prim_buffer_reset(x_obj_t *p_base, x_obj_t *p_args)
+{
+	return x_prim_op1(p_base, p_args, x_type_buffer_reset);
+}
+
+/** x-lang (buffer-retain buffer): compact unread data to the front. */
+static x_obj_t *x_prim_buffer_retain(x_obj_t *p_base, x_obj_t *p_args)
+{
+	return x_prim_op1(p_base, p_args, x_type_buffer_retain);
+}
+
+/** x-lang (buffer-append buffer char): write one char at the write cursor. */
+static x_obj_t *x_prim_buffer_append(x_obj_t *p_base, x_obj_t *p_args)
+{
+	x_obj_t *p_buffer, *p_char;
+	x_spair_t args[2];
+
+	x_eargs(p_base, p_args, 3, NULL, &p_buffer, &p_char);
+
+	args[0][X_OBJ_META_TYPE].p = NULL;
+	args[0][X_OBJ_META_FLAGS].i = X_OBJ_FLAG_NONE;
+	x_firstobj((x_obj_t *)args) = p_buffer;
+	x_restobj((x_obj_t *)args) = (x_obj_t *)(args + 1);
+	args[1][X_OBJ_META_TYPE].p = NULL;
+	args[1][X_OBJ_META_FLAGS].i = X_OBJ_FLAG_NONE;
+	x_firstobj((x_obj_t *)(args + 1)) = p_char;
+	x_restobj((x_obj_t *)(args + 1)) = NULL;
+
+	return x_type_buffer_append(p_base, (x_obj_t *)args);
+}
+
+/** x-lang (buffer-read buffer): read one char (extending from input), or nil. */
+static x_obj_t *x_prim_buffer_read(x_obj_t *p_base, x_obj_t *p_args)
+{
+	return x_prim_op1(p_base, p_args, x_type_buffer_read);
+}
+
+/** x-lang (buffer-read-text buffer): like buffer-read, NUL counts as EOF. */
+static x_obj_t *x_prim_buffer_read_text(x_obj_t *p_base, x_obj_t *p_args)
+{
+	return x_prim_op1(p_base, p_args, x_type_buffer_read_text);
+}
+
+/**
  * @brief Register all type-system and sandboxing primitives.
  *
  * Binds: make-type, base-make-type, make-instance, make-obj, obj-ref,
@@ -751,7 +857,15 @@ x_obj_t *x_prim_type_register(x_obj_t *p_base, x_obj_t *p_args)
 		{ "base-bind", x_prim_base_bind },
 		{ "token-read", x_prim_token_read },
 		{ "token-read-string", x_prim_token_read_string },
-		{ "iter", x_prim_iter }
+		{ "iter", x_prim_iter },
+		{ "make-iter", x_prim_make_iter },
+		{ "iter-next", x_prim_iter_next },
+		{ "iter-empty?", x_prim_iter_empty },
+		{ "buffer-reset", x_prim_buffer_reset },
+		{ "buffer-retain", x_prim_buffer_retain },
+		{ "buffer-append", x_prim_buffer_append },
+		{ "buffer-read", x_prim_buffer_read },
+		{ "buffer-read-text", x_prim_buffer_read_text }
 	};
 
 	x_callable_bind_table(p_base, entries,
