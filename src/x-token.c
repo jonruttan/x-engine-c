@@ -116,7 +116,7 @@ x_obj_t *x_type_alist_iter(x_obj_t *p_base, x_obj_t *p_args)
 x_obj_t *x_token_analyse(x_obj_t *p_base, x_obj_t *p_args)
 {
 	x_int_t i_best, i_consumed;
-	x_obj_t *p_buffer = x_firstobj(p_args), *p_winner, *p_entry, *p_analyse, *p_obj;
+	x_obj_t *p_buffer = x_firstobj(p_args), *p_winner, *p_entry, *p_analyse, *p_analyse_slot, *p_obj;
 	x_satom_t chr = x_obj_set(NULL, X_OBJ_FLAG_NONE, { .c = '\0' } ),
 		arg_chr = x_obj_set(NULL, X_OBJ_FLAG_NONE, { .i = 0 });
 	x_spair_t
@@ -137,6 +137,15 @@ x_obj_t *x_token_analyse(x_obj_t *p_base, x_obj_t *p_args)
 		read_args[2] = {
 			x_obj_set(NULL, X_OBJ_FLAG_NONE, { p_buffer }, { (x_obj_t *)(read_args + 1) }),
 			x_obj_set(NULL, X_OBJ_FLAG_NONE, { chr }, { NULL }),
+		},
+		/* an_iter walks the analyse slot -- the slot's list itself, or
+		 * an_one (a one-element list wrapping a lone handler) so the
+		 * per-handler loop stays uniform.  Its state is set per type. */
+		an_one = x_obj_set(NULL, X_OBJ_FLAG_NONE, { NULL }, { NULL }),
+		an_iter = x_obj_set(NULL, X_OBJ_FLAG_NONE, { x_type_list_iter_prim }, { NULL }),
+		an_args[2] = {
+			x_obj_set(NULL, X_OBJ_FLAG_NONE, { an_iter }, { (x_obj_t *)(an_args + 1) }),
+			x_obj_set(NULL, X_OBJ_FLAG_NONE, { NULL }, { NULL }),
 		};
 	x_obj_t *p_score = (x_obj_t *)score;
 	x_char_t *p_bw;
@@ -152,25 +161,38 @@ x_obj_t *x_token_analyse(x_obj_t *p_base, x_obj_t *p_args)
 		p_entry = x_type_iter_next(p_base, (x_obj_t *)iter_args);
 
 		if ( ! x_obj_isnil(p_base, p_entry)) {
-		p_analyse = x_type_field_analyse(x_restobj(p_entry));
+		p_analyse_slot = x_type_field_analyse(x_restobj(p_entry));
 
-		if ( ! x_obj_isnil(p_base, p_analyse)) {
-			/* Clear score for this type. */
+		if ( ! x_obj_isnil(p_base, p_analyse_slot)) {
+			/* Score every handler in the analyse slot.  A list is walked
+			 * directly; a lone handler is wrapped in an_one so the walk
+			 * stays uniform -- this lets the quote/quasi/unquote readers
+			 * live on the symbol type next to the symbol reader. */
+			x_firstobj((x_obj_t *)an_one) = p_analyse_slot;
+			x_restobj((x_obj_t *)an_iter) = x_obj_type_islist(p_base, p_analyse_slot)
+				? p_analyse_slot : (x_obj_t *)an_one;
+
+			while ( ! x_iterempty(p_base, (x_obj_t *)an_iter)) {
+			p_analyse = x_type_iter_next(p_base, (x_obj_t *)an_args);
+
+			/* Clear score for this handler. */
 			x_firstint(p_score) = 0;
 
 			while (1) {
 
 				/* EOF for readonly buffers — don't reset,
 				 * let auto-score compute from bufferlen. */
-				if ((x_obj_flags(p_buffer) & X_OBJ_FLAG_RO)
-					&& x_buffereof(p_buffer)) {
+				if ((x_obj_flags(p_buffer) & X_OBJ_FLAG_RO) && x_buffereof(p_buffer)) {
 					break;
 				}
 
 				p_bw = x_bufferwrite(p_buffer);
+
 				if (x_obj_isnil(p_base, x_type_buffer_read_text(p_base, (x_obj_t *)read_args))
-					&& x_bufferwrite(p_buffer) == p_bw) {
+					&& x_bufferwrite(p_buffer) == p_bw)
+				{
 					x_bufferread(p_buffer) = x_bufferval(p_buffer);
+
 					break;
 				}
 
@@ -181,6 +203,7 @@ x_obj_t *x_token_analyse(x_obj_t *p_base, x_obj_t *p_args)
 				/* Not recognized. */
 				if (x_obj_isnil(p_base, p_obj)) {
 					x_bufferread(p_buffer) = x_bufferval(p_buffer);
+
 					break;
 				}
 
@@ -196,6 +219,7 @@ x_obj_t *x_token_analyse(x_obj_t *p_base, x_obj_t *p_args)
 					}
 
 					x_bufferread(p_buffer) = x_bufferval(p_buffer);
+
 					break;
 				}
 
@@ -208,19 +232,17 @@ x_obj_t *x_token_analyse(x_obj_t *p_base, x_obj_t *p_args)
 			 * match), use the sign from the partial score to
 			 * compute final score from total consumed. */
 			i_consumed = x_bufferlen(p_buffer);
-			if (i_consumed > 0
-				&& x_firstint(p_score) != 0) {
-				x_int_t i_score = (x_firstint(p_score) < 0 ? -1 : 1)
-					* i_consumed;
 
-				if (i_score >= i_best
-					|| (i_best < 1
-						&& i_score <= i_best)) {
+			if (i_consumed > 0 && x_firstint(p_score) != 0) {
+				x_int_t i_score = (x_firstint(p_score) < 0 ? -1 : 1) * i_consumed;
+
+				if (i_score >= i_best || (i_best < 1 && i_score <= i_best)) {
 					i_best = i_score;
 					p_winner = p_entry;
 				}
 			}
 			x_bufferread(p_buffer) = x_bufferval(p_buffer);
+			}
 		}
 		}
 	}
@@ -254,6 +276,15 @@ x_obj_t *x_token_read(x_obj_t *p_base, x_obj_t *p_args)
 		},
 		prim_args[1] = {
 			x_obj_set(NULL, X_OBJ_FLAG_NONE, { NULL }, { (x_obj_t *)(buffer_args) }),
+		},
+		/* read_iter walks the read slot -- the slot's list, or read_one
+		 * (wrapping a lone reader) so the loop is uniform.  State is set
+		 * per token below. */
+		read_one = x_obj_set(NULL, X_OBJ_FLAG_NONE, { NULL }, { NULL }),
+		read_iter = x_obj_set(NULL, X_OBJ_FLAG_NONE, { x_type_list_iter_prim }, { NULL }),
+		read_args[2] = {
+			x_obj_set(NULL, X_OBJ_FLAG_NONE, { read_iter }, { (x_obj_t *)(read_args + 1) }),
+			x_obj_set(NULL, X_OBJ_FLAG_NONE, { NULL }, { NULL }),
 		};
 
 	for (;;) {
@@ -292,8 +323,24 @@ x_obj_t *x_token_read(x_obj_t *p_base, x_obj_t *p_args)
 			line = x_obj_meta_i(p_buffer, 0).i;
 		}
 
-		prim_arg_prim = p_read;
-		p_obj = x_callable_apply(p_base, (x_obj_t *)prim_args);
+		/* Walk the read slot's reader(s) and take the first non-nil
+		 * result.  A list is walked directly; a lone reader is wrapped in
+		 * read_one so the walk is uniform.  A reader declines a token it
+		 * does not handle by returning nil WITHOUT consuming, so the next
+		 * reader sees the same buffer. */
+		x_firstobj((x_obj_t *)read_one) = p_read;
+		x_restobj((x_obj_t *)read_iter) = x_obj_type_islist(p_base, p_read)
+			? p_read : (x_obj_t *)read_one;
+
+		p_obj = NULL;
+		while ( ! x_iterempty(p_base, (x_obj_t *)read_iter)) {
+			prim_arg_prim = x_type_iter_next(p_base, (x_obj_t *)read_args);
+			p_obj = x_callable_apply(p_base, (x_obj_t *)prim_args);
+
+			if ( ! x_obj_isnil(p_base, p_obj)) {
+				break;
+			}
+		}
 
 		if (x_obj_isnil(p_base, p_obj)) {
 			return NULL;
@@ -307,6 +354,7 @@ x_obj_t *x_token_read(x_obj_t *p_base, x_obj_t *p_args)
 		}
 
 		x_type_buffer_retain(p_base, (x_obj_t *)buffer_args);
+
 		return p_obj;
 	}
 }
