@@ -72,6 +72,8 @@ tmp/
 /x
 /x-debug
 /x-profile
+/x-asan
+/x-dbg
 /core
 *.core
 docs/ref/c/

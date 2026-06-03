@@ -156,6 +156,20 @@ x-profile: ## Build profiling binary (includes coverage)
 	$(MAKE) clean-obj
 	$(MAKE) OUTPUT=$@ CFLAGS="$(CFLAGS) -DX_PROFILE -DX_COV" $(EXECUTABLE)
 
+# AddressSanitizer build for memory-safety testing.  The sanitizer flags go in
+# CFLAGS ONLY: 'LDFLAGS?=$(CFLAGS)' (above) feeds them into the link as well, so
+# the ASan runtime is linked while KEEPING the project's -dead_strip/exports.sym
+# LDFLAGS (passing LDFLAGS on the command line would override and lose those).
+# Objects are shared with the normal build, so clean-obj brackets the recipe:
+# the leading one forces a fully-instrumented rebuild; the trailing one removes
+# the ASan objects so a later plain `make` doesn't link them without the ASan
+# runtime (the "_asan.module_ctor ... symbol(s) not found" failure mode).
+x-asan: ## Build with AddressSanitizer for memory-safety testing
+	$(MAKE) clean-obj
+	$(MAKE) OUTPUT=$@ CFLAGS="$(CFLAGS) -fsanitize=address -fno-omit-frame-pointer -g" $(EXECUTABLE)
+	$(MAKE) clean-obj
+.PHONY: x-asan
+
 clean-obj:
 	rm -f $(SRCDIR)/*.o $(SRCDIR)/**/*.o $(SRCDIR)/**/**/*.o $(OPTDIR)/**/*.o $(X_EXPR_DIR)/src/*.o
 
