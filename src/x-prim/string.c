@@ -155,6 +155,38 @@ static x_obj_t *x_prim_str_byte_sub(x_obj_t *p_base, x_obj_t *p_args)
 		x_strval(p_str) + x_atomint(p_start), x_atomint(p_len)));
 }
 
+/** Lexicographic (byte-wise) string less-than.
+ *
+ *  x-lang form: @code (str<? a b) @endcode
+ *
+ *  Compares two strings byte by byte; the shorter string sorts first when it
+ *  is a prefix of the longer.  A C primitive so callers (e.g. sorting the help
+ *  module list) avoid an x-lang per-character loop, which is both slow and a
+ *  GC-rooting hazard.
+ *
+ *  @param p_base Interpreter base context.
+ *  @param p_args Unevaluated argument list: (str<? a b).
+ *  @return #t if a sorts before b, else #f.
+ */
+static x_obj_t *x_prim_str_lt(x_obj_t *p_base, x_obj_t *p_args)
+{
+	x_obj_t *p_a, *p_b;
+	x_char_t *a, *b;
+
+	x_eargs(p_base, p_args, 3, NULL, &p_a, &p_b);
+	a = x_strval(p_a);
+	b = x_strval(p_b);
+
+	while (*a != '\0' && *a == *b) {
+		a++;
+		b++;
+	}
+
+	return ((unsigned char)*a < (unsigned char)*b)
+		? x_firstobj(x_interp_field_true(p_base))
+		: x_firstobj(x_interp_field_false(p_base));
+}
+
 /** Register string manipulation primitives.
  *
  *  Binds: @c str-append, @c str->symbol, @c symbol->str, @c bytes->str,
@@ -181,7 +213,8 @@ x_obj_t *x_prim_string_register(x_obj_t *p_base, x_obj_t *p_args)
 		{ "list->str", x_prim_list_to_string },
 		{ "str-byte-len", x_prim_str_byte_len },
 		{ "str-byte-ref", x_prim_str_byte_ref },
-		{ "str-byte-sub", x_prim_str_byte_sub }
+		{ "str-byte-sub", x_prim_str_byte_sub },
+		{ "str<?", x_prim_str_lt }
 	};
 
 	x_callable_bind_table(p_base, entries,
