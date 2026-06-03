@@ -148,22 +148,24 @@ strip: $(EXECUTABLE) ## Strip non-global symbols (keep dynamic exports for dlope
 $(EXECUTABLE): $(OBJECTS) $(X_EXPR_OBJECTS) $(EXTRA_OBJS)
 	$(CC) $(LDFLAGS) $(OBJECTS) $(X_EXPR_OBJECTS) $(EXTRA_OBJS) $(EXTRA_LIBS) -o $(OUTPUT)
 
+# Variant builds (debug / profile / asan) share src/*.o with the normal build,
+# so each brackets its work with clean-obj: the leading one forces a rebuild
+# under the variant's flags; the trailing one removes those objects so a later
+# plain `make` doesn't relink them -- silently picking up -DDEBUG, or hard-
+# failing on the ASan runtime ("_asan.module_ctor ... symbol(s) not found").
 x-debug: ## Build debug target
 	$(MAKE) clean-obj
 	$(MAKE) OUTPUT=$@ CFLAGS="$(CFLAGS) -g -Og -DDEBUG" $(EXECUTABLE)
+	$(MAKE) clean-obj
 
 x-profile: ## Build profiling binary (includes coverage)
 	$(MAKE) clean-obj
 	$(MAKE) OUTPUT=$@ CFLAGS="$(CFLAGS) -DX_PROFILE -DX_COV" $(EXECUTABLE)
+	$(MAKE) clean-obj
 
-# AddressSanitizer build for memory-safety testing.  The sanitizer flags go in
-# CFLAGS ONLY: 'LDFLAGS?=$(CFLAGS)' (above) feeds them into the link as well, so
-# the ASan runtime is linked while KEEPING the project's -dead_strip/exports.sym
-# LDFLAGS (passing LDFLAGS on the command line would override and lose those).
-# Objects are shared with the normal build, so clean-obj brackets the recipe:
-# the leading one forces a fully-instrumented rebuild; the trailing one removes
-# the ASan objects so a later plain `make` doesn't link them without the ASan
-# runtime (the "_asan.module_ctor ... symbol(s) not found" failure mode).
+# ASan flags go in CFLAGS only: 'LDFLAGS?=$(CFLAGS)' (above) carries them into
+# the link too, so the runtime links while KEEPING the project's -dead_strip /
+# exports.sym LDFLAGS (passing LDFLAGS on the command line would lose those).
 x-asan: ## Build with AddressSanitizer for memory-safety testing
 	$(MAKE) clean-obj
 	$(MAKE) OUTPUT=$@ CFLAGS="$(CFLAGS) -fsanitize=address -fno-omit-frame-pointer -g" $(EXECUTABLE)
