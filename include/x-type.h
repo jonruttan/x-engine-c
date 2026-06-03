@@ -126,7 +126,7 @@
 /** @} */
 
 /** @name I/O Group -- Read, Write, and Display Handlers
- *  @c (analyse delimit read write display error)
+ *  @c (analyse delimit read write display)
  * @{ */
 #define x_type_field_io(X)            x_firstobj(x_restobj(x_restobj(x_restobj(x_restobj(x_restobj(X)))))) /**< I/O handler group. */
 #define x_type_field_analyse_stack(X) x_firstobj(x_type_field_io((X)))       /**< Tokenizer analyse stack cell. */
@@ -139,8 +139,6 @@
 #define x_type_field_write(X)         x_firstobj(x_type_field_write_stack((X))) /**< Current write handler. */
 #define x_type_field_display_stack(X) x_firstobj(x_restobj(x_restobj(x_restobj(x_restobj(x_type_field_io((X))))))) /**< Display stack cell. */
 #define x_type_field_display(X)       x_firstobj(x_type_field_display_stack((X))) /**< Current display handler. */
-#define x_type_field_error_stack(X)   x_firstobj(x_restobj(x_restobj(x_restobj(x_restobj(x_restobj(x_type_field_io((X)))))))) /**< Error stack cell. */
-#define x_type_field_error(X)         x_firstobj(x_type_field_error_stack((X))) /**< Current error handler. */
 /** @} */
 
 /** @name Iter Group -- Iterator Handler
@@ -181,7 +179,6 @@ struct x_type_t
 	x_obj_t *p_read;       /**< Reader handler. */
 	x_obj_t *p_write;      /**< Writer handler. */
 	x_obj_t *p_display;    /**< Display handler. */
-	x_obj_t *p_error;      /**< Error handler. */
 	x_obj_t *p_iter;       /**< Iterator handler. */
 };
 
@@ -199,9 +196,6 @@ x_obj_t *x_type_write(x_obj_t *p_base, x_obj_t *p_args);
 
 /** Display an object using its type's display handler. */
 x_obj_t *x_type_display(x_obj_t *p_base, x_obj_t *p_args);
-
-/** Format an error using its type's error handler. */
-x_obj_t *x_type_error(x_obj_t *p_base, x_obj_t *p_args);
 
 /** Primitive: return the name of an object's type. */
 x_obj_t *x_type_prim_type_name(x_obj_t *p_base, x_obj_t *p_args);

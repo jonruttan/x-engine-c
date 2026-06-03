@@ -59,14 +59,13 @@ x_obj_t *x_type_struct_make(x_obj_t *p_base, struct x_type_t type)
 		pair(pair(pair(type.p_from, nil),
 			pair(pair(type.p_to, nil),
 			nil)),
-		/* IO: '(analyse-stack delimit-stack read-stack write-stack display-stack error-stack) */
+		/* IO: '(analyse-stack delimit-stack read-stack write-stack display-stack) */
 		pair(pair(pair(type.p_analyse, nil),
 			pair(pair(type.p_delimit, nil),
 			pair(pair(type.p_read, nil),
 			pair(pair(type.p_write, nil),
 			pair(pair(type.p_display, nil),
-			pair(pair(type.p_error, nil),
-			nil)))))),
+			nil))))),
 		/* Iter: '(iter-stack) */
 		pair(pair(pair(type.p_iter, nil),
 			nil),
@@ -166,32 +165,6 @@ x_obj_t *x_type_display(x_obj_t *p_base, x_obj_t *p_args)
 
 	/* Fallback: use write */
 	return x_type_write(p_base, p_args);
-}
-
-/**
- * Dispatch the error-display hook for a typed object.
- *
- * Used to format objects in error messages. Returns NULL if no error
- * hook is registered on the type.
- *
- * @param p_base  x_obj_t* -- Execution context
- * @param p_args  x_obj_t* -- (object . ...)
- * @return x_obj_t* -- Error-display result, or NULL
- */
-x_obj_t *x_type_error(x_obj_t *p_base, x_obj_t *p_args)
-{
-	x_obj_t *p_obj = x_firstobj(p_args),
-		*p_fn = x_type_field_error(x_obj_type(p_obj));
-	x_spair_t args[2] = {
-		x_obj_set(NULL, X_OBJ_FLAG_NONE, { p_fn }, { (x_obj_t *)(args + 1) }),
-		x_obj_set(NULL, X_OBJ_FLAG_NONE, { p_obj }, { NULL })
-	};
-
-	if ( ! x_obj_isnil(p_base, p_fn)) {
-		return x_callable_apply(p_base, (x_obj_t *)args);
-	}
-
-	return NULL;
 }
 
 /**
