@@ -48,7 +48,7 @@
  *
  * Iterates a table of known handler field names (call, eval, write, display,
  * length, analyse, delimit, read, error, from, to, units, free, mark,
- * first-chars, iter), looks each up in @p p_handlers via alist association,
+ * iter), looks each up in @p p_handlers via alist association,
  * and populates the corresponding x_type_t slot.
  *
  * @param p_base  Execution context used for symbol lookup and allocation.
@@ -85,7 +85,6 @@ static x_obj_t *x_prim_type_build_struct(x_obj_t *p_base,
 			{ "units",   offsetof(struct x_type_t, p_units) },
 			{ "free",    offsetof(struct x_type_t, p_free) },
 			{ "mark",    offsetof(struct x_type_t, p_mark) },
-			{ "first-chars", offsetof(struct x_type_t, p_data) },
 			{ "iter",    offsetof(struct x_type_t, p_iter) }
 		};
 		int i;

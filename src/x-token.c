@@ -138,9 +138,8 @@ x_obj_t *x_token_analyse(x_obj_t *p_base, x_obj_t *p_args)
 			x_obj_set(NULL, X_OBJ_FLAG_NONE, { p_buffer }, { (x_obj_t *)(read_args + 1) }),
 			x_obj_set(NULL, X_OBJ_FLAG_NONE, { chr }, { NULL }),
 		};
-	x_obj_t *p_score = (x_obj_t *)score, *p_hint;
-	x_char_t *p_bw, *p_hintstr;
-	int skip;
+	x_obj_t *p_score = (x_obj_t *)score;
+	x_char_t *p_bw;
 
 	/* Retain: ensure bufferval == bufferread for correct x_bufferlen. */
 	x_type_buffer_retain(p_base, (x_obj_t *)buffer_args);
@@ -156,28 +155,6 @@ x_obj_t *x_token_analyse(x_obj_t *p_base, x_obj_t *p_args)
 		p_analyse = x_type_field_analyse(x_restobj(p_entry));
 
 		if ( ! x_obj_isnil(p_base, p_analyse)) {
-
-			/* First-char hint: skip x-lang closure if first char
-			 * doesn't match the type's accepted characters. */
-			skip = 0;
-			if ( ! x_obj_type_issatom(p_analyse)
-				&& x_primval(p_analyse) == NULL
-				&& ! x_buffereof(p_buffer)) {
-				p_hint = x_type_field_data(x_restobj(p_entry));
-				if ( ! x_obj_isnil(p_base, p_hint)) {
-					p_hintstr = x_strval(p_hint);
-					skip = 1;
-					while (*p_hintstr) {
-						if (*p_hintstr == *x_bufferread(p_buffer)) {
-							skip = 0;
-							break;
-						}
-						p_hintstr++;
-					}
-				}
-			}
-
-		if ( ! skip) {
 			/* Clear score for this type. */
 			x_firstint(p_score) = 0;
 
@@ -244,7 +221,6 @@ x_obj_t *x_token_analyse(x_obj_t *p_base, x_obj_t *p_args)
 				}
 			}
 			x_bufferread(p_buffer) = x_bufferval(p_buffer);
-		} /* if ( ! skip) */
 		}
 		}
 	}
