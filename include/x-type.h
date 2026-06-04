@@ -30,8 +30,7 @@
  *     delimit      [S] delimiter predicate
  *     read         [S] reader (token -> object)
  *     write        [S] writer (s-expression output)
- *     display      [S] display (human-readable output)
- *     error)       [S] error formatter
+ *     display)     [S] display (human-readable output)
  *    (iter)        [S] iterator constructor
  * )
  * @endcode
@@ -54,7 +53,7 @@
  *      " "
  */
 
-#include "x-interp.h"
+#include "x-eval.h"
 
 /** @name Type Construction
  * @{ */

@@ -20,7 +20,8 @@
 #include "ext/x-expr/src/x-obj.c"
 #include "src/x-alist.c"
 #include "ext/x-expr/src/x-base.c"
-#include "src/x-interp.c"
+#define STUB_X_EVAL
+#include "src/x-eval.c"
 #include "ext/x-expr/src/x-heap.c"
 #include "src/x-type.c"
 #include "src/x-type/atom.c"
@@ -182,7 +183,6 @@ static char *test_type_struct_make(void)
 		TEST_TYPE_STRUCT_READ,
 		TEST_TYPE_STRUCT_WRITE,
 		TEST_TYPE_STRUCT_DISPLAY,
-		NULL,	/* p_error */
 		NULL	/* p_iter */
 	};
 
@@ -286,7 +286,7 @@ static char *test_type_struct_get(void)
 	x_sys_free(p_args);
 
 
-	p_base = x_interp_make(NULL, NULL);
+	p_base = x_eval_make(NULL, NULL);
 	p_obj[3] = x_mksatom(p_base, X_OBJ_FLAG_NONE, mock_fn);
 	p_obj[2] = x_mksatom(p_base, X_OBJ_FLAG_NONE, mock_str);
 	p_obj[1] = x_mkspair(p_base, X_OBJ_FLAG_NONE, p_obj[3], p_base);
@@ -311,7 +311,7 @@ static char *test_type_struct_get(void)
 	x_sys_free(p_base);
 
 
-	p_base = x_interp_make(NULL, NULL);
+	p_base = x_eval_make(NULL, NULL);
 
 	p_args = x_mkspair(NULL, X_OBJ_FLAG_NONE,
 		x_mksatom(p_base, X_OBJ_FLAG_NONE, mock_str),
@@ -378,46 +378,6 @@ static char *test_type_write_null(void)
 	p_ret = x_type_write(NULL, p_args);
 
 	_it_should("return NULL when write fn is nil",
-		p_ret == NULL
-	);
-
-	return NULL;
-}
-
-static int type_error_call_count = 0;
-x_obj_t *type_error_fn(x_obj_t *p_base, x_obj_t *p_args)
-{
-	++type_error_call_count;
-
-	return x_firstobj(p_args);
-}
-
-static char *test_type_error(void)
-{
-	x_obj_t *p_obj, *p_fn, *p_args, *p_ret;
-
-	/* With error fn set */
-	p_obj = x_mkatom(NULL, NULL);
-	p_fn = x_mksatom(NULL, X_OBJ_FLAG_NONE, type_error_fn);
-	x_type_field_error(x_obj_type(p_obj)) = p_fn;
-
-	p_args = x_mkspair(NULL, X_OBJ_FLAG_NONE, p_obj, NULL);
-
-	type_error_call_count = 0;
-	p_ret = x_type_error(NULL, p_args);
-
-	_it_should("call the error fn",
-		p_obj == p_ret
-		&& 1 == type_error_call_count
-	);
-
-	/* Without error fn (NULL) */
-	p_obj = x_mkatom(NULL, NULL);
-	p_args = x_mkspair(NULL, X_OBJ_FLAG_NONE, p_obj, NULL);
-
-	p_ret = x_type_error(NULL, p_args);
-
-	_it_should("return NULL when error fn is nil",
 		p_ret == NULL
 	);
 
@@ -632,7 +592,7 @@ static char *test_type_heap_mark(void)
 
 	/* Path 1: base type object returns x_atomobj */
 	p_obj = x_mksatom(p_base, X_OBJ_FLAG_NONE, 99);
-	x_obj_type(p_obj) = (x_obj_t *)&x_interp_obj;
+	x_obj_type(p_obj) = (x_obj_t *)&x_eval_obj;
 	p_ret = x_type_heap_mark(p_base, p_obj, 0);
 	_it_should("base type returns atomobj",
 		p_ret == x_atomobj(p_obj));
@@ -760,7 +720,6 @@ static char *run_tests() {
 	_run_test(test_type_struct_get);
 	_run_test(test_type_write);
 	_run_test(test_type_write_null);
-	_run_test(test_type_error);
 	_run_test(test_type_prim_type_name);
 	_run_test(test_type_prim_units);
 	_run_test(test_type_prim_length);

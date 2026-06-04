@@ -18,7 +18,8 @@
 #include "ext/x-expr/src/x-obj.c"
 #include "src/x-alist.c"
 #include "ext/x-expr/src/x-base.c"
-#include "src/x-interp.c"
+#define STUB_X_EVAL
+#include "src/x-eval.c"
 #include "ext/x-expr/src/x-heap.c"
 #include "src/x-type.c"
 #include "src/x-type/prim.c"
@@ -86,7 +87,7 @@ static char *test_obj_type_iswhitespace(void)
 {
 	x_obj_t *p_base, *p_obj, *p_type;
 
-	p_base = x_interp_make(NULL, NULL);
+	p_base = x_eval_make(NULL, NULL);
 
 	p_type = x_type_whitespace_register(p_base, p_base);
 	p_obj = x_obj_make(p_base, p_type, X_OBJ_FLAG_NONE, X_OBJ_LENGTH_ATOM, NULL);
@@ -213,14 +214,14 @@ static char *test_type_whitespace_register(void)
 {
 	x_obj_t *p_base, *p_type;
 
-	p_base = x_interp_make(NULL, NULL);
+	p_base = x_eval_make(NULL, NULL);
 
 	p_type = x_type_whitespace_register(p_base, p_base);
 	_it_should("return the Whitespace type object",
 		0 == x_lib_strcmp(X_TYPE_WHITESPACE_NAME, x_strval(x_type_field_name(p_type)))
 	);
 	_it_should("add the Whitespace type to the Type alist",
-		p_type == x_restobj(x_firstobj(x_firstobj(x_interp_field_type_alist(p_base))))
+		p_type == x_restobj(x_firstobj(x_firstobj(x_eval_field_type_alist(p_base))))
 	);
 
 	test_cleanup(p_base);

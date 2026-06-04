@@ -19,7 +19,6 @@
 #include "ext/x-expr/src/x.c"
 #include "src/x-alist.c"
 #include "ext/x-expr/src/x-base.c"
-#include "src/x-interp.c"
 #include "src/x-eval.c"
 #include "src/x-type.c"
 #include "src/x-type/atom.c"
@@ -103,7 +102,7 @@ static char *test_core_quote(void)
 {
 	x_obj_t *p_base, *p_args, *p_result, *p_obj;
 
-	p_base = x_interp_make(NULL, NULL);
+	p_base = x_eval_make(NULL, NULL);
 	x_prim_register(p_base, NULL);
 
 	/* (lit x) -> x unevaluated */
@@ -130,7 +129,7 @@ static char *test_core_pair_first_rest(void)
 	x_obj_t *p_base, *p_args, *p_result;
 	x_obj_t *p_a, *p_b;
 
-	p_base = x_interp_make(NULL, NULL);
+	p_base = x_eval_make(NULL, NULL);
 	x_prim_register(p_base, NULL);
 
 	p_a = x_mksatom(p_base, X_OBJ_FLAG_NONE, (x_int_t)1);
@@ -162,7 +161,7 @@ static char *test_core_def_set(void)
 {
 	x_obj_t *p_base, *p_args, *p_result;
 
-	p_base = x_interp_make(NULL, NULL);
+	p_base = x_eval_make(NULL, NULL);
 	x_prim_register(p_base, NULL);
 
 	/* (def x 42) -> bind x to 42 */
@@ -201,7 +200,7 @@ static char *test_core_fn(void)
 {
 	x_obj_t *p_base, *p_args, *p_result;
 
-	p_base = x_interp_make(NULL, NULL);
+	p_base = x_eval_make(NULL, NULL);
 	x_prim_register(p_base, NULL);
 
 	/* (fn (x) x) -> creates a procedure */
@@ -225,7 +224,7 @@ static char *test_core_op(void)
 {
 	x_obj_t *p_base, *p_args, *p_result;
 
-	p_base = x_interp_make(NULL, NULL);
+	p_base = x_eval_make(NULL, NULL);
 	x_prim_register(p_base, NULL);
 
 	/* (op args #f args) -> creates an operative */
@@ -245,7 +244,7 @@ static char *test_core_eval(void)
 {
 	x_obj_t *p_base, *p_args;
 
-	p_base = x_interp_make(NULL, NULL);
+	p_base = x_eval_make(NULL, NULL);
 	x_prim_register(p_base, NULL);
 
 	/* (def myval 42), then (eval myval) -> sets tco_expr to 42 */
@@ -261,7 +260,7 @@ static char *test_core_eval(void)
 			x_mkspair(p_base, X_OBJ_FLAG_NONE, p_sym, NULL));
 		x_prim_eval(p_base, p_args);
 		_it_should("eval without env sets tco_expr",
-			x_firstobj(x_interp_field_tco_expr(p_base)) != NULL);
+			x_firstobj(x_eval_field_tco_expr(p_base)) != NULL);
 	}
 
 	test_cleanup(p_base);
@@ -272,7 +271,7 @@ static char *test_core_eval_immediate(void)
 {
 	x_obj_t *p_base, *p_args, *p_result;
 
-	p_base = x_interp_make(NULL, NULL);
+	p_base = x_eval_make(NULL, NULL);
 	x_prim_register(p_base, NULL);
 
 	/* (def y 77), then (eval! 'y) -> 77 */
@@ -295,7 +294,7 @@ static char *test_core_match(void)
 {
 	x_obj_t *p_base, *p_args;
 
-	p_base = x_interp_make(NULL, NULL);
+	p_base = x_eval_make(NULL, NULL);
 	x_prim_register(p_base, NULL);
 
 	/* (match (nil 1) (#t 42)) -> tco_expr = 42 */
@@ -306,16 +305,16 @@ static char *test_core_match(void)
 			x_mkspair(p_base, X_OBJ_FLAG_NONE, x_mksatom(p_base, X_OBJ_FLAG_NONE, (x_int_t)1), NULL)),
 		x_mkspair(p_base, X_OBJ_FLAG_NONE,
 			/* second clause: (#t 42) -- test is #t, match */
-			x_mkspair(p_base, X_OBJ_FLAG_NONE, x_interp_field_true(p_base),
+			x_mkspair(p_base, X_OBJ_FLAG_NONE, x_eval_field_true(p_base),
 				x_mkspair(p_base, X_OBJ_FLAG_NONE, x_mksatom(p_base, X_OBJ_FLAG_NONE, (x_int_t)42), NULL)),
 			NULL)));
 	x_prim_match(p_base, p_args);
 	_it_should("match sets tco_expr to matched body",
-		x_firstobj(x_interp_field_tco_expr(p_base)) != NULL
-		&& x_atomint(x_firstobj(x_interp_field_tco_expr(p_base))) == 42);
+		x_firstobj(x_eval_field_tco_expr(p_base)) != NULL
+		&& x_atomint(x_firstobj(x_eval_field_tco_expr(p_base))) == 42);
 
 	/* (match (nil 1)) -> no match, tco_expr unchanged from above, returns nil */
-	x_firstobj(x_interp_field_tco_expr(p_base)) = NULL;
+	x_firstobj(x_eval_field_tco_expr(p_base)) = NULL;
 	p_args = x_mkspair(p_base, X_OBJ_FLAG_NONE, NULL,
 		x_mkspair(p_base, X_OBJ_FLAG_NONE,
 		x_mkspair(p_base, X_OBJ_FLAG_NONE, NULL,
@@ -323,7 +322,7 @@ static char *test_core_match(void)
 		NULL));
 	x_prim_match(p_base, p_args);
 	_it_should("match with no truthy test leaves tco_expr nil",
-		x_firstobj(x_interp_field_tco_expr(p_base)) == NULL);
+		x_firstobj(x_eval_field_tco_expr(p_base)) == NULL);
 
 	test_cleanup(p_base);
 	return NULL;
@@ -333,7 +332,7 @@ static char *test_core_guard(void)
 {
 	x_obj_t *p_base, *p_args, *p_result;
 
-	p_base = x_interp_make(NULL, NULL);
+	p_base = x_eval_make(NULL, NULL);
 	x_prim_register(p_base, NULL);
 
 	/* (guard (e 99) 42) -> 42 (no error) */
@@ -348,7 +347,7 @@ static char *test_core_guard(void)
 	_it_should("guard returns body result when no error",
 		x_atomint(p_result) == 42);
 	_it_should("guard pops handler",
-		x_firstobj(x_interp_field_error_handler(p_base)) == NULL);
+		x_firstobj(x_eval_field_error_handler(p_base)) == NULL);
 
 	test_cleanup(p_base);
 	return NULL;
@@ -361,16 +360,16 @@ static char *test_core_wrap_unwrap(void)
 {
 	x_obj_t *p_base, *p_args, *p_result, *p_op;
 
-	p_base = x_interp_make(NULL, NULL);
+	p_base = x_eval_make(NULL, NULL);
 	x_prim_register(p_base, NULL);
 
 	/* Create operative, bind as 'myop' */
 	p_op = x_mkop(p_base,
 		x_mksymbol(p_base, "args"), NULL,
 		x_mkspair(p_base, X_OBJ_FLAG_NONE, x_mksatom(p_base, X_OBJ_FLAG_NONE, (x_int_t)1), NULL),
-		x_firstobj(x_interp_field_env_alist(p_base)));
+		x_firstobj(x_eval_field_env_alist(p_base)));
 
-	x_interp_env_alist_extend(p_base,
+	x_eval_env_alist_extend(p_base,
 		x_mkspair(p_base, X_OBJ_FLAG_NONE, x_mksymbol(p_base, "myop"), p_op));
 
 	/* (wrap myop) -> applicative */
@@ -381,7 +380,7 @@ static char *test_core_wrap_unwrap(void)
 		p_result != NULL);
 
 	/* Bind wrapped, then (unwrap it) -> gets underlying combiner back */
-	x_interp_env_alist_extend(p_base,
+	x_eval_env_alist_extend(p_base,
 		x_mkspair(p_base, X_OBJ_FLAG_NONE, x_mksymbol(p_base, "wrapped"), p_result));
 
 	p_args = x_mkspair(p_base, X_OBJ_FLAG_NONE, NULL,
@@ -398,7 +397,7 @@ static char *test_core_base(void)
 {
 	x_obj_t *p_base, *p_result;
 
-	p_base = x_interp_make(NULL, NULL);
+	p_base = x_eval_make(NULL, NULL);
 	x_prim_register(p_base, NULL);
 
 	p_result = x_prim_base(p_base, NULL);
@@ -413,7 +412,7 @@ static char *test_core_seq(void)
 {
 	x_obj_t *p_base, *p_args, *p_body_form;
 
-	p_base = x_interp_make(NULL, NULL);
+	p_base = x_eval_make(NULL, NULL);
 	x_prim_register(p_base, NULL);
 
 	/* (%seq 1 2) -> evals first arg, sets tco_expr to second */
@@ -423,7 +422,7 @@ static char *test_core_seq(void)
 		x_mkspair(p_base, X_OBJ_FLAG_NONE, p_body_form, NULL)));
 	x_prim_seq(p_base, p_args);
 	_it_should("seq sets tco_expr to second arg",
-		x_firstobj(x_interp_field_tco_expr(p_base)) == p_body_form);
+		x_firstobj(x_eval_field_tco_expr(p_base)) == p_body_form);
 
 	test_cleanup(p_base);
 	return NULL;
@@ -433,11 +432,11 @@ static char *test_core_tail_eval(void)
 {
 	x_obj_t *p_base, *p_args, *p_expr, *p_env;
 
-	p_base = x_interp_make(NULL, NULL);
+	p_base = x_eval_make(NULL, NULL);
 	x_prim_register(p_base, NULL);
 
 	p_expr = x_mksatom(p_base, X_OBJ_FLAG_NONE, (x_int_t)42);
-	p_env = x_firstobj(x_interp_field_env_alist(p_base));
+	p_env = x_firstobj(x_eval_field_env_alist(p_base));
 
 	/* Bind expr and env */
 	p_args = x_mkspair(p_base, X_OBJ_FLAG_NONE, NULL,
@@ -455,9 +454,9 @@ static char *test_core_tail_eval(void)
 		x_mkspair(p_base, X_OBJ_FLAG_NONE, x_mksymbol(p_base, "tenv"), NULL)));
 	x_prim_tail_eval(p_base, p_args);
 	_it_should("tail-eval sets tco_expr",
-		x_firstobj(x_interp_field_tco_expr(p_base)) == p_expr);
+		x_firstobj(x_eval_field_tco_expr(p_base)) == p_expr);
 	_it_should("tail-eval sets env",
-		x_firstobj(x_interp_field_env_alist(p_base)) == p_env);
+		x_firstobj(x_eval_field_env_alist(p_base)) == p_env);
 
 	test_cleanup(p_base);
 	return NULL;
@@ -468,7 +467,7 @@ static char *test_core_rest(void)
 	x_obj_t *p_base, *p_args, *p_result;
 	x_obj_t *p_a, *p_b, *p_pair;
 
-	p_base = x_interp_make(NULL, NULL);
+	p_base = x_eval_make(NULL, NULL);
 	x_prim_register(p_base, NULL);
 
 	p_a = x_mksatom(p_base, X_OBJ_FLAG_NONE, (x_int_t)1);
@@ -476,7 +475,7 @@ static char *test_core_rest(void)
 	p_pair = x_mklist(p_base, p_a, p_b);
 
 	/* Bind pair so prim_rest can eval it */
-	x_interp_env_alist_extend(p_base,
+	x_eval_env_alist_extend(p_base,
 		x_mkspair(p_base, X_OBJ_FLAG_NONE, x_mksymbol(p_base, "pp"), p_pair));
 
 	/* (rest pp) -> p_b */
@@ -497,16 +496,16 @@ static char *test_core_eval_with_env(void)
 	x_obj_t *p_base, *p_args, *p_result;
 	x_obj_t *p_env, *p_sym, *p_quote_form;
 
-	p_base = x_interp_make(NULL, NULL);
+	p_base = x_eval_make(NULL, NULL);
 	x_prim_register(p_base, NULL);
 
 	/* Create a custom env with binding: z -> 123 */
 	p_sym = x_mksymbol(p_base, "z");
-	p_env = x_firstobj(x_interp_field_env_alist(p_base));
+	p_env = x_firstobj(x_eval_field_env_alist(p_base));
 	p_env = x_mklist(p_base,
 		x_mkspair(p_base, X_OBJ_FLAG_NONE, p_sym, x_mksatom(p_base, X_OBJ_FLAG_NONE, (x_int_t)123)),
 		p_env);
-	x_interp_env_alist_extend(p_base,
+	x_eval_env_alist_extend(p_base,
 		x_mkspair(p_base, X_OBJ_FLAG_NONE, x_mksymbol(p_base, "myenv"), p_env));
 
 	/* Build (lit z) — evaluates to the symbol z */
@@ -525,7 +524,7 @@ static char *test_core_eval_with_env(void)
 
 	/* Verify original env is restored */
 	_it_should("eval with env restores original env",
-		x_firstobj(x_interp_field_env_alist(p_base)) != p_env);
+		x_firstobj(x_eval_field_env_alist(p_base)) != p_env);
 
 	test_cleanup(p_base);
 	return NULL;
@@ -536,7 +535,7 @@ static char *test_core_apply(void)
 	x_obj_t *p_base, *p_args;
 	x_obj_t *p_fn, *p_arglist;
 
-	p_base = x_interp_make(NULL, NULL);
+	p_base = x_eval_make(NULL, NULL);
 	x_prim_register(p_base, NULL);
 
 	/* Create (fn (x) x) — identity function */
@@ -547,22 +546,22 @@ static char *test_core_apply(void)
 	p_fn = x_prim_closure(p_base, p_args);
 
 	/* Bind fn and arg list */
-	x_interp_env_alist_extend(p_base,
+	x_eval_env_alist_extend(p_base,
 		x_mkspair(p_base, X_OBJ_FLAG_NONE, x_mksymbol(p_base, "idfn"), p_fn));
 	p_arglist = x_mklist(p_base,
 		x_mksatom(p_base, X_OBJ_FLAG_NONE, (x_int_t)42), NULL);
-	x_interp_env_alist_extend(p_base,
+	x_eval_env_alist_extend(p_base,
 		x_mkspair(p_base, X_OBJ_FLAG_NONE, x_mksymbol(p_base, "args"), p_arglist));
 
 	/* (apply idfn args) — single trailing list, procedure path.
 	 * apply + procedure uses TCO: sets tco_expr = x, returns NULL. */
-	x_firstobj(x_interp_field_tco_expr(p_base)) = NULL;
+	x_firstobj(x_eval_field_tco_expr(p_base)) = NULL;
 	p_args = x_mkspair(p_base, X_OBJ_FLAG_NONE, NULL,
 		x_mkspair(p_base, X_OBJ_FLAG_NONE, x_mksymbol(p_base, "idfn"),
 		x_mkspair(p_base, X_OBJ_FLAG_NONE, x_mksymbol(p_base, "args"), NULL)));
 	x_prim_apply(p_base, p_args);
 	_it_should("apply single-arg sets tco_expr for TCO",
-		! x_obj_isnil(p_base, x_firstobj(x_interp_field_tco_expr(p_base))));
+		! x_obj_isnil(p_base, x_firstobj(x_eval_field_tco_expr(p_base))));
 
 	/* Test apply with prefix + tail: create (fn (a b) a) */
 	{
@@ -574,27 +573,27 @@ static char *test_core_apply(void)
 				x_mkspair(p_base, X_OBJ_FLAG_NONE, x_mksymbol(p_base, "b"), NULL)),
 			x_mkspair(p_base, X_OBJ_FLAG_NONE, x_mksymbol(p_base, "a"), NULL)));
 		p_fn2 = x_prim_closure(p_base, p_args);
-		x_interp_env_alist_extend(p_base,
+		x_eval_env_alist_extend(p_base,
 			x_mkspair(p_base, X_OBJ_FLAG_NONE, x_mksymbol(p_base, "fn2"), p_fn2));
 
 		/* Tail list: bind '(200) to tl */
 		p_tl = x_mklist(p_base,
 			x_mksatom(p_base, X_OBJ_FLAG_NONE, (x_int_t)200), NULL);
-		x_interp_env_alist_extend(p_base,
+		x_eval_env_alist_extend(p_base,
 			x_mkspair(p_base, X_OBJ_FLAG_NONE, x_mksymbol(p_base, "tl"), p_tl));
 
 		/* (apply fn2 100 tl) — prefix 100, tail (200): 2-arg splice path.
 		 * evlis on (100 tl) -> (100 (200)), walk to second-to-last (100),
 		 * splice: rest(100-node) = first(rest(100-node)) = (200)
 		 * -> p_vals = (100 200) */
-		x_firstobj(x_interp_field_tco_expr(p_base)) = NULL;
+		x_firstobj(x_eval_field_tco_expr(p_base)) = NULL;
 		p_args = x_mkspair(p_base, X_OBJ_FLAG_NONE, NULL,
 			x_mkspair(p_base, X_OBJ_FLAG_NONE, x_mksymbol(p_base, "fn2"),
 			x_mkspair(p_base, X_OBJ_FLAG_NONE, x_mksatom(p_base, X_OBJ_FLAG_NONE, (x_int_t)100),
 			x_mkspair(p_base, X_OBJ_FLAG_NONE, x_mksymbol(p_base, "tl"), NULL))));
 		x_prim_apply(p_base, p_args);
 		_it_should("apply prefix+tail sets tco_expr",
-			! x_obj_isnil(p_base, x_firstobj(x_interp_field_tco_expr(p_base))));
+			! x_obj_isnil(p_base, x_firstobj(x_eval_field_tco_expr(p_base))));
 	}
 
 	/* Test apply with 3 prefix args + tail: walk loop (line 124) */
@@ -609,16 +608,16 @@ static char *test_core_apply(void)
 			x_mkspair(p_base, X_OBJ_FLAG_NONE, x_mksymbol(p_base, "c"), NULL))),
 			x_mkspair(p_base, X_OBJ_FLAG_NONE, x_mksymbol(p_base, "a"), NULL)));
 		p_fn3 = x_prim_closure(p_base, p_args);
-		x_interp_env_alist_extend(p_base,
+		x_eval_env_alist_extend(p_base,
 			x_mkspair(p_base, X_OBJ_FLAG_NONE, x_mksymbol(p_base, "fn3"), p_fn3));
 
 		p_tl = x_mklist(p_base,
 			x_mksatom(p_base, X_OBJ_FLAG_NONE, (x_int_t)300), NULL);
-		x_interp_env_alist_extend(p_base,
+		x_eval_env_alist_extend(p_base,
 			x_mkspair(p_base, X_OBJ_FLAG_NONE, x_mksymbol(p_base, "tl3"), p_tl));
 
 		/* (apply fn3 100 200 tl3) — 3 args total: 2 prefix + tail */
-		x_firstobj(x_interp_field_tco_expr(p_base)) = NULL;
+		x_firstobj(x_eval_field_tco_expr(p_base)) = NULL;
 		p_args = x_mkspair(p_base, X_OBJ_FLAG_NONE, NULL,
 			x_mkspair(p_base, X_OBJ_FLAG_NONE, x_mksymbol(p_base, "fn3"),
 			x_mkspair(p_base, X_OBJ_FLAG_NONE, x_mksatom(p_base, X_OBJ_FLAG_NONE, (x_int_t)100),
@@ -626,7 +625,7 @@ static char *test_core_apply(void)
 			x_mkspair(p_base, X_OBJ_FLAG_NONE, x_mksymbol(p_base, "tl3"), NULL)))));
 		x_prim_apply(p_base, p_args);
 		_it_should("apply 3-prefix+tail sets tco_expr",
-			! x_obj_isnil(p_base, x_firstobj(x_interp_field_tco_expr(p_base))));
+			! x_obj_isnil(p_base, x_firstobj(x_eval_field_tco_expr(p_base))));
 	}
 
 	test_cleanup(p_base);
@@ -636,7 +635,7 @@ static char *test_core_apply(void)
 	{
 		x_obj_t *p_op, *p_tl;
 
-		p_base = x_interp_make(NULL, NULL);
+		p_base = x_eval_make(NULL, NULL);
 		x_prim_register(p_base, NULL);
 
 		/* Create (op (x) x) — identity operative */
@@ -645,12 +644,12 @@ static char *test_core_apply(void)
 			x_mkspair(p_base, X_OBJ_FLAG_NONE, x_mksymbol(p_base, "x"), NULL),
 			x_mkspair(p_base, X_OBJ_FLAG_NONE, x_mksymbol(p_base, "x"), NULL)));
 		p_op = x_prim_operative(p_base, p_args);
-		x_interp_env_alist_extend(p_base,
+		x_eval_env_alist_extend(p_base,
 			x_mkspair(p_base, X_OBJ_FLAG_NONE, x_mksymbol(p_base, "myop"), p_op));
 
 		p_tl = x_mklist(p_base,
 			x_mksatom(p_base, X_OBJ_FLAG_NONE, (x_int_t)42), NULL);
-		x_interp_env_alist_extend(p_base,
+		x_eval_env_alist_extend(p_base,
 			x_mkspair(p_base, X_OBJ_FLAG_NONE, x_mksymbol(p_base, "optl"), p_tl));
 
 		/* (apply myop optl) */
@@ -670,7 +669,7 @@ static char *test_core_error_guard_catch(void)
 {
 	x_obj_t *p_base, *p_result;
 
-	p_base = x_interp_make(NULL, NULL);
+	p_base = x_eval_make(NULL, NULL);
 	x_prim_register(p_base, NULL);
 
 	/* (guard (e e) (error 42)) -> guard catches error, e = 42, returns e */
@@ -718,7 +717,7 @@ static char *test_core_error_guard_catch(void)
 		_it_should("guard handler receives error value",
 			x_atomint(p_result) == 42);
 		_it_should("guard pops handler after catch",
-			x_firstobj(x_interp_field_error_handler(p_base)) == NULL);
+			x_firstobj(x_eval_field_error_handler(p_base)) == NULL);
 	}
 
 	test_cleanup(p_base);
@@ -729,7 +728,7 @@ static char *test_core_set_unbound(void)
 {
 	x_obj_t *p_base, *p_args, *p_result;
 
-	p_base = x_interp_make(NULL, NULL);
+	p_base = x_eval_make(NULL, NULL);
 	x_prim_register(p_base, NULL);
 
 	/* (set unbound-name 42) should trigger error path.
@@ -741,9 +740,9 @@ static char *test_core_set_unbound(void)
 		p_handler = x_mkspair(p_base, X_OBJ_FLAG_NONE,
 			x_mkptr(p_base, &jmp),
 			x_mkspair(p_base, X_OBJ_FLAG_NONE,
-				x_firstobj(x_interp_field_env_alist(p_base)),
+				x_firstobj(x_eval_field_env_alist(p_base)),
 				x_mkspair(p_base, X_OBJ_FLAG_NONE, NULL, NULL)));
-		x_firstobj(x_interp_field_error_handler(p_base)) = p_handler;
+		x_firstobj(x_eval_field_error_handler(p_base)) = p_handler;
 
 		if (setjmp(jmp) == 0) {
 			p_args = x_mkspair(p_base, X_OBJ_FLAG_NONE, NULL,
@@ -759,7 +758,7 @@ static char *test_core_set_unbound(void)
 				p_result != NULL);
 		}
 
-		x_firstobj(x_interp_field_error_handler(p_base)) = NULL;
+		x_firstobj(x_eval_field_error_handler(p_base)) = NULL;
 	}
 
 	test_cleanup(p_base);
@@ -777,7 +776,7 @@ static char *test_core_error_no_handler_str(void)
 {
 	x_obj_t *p_base, *p_args, *p_ret;
 
-	p_base = x_interp_make(NULL, NULL);
+	p_base = x_eval_make(NULL, NULL);
 	x_prim_register(p_base, NULL);
 
 	/* Install test error hook */
@@ -785,7 +784,7 @@ static char *test_core_error_no_handler_str(void)
 
 	/* No guard handler; string error message */
 	test_error_hook_called = 0;
-	x_firstobj(x_interp_field_error_handler(p_base)) = NULL;
+	x_firstobj(x_eval_field_error_handler(p_base)) = NULL;
 	p_args = x_mkspair(p_base, X_OBJ_FLAG_NONE, NULL,
 		x_mkspair(p_base, X_OBJ_FLAG_NONE, x_mkstr(p_base, "test error"), NULL));
 	p_ret = x_prim_error(p_base, p_args);
@@ -796,7 +795,7 @@ static char *test_core_error_no_handler_str(void)
 
 	/* No guard handler; non-string error message */
 	test_error_hook_called = 0;
-	x_firstobj(x_interp_field_error_handler(p_base)) = NULL;
+	x_firstobj(x_eval_field_error_handler(p_base)) = NULL;
 	p_args = x_mkspair(p_base, X_OBJ_FLAG_NONE, NULL,
 		x_mkspair(p_base, X_OBJ_FLAG_NONE, x_mksatom(p_base, X_OBJ_FLAG_NONE, 42), NULL));
 	p_ret = x_prim_error(p_base, p_args);

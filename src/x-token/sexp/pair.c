@@ -35,12 +35,12 @@ x_obj_t *x_sexp_pair_write(x_obj_t *p_base, x_obj_t *p_args)
 	x_spair_t wrap = x_obj_set(NULL, X_OBJ_FLAG_NONE, { str }, { NULL });
 
 	x_atomstr(str) = "(";
-	x_interp_write_str(p_base, (x_obj_t *)&wrap);
+	x_eval_write_str(p_base, (x_obj_t *)&wrap);
 
 	for (;;) {
 		if (x_obj_isnil(p_base, x_firstobj(p_obj))) {
 			x_atomstr(str) = "()";
-			x_interp_write_str(p_base, (x_obj_t *)&wrap);
+			x_eval_write_str(p_base, (x_obj_t *)&wrap);
 		} else {
 			x_firstobj((x_obj_t *)write_wrap) = x_firstobj(p_obj);
 			x_token_write(p_base, (x_obj_t *)write_wrap);
@@ -50,26 +50,26 @@ x_obj_t *x_sexp_pair_write(x_obj_t *p_base, x_obj_t *p_args)
 
 		if (x_obj_isnil(p_base, p_obj)) {
 			x_atomstr(str) = ")";
-			x_interp_write_str(p_base, (x_obj_t *)&wrap);
+			x_eval_write_str(p_base, (x_obj_t *)&wrap);
 
 			break;
 		}
 
 		if ( ! x_obj_type_isspair(p_obj)) {
 			x_atomstr(str) = " . ";
-			x_interp_write_str(p_base, (x_obj_t *)&wrap);
+			x_eval_write_str(p_base, (x_obj_t *)&wrap);
 
 			x_firstobj((x_obj_t *)write_wrap) = p_obj;
 			x_token_write(p_base, (x_obj_t *)write_wrap);
 
 			x_atomstr(str) = ")";
-			x_interp_write_str(p_base, (x_obj_t *)&wrap);
+			x_eval_write_str(p_base, (x_obj_t *)&wrap);
 
 			break;
 		}
 
 		x_atomstr(str) = " ";
-		x_interp_write_str(p_base, (x_obj_t *)&wrap);
+		x_eval_write_str(p_base, (x_obj_t *)&wrap);
 	}
 
 	return p_obj;
@@ -93,12 +93,12 @@ x_obj_t *x_sexp_pair_display(x_obj_t *p_base, x_obj_t *p_args)
 	x_spair_t wrap = x_obj_set(NULL, X_OBJ_FLAG_NONE, { str }, { NULL });
 
 	x_atomstr(str) = "(";
-	x_interp_write_str(p_base, (x_obj_t *)&wrap);
+	x_eval_write_str(p_base, (x_obj_t *)&wrap);
 
 	for (;;) {
 		if (x_obj_isnil(p_base, x_firstobj(p_obj))) {
 			x_atomstr(str) = "()";
-			x_interp_write_str(p_base, (x_obj_t *)&wrap);
+			x_eval_write_str(p_base, (x_obj_t *)&wrap);
 		} else {
 			x_firstobj((x_obj_t *)disp_wrap) = x_firstobj(p_obj);
 			x_token_display(p_base, (x_obj_t *)disp_wrap);
@@ -108,26 +108,26 @@ x_obj_t *x_sexp_pair_display(x_obj_t *p_base, x_obj_t *p_args)
 
 		if (x_obj_isnil(p_base, p_obj)) {
 			x_atomstr(str) = ")";
-			x_interp_write_str(p_base, (x_obj_t *)&wrap);
+			x_eval_write_str(p_base, (x_obj_t *)&wrap);
 
 			break;
 		}
 
 		if ( ! x_obj_type_isspair(p_obj)) {
 			x_atomstr(str) = " . ";
-			x_interp_write_str(p_base, (x_obj_t *)&wrap);
+			x_eval_write_str(p_base, (x_obj_t *)&wrap);
 
 			x_firstobj((x_obj_t *)disp_wrap) = p_obj;
 			x_token_display(p_base, (x_obj_t *)disp_wrap);
 
 			x_atomstr(str) = ")";
-			x_interp_write_str(p_base, (x_obj_t *)&wrap);
+			x_eval_write_str(p_base, (x_obj_t *)&wrap);
 
 			break;
 		}
 
 		x_atomstr(str) = " ";
-		x_interp_write_str(p_base, (x_obj_t *)&wrap);
+		x_eval_write_str(p_base, (x_obj_t *)&wrap);
 	}
 
 	return p_obj;

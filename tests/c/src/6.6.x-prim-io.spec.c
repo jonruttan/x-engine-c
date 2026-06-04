@@ -20,7 +20,6 @@
 #include "ext/x-expr/src/x.c"
 #include "src/x-alist.c"
 #include "ext/x-expr/src/x-base.c"
-#include "src/x-interp.c"
 #include "src/x-eval.c"
 #include "src/x-type.c"
 #include "src/x-type/atom.c"
@@ -106,7 +105,7 @@ static char *test_io_display(void)
 	x_obj_t *p_base, *p_args;
 	x_char_t s[64];
 
-	p_base = x_interp_make(NULL, NULL);
+	p_base = x_eval_make(NULL, NULL);
 	x_prim_register(p_base, NULL);
 
 	helper_file_buffer_ptr[TEST_HELPER_FILE_STDOUT] = s;
@@ -144,7 +143,7 @@ static char *test_io_write(void)
 	x_obj_t *p_base, *p_args;
 	x_char_t s[64];
 
-	p_base = x_interp_make(NULL, NULL);
+	p_base = x_eval_make(NULL, NULL);
 	x_prim_register(p_base, NULL);
 
 	helper_file_buffer_ptr[TEST_HELPER_FILE_STDOUT] = s;
@@ -168,7 +167,7 @@ static char *test_io_heap_count(void)
 {
 	x_obj_t *p_base, *p_result;
 
-	p_base = x_interp_make(NULL, NULL);
+	p_base = x_eval_make(NULL, NULL);
 	x_prim_register(p_base, NULL);
 
 	p_result = x_prim_heap_count(p_base, NULL);
@@ -186,7 +185,7 @@ static char *test_io_read_char(void)
 	x_obj_t *p_base, *p_result;
 	x_char_t buffer[32];
 
-	p_base = x_interp_make(NULL, NULL);
+	p_base = x_eval_make(NULL, NULL);
 	x_prim_register(p_base, NULL);
 
 	/* Set up stdin with 'A' */
@@ -194,7 +193,7 @@ static char *test_io_read_char(void)
 	helper_file_reset();
 
 	/* Create and set buffer */
-	x_interp_buffer_push(p_base, x_mkbuffer(p_base, buffer));
+	x_eval_buffer_push(p_base, x_mkbuffer(p_base, buffer));
 
 	p_result = x_prim_read_char(p_base, NULL);
 	_it_should("read-char returns a char",
@@ -211,7 +210,7 @@ static char *test_io_write_to_string(void)
 	x_obj_t *p_base, *p_args, *p_result;
 
 	helper_set_alloc(MEM_SYSTEM);
-	p_base = x_interp_make(NULL, NULL);
+	p_base = x_eval_make(NULL, NULL);
 	x_prim_register(p_base, NULL);
 
 	/* (write-to-string 42) -> "42" */
@@ -253,7 +252,7 @@ static char *test_io_read_expr(void)
 	x_obj_t *p_base, *p_result;
 	x_char_t buffer[32];
 
-	p_base = x_interp_make(NULL, NULL);
+	p_base = x_eval_make(NULL, NULL);
 	x_prim_register(p_base, NULL);
 
 	/* Register types needed by the tokenizer */
@@ -265,7 +264,7 @@ static char *test_io_read_expr(void)
 	helper_file_buffer_ptr[TEST_HELPER_FILE_STDIN] = "42\n";
 	helper_file_buffer_remaining[TEST_HELPER_FILE_STDIN] = 3;
 	helper_file_reset();
-	x_interp_buffer_push(p_base, x_mkbuffer(p_base, buffer));
+	x_eval_buffer_push(p_base, x_mkbuffer(p_base, buffer));
 
 	p_result = x_prim_read_expr(p_base, NULL);
 	_it_should("read returns an integer",
@@ -283,14 +282,14 @@ static char *test_io_read_char_eof(void)
 	x_obj_t *p_base, *p_result;
 	x_char_t buffer[32];
 
-	p_base = x_interp_make(NULL, NULL);
+	p_base = x_eval_make(NULL, NULL);
 	x_prim_register(p_base, NULL);
 
 	/* Empty stdin — read-char should return NULL (EOF) */
 	helper_file_buffer_ptr[TEST_HELPER_FILE_STDIN] = "";
 	helper_file_buffer_remaining[TEST_HELPER_FILE_STDIN] = 0;
 	helper_file_reset();
-	x_interp_buffer_push(p_base, x_mkbuffer(p_base, buffer));
+	x_eval_buffer_push(p_base, x_mkbuffer(p_base, buffer));
 
 	p_result = x_prim_read_char(p_base, NULL);
 	_it_should("read-char returns NULL on EOF", NULL == p_result);
@@ -304,7 +303,7 @@ static char *test_io_clock(void)
 {
 	x_obj_t *p_base, *p_result;
 
-	p_base = x_interp_make(NULL, NULL);
+	p_base = x_eval_make(NULL, NULL);
 	x_prim_register(p_base, NULL);
 
 	p_result = x_prim_clock(p_base, NULL);
@@ -322,7 +321,7 @@ static char *test_io_heap_mark_sweep_collect(void)
 	x_obj_t *p_base;
 	long count1, count2;
 
-	p_base = x_interp_make(NULL, NULL);
+	p_base = x_eval_make(NULL, NULL);
 	x_prim_register(p_base, NULL);
 
 	/* Allocate some unreachable objects */
@@ -358,7 +357,7 @@ static char *test_io_repl(void)
 	x_obj_t *p_base;
 	x_char_t buffer[64], out[64];
 
-	p_base = x_interp_make(NULL, NULL);
+	p_base = x_eval_make(NULL, NULL);
 	x_prim_register(p_base, NULL);
 
 	/* Register types needed by the tokenizer */
@@ -370,7 +369,7 @@ static char *test_io_repl(void)
 	helper_file_buffer_remaining[TEST_HELPER_FILE_STDIN] = 3;
 	helper_file_buffer_ptr[TEST_HELPER_FILE_STDOUT] = out;
 	helper_file_reset();
-	x_interp_buffer_push(p_base, x_mkbuffer(p_base, buffer));
+	x_eval_buffer_push(p_base, x_mkbuffer(p_base, buffer));
 
 	x_prim_repl(p_base, NULL);
 	_it_should("repl returns without error on EOF", 1);

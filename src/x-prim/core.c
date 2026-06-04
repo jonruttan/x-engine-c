@@ -14,7 +14,7 @@
  * # Includes
  */
 #include "x-prim.h"
-#include "x-interp.h"
+#include "x-eval.h"
 #include "x-eval.h"
 #include "x-type/int.h"
 #include "x-type/list.h"
@@ -101,36 +101,36 @@ static x_obj_t *x_prim_apply(x_obj_t *p_base, x_obj_t *p_args)
 	}
 
 	/* Root p_fn and p_vals so GC doesn't free them during procedure setup */
-	x_obj_push_field(p_base, &x_interp_field_eval_list(p_base), p_vals, X_OBJ_FLAG_NONE);
-	x_obj_push_field(p_base, &x_interp_field_eval_list(p_base), p_fn, X_OBJ_FLAG_NONE);
+	x_obj_push_field(p_base, &x_eval_field_eval_list(p_base), p_vals, X_OBJ_FLAG_NONE);
+	x_obj_push_field(p_base, &x_eval_field_eval_list(p_base), p_fn, X_OBJ_FLAG_NONE);
 
 	/* Procedure: bind params, eval body with TCO for eval trampoline. */
 	if (x_obj_type_isprocedure(p_base, p_fn)) {
 		/* Push ((env . boundary) . (bst . shadow_head)) onto save-stack */
-		x_interp_field_save_stack(p_base) = x_mkspair(p_base, X_OBJ_FLAG_NONE,
+		x_eval_field_save_stack(p_base) = x_mkspair(p_base, X_OBJ_FLAG_NONE,
 			x_mkspair(p_base, X_OBJ_FLAG_NONE,
-				x_mkspair(p_base, X_OBJ_FLAG_NONE, x_firstobj(x_interp_field_env_alist(p_base)),
-				                   x_interp_field_env_local_boundary(p_base)),
-				x_mkspair(p_base, X_OBJ_FLAG_NONE, x_interp_field_env_global_tree(p_base),
-				                   x_interp_field_shadow_list(p_base))),
-			x_interp_field_save_stack(p_base));
+				x_mkspair(p_base, X_OBJ_FLAG_NONE, x_firstobj(x_eval_field_env_alist(p_base)),
+				                   x_eval_field_env_local_boundary(p_base)),
+				x_mkspair(p_base, X_OBJ_FLAG_NONE, x_eval_field_env_global_tree(p_base),
+				                   x_eval_field_shadow_list(p_base))),
+			x_eval_field_save_stack(p_base));
 
 		/* Set boundary and BST to closure's captured values.  Skip the
 		 * BST swap if the closure was captured before any top-level def
 		 * existed (captured BST is NULL): use the current live BST so
 		 * lookups can still find anything defined since. */
-		x_interp_field_env_local_boundary(p_base) = x_procenv(p_fn);
+		x_eval_field_env_local_boundary(p_base) = x_procenv(p_fn);
 		if (x_procbst(p_fn) != NULL) {
-			x_interp_field_env_global_tree(p_base) = x_procbst(p_fn);
+			x_eval_field_env_global_tree(p_base) = x_procbst(p_fn);
 		}
 
 		p_vals = x_mkspair(p_base, X_OBJ_FLAG_NONE, p_fn, p_vals);
-		x_firstobj(x_interp_field_env_alist(p_base)) = x_env_extend(
+		x_firstobj(x_eval_field_env_alist(p_base)) = x_env_extend(
 			p_base, x_procenv(p_fn), x_procparams(p_fn), p_vals);
 
 		/* Unroot */
-		x_obj_pop_field(p_base, &x_interp_field_eval_list(p_base));
-		x_obj_pop_field(p_base, &x_interp_field_eval_list(p_base));
+		x_obj_pop_field(p_base, &x_eval_field_eval_list(p_base));
+		x_obj_pop_field(p_base, &x_eval_field_eval_list(p_base));
 
 		return x_eval_body_tco(p_base, x_procbody(p_fn));
 	}
@@ -143,8 +143,8 @@ static x_obj_t *x_prim_apply(x_obj_t *p_base, x_obj_t *p_args)
 		x_obj_t *p_result = x_callable_apply(p_base, (x_obj_t *)apply_args);
 
 		/* Unroot */
-		x_obj_pop_field(p_base, &x_interp_field_eval_list(p_base));
-		x_obj_pop_field(p_base, &x_interp_field_eval_list(p_base));
+		x_obj_pop_field(p_base, &x_eval_field_eval_list(p_base));
+		x_obj_pop_field(p_base, &x_eval_field_eval_list(p_base));
 
 		return p_result;
 	}
@@ -175,20 +175,20 @@ static x_obj_t *x_prim_eval(x_obj_t *p_base, x_obj_t *p_args)
 		/* Push ((env . boundary) . (bst . shadow_head)) onto save-stack */
 		x_tco_compound_save(p_base);
 
-		x_firstobj(x_interp_field_env_alist(p_base)) = p_env;
+		x_firstobj(x_eval_field_env_alist(p_base)) = p_env;
 		/* Don't change boundary or BST — eval-with-env preserves scope context */
 		p_result = x_eval_arg(p_base, p_expr);
 
 		/* Pop save-stack and restore env + boundary + bst + shadow */
-		x_tco_restore(p_base, x_firstobj(x_interp_field_save_stack(p_base)));
-		x_interp_field_save_stack(p_base)
-			= x_restobj(x_interp_field_save_stack(p_base));
+		x_tco_restore(p_base, x_firstobj(x_eval_field_save_stack(p_base)));
+		x_eval_field_save_stack(p_base)
+			= x_restobj(x_eval_field_save_stack(p_base));
 
 		return p_result;
 	}
 
 	/* eval without env: use TCO trampoline */
-	x_firstobj(x_interp_field_tco_expr(p_base)) = p_expr;
+	x_firstobj(x_eval_field_tco_expr(p_base)) = p_expr;
 
 	return NULL;
 }
@@ -224,8 +224,8 @@ static x_obj_t *x_prim_tail_eval(x_obj_t *p_base, x_obj_t *p_args)
 	x_obj_t *p_expr, *p_env;
 	x_eargs(p_base, p_args, 3, NULL, &p_expr, &p_env);
 
-	x_firstobj(x_interp_field_env_alist(p_base)) = p_env;
-	x_firstobj(x_interp_field_tco_expr(p_base)) = p_expr;
+	x_firstobj(x_eval_field_env_alist(p_base)) = p_env;
+	x_firstobj(x_eval_field_tco_expr(p_base)) = p_expr;
 
 	return NULL;
 }
@@ -276,11 +276,11 @@ static x_obj_t *x_prim_atomic(x_obj_t *p_base, x_obj_t *p_args)
 
 	while ( ! x_obj_isnil(p_base, p_args)) {
 		/* Root remaining args so GC doesn't free them */
-		x_obj_push_field(p_base, &x_interp_field_eval_list(p_base), p_args, X_OBJ_FLAG_NONE);
+		x_obj_push_field(p_base, &x_eval_field_eval_list(p_base), p_args, X_OBJ_FLAG_NONE);
 
 		p_result = x_eval_arg(p_base, x_firstobj(p_args));
 
-		x_obj_pop_field(p_base, &x_interp_field_eval_list(p_base));
+		x_obj_pop_field(p_base, &x_eval_field_eval_list(p_base));
 
 		p_args = x_restobj(p_args);
 	}

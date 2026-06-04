@@ -217,7 +217,7 @@ x_obj_t *x_sexp_int_write(x_obj_t *p_base, x_obj_t *p_args)
 
 	x_lib_inttostr(x_intval(x_firstobj(p_args)), s, 10);
 
-	p_ret = x_interp_write_str(p_base, (x_obj_t *)&wrap);
+	p_ret = x_eval_write_str(p_base, (x_obj_t *)&wrap);
 
 	if ( ! x_obj_isnil(p_base, p_ret)) {
 		return x_firstobj(p_args);

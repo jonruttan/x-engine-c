@@ -183,8 +183,8 @@ static x_obj_t *x_prim_str_lt(x_obj_t *p_base, x_obj_t *p_args)
 	}
 
 	return ((unsigned char)*a < (unsigned char)*b)
-		? x_firstobj(x_interp_field_true(p_base))
-		: x_firstobj(x_interp_field_false(p_base));
+		? x_firstobj(x_eval_field_true(p_base))
+		: x_firstobj(x_eval_field_false(p_base));
 }
 
 /** Register string manipulation primitives.

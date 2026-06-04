@@ -3,7 +3,7 @@
  *
  *  A static atom's .i field is the SIGINT flag (unavoidable: POSIX handlers
  *  receive only the signal number, not an application context).  Its pointer
- *  is published into the base (x_interp_field_sigint) so x_eval can poll it via
+ *  is published into the base (x_eval_field_sigint) so x_eval can poll it via
  *  p_base rather than naming this module's global.  Bound as %sigint-flag so
  *  x-lang can read/clear it with first-int / set-first-int!.
  *
@@ -30,7 +30,7 @@
 #define _GNU_SOURCE
 
 #include "x-prim.h"
-#include "x-interp.h"
+#include "x-eval.h"
 
 #include <signal.h>
 
@@ -85,7 +85,7 @@ x_obj_t *x_prim_signal_register(x_obj_t *p_base, x_obj_t *p_args)
 
 	/* Publish the flag pointer onto the base so x_eval can poll it without
 	 * naming this module's global, and bind it for x-lang (%sigint-flag). */
-	x_firstobj(x_interp_field_sigint(p_base)) = (x_obj_t *)&x_sigint_flag;
+	x_firstobj(x_eval_field_sigint(p_base)) = (x_obj_t *)&x_sigint_flag;
 	x_value_bind(p_base, "%sigint-flag", (x_obj_t *)&x_sigint_flag);
 
 	return p_base;

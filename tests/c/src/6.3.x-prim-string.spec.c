@@ -19,7 +19,6 @@
 #include "ext/x-expr/src/x.c"
 #include "src/x-alist.c"
 #include "ext/x-expr/src/x-base.c"
-#include "src/x-interp.c"
 #include "src/x-eval.c"
 #include "src/x-type.c"
 #include "src/x-type/atom.c"
@@ -103,7 +102,7 @@ static char *test_string_append(void)
 {
 	x_obj_t *p_base, *p_args, *p_result;
 
-	p_base = x_interp_make(NULL, NULL);
+	p_base = x_eval_make(NULL, NULL);
 	x_prim_register(p_base, NULL);
 
 	/* (string-append "foo" "bar") -> "foobar" */
@@ -130,7 +129,7 @@ static char *test_string_symbol_convert(void)
 {
 	x_obj_t *p_base, *p_args, *p_result;
 
-	p_base = x_interp_make(NULL, NULL);
+	p_base = x_eval_make(NULL, NULL);
 	x_prim_register(p_base, NULL);
 
 	/* (string->symbol "foo") -> foo symbol */
@@ -144,7 +143,7 @@ static char *test_string_symbol_convert(void)
 	{
 		x_obj_t *p_sym;
 		p_sym = x_mksymbol(p_base, "mysym");
-		x_interp_env_alist_extend(p_base,
+		x_eval_env_alist_extend(p_base,
 			x_mkspair(p_base, X_OBJ_FLAG_NONE, x_mksymbol(p_base, "mysym"), p_sym));
 		p_args = x_mkspair(p_base, X_OBJ_FLAG_NONE, NULL,
 			x_mkspair(p_base, X_OBJ_FLAG_NONE, x_mksymbol(p_base, "mysym"), NULL));
@@ -161,7 +160,7 @@ static char *test_list_to_string(void)
 {
 	x_obj_t *p_base, *p_args, *p_result, *p_list;
 
-	p_base = x_interp_make(NULL, NULL);
+	p_base = x_eval_make(NULL, NULL);
 	x_prim_register(p_base, NULL);
 
 	/* (list->string '(#\a #\b #\c)) -> "abc" */
@@ -189,7 +188,7 @@ static char *test_str_call_negative_index(void)
 {
 	x_obj_t *p_base, *p_str, *p_args, *p_result;
 
-	p_base = x_interp_make(NULL, NULL);
+	p_base = x_eval_make(NULL, NULL);
 	x_prim_register(p_base, NULL);
 
 	/* ("hello" -1) -> last char 'o' */

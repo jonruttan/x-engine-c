@@ -19,7 +19,6 @@
 #include "ext/x-expr/src/x.c"
 #include "src/x-alist.c"
 #include "ext/x-expr/src/x-base.c"
-#include "src/x-interp.c"
 #include "src/x-eval.c"
 #include "src/x-type.c"
 #include "src/x-type/atom.c"
@@ -103,7 +102,7 @@ static char *test_procedure_struct(void)
 {
 	x_obj_t *p_base, *p_type;
 
-	p_base = x_interp_make(NULL, NULL);
+	p_base = x_eval_make(NULL, NULL);
 	p_type = x_type_procedure_struct(p_base, NULL);
 
 	_it_should("return a type struct",
@@ -126,7 +125,7 @@ static char *test_procedure_register(void)
 {
 	x_obj_t *p_base, *p_type1, *p_type2;
 
-	p_base = x_interp_make(NULL, NULL);
+	p_base = x_eval_make(NULL, NULL);
 	p_type1 = x_type_procedure_register(p_base, NULL);
 
 	_it_should("return a type struct",
@@ -145,7 +144,7 @@ static char *test_procedure_make(void)
 {
 	x_obj_t *p_base, *p_proc;
 
-	p_base = x_interp_make(NULL, NULL);
+	p_base = x_eval_make(NULL, NULL);
 
 	p_proc = x_make_procedure(p_base, X_OBJ_FLAG_NONE,
 		x_mksatom(p_base, X_OBJ_FLAG_NONE, "params"),
@@ -172,18 +171,18 @@ static char *test_procedure_call(void)
 	x_obj_t *p_base, *p_proc;
 	x_obj_t *p_params, *p_body, *p_env, *p_args;
 
-	p_base = x_interp_make(NULL, NULL);
+	p_base = x_eval_make(NULL, NULL);
 	x_prim_register(p_base, NULL);
 
 	/* (fn (x) x) — takes one param, body returns x.
 	 * Procedure evaluates args before binding, unlike operative. */
 	p_params = x_mkspair(p_base, X_OBJ_FLAG_NONE, x_mksymbol(p_base, "x"), NULL);
 	p_body = x_mkspair(p_base, X_OBJ_FLAG_NONE, x_mksymbol(p_base, "x"), NULL);
-	p_env = x_firstobj(x_interp_field_env_alist(p_base));
+	p_env = x_firstobj(x_eval_field_env_alist(p_base));
 
 	p_proc = x_make_procedure(p_base, X_OBJ_FLAG_NONE,
 		p_params, p_body, p_env,
-		x_interp_field_env_global_tree(p_base));
+		x_eval_field_env_global_tree(p_base));
 
 	/* Call: (proc 42) — procedure evaluates args then binds. */
 	p_args = x_mkspair(p_base, X_OBJ_FLAG_NONE, p_proc,
@@ -193,7 +192,7 @@ static char *test_procedure_call(void)
 
 	/* body_eval_tco sets tco_expr for tail form */
 	_it_should("set tco_expr for tail call",
-		x_firstobj(x_interp_field_tco_expr(p_base)) != NULL);
+		x_firstobj(x_eval_field_tco_expr(p_base)) != NULL);
 
 	test_cleanup(p_base);
 
@@ -205,13 +204,13 @@ static char *test_procedure_call_wrapped(void)
 	x_obj_t *p_base, *p_op, *p_proc;
 	x_obj_t *p_body, *p_args, *p_result;
 
-	p_base = x_interp_make(NULL, NULL);
+	p_base = x_eval_make(NULL, NULL);
 	x_prim_register(p_base, NULL);
 
 	/* Create an operative whose body returns 77. */
 	p_body = x_mkspair(p_base, X_OBJ_FLAG_NONE, x_mksatom(p_base, X_OBJ_FLAG_NONE, 77), NULL);
 	p_op = x_make_operative(p_base, X_OBJ_FLAG_NONE,
-		NULL, NULL, p_body, x_firstobj(x_interp_field_env_alist(p_base)));
+		NULL, NULL, p_body, x_firstobj(x_eval_field_env_alist(p_base)));
 
 	/* Wrap the operative in a procedure (applicative wrapper). */
 	p_proc = x_make_procedure(p_base, X_OBJ_FLAG_WRAP,
@@ -239,7 +238,7 @@ static char *test_procedure_write(void)
 	x_obj_t *p_base, *p_proc, *p_args, *p_ret;
 	x_char_t s[64];
 
-	p_base = x_interp_make(NULL, NULL);
+	p_base = x_eval_make(NULL, NULL);
 
 	p_proc = x_make_procedure(p_base, X_OBJ_FLAG_NONE,
 		NULL, NULL, NULL, NULL);

@@ -38,7 +38,7 @@ x_obj_t *x_eval(x_obj_t *p_base, x_obj_t *p_obj) { return NULL; }
 #endif
 
 #ifdef STUB_X_BASE_ERROR
-void x_interp_error(x_obj_t *p_base, x_char_t *message, x_obj_t *p_obj) {}
+void x_eval_error(x_obj_t *p_base, x_char_t *message, x_obj_t *p_obj) {}
 #endif
 
 #ifdef STUB_X_TOKEN
@@ -53,7 +53,7 @@ x_obj_t *x_heap_mark(x_obj_t *p_base, x_obj_t *p_obj, x_obj_flag_t flags,
 #endif
 
 #ifdef STUB_X_OBJ_OBJ
-x_satom_t x_interp_obj = x_obj_set(NULL, X_OBJ_FLAG_NONE,
+x_satom_t x_eval_obj = x_obj_set(NULL, X_OBJ_FLAG_NONE,
 	{.s = (x_char_t *)"BASE"});
 #endif
 
@@ -111,10 +111,6 @@ x_obj_t *x_type_prim_length(x_obj_t *p_base, x_obj_t *p_args) { return NULL; }
 
 #ifdef STUB_X_TYPE_DISPLAY
 x_obj_t *x_type_display(x_obj_t *p_base, x_obj_t *p_args) { return NULL; }
-#endif
-
-#ifdef STUB_X_TYPE_ERROR
-void x_type_error(x_obj_t *p_base, x_char_t *msg, x_obj_t *p_obj) {}
 #endif
 
 #ifdef STUB_X_TYPE_WRITE

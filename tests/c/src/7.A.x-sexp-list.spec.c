@@ -20,7 +20,6 @@
 #include "ext/x-expr/src/x-obj.c"
 #include "src/x-alist.c"
 #include "ext/x-expr/src/x-base.c"
-#include "src/x-interp.c"
 #include "src/x-eval.c"
 #include "src/x-type.c"
 #include "src/x-type/prim.c"
@@ -112,7 +111,7 @@ static char *test_sexp_list_analyse(void)
 	helper_file_buffer_ptr[TEST_HELPER_FILE_STDIN] = s;
 	helper_file_reset();
 
-	p_base = x_interp_make(NULL, NULL);
+	p_base = x_eval_make(NULL, NULL);
 	p_buffer = x_mkbuffer(p_base, buffer);
 	{
 		x_spair_t score = x_obj_set(NULL, X_OBJ_FLAG_NONE, {});
@@ -134,7 +133,7 @@ static char *test_sexp_list_analyse(void)
 	helper_file_buffer_ptr[TEST_HELPER_FILE_STDIN] = s;
 	helper_file_reset();
 
-	p_base = x_interp_make(NULL, NULL);
+	p_base = x_eval_make(NULL, NULL);
 	p_buffer = x_mkbuffer(p_base, buffer);
 	{
 		x_spair_t score = x_obj_set(NULL, X_OBJ_FLAG_NONE, {});
@@ -166,7 +165,7 @@ static char *test_sexp_list_delimit(void)
 	helper_file_buffer_ptr[TEST_HELPER_FILE_STDIN] = s;
 	helper_file_reset();
 
-	p_base = x_interp_make(NULL, NULL);
+	p_base = x_eval_make(NULL, NULL);
 	p_buffer = x_mkbuffer(p_base, buffer);
 	p_args = x_mkspair(p_base, X_OBJ_FLAG_NONE, p_buffer, NULL);
 	x_type_buffer_read(p_base, p_args);
@@ -179,7 +178,7 @@ static char *test_sexp_list_delimit(void)
 	helper_file_buffer_ptr[TEST_HELPER_FILE_STDIN] = s;
 	helper_file_reset();
 
-	p_base = x_interp_make(NULL, NULL);
+	p_base = x_eval_make(NULL, NULL);
 	p_buffer = x_mkbuffer(p_base, buffer);
 	p_args = x_mkspair(p_base, X_OBJ_FLAG_NONE, p_buffer, NULL);
 	x_type_buffer_read(p_base, p_args);
@@ -202,7 +201,7 @@ static char *test_sexp_list_read(void)
 	helper_file_buffer_remaining[TEST_HELPER_FILE_STDIN] = x_lib_strlen(s);
 	helper_file_reset();
 
-	p_base = x_interp_make(NULL, NULL);
+	p_base = x_eval_make(NULL, NULL);
 	x_prim_register(p_base, NULL);
 
 	/* Register sexp types so the tokenizer has types to iterate. */
@@ -276,7 +275,7 @@ static char *test_sexp_list_write(void)
 	x_obj_t *p_base, *p_list, *p_args;
 	x_char_t s[64];
 
-	p_base = x_interp_make(NULL, NULL);
+	p_base = x_eval_make(NULL, NULL);
 	x_prim_register(p_base, NULL);
 
 	/* Write empty list: () */

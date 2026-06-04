@@ -18,7 +18,8 @@
 #include "ext/x-expr/src/x-obj.c"
 #include "src/x-alist.c"
 #include "ext/x-expr/src/x-base.c"
-#include "src/x-interp.c"
+#define STUB_X_EVAL
+#include "src/x-eval.c"
 #include "ext/x-expr/src/x-heap.c"
 #include "src/x-type.c"
 #include "src/x-type/prim.c"
@@ -79,7 +80,7 @@ static char *test_obj_type_isatom(void)
 {
 	x_obj_t *p_base, *p_obj;
 
-	p_base = x_interp_make(NULL, NULL);
+	p_base = x_eval_make(NULL, NULL);
 
 	p_obj = x_mkatom(p_base, 0);
 	_it_should("return true when object is an atom",
@@ -106,7 +107,7 @@ static char *test_atomval(void)
 	x_obj_t *p_base, *p_obj;
 	x_int_t i = rand();
 
-	p_base = x_interp_make(NULL, NULL);
+	p_base = x_eval_make(NULL, NULL);
 	p_obj = x_mkatom(p_base, (void *)i);
 
 	_it_should("return the Atom's value", i == x_atomint(p_obj));
@@ -121,7 +122,7 @@ static char *test_mkatom(void)
 	x_obj_t *p_base, *p_obj;
 	x_int_t i = rand();
 
-	p_base = x_interp_make(NULL, NULL);
+	p_base = x_eval_make(NULL, NULL);
 
 	p_obj = x_mkatom(p_base, (void *)i);
 	_it_should("make an Atom object and set its value",
@@ -142,7 +143,7 @@ static char *test_mkfatom(void)
 	x_int_t i = rand();
 	x_obj_flag_t flags = rand();
 
-	p_base = x_interp_make(NULL, NULL);
+	p_base = x_eval_make(NULL, NULL);
 
 	p_obj = x_mkfatom(p_base, flags, (void *)i);
 	_it_should("make an Atom object and set its value",
@@ -163,7 +164,7 @@ static char *test_make_atom(void)
 	x_int_t i = rand();
 	x_obj_flag_t flags = rand();
 
-	p_base = x_interp_make(NULL, NULL);
+	p_base = x_eval_make(NULL, NULL);
 
 	p_obj = x_make_atom(p_base, flags, (void *)i);
 	_it_should("make an Atom object and set its value",
@@ -182,14 +183,14 @@ static char *test_type_atom_register(void)
 {
 	x_obj_t *p_base, *p_type;
 
-	p_base = x_interp_make(NULL, NULL);
+	p_base = x_eval_make(NULL, NULL);
 
 	p_type = x_type_atom_register(p_base, p_base);
 	_it_should("return the Atom type object",
 		0 == x_lib_strcmp(X_TYPE_ATOM_SYMBOL, x_atomstr(x_type_field_name(p_type)))
 	);
 	_it_should("add the Atom type to the Type alist",
-		NULL != x_interp_type_alist_assoc(p_base,
+		NULL != x_eval_type_alist_assoc(p_base,
 			x_mkspair(p_base, X_OBJ_FLAG_NONE, x_type_atom_name, NULL))
 	);
 
@@ -278,10 +279,10 @@ static char *test_base_alist_assoc(void)
 
 	helper_alloc_reset();
 
-	p_base = x_interp_make(NULL, NULL);
-	x_interp_type_alist_extend(p_base, x_mkspair(p_base, X_OBJ_FLAG_NONE, x_mkspair(p_base, X_OBJ_FLAG_NONE, x_type_atom_name, NULL), atom(1)));
+	p_base = x_eval_make(NULL, NULL);
+	x_eval_type_alist_extend(p_base, x_mkspair(p_base, X_OBJ_FLAG_NONE, x_mkspair(p_base, X_OBJ_FLAG_NONE, x_type_atom_name, NULL), atom(1)));
 
-	p_type = x_interp_type_alist_assoc(p_base, x_mkspair(p_base, X_OBJ_FLAG_NONE, x_type_atom_name, NULL));
+	p_type = x_eval_type_alist_assoc(p_base, x_mkspair(p_base, X_OBJ_FLAG_NONE, x_type_atom_name, NULL));
 	_it_should("find the type in the Type alist and return its properties",
 		x_type_atom_name == x_type_field_name(p_type)
 	);
@@ -294,7 +295,7 @@ static char *test_type_atom_make(void)
 	x_obj_t *p_base, *p_atom, *p_flags, *p_args, *p_obj[2];
 
 	/* With p_base object */
-	p_base = x_interp_make(NULL, NULL);
+	p_base = x_eval_make(NULL, NULL);
 	p_atom = x_mksatom(p_base, X_OBJ_FLAG_NONE, rand());
 	p_args = x_mkspair(p_base, X_OBJ_FLAG_NONE, p_atom, NULL);
 
@@ -343,7 +344,7 @@ static char *test_type_atom_write(void)
 	helper_alloc_reset();
 	memset(buf, 0, sizeof(buf));
 
-	p_base = x_interp_make(NULL, NULL);
+	p_base = x_eval_make(NULL, NULL);
 	p_obj = x_mkatom(p_base, 0);
 	p_args = x_mkspair(p_base, X_OBJ_FLAG_NONE, p_obj, NULL);
 

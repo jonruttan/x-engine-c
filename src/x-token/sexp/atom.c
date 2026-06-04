@@ -33,20 +33,20 @@ x_obj_t *x_sexp_atom_write(x_obj_t *p_base, x_obj_t *p_args)
 	x_spair_t wrap = x_obj_set(NULL, X_OBJ_FLAG_NONE, { str }, { NULL });
 
 	x_atomstr(str) = "#<";
-	x_interp_write_str(p_base, (x_obj_t *)&wrap);
+	x_eval_write_str(p_base, (x_obj_t *)&wrap);
 
 	x_atomstr(str) = type;
-	x_interp_write_str(p_base, (x_obj_t *)&wrap);
+	x_eval_write_str(p_base, (x_obj_t *)&wrap);
 
 	x_atomstr(str) = ":0x";
-	x_interp_write_str(p_base, (x_obj_t *)&wrap);
+	x_eval_write_str(p_base, (x_obj_t *)&wrap);
 
 	x_lib_inttostr(x_atomint(x_firstobj(p_args)), tmp, 16);
 	x_atomstr(str) = tmp;
-	x_interp_write_str(p_base, (x_obj_t *)&wrap);
+	x_eval_write_str(p_base, (x_obj_t *)&wrap);
 
 	x_atomstr(str) = ">";
-	x_interp_write_str(p_base, (x_obj_t *)&wrap);
+	x_eval_write_str(p_base, (x_obj_t *)&wrap);
 
 	return p_args;
 }

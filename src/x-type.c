@@ -14,7 +14,7 @@
  * # Includes
  */
 #include "x-type.h"
-#include "x-interp.h"
+#include "x-eval.h"
 #include "x-heap.h"
 #include "x-obj.h"
 #include "x-type/prim.h"
@@ -94,7 +94,7 @@ x_obj_t *x_type_struct_get(x_obj_t *p_base, x_obj_t *p_args)
 	x_obj_t *p_type = NULL;
 
 	if (x_base_isset(p_base)) {
-		p_type = x_interp_type_alist_assoc(p_base, p_args);
+		p_type = x_eval_type_alist_assoc(p_base, p_args);
 	}
 
 	/* TODO: GC on exit, with and w/o GC structures. */
@@ -102,7 +102,7 @@ x_obj_t *x_type_struct_get(x_obj_t *p_base, x_obj_t *p_args)
 		p_type = x_callable_call(p_base, x_restobj(p_args));
 
 		if (x_base_isset(p_base)) {
-			x_interp_type_alist_extend(p_base, p_type);
+			x_eval_type_alist_extend(p_base, p_type);
 		}
 	}
 
@@ -274,7 +274,7 @@ x_obj_t *x_type_prim_length(x_obj_t *p_base, x_obj_t *p_args)
 /**
  * GC mark hook for typed heap objects.
  *
- * For child base objects (type == x_interp_obj), returns the data
+ * For child base objects (type == x_eval_obj), returns the data
  * pointer so the GC traverses the base's pair tree. For custom types,
  * calls the type's mark callback if present. Otherwise falls back to
  * a generic N-slot traversal using the units count.
@@ -290,7 +290,7 @@ x_obj_t *x_type_heap_mark(x_obj_t *p_base, x_obj_t *p_obj, x_obj_flag_t flags)
 
 	/* Child base objects (e.g. %sh-base): traverse their pair tree
 	 * so type alist entries, env, etc. are not freed by GC. */
-	if (p_type == (x_obj_t *)&x_interp_obj) {
+	if (p_type == (x_obj_t *)&x_eval_obj) {
 		return x_atomobj(p_obj);
 	}
 

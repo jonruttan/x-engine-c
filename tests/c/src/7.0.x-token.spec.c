@@ -22,7 +22,6 @@
 #include "ext/x-expr/src/x-obj.c"
 #include "src/x-alist.c"
 #include "ext/x-expr/src/x-base.c"
-#include "src/x-interp.c"
 #include "ext/x-expr/src/x-heap.c"
 #include "src/x-type.c"
 #include "src/x-type/prim.c"
@@ -290,8 +289,8 @@ static x_satom_t
  */
 static char *test_token_delimit(void)
 {
-	x_obj_t *p_base = x_interp_make(NULL, NULL),
-		*p_base2 = x_interp_make(NULL, NULL),
+	x_obj_t *p_base = x_eval_make(NULL, NULL),
+		*p_base2 = x_eval_make(NULL, NULL),
 		*p_type, *p_buffer, *p_args, *p_obj;
 	x_char_t buffer[32];
 	struct x_type_t type_whitespace = {
@@ -304,10 +303,10 @@ static char *test_token_delimit(void)
 	};
 
 	p_type = x_type_struct_make(p_base, type_whitespace);
-	x_interp_type_alist_extend(p_base2, p_type);
+	x_eval_type_alist_extend(p_base2, p_type);
 
 	p_type = x_type_struct_make(p_base, type1);
-	x_interp_type_alist_extend(p_base2, p_type);
+	x_eval_type_alist_extend(p_base2, p_type);
 
 	/* Space is a whitespace delimiter.
 	 * x_token_delimit expects (buffer, self-type, ...) where self-type
@@ -347,8 +346,8 @@ static char *test_token_delimit(void)
 
 static char *test_token_read(void)
 {
-	x_obj_t *p_base = x_interp_make(NULL, NULL),
-		*p_base2 = x_interp_make(NULL, NULL),
+	x_obj_t *p_base = x_eval_make(NULL, NULL),
+		*p_base2 = x_eval_make(NULL, NULL),
 		*p_type, *p_args, *p_buffer, *p_obj;
 	x_char_t *s, buffer[32];
 	struct x_type_t type_whitespace = {
@@ -374,16 +373,16 @@ static char *test_token_read(void)
 	helper_file_reset();
 
 	p_type = x_type_struct_make(p_base, type_whitespace);
-	x_interp_type_alist_extend(p_base2, p_type);
+	x_eval_type_alist_extend(p_base2, p_type);
 
 	p_type = x_type_struct_make(p_base, type_catchall);
-	x_interp_type_alist_extend(p_base2, p_type);
+	x_eval_type_alist_extend(p_base2, p_type);
 
 	p_type = x_type_struct_make(p_base, type1);
-	x_interp_type_alist_extend(p_base2, p_type);
+	x_eval_type_alist_extend(p_base2, p_type);
 
 	p_type = x_type_struct_make(p_base, type2);
-	x_interp_type_alist_extend(p_base2, p_type);
+	x_eval_type_alist_extend(p_base2, p_type);
 
 	p_buffer = x_mkbufferown(p_base, buffer);
 	p_args = x_mkpair(p_base, p_buffer, p_base);
@@ -413,8 +412,8 @@ static char *test_token_read(void)
 
 static char *test_token_read_eof(void)
 {
-	x_obj_t *p_base = x_interp_make(NULL, NULL),
-		*p_base2 = x_interp_make(NULL, NULL),
+	x_obj_t *p_base = x_eval_make(NULL, NULL),
+		*p_base2 = x_eval_make(NULL, NULL),
 		*p_type, *p_args, *p_buffer, *p_obj;
 	x_char_t buffer[32];
 	struct x_type_t type_catchall = {
@@ -424,7 +423,7 @@ static char *test_token_read_eof(void)
 	};
 
 	p_type = x_type_struct_make(p_base, type_catchall);
-	x_interp_type_alist_extend(p_base2, p_type);
+	x_eval_type_alist_extend(p_base2, p_type);
 
 	/* Empty input — analyse returns NULL → read returns NULL */
 	helper_file_buffer_ptr[TEST_HELPER_FILE_STDIN] = "";
@@ -462,7 +461,7 @@ static char *test_token_read_eof(void)
 
 static char *test_token_write(void)
 {
-	x_obj_t *p_base = x_interp_make(NULL, NULL), *p_obj, *p_args, *p_ret;
+	x_obj_t *p_base = x_eval_make(NULL, NULL), *p_obj, *p_args, *p_ret;
 	int fd_null = open("/dev/null", O_WRONLY);
 
 	/* Redirect output to /dev/null so writes don't pollute test output */
@@ -484,7 +483,7 @@ static char *test_token_write(void)
 
 	/* Write a typed heap object — exercises x_type_write path */
 	{
-		x_obj_t *p_base3 = x_interp_make(NULL, NULL);
+		x_obj_t *p_base3 = x_eval_make(NULL, NULL);
 		x_obj_t *p_prim_obj = x_make_prim(p_base3, X_OBJ_FLAG_NONE,
 			test_token_read_read_catchall);
 
@@ -511,8 +510,8 @@ static char *test_token_write(void)
 
 static char *test_token_read_null_reader(void)
 {
-	x_obj_t *p_base = x_interp_make(NULL, NULL),
-		*p_base2 = x_interp_make(NULL, NULL),
+	x_obj_t *p_base = x_eval_make(NULL, NULL),
+		*p_base2 = x_eval_make(NULL, NULL),
 		*p_type, *p_args, *p_buffer, *p_obj;
 	x_char_t buffer[32];
 	struct x_type_t type_null = {
@@ -522,7 +521,7 @@ static char *test_token_read_null_reader(void)
 	};
 
 	p_type = x_type_struct_make(p_base, type_null);
-	x_interp_type_alist_extend(p_base2, p_type);
+	x_eval_type_alist_extend(p_base2, p_type);
 
 	helper_file_buffer_ptr[TEST_HELPER_FILE_STDIN] = "X";
 	helper_file_buffer_remaining[TEST_HELPER_FILE_STDIN] = 1;
@@ -545,8 +544,8 @@ static char *test_token_read_null_reader(void)
 
 static char *test_token_read_ro_eof(void)
 {
-	x_obj_t *p_base = x_interp_make(NULL, NULL),
-		*p_base2 = x_interp_make(NULL, NULL),
+	x_obj_t *p_base = x_eval_make(NULL, NULL),
+		*p_base2 = x_eval_make(NULL, NULL),
 		*p_type, *p_args, *p_obj;
 	x_char_t ro_buf[] = "AB";
 	x_obj_t *p_ro_buffer;
@@ -560,7 +559,7 @@ static char *test_token_read_ro_eof(void)
 	 * When RO EOF is hit, auto-score path computes score from consumed
 	 * chars and the sign from the partial score. */
 	p_type = x_type_struct_make(p_base, type_autoscore);
-	x_interp_type_alist_extend(p_base2, p_type);
+	x_eval_type_alist_extend(p_base2, p_type);
 
 	/* RO buffer with 2 bytes of data */
 	p_ro_buffer = x_mkbufferro(p_base, ro_buf);
@@ -583,7 +582,7 @@ static char *test_alist_iter_nil(void)
 {
 	x_obj_t *p_base, *p_iter, *p_args, *p_obj;
 
-	p_base = x_interp_make(NULL, NULL);
+	p_base = x_eval_make(NULL, NULL);
 
 	/* Iterator over empty list — x_type_alist_iter returns nil */
 	p_iter = x_mkiter(p_base, (x_obj_t *)&x_type_alist_iter_prim, NULL);

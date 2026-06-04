@@ -241,6 +241,17 @@ cov-x: x-profile ## x-lang library coverage report
 defs: ## Generate ctags definitions
 	ctags -f - src/**/*.c | awk 'BEGIN {FS = "\t"} /\/.*\$\/;"/ { printf("%s;\n", substr($$3,3,length($$3)-6)) }' | sort -u > defs
 
+# The base-object layout -- the x_eval_field_* accessors and x_eval_make's
+# construction skeleton -- is generated from the descriptor tools/base-layout.x.
+# include/x-eval-layout.h is committed so a plain checkout builds without awk;
+# after editing the descriptor run `make gen-layout`, then `make clean && make`
+# (header changes don't trigger object rebuilds on their own here).
+$(INCDIR)/x-eval-layout.h: tools/base-layout.x tools/gen-base-layout.awk
+	awk -f tools/gen-base-layout.awk $< > $@
+
+gen-layout: $(INCDIR)/x-eval-layout.h ## Regenerate the base-object layout header from the descriptor
+.PHONY: gen-layout
+
 lint: ## Lint C sources
 	$(CC) -fsyntax-only $(CFLAGS) -g -Wall -pedantic $(SOURCES)
 .PHONY: lint

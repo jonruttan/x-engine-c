@@ -20,7 +20,6 @@
 #include "ext/x-expr/src/x-obj.c"
 #include "src/x-alist.c"
 #include "ext/x-expr/src/x-base.c"
-#include "src/x-interp.c"
 #include "ext/x-expr/src/x-heap.c"
 #include "src/x-type.c"
 #include "src/x-type/prim.c"
@@ -98,7 +97,7 @@ static char *test_sexp_int_analyse_digits(void)
 	helper_file_buffer_ptr[TEST_HELPER_FILE_STDIN] = s;
 	helper_file_reset();
 
-	p_base = x_interp_make(NULL, NULL);
+	p_base = x_eval_make(NULL, NULL);
 	p_buffer = x_mkbuffer(p_base, buffer);
 	{
 		x_spair_t score = x_obj_set(NULL, X_OBJ_FLAG_NONE, {});
@@ -123,7 +122,7 @@ static char *test_sexp_int_analyse_digits(void)
 	helper_file_buffer_ptr[TEST_HELPER_FILE_STDIN] = s;
 	helper_file_reset();
 
-	p_base = x_interp_make(NULL, NULL);
+	p_base = x_eval_make(NULL, NULL);
 	p_buffer = x_mkbuffer(p_base, buffer);
 	{
 		x_spair_t score = x_obj_set(NULL, X_OBJ_FLAG_NONE, {});
@@ -163,7 +162,7 @@ static char *test_sexp_int_analyse_xdigits(void)
 	helper_file_buffer_ptr[TEST_HELPER_FILE_STDIN] = s;
 	helper_file_reset();
 
-	p_base = x_interp_make(NULL, NULL);
+	p_base = x_eval_make(NULL, NULL);
 	p_buffer = x_mkbuffer(p_base, buffer);
 	{
 		x_spair_t score = x_obj_set(NULL, X_OBJ_FLAG_NONE, {});
@@ -188,7 +187,7 @@ static char *test_sexp_int_analyse_xdigits(void)
 	helper_file_buffer_ptr[TEST_HELPER_FILE_STDIN] = s;
 	helper_file_reset();
 
-	p_base = x_interp_make(NULL, NULL);
+	p_base = x_eval_make(NULL, NULL);
 	p_buffer = x_mkbuffer(p_base, buffer);
 	{
 		x_spair_t score = x_obj_set(NULL, X_OBJ_FLAG_NONE, {});
@@ -230,7 +229,7 @@ static char *test_sexp_int_analyse_base(void)
 	helper_file_buffer_ptr[TEST_HELPER_FILE_STDIN] = s;
 	helper_file_reset();
 
-	p_base = x_interp_make(NULL, NULL);
+	p_base = x_eval_make(NULL, NULL);
 	p_buffer = x_mkbuffer(p_base, buffer);
 	{
 		x_spair_t score = x_obj_set(NULL, X_OBJ_FLAG_NONE, {});
@@ -255,7 +254,7 @@ static char *test_sexp_int_analyse_base(void)
 	helper_file_buffer_ptr[TEST_HELPER_FILE_STDIN] = s;
 	helper_file_reset();
 
-	p_base = x_interp_make(NULL, NULL);
+	p_base = x_eval_make(NULL, NULL);
 	p_buffer = x_mkbuffer(p_base, buffer);
 	{
 		x_spair_t score = x_obj_set(NULL, X_OBJ_FLAG_NONE, {});
@@ -282,7 +281,7 @@ static char *test_sexp_int_analyse_base(void)
 	helper_file_buffer_ptr[TEST_HELPER_FILE_STDIN] = s;
 	helper_file_reset();
 
-	p_base = x_interp_make(NULL, NULL);
+	p_base = x_eval_make(NULL, NULL);
 	p_buffer = x_mkbuffer(p_base, buffer);
 	{
 		x_spair_t score = x_obj_set(NULL, X_OBJ_FLAG_NONE, {});
@@ -316,7 +315,7 @@ static char *test_sexp_int_analyse_prefix(void)
 	helper_file_buffer_ptr[TEST_HELPER_FILE_STDIN] = s;
 	helper_file_reset();
 
-	p_base = x_interp_make(NULL, NULL);
+	p_base = x_eval_make(NULL, NULL);
 	p_buffer = x_mkbuffer(p_base, buffer);
 	{
 		x_spair_t score = x_obj_set(NULL, X_OBJ_FLAG_NONE, {});
@@ -341,7 +340,7 @@ static char *test_sexp_int_analyse_prefix(void)
 	helper_file_buffer_ptr[TEST_HELPER_FILE_STDIN] = s;
 	helper_file_reset();
 
-	p_base = x_interp_make(NULL, NULL);
+	p_base = x_eval_make(NULL, NULL);
 	p_buffer = x_mkbuffer(p_base, buffer);
 	{
 		x_spair_t score = x_obj_set(NULL, X_OBJ_FLAG_NONE, {});
@@ -375,7 +374,7 @@ static char *test_sexp_int_analyse_sign(void)
 	helper_file_buffer_ptr[TEST_HELPER_FILE_STDIN] = s;
 	helper_file_reset();
 
-	p_base = x_interp_make(NULL, NULL);
+	p_base = x_eval_make(NULL, NULL);
 	p_buffer = x_mkbuffer(p_base, buffer);
 	{
 		x_spair_t score = x_obj_set(NULL, X_OBJ_FLAG_NONE, {});
@@ -400,7 +399,7 @@ static char *test_sexp_int_analyse_sign(void)
 	helper_file_buffer_ptr[TEST_HELPER_FILE_STDIN] = s;
 	helper_file_reset();
 
-	p_base = x_interp_make(NULL, NULL);
+	p_base = x_eval_make(NULL, NULL);
 	p_buffer = x_mkbuffer(p_base, buffer);
 	{
 		x_spair_t score = x_obj_set(NULL, X_OBJ_FLAG_NONE, {});
@@ -427,7 +426,7 @@ static char *test_sexp_int_analyse_sign(void)
 	helper_file_buffer_ptr[TEST_HELPER_FILE_STDIN] = s;
 	helper_file_reset();
 
-	p_base = x_interp_make(NULL, NULL);
+	p_base = x_eval_make(NULL, NULL);
 	p_buffer = x_mkbuffer(p_base, buffer);
 	{
 		x_spair_t score = x_obj_set(NULL, X_OBJ_FLAG_NONE, {});
@@ -524,7 +523,7 @@ x_obj_t *test_token_read_read_whitespace(x_obj_t *p_base, x_obj_t *p_args)
 
 static char *test_sexp_int_read_token(void)
 {
-	x_obj_t *p_base = x_interp_make(NULL, NULL),
+	x_obj_t *p_base = x_eval_make(NULL, NULL),
 		*p_type, *p_args, *p_buffer, *p_obj;
 	x_char_t *s, buffer[32];
 	struct x_type_t type_whitespace = {
@@ -539,10 +538,10 @@ static char *test_sexp_int_read_token(void)
 	helper_file_reset();
 
 	/* NOTE: Type registration order matters. */
-	p_base = x_interp_make(NULL, NULL);
+	p_base = x_eval_make(NULL, NULL);
 	x_type_int_register(p_base, p_base);
 	p_type = x_type_struct_make(p_base, type_whitespace);
-	x_interp_type_alist_extend(p_base, p_type);
+	x_eval_type_alist_extend(p_base, p_type);
 	p_buffer = x_mkbuffer(p_base, buffer);
 	p_args = x_mkspair(p_base, X_OBJ_FLAG_NONE, p_buffer, p_base);
 

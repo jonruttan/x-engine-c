@@ -11,7 +11,7 @@
  *      " "
  */
 #include "x-prim.h"
-#include "x-interp.h"
+#include "x-eval.h"
 #include "x-eval.h"
 #include <setjmp.h>
 #include <string.h>
@@ -175,14 +175,14 @@ static x_obj_t *x_prim_callcc(x_obj_t *p_base, x_obj_t *p_args)
 	if (setjmp(cont->jmp) != 0) {
 		/* Continuation was invoked. Restore interpreter state and
 		 * return the value passed to the continuation. */
-		x_firstobj(x_interp_field_env_alist(p_base)) = cont->p_env_alist;
-		x_interp_field_env_local_boundary(p_base) = cont->p_local_boundary;
-		x_interp_field_env_global_tree(p_base) = cont->p_global_tree;
-		x_interp_field_save_stack(p_base) = cont->p_save_stack;
-		x_firstobj(x_interp_field_error_handler(p_base)) = cont->p_error_handler;
-		x_firstobj(x_interp_field_eval_list(p_base)) = cont->p_eval_list_stack;
-		x_firstobj(x_interp_field_tco_expr(p_base)) = NULL;
-		x_firstobj(x_interp_field_tco_env(p_base)) = NULL;
+		x_firstobj(x_eval_field_env_alist(p_base)) = cont->p_env_alist;
+		x_eval_field_env_local_boundary(p_base) = cont->p_local_boundary;
+		x_eval_field_env_global_tree(p_base) = cont->p_global_tree;
+		x_eval_field_save_stack(p_base) = cont->p_save_stack;
+		x_firstobj(x_eval_field_error_handler(p_base)) = cont->p_error_handler;
+		x_firstobj(x_eval_field_eval_list(p_base)) = cont->p_eval_list_stack;
+		x_firstobj(x_eval_field_tco_expr(p_base)) = NULL;
+		x_firstobj(x_eval_field_tco_env(p_base)) = NULL;
 
 		return cont->p_result;
 	}
@@ -195,17 +195,17 @@ static x_obj_t *x_prim_callcc(x_obj_t *p_base, x_obj_t *p_args)
 	/* Build GC-visible interpreter state list:
 	 * (env-alist save-stack error-handler local-boundary global-tree) */
 	p_state = x_mklist(p_base,
-		x_firstobj(x_interp_field_env_alist(p_base)),
+		x_firstobj(x_eval_field_env_alist(p_base)),
 		x_mklist(p_base,
-			x_interp_field_save_stack(p_base),
+			x_eval_field_save_stack(p_base),
 			x_mklist(p_base,
-				x_firstobj(x_interp_field_error_handler(p_base)),
+				x_firstobj(x_eval_field_error_handler(p_base)),
 				x_mklist(p_base,
-					x_interp_field_env_local_boundary(p_base),
+					x_eval_field_env_local_boundary(p_base),
 					x_mklist(p_base,
-						x_interp_field_env_global_tree(p_base),
+						x_eval_field_env_global_tree(p_base),
 						x_mklist(p_base,
-							x_firstobj(x_interp_field_eval_list(p_base)),
+							x_firstobj(x_eval_field_eval_list(p_base)),
 							NULL))))));
 
 	/* Wrap continuation struct as POINTER with OWN flag.
@@ -236,11 +236,11 @@ static x_obj_t *x_prim_callcc(x_obj_t *p_base, x_obj_t *p_args)
 		x_mkspair(p_base, X_OBJ_FLAG_NONE, p_ptr_sym, p_ptr),
 		x_mkspair(p_base, X_OBJ_FLAG_NONE,
 			x_mkspair(p_base, X_OBJ_FLAG_NONE, p_state_sym, p_state),
-			x_firstobj(x_interp_field_env_alist(p_base))));
+			x_firstobj(x_eval_field_env_alist(p_base))));
 
 	/* Create k as a procedure (fn). */
 	p_k = x_mkproc(p_base, p_params, p_body, p_env,
-		x_interp_field_env_global_tree(p_base));
+		x_eval_field_env_global_tree(p_base));
 
 	/* Call proc(k) using type_prim_apply: (proc k) */
 	{

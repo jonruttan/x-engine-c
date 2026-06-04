@@ -12,7 +12,7 @@
  *      " "
  */
 #include "x-type/operative.h"
-#include "x-interp.h"
+#include "x-eval.h"
 #include "x-heap.h"
 #include "x-prim.h"
 
@@ -184,9 +184,9 @@ x_obj_t *x_type_operative_call(x_obj_t *p_base, x_obj_t *p_args)
 		*p_saved_shadow;
 
 	/* Capture caller's env (the head the operative restores to on exit). */
-	p_caller_env = x_firstobj(x_interp_field_env_alist(p_base));
-	p_saved_boundary = x_interp_field_env_local_boundary(p_base);
-	p_saved_shadow = x_interp_field_shadow_list(p_base);
+	p_caller_env = x_firstobj(x_eval_field_env_alist(p_base));
+	p_saved_boundary = x_eval_field_env_local_boundary(p_base);
+	p_saved_shadow = x_eval_field_shadow_list(p_base);
 
 	/* Extend captured env with formals bound to unevaluated args. */
 	p_env = x_env_extend(
@@ -201,8 +201,8 @@ x_obj_t *x_type_operative_call(x_obj_t *p_base, x_obj_t *p_args)
 
 	/* Install op's chain.  Boundary at captured_env makes caller's
 	 * locals invisible to symbol lookup. */
-	x_firstobj(x_interp_field_env_alist(p_base)) = p_env;
-	x_interp_field_env_local_boundary(p_base) = p_captured_env;
+	x_firstobj(x_eval_field_env_alist(p_base)) = p_env;
+	x_eval_field_env_local_boundary(p_base) = p_captured_env;
 
 	/* Defer the body's tail to the outer trampoline (TCO) instead of
 	 * resolving it synchronously, so operative calls stay O(1) on the C
@@ -229,7 +229,7 @@ x_obj_t *x_type_operative_write(x_obj_t *p_base, x_obj_t *p_args)
 		{ .s = (x_char_t *)X_TYPE_OPERATIVE_WRITE_STR });
 	x_spair_t wrap = x_obj_set(NULL, X_OBJ_FLAG_NONE, { str }, { NULL });
 
-	x_interp_write_str(p_base, (x_obj_t *)&wrap);
+	x_eval_write_str(p_base, (x_obj_t *)&wrap);
 
 	return x_firstobj(p_args);
 }

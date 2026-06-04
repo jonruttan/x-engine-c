@@ -13,7 +13,8 @@
 #include "ext/x-expr/src/x.c"
 #include "src/x-alist.c"
 #include "ext/x-expr/src/x-base.c"
-#include "src/x-interp.c"
+#define STUB_X_EVAL
+#include "src/x-eval.c"
 #define STUB_X_EVAL
 #define STUB_X_OBJ_OBJ
 #define STUB_X_STR

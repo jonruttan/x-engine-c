@@ -15,7 +15,7 @@
 #include "x-type/list.h"
 #include "x-type/buffer.h"
 #include "x-type/symbol.h"
-#include "x-interp.h"
+#include "x-eval.h"
 #include "x-token.h"
 #include "x-token.h"
 #include "x-token/sexp/list.h"
@@ -73,7 +73,7 @@ static int x_sexp_list_write_quasi_shorthand(x_obj_t *p_base,
 
 	/* Emit shorthand prefix and the second element. */
 	x_atomstr(str) = prefix;
-	x_interp_write_str(p_base, (x_obj_t *)&wrap);
+	x_eval_write_str(p_base, (x_obj_t *)&wrap);
 
 	x_firstobj((x_obj_t *)elem_wrap) = x_firstobj(p_tail);
 	dispatch(p_base, (x_obj_t *)&elem_wrap);
@@ -184,7 +184,7 @@ x_obj_t *x_sexp_list_read(x_obj_t *p_base, x_obj_t *p_args)
 			if (x_obj_isnil(p_base, head)) {
 				head = pair;
 				/* Root head so GC can reach the list under construction */
-				x_obj_push_field(p_base, &x_interp_field_eval_list(p_base), head, X_OBJ_FLAG_NONE);
+				x_obj_push_field(p_base, &x_eval_field_eval_list(p_base), head, X_OBJ_FLAG_NONE);
 			} else {
 				x_restobj(tail) = pair;
 			}
@@ -193,7 +193,7 @@ x_obj_t *x_sexp_list_read(x_obj_t *p_base, x_obj_t *p_args)
 
 		/* Unroot if we rooted */
 		if ( ! x_obj_isnil(p_base, head)) {
-			x_obj_pop_field(p_base, &x_interp_field_eval_list(p_base));
+			x_obj_pop_field(p_base, &x_eval_field_eval_list(p_base));
 		}
 
 		return head;
@@ -221,12 +221,12 @@ x_obj_t *x_sexp_list_write(x_obj_t *p_base, x_obj_t *p_args)
 		return p_obj;
 
 	x_atomstr(str) = X_SEXP_LIST_PRE_STR;
-	x_interp_write_str(p_base, (x_obj_t *)&wrap);
+	x_eval_write_str(p_base, (x_obj_t *)&wrap);
 
 	for (;;) {
 		if (x_obj_isnil(p_base, x_firstobj(p_obj))) {
 			x_atomstr(str) = "()";
-			x_interp_write_str(p_base, (x_obj_t *)&wrap);
+			x_eval_write_str(p_base, (x_obj_t *)&wrap);
 		} else {
 			x_firstobj((x_obj_t *)write_wrap) = x_firstobj(p_obj);
 			x_token_write(p_base, (x_obj_t *)write_wrap);
@@ -236,26 +236,26 @@ x_obj_t *x_sexp_list_write(x_obj_t *p_base, x_obj_t *p_args)
 
 		if (x_obj_isnil(p_base, p_obj)) {
 			x_atomstr(str) = X_SEXP_LIST_POST_STR;
-			x_interp_write_str(p_base, (x_obj_t *)&wrap);
+			x_eval_write_str(p_base, (x_obj_t *)&wrap);
 
 			break;
 		}
 
 		if ( ! x_obj_type_islist(p_base, p_obj)) {
 			x_atomstr(str) = X_SEXP_WHITESPACE_SPACE_STR X_SEXP_LIST_DOT_STR X_SEXP_WHITESPACE_SPACE_STR;
-			x_interp_write_str(p_base, (x_obj_t *)&wrap);
+			x_eval_write_str(p_base, (x_obj_t *)&wrap);
 
 			x_firstobj((x_obj_t *)write_wrap) = p_obj;
 			x_token_write(p_base, (x_obj_t *)write_wrap);
 
 			x_atomstr(str) = X_SEXP_LIST_POST_STR;
-			x_interp_write_str(p_base, (x_obj_t *)&wrap);
+			x_eval_write_str(p_base, (x_obj_t *)&wrap);
 
 			break;
 		}
 
 		x_atomstr(str) = X_SEXP_WHITESPACE_SPACE_STR;
-		x_interp_write_str(p_base, (x_obj_t *)&wrap);
+		x_eval_write_str(p_base, (x_obj_t *)&wrap);
 	}
 
 	return p_obj;
@@ -282,12 +282,12 @@ x_obj_t *x_sexp_list_display(x_obj_t *p_base, x_obj_t *p_args)
 		return p_obj;
 
 	x_atomstr(str) = X_SEXP_LIST_PRE_STR;
-	x_interp_write_str(p_base, (x_obj_t *)&wrap);
+	x_eval_write_str(p_base, (x_obj_t *)&wrap);
 
 	for (;;) {
 		if (x_obj_isnil(p_base, x_firstobj(p_obj))) {
 			x_atomstr(str) = "()";
-			x_interp_write_str(p_base, (x_obj_t *)&wrap);
+			x_eval_write_str(p_base, (x_obj_t *)&wrap);
 		} else {
 			x_firstobj((x_obj_t *)disp_wrap) = x_firstobj(p_obj);
 			x_token_display(p_base, (x_obj_t *)disp_wrap);
@@ -297,26 +297,26 @@ x_obj_t *x_sexp_list_display(x_obj_t *p_base, x_obj_t *p_args)
 
 		if (x_obj_isnil(p_base, p_obj)) {
 			x_atomstr(str) = X_SEXP_LIST_POST_STR;
-			x_interp_write_str(p_base, (x_obj_t *)&wrap);
+			x_eval_write_str(p_base, (x_obj_t *)&wrap);
 
 			break;
 		}
 
 		if ( ! x_obj_type_islist(p_base, p_obj)) {
 			x_atomstr(str) = X_SEXP_WHITESPACE_SPACE_STR X_SEXP_LIST_DOT_STR X_SEXP_WHITESPACE_SPACE_STR;
-			x_interp_write_str(p_base, (x_obj_t *)&wrap);
+			x_eval_write_str(p_base, (x_obj_t *)&wrap);
 
 			x_firstobj((x_obj_t *)disp_wrap) = p_obj;
 			x_token_display(p_base, (x_obj_t *)disp_wrap);
 
 			x_atomstr(str) = X_SEXP_LIST_POST_STR;
-			x_interp_write_str(p_base, (x_obj_t *)&wrap);
+			x_eval_write_str(p_base, (x_obj_t *)&wrap);
 
 			break;
 		}
 
 		x_atomstr(str) = X_SEXP_WHITESPACE_SPACE_STR;
-		x_interp_write_str(p_base, (x_obj_t *)&wrap);
+		x_eval_write_str(p_base, (x_obj_t *)&wrap);
 	}
 
 	return p_obj;

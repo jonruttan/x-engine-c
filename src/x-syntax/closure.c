@@ -11,7 +11,7 @@
  *      " "
  */
 #include "x-prim.h"
-#include "x-interp.h"
+#include "x-eval.h"
 #include "x-type/operative.h"
 #include "x-type/procedure.h"
 
@@ -31,8 +31,8 @@
 static x_obj_t *x_prim_closure(x_obj_t *p_base, x_obj_t *p_args)
 {
 	x_obj_t *p_params, *p_body,
-		*p_env = x_firstobj(x_interp_field_env_alist(p_base)),
-		*p_bst = x_interp_field_env_global_tree(p_base);
+		*p_env = x_firstobj(x_eval_field_env_alist(p_base)),
+		*p_bst = x_eval_field_env_global_tree(p_base);
 	x_args(p_args, 2, NULL, &p_params);
 	p_body = x_11(p_args);
 
@@ -55,7 +55,7 @@ static x_obj_t *x_prim_closure(x_obj_t *p_base, x_obj_t *p_args)
 static x_obj_t *x_prim_operative(x_obj_t *p_base, x_obj_t *p_args)
 {
 	x_obj_t *p_params, *p_envparam, *p_body,
-		*p_env = x_firstobj(x_interp_field_env_alist(p_base));
+		*p_env = x_firstobj(x_eval_field_env_alist(p_base));
 	x_args(p_args, 3, NULL, &p_params, &p_envparam);
 	p_body = x_111(p_args);
 

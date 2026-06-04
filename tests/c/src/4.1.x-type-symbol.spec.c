@@ -18,7 +18,6 @@
 #include "ext/x-expr/src/x-obj.c"
 #include "src/x-alist.c"
 #include "ext/x-expr/src/x-base.c"
-#include "src/x-interp.c"
 #include "src/x-token/sexp/atom.c"
 #include "src/x-token/sexp/pair.c"
 #include "src/x-token.c"
@@ -90,7 +89,7 @@ static char *test_obj_type_issymbol(void)
 {
 	x_obj_t *p_base, *p_obj;
 
-	p_base = x_interp_make(NULL, NULL);
+	p_base = x_eval_make(NULL, NULL);
 
 	p_obj = x_mksymbol(p_base, 0);
 	_it_should("return true when object is a Symbol",
@@ -161,7 +160,7 @@ static char *test_mksymbol(void)
 
 
 
-	p_base = x_interp_make(NULL, NULL);
+	p_base = x_eval_make(NULL, NULL);
 	p_obj = x_mksymbol(p_base, X_TEST_SYMBOL_VALUE);
 	_it_should("make a Symbol object, attach it to the Base object, and set its value",
 		p_obj != NULL
@@ -179,7 +178,7 @@ static char *test_mkfsymbol(void)
 	x_obj_t *p_base, *p_obj;
 	x_obj_flag_t flags = rand();
 
-	p_base = x_interp_make(NULL, NULL);
+	p_base = x_eval_make(NULL, NULL);
 
 	p_obj = x_mkfsymbol(p_base, flags, X_TEST_SYMBOL_VALUE);
 	_it_should("make a Symbol object and set its value",
@@ -190,7 +189,7 @@ static char *test_mkfsymbol(void)
 
 
 
-	p_base = x_interp_make(NULL, NULL);
+	p_base = x_eval_make(NULL, NULL);
 	p_obj = x_mkfsymbol(p_base, flags, X_TEST_SYMBOL_VALUE);
 	_it_should("make a Symbol object, attach it to the Base object, and set its value",
 		p_obj != NULL
@@ -217,7 +216,7 @@ static char *test_mksymbolown(void)
 
 
 
-	p_base = x_interp_make(NULL, NULL);
+	p_base = x_eval_make(NULL, NULL);
 	p_obj = x_mksymbolown(p_base, X_TEST_SYMBOL_VALUE);
 	_it_should("make an Owned Symbol, attach it to the Base object, object and set its value",
 		p_obj != NULL
@@ -236,7 +235,7 @@ static char *test_mkfsymbolown(void)
 	x_obj_t *p_base, *p_obj;
 	x_obj_flag_t flags = rand();
 
-	p_base = x_interp_make(NULL, NULL);
+	p_base = x_eval_make(NULL, NULL);
 
 	p_obj = x_mkfsymbolown(NULL, flags, X_TEST_SYMBOL_VALUE);
 	_it_should("make an Owned Symbol object and set its value",
@@ -247,7 +246,7 @@ static char *test_mkfsymbolown(void)
 
 
 
-	p_base = x_interp_make(NULL, NULL);
+	p_base = x_eval_make(NULL, NULL);
 	p_obj = x_mkfsymbolown(p_base, flags, X_TEST_SYMBOL_VALUE);
 	_it_should("make an Owned Symbol, attach it to the Base object, object and set its value",
 		p_obj != NULL
@@ -277,7 +276,7 @@ static char *test_make_symbol(void)
 
 
 
-	p_base = x_interp_make(NULL, NULL);
+	p_base = x_eval_make(NULL, NULL);
 	p_obj = x_make_symbol(p_base, flags, X_TEST_SYMBOL_VALUE);
 	_it_should("make a Symbol object, attach it to the Base object, and set its value",
 		p_obj != NULL
@@ -297,7 +296,7 @@ static char *test_type_symbol_struct(void)
 
 	helper_alloc_reset();
 
-	p_base = x_interp_make(NULL, NULL);
+	p_base = x_eval_make(NULL, NULL);
 	p_type = x_type_symbol_struct(p_base, p_base);
 	_it_should("return Symbol Type list",
 		! x_obj_isnil(p_base, p_type)
@@ -370,14 +369,14 @@ static char *test_type_symbol_register(void)
 {
 	x_obj_t *p_base, *p_type;
 
-	p_base = x_interp_make(NULL, NULL);
+	p_base = x_eval_make(NULL, NULL);
 
 	p_type = x_type_symbol_register(p_base, p_base);
 	_it_should("return the Symbol type object",
 		0 == x_lib_strcmp(X_TYPE_SYMBOL_NAME, x_strval(x_type_field_name(p_type)))
 	);
 	_it_should("add the Symbol type to the Type alist",
-		p_type == x_restobj(x_firstobj(x_firstobj(x_interp_field_type_alist(p_base))))
+		p_type == x_restobj(x_firstobj(x_firstobj(x_eval_field_type_alist(p_base))))
 	);
 	_it_should("create the Symbol data structure",
 		x_obj_type_isspair(x_symbol_data(p_type))
@@ -395,10 +394,10 @@ static char *test_base_alist_assoc(void)
 
 	helper_alloc_reset();
 
-	p_base = x_interp_make(NULL, NULL);
-	x_interp_type_alist_extend(p_base, x_mkspair(p_base, X_OBJ_FLAG_NONE, x_mkspair(p_base, X_OBJ_FLAG_NONE, x_type_symbol_name, NULL), atom(1)));
+	p_base = x_eval_make(NULL, NULL);
+	x_eval_type_alist_extend(p_base, x_mkspair(p_base, X_OBJ_FLAG_NONE, x_mkspair(p_base, X_OBJ_FLAG_NONE, x_type_symbol_name, NULL), atom(1)));
 
-	p_type = x_interp_type_alist_assoc(p_base, x_mkspair(p_base, X_OBJ_FLAG_NONE, x_type_symbol_name, NULL));
+	p_type = x_eval_type_alist_assoc(p_base, x_mkspair(p_base, X_OBJ_FLAG_NONE, x_type_symbol_name, NULL));
 	_it_should("find the type in the alist and return its properties",
 		x_type_symbol_name == x_type_field_name(p_type)
 	);
@@ -412,14 +411,14 @@ static char *test_base_alist_assoc(void)
 
 	helper_alloc_reset();
 
-	p_base = x_interp_make(NULL, NULL);
+	p_base = x_eval_make(NULL, NULL);
 
 
 	p_args = x_mkspair(p_base, X_OBJ_FLAG_NONE, x_mkstr(p_base, "SYMBOL"), p_base);
 	p_symbol = 	p_obj = x_type_symbol_insert(p_base, p_args);
 
 	_it_should("contain the symbol in the symbol list",
-		p_obj == x_firstobj(x_interp_field_symbol_list(p_base))
+		p_obj == x_firstobj(x_eval_field_symbol_list(p_base))
 		&& 0 == x_lib_strcmp(x_symbolval(p_symbol), x_symbolval(p_obj))
 	);
 
@@ -475,7 +474,7 @@ static char *test_type_symbol_make(void)
 
 
 	/* Empty p_base object */
-	p_base = x_interp_make(NULL, NULL);
+	p_base = x_eval_make(NULL, NULL);
 	p_args = x_mkspair(p_base, X_OBJ_FLAG_NONE, p_str, NULL);
 	p_obj[0] = x_type_symbol_make(p_base, p_args);
 	_it_should("make a symbol object",
@@ -505,7 +504,7 @@ static char *test_type_symbol_make(void)
 
 
 	/* With p_base object */
-	p_base = x_interp_make(NULL, NULL);
+	p_base = x_eval_make(NULL, NULL);
 
 	p_type = x_type_symbol_register(p_base, p_base);
 
@@ -575,7 +574,7 @@ static char *test_type_symbol_find(void)
 
 	helper_alloc_reset();
 
-	p_base = x_interp_make(NULL, NULL);
+	p_base = x_eval_make(NULL, NULL);
 
 	p_str = x_mkstr(p_base, "SYMBOL");
 	p_args = x_mkspair(p_base, X_OBJ_FLAG_NONE, p_str, NULL);

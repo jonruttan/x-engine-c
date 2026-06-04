@@ -17,7 +17,7 @@
 #include "x-type/atom.h"
 #include "x-type/int.h"
 #include "x-obj.h"
-#include "x-interp.h"
+#include "x-eval.h"
 
 x_satom_t x_type_atom_name = x_obj_set(x_type_atom_obj, X_OBJ_FLAG_NONE, { .s = (x_char_t *)X_TYPE_ATOM_SYMBOL }),
 	x_type_atom_make_prim = x_obj_set(x_type_atom_obj, X_OBJ_FLAG_NONE, { (x_obj_t *)&x_type_atom_make }),
@@ -118,7 +118,7 @@ x_obj_t *x_type_atom_write(x_obj_t *p_base, x_obj_t *p_args)
 		{ .s = (x_char_t *)X_TYPE_ATOM_WRITE_STR });
 	x_spair_t wrap = x_obj_set(NULL, X_OBJ_FLAG_NONE, { str }, { NULL });
 
-	x_interp_write_str(p_base, (x_obj_t *)&wrap);
+	x_eval_write_str(p_base, (x_obj_t *)&wrap);
 
 	return x_firstobj(p_args);
 }

@@ -19,7 +19,6 @@
 #include "ext/x-expr/src/x.c"
 #include "src/x-alist.c"
 #include "ext/x-expr/src/x-base.c"
-#include "src/x-interp.c"
 #include "src/x-eval.c"
 #include "src/x-type.c"
 #include "src/x-type/atom.c"
@@ -103,7 +102,7 @@ static char *test_operative_struct(void)
 {
 	x_obj_t *p_base, *p_type;
 
-	p_base = x_interp_make(NULL, NULL);
+	p_base = x_eval_make(NULL, NULL);
 	p_type = x_type_operative_struct(p_base, NULL);
 
 	_it_should("return a type struct",
@@ -126,7 +125,7 @@ static char *test_operative_register(void)
 {
 	x_obj_t *p_base, *p_type1, *p_type2;
 
-	p_base = x_interp_make(NULL, NULL);
+	p_base = x_eval_make(NULL, NULL);
 	p_type1 = x_type_operative_register(p_base, NULL);
 
 	_it_should("return a type struct",
@@ -146,7 +145,7 @@ static char *test_operative_make(void)
 {
 	x_obj_t *p_base, *p_op;
 
-	p_base = x_interp_make(NULL, NULL);
+	p_base = x_eval_make(NULL, NULL);
 
 	p_op = x_make_operative(p_base, X_OBJ_FLAG_NONE,
 		x_mksatom(p_base, X_OBJ_FLAG_NONE, "params"),
@@ -174,7 +173,7 @@ static char *test_operative_call(void)
 	x_obj_t *p_params, *p_body, *p_args, *p_result;
 	x_obj_t *p_saved_env;
 
-	p_base = x_interp_make(NULL, NULL);
+	p_base = x_eval_make(NULL, NULL);
 	x_prim_register(p_base, NULL);
 
 	/* Create operative: (op x 99) — variadic param, body is (99).
@@ -186,9 +185,9 @@ static char *test_operative_call(void)
 	p_body = x_mkspair(p_base, X_OBJ_FLAG_NONE, x_mksatom(p_base, X_OBJ_FLAG_NONE, 99), NULL);
 
 	p_op = x_make_operative(p_base, X_OBJ_FLAG_NONE,
-		p_params, NULL, p_body, x_firstobj(x_interp_field_env_alist(p_base)));
+		p_params, NULL, p_body, x_firstobj(x_eval_field_env_alist(p_base)));
 
-	p_saved_env = x_firstobj(x_interp_field_env_alist(p_base));
+	p_saved_env = x_firstobj(x_eval_field_env_alist(p_base));
 
 	/* Call: (op 42) — args: (op . (42 . nil)) */
 	p_args = x_mkspair(p_base, X_OBJ_FLAG_NONE, p_op,
@@ -203,7 +202,7 @@ static char *test_operative_call(void)
 		p_result != NULL && x_atomint(p_result) == 99);
 
 	_it_should("env_alist restored to caller (formals shed)",
-		x_firstobj(x_interp_field_env_alist(p_base)) == p_saved_env);
+		x_firstobj(x_eval_field_env_alist(p_base)) == p_saved_env);
 
 	test_cleanup(p_base);
 
@@ -216,10 +215,10 @@ static char *test_operative_call_envparam(void)
 	x_obj_t *p_envparam, *p_body, *p_args, *p_result;
 	x_obj_t *p_caller_env;
 
-	p_base = x_interp_make(NULL, NULL);
+	p_base = x_eval_make(NULL, NULL);
 	x_prim_register(p_base, NULL);
 
-	p_caller_env = x_firstobj(x_interp_field_env_alist(p_base));
+	p_caller_env = x_firstobj(x_eval_field_env_alist(p_base));
 
 	/* Op with env-param 'e', no params, body is (42).  Lexical scope:
 	 * env-param is bound to caller's env during body execution but the
@@ -229,7 +228,7 @@ static char *test_operative_call_envparam(void)
 	p_body = x_mkspair(p_base, X_OBJ_FLAG_NONE, x_mksatom(p_base, X_OBJ_FLAG_NONE, 42), NULL);
 
 	p_op = x_make_operative(p_base, X_OBJ_FLAG_NONE,
-		NULL, p_envparam, p_body, x_firstobj(x_interp_field_env_alist(p_base)));
+		NULL, p_envparam, p_body, x_firstobj(x_eval_field_env_alist(p_base)));
 
 	p_args = x_mkspair(p_base, X_OBJ_FLAG_NONE, p_op, NULL);
 
@@ -240,7 +239,7 @@ static char *test_operative_call_envparam(void)
 		p_result != NULL && x_atomint(p_result) == 42);
 
 	_it_should("env_alist restored to caller (env-param frame shed)",
-		x_firstobj(x_interp_field_env_alist(p_base)) == p_caller_env);
+		x_firstobj(x_eval_field_env_alist(p_base)) == p_caller_env);
 
 	test_cleanup(p_base);
 
@@ -252,7 +251,7 @@ static char *test_operative_write(void)
 	x_obj_t *p_base, *p_op, *p_args, *p_ret;
 	x_char_t s[64];
 
-	p_base = x_interp_make(NULL, NULL);
+	p_base = x_eval_make(NULL, NULL);
 
 	p_op = x_make_operative(p_base, X_OBJ_FLAG_NONE,
 		NULL, NULL, NULL, NULL);

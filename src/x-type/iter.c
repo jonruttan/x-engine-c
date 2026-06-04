@@ -13,7 +13,7 @@
  */
 #include "x-type/iter.h"
 #include "x-obj.h"
-#include "x-interp.h"
+#include "x-eval.h"
 #include "x-type/prim.h"
 
 x_satom_t x_type_iter_name = x_obj_set(x_type_atom_obj, X_OBJ_FLAG_NONE, { .s = (x_char_t *)X_TYPE_ITER_NAME }),
@@ -111,7 +111,7 @@ x_obj_t *x_type_iter_write(x_obj_t *p_base, x_obj_t *p_args)
 		{ .s = (x_char_t *)X_TYPE_ITER_WRITE_STR });
 	x_spair_t wrap = x_obj_set(NULL, X_OBJ_FLAG_NONE, { str }, { NULL });
 
-	x_interp_write_str(p_base, (x_obj_t *)&wrap);
+	x_eval_write_str(p_base, (x_obj_t *)&wrap);
 
 	return x_firstobj(p_args);
 }

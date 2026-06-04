@@ -14,7 +14,7 @@
  * # Includes
  */
 #include "x-prim.h"
-#include "x-interp.h"
+#include "x-eval.h"
 #include "x-eval.h"
 #include "x-heap.h"
 #include "x-token.h"
@@ -222,7 +222,7 @@ static x_obj_t *x_prim_clock(x_obj_t *p_base, x_obj_t *p_args)
  *
  *  @note Conservative C-stack scanning (pass 2) is active for the CLI --
  *        main() records &p_base as the stack base -- but inert in unit
- *        tests that build a base via x_interp_make directly (it leaves the
+ *        tests that build a base via x_eval_make directly (it leaves the
  *        stack-base atom nil).  Either way, a sweep must run with no
  *        allocation between it and this mark: a transient eval-list cell
  *        pushed *after* the mark is unmarked (and the stack scan, being
@@ -317,7 +317,7 @@ static x_obj_t *x_prim_heap_sweep(x_obj_t *p_base, x_obj_t *p_args)
 	(void)p_args;
 #ifdef X_PROFILE
 	if (x_base_isset(p_base))
-		x_atomint(x_firstobj(x_interp_field_profile_gc_runs(p_base)))++;
+		x_atomint(x_firstobj(x_eval_field_profile_gc_runs(p_base)))++;
 #endif
 
 	x_heap_sweep_phase(p_base);
@@ -392,7 +392,7 @@ static x_obj_t *x_prim_heap_collect(x_obj_t *p_base, x_obj_t *p_args)
 	(void)p_args;
 #ifdef X_PROFILE
 	if (x_base_isset(p_base))
-		x_atomint(x_firstobj(x_interp_field_profile_gc_runs(p_base)))++;
+		x_atomint(x_firstobj(x_eval_field_profile_gc_runs(p_base)))++;
 #endif
 
 	x_heap_mark_phase(p_base);
@@ -486,7 +486,7 @@ static x_obj_t *x_prim_atomic(x_obj_t *p_base, x_obj_t *p_args)
 	call_args[0][X_OBJ_META_FLAGS].i = X_OBJ_FLAG_NONE;
 
 	/* Root p_args so mark+sweep inside the loop doesn't free them */
-	x_obj_push_field(p_base, &x_interp_field_eval_list(p_base), p_args, X_OBJ_FLAG_NONE);
+	x_obj_push_field(p_base, &x_eval_field_eval_list(p_base), p_args, X_OBJ_FLAG_NONE);
 
 	while ( ! x_obj_isnil(p_base, p_args)) {
 		x_firstobj((x_obj_t *)call_args) = x_firstobj(p_args);
@@ -499,7 +499,7 @@ static x_obj_t *x_prim_atomic(x_obj_t *p_base, x_obj_t *p_args)
 		p_args = x_restobj(p_args);
 	}
 
-	x_obj_pop_field(p_base, &x_interp_field_eval_list(p_base));
+	x_obj_pop_field(p_base, &x_eval_field_eval_list(p_base));
 
 	return p_result;
 }
@@ -536,7 +536,7 @@ x_obj_t *x_prim_repl(x_obj_t *p_base, x_obj_t *p_args)
  * Return the source line at which the most recent error was signaled.
  *
  * Reads the line number saved in the current error handler's line slot
- * (set by x_interp_error before longjmp).  Returns 0 outside a guard handler.
+ * (set by x_eval_error before longjmp).  Returns 0 outside a guard handler.
  *
  * x-lang form: @code (error-line) @endcode
  *
@@ -549,7 +549,7 @@ static x_obj_t *x_prim_error_line(x_obj_t *p_base, x_obj_t *p_args)
 	x_obj_t *p_handler;
 	(void)p_args;
 
-	p_handler = x_firstobj(x_interp_field_error_handler(p_base));
+	p_handler = x_firstobj(x_eval_field_error_handler(p_base));
 	if (x_obj_isnil(p_base, p_handler)) {
 		return x_mkint(p_base, 0);
 	}

@@ -17,7 +17,6 @@
 #include "ext/x-expr/src/x.c"
 #include "src/x-alist.c"
 #include "ext/x-expr/src/x-base.c"
-#include "src/x-interp.c"
 #include "src/x-eval.c"
 #include "ext/x-expr/src/x-heap.c"
 #include "src/x-type.c"
@@ -120,7 +119,7 @@ static char *test_eval(void)
 	x_sys_free(p_args);
 
 
-	p_base = x_interp_make(NULL, NULL);
+	p_base = x_eval_make(NULL, NULL);
 	p_obj = x_mksatom(p_base, X_OBJ_FLAG_NONE, i);
 	p_args = x_mkpair(p_base, x_mkpair(p_base, p_obj, p_base), p_base);
 	p_ret = x_eval(p_base, p_args);
@@ -132,7 +131,7 @@ static char *test_eval(void)
 	test_cleanup(p_base);
 
 
-	p_base = x_interp_make(NULL, NULL);
+	p_base = x_eval_make(NULL, NULL);
 	p_type = x_type_struct_make(p_base, types[0]);
 	p_obj = x_obj_make(p_base, p_type, X_OBJ_FLAG_NONE, X_OBJ_LENGTH_ATOM, i);
 	p_args = x_mkpair(p_base, x_mkpair(p_base, p_obj, p_base), p_base);
@@ -145,7 +144,7 @@ static char *test_eval(void)
 	test_cleanup(p_base);
 
 
-	p_base = x_interp_make(NULL, NULL);
+	p_base = x_eval_make(NULL, NULL);
 	p_type = x_type_struct_make(p_base, types[1]);
 	p_obj = x_obj_make(p_base, p_type, X_OBJ_FLAG_NONE, X_OBJ_LENGTH_ATOM, i);
 	p_args = x_mkpair(p_base, x_mkpair(p_base, p_obj, p_base), p_base);
@@ -158,7 +157,7 @@ static char *test_eval(void)
 	test_cleanup(p_base);
 
 
-	p_base = x_interp_make(NULL, NULL);
+	p_base = x_eval_make(NULL, NULL);
 	p_type = x_type_struct_make(p_base, types[2]);
 	p_obj = x_mksatom(p_base, X_OBJ_FLAG_NONE, i);
 	p_args = x_mkpair(p_base,
@@ -177,7 +176,7 @@ static char *test_eval(void)
 	test_cleanup(p_base);
 
 
-	p_base = x_interp_make(NULL, NULL);
+	p_base = x_eval_make(NULL, NULL);
 	p_obj = x_mksatom(p_base, X_OBJ_FLAG_NONE, i);
 	p_args = x_mkpair(p_base, x_mkpair(p_base, p_obj, p_base), p_base);
 	p_ret = x_eval(p_base, p_args);
@@ -203,7 +202,7 @@ x_obj_t *test_type_tco_eval(x_obj_t *p_base, x_obj_t *p_args)
 
 	/* Set a self-evaluating satom as the TCO bounce target */
 	test_tco_result = x_mksatom(p_base, X_OBJ_FLAG_NONE, 999);
-	x_firstobj(x_interp_field_tco_expr(p_base)) = test_tco_result;
+	x_firstobj(x_eval_field_tco_expr(p_base)) = test_tco_result;
 
 	return p_obj;
 }
@@ -219,7 +218,7 @@ x_obj_t *test_type_tco_eval_two_bounce(x_obj_t *p_base, x_obj_t *p_args)
 
 	if (tco_eval_calls == 1) {
 		/* First bounce: leave tco_env nil */
-		x_firstobj(x_interp_field_tco_expr(p_base)) = p_obj;
+		x_firstobj(x_eval_field_tco_expr(p_base)) = p_obj;
 		return p_obj;
 	}
 
@@ -227,14 +226,14 @@ x_obj_t *test_type_tco_eval_two_bounce(x_obj_t *p_base, x_obj_t *p_args)
 		/* Second bounce: set tco_env for env restore.
 		 * tco_env holds compound ((env . boundary) . (bst . shadow)). */
 		if (test_tco_env_to_set != NULL) {
-			x_firstobj(x_interp_field_tco_env(p_base)) = x_mkspair(p_base, X_OBJ_FLAG_NONE,
+			x_firstobj(x_eval_field_tco_env(p_base)) = x_mkspair(p_base, X_OBJ_FLAG_NONE,
 				x_mkspair(p_base, X_OBJ_FLAG_NONE, test_tco_env_to_set,
-					x_interp_field_env_local_boundary(p_base)),
+					x_eval_field_env_local_boundary(p_base)),
 				x_mkspair(p_base, X_OBJ_FLAG_NONE,
-					x_interp_field_env_global_tree(p_base),
-					x_interp_field_shadow_list(p_base)));
+					x_eval_field_env_global_tree(p_base),
+					x_eval_field_shadow_list(p_base)));
 		}
-		x_firstobj(x_interp_field_tco_expr(p_base)) = p_obj;
+		x_firstobj(x_eval_field_tco_expr(p_base)) = p_obj;
 		return p_obj;
 	}
 
@@ -254,7 +253,7 @@ static char *test_eval_tco(void)
 		{ .fn = test_type_tco_eval });
 
 	/* TCO bounce: eval fn sets tco_expr, x_eval loops back */
-	p_base = x_interp_make(NULL, NULL);
+	p_base = x_eval_make(NULL, NULL);
 
 	x_lib_memset(&tco_type, 0, sizeof(tco_type));
 	tco_type.p_name = tco_type_name;
@@ -273,14 +272,14 @@ static char *test_eval_tco(void)
 	_it_should("call eval fn once (bounce resolves to self-eval)",
 		1 == tco_eval_calls);
 
-	tco_count = x_atomint(x_firstobj(x_interp_field_profile_tco(p_base)));
+	tco_count = x_atomint(x_firstobj(x_eval_field_profile_tco(p_base)));
 	_it_should("increment TCO profile counter",
 		tco_count == 1);
 
 	test_cleanup(p_base);
 
 	/* TCO env restore: tco_env set by eval fn */
-	p_base = x_interp_make(NULL, NULL);
+	p_base = x_eval_make(NULL, NULL);
 	p_type = x_type_struct_make(p_base, tco_type);
 	p_obj = x_obj_make(p_base, p_type, X_OBJ_FLAG_NONE,
 		X_OBJ_LENGTH_ATOM, 42);
@@ -295,12 +294,12 @@ static char *test_eval_tco(void)
 				x_mksatom(p_base, X_OBJ_FLAG_NONE, "val")),
 			NULL);
 
-		x_firstobj(x_interp_field_tco_env(p_base)) = x_mkspair(p_base, X_OBJ_FLAG_NONE,
+		x_firstobj(x_eval_field_tco_env(p_base)) = x_mkspair(p_base, X_OBJ_FLAG_NONE,
 			x_mkspair(p_base, X_OBJ_FLAG_NONE, p_saved_env, NULL),
 			NULL);
 
 		/* Modify env to something else */
-		x_firstobj(x_interp_field_env_alist(p_base)) = x_mkspair(p_base, X_OBJ_FLAG_NONE,
+		x_firstobj(x_eval_field_env_alist(p_base)) = x_mkspair(p_base, X_OBJ_FLAG_NONE,
 			x_mkspair(p_base, X_OBJ_FLAG_NONE,
 				x_mksatom(p_base, X_OBJ_FLAG_NONE, "other"),
 				x_mksatom(p_base, X_OBJ_FLAG_NONE, "env")),
@@ -344,7 +343,7 @@ static char *test_eval_tco_env_restore(void)
 	x_satom_t tco_eval_prim = x_obj_set(x_type_atom_obj, X_OBJ_FLAG_NONE,
 		{ .fn = test_type_tco_eval_two_bounce });
 
-	p_base = x_interp_make(NULL, NULL);
+	p_base = x_eval_make(NULL, NULL);
 
 	x_lib_memset(&tco_type, 0, sizeof(tco_type));
 	tco_type.p_name = tco_type_name;
@@ -372,7 +371,7 @@ static char *test_eval_tco_env_restore(void)
 	_it_should("called eval fn three times",
 		3 == tco_eval_calls);
 	_it_should("restore env from later tco_env",
-		x_firstobj(x_interp_field_env_alist(p_base)) == p_restore_env);
+		x_firstobj(x_eval_field_env_alist(p_base)) == p_restore_env);
 
 	test_tco_env_to_set = NULL;
 	test_cleanup(p_base);

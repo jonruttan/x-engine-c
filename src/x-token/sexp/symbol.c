@@ -13,7 +13,7 @@
  */
 
 #include "x-token/sexp/symbol.h"
-#include "x-interp.h"
+#include "x-eval.h"
 #include "x-token.h"
 #include "x-type/buffer.h"
 #include "x-type/str.h"
@@ -86,7 +86,7 @@ x_obj_t *x_sexp_symbol_display(x_obj_t *p_base, x_obj_t *p_args)
 		{ .s = x_firststr(x_firstobj(p_args)) });
 	x_spair_t wrap = x_obj_set(NULL, X_OBJ_FLAG_NONE, { str }, { NULL });
 
-	x_interp_write_str(p_base, (x_obj_t *)&wrap);
+	x_eval_write_str(p_base, (x_obj_t *)&wrap);
 
 	return x_firstobj(p_args);
 }
@@ -113,9 +113,9 @@ x_obj_t *x_sexp_symbol_write(x_obj_t *p_base, x_obj_t *p_args)
 		wrap_str = x_obj_set(NULL, X_OBJ_FLAG_NONE, { str }, { NULL }),
 		wrap_suf = x_obj_set(NULL, X_OBJ_FLAG_NONE, { suffix }, { NULL });
 
-	x_interp_write_str(p_base, (x_obj_t *)&wrap_pre);
-	x_interp_write_str(p_base, (x_obj_t *)&wrap_str);
-	x_interp_write_str(p_base, (x_obj_t *)&wrap_suf);
+	x_eval_write_str(p_base, (x_obj_t *)&wrap_pre);
+	x_eval_write_str(p_base, (x_obj_t *)&wrap_str);
+	x_eval_write_str(p_base, (x_obj_t *)&wrap_suf);
 
 	return x_firstobj(p_args);
 }

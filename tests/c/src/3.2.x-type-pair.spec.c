@@ -18,7 +18,8 @@
 #include "ext/x-expr/src/x-obj.c"
 #include "src/x-alist.c"
 #include "ext/x-expr/src/x-base.c"
-#include "src/x-interp.c"
+#define STUB_X_EVAL
+#include "src/x-eval.c"
 #include "ext/x-expr/src/x-heap.c"
 #include "src/x-type.c"
 #include "src/x-type/prim.c"
@@ -81,7 +82,7 @@ static char *test_obj_type_ispair(void)
 {
 	x_obj_t *p_base, *p_obj;
 
-	p_base = x_interp_make(NULL, NULL);
+	p_base = x_eval_make(NULL, NULL);
 
 	p_obj = x_mkpair(p_base, 0, 0);
 	_it_should("return true when object is a pair",
@@ -108,7 +109,7 @@ static char *test_mkpair(void)
 	x_obj_t *p_base, *p_obj;
 	x_int_t i1 = rand(), i2 = rand();
 
-	p_base = x_interp_make(NULL, NULL);
+	p_base = x_eval_make(NULL, NULL);
 
 	p_obj = x_mkpair(p_base, (void *)i1, (void *)i2);
 	_it_should("make a Pair object and set its first and rest values",
@@ -122,7 +123,7 @@ static char *test_mkpair(void)
 	x_sys_free(p_obj);
 
 
-	p_base = x_interp_make(NULL, NULL);
+	p_base = x_eval_make(NULL, NULL);
 	p_obj = x_mkpair(p_base, (void *)i1, (void *)i2);
 	_it_should("make a Pair object with a real base and set its first and rest values",
 		! x_obj_isnil(p_base, p_obj)
@@ -143,7 +144,7 @@ static char *test_mkfpair(void)
 	x_int_t i1 = rand(), i2 = rand();
 	x_obj_flag_t flags = rand();
 
-	p_base = x_interp_make(NULL, NULL);
+	p_base = x_eval_make(NULL, NULL);
 
 	p_obj = x_mkfpair(p_base, flags, (void *)i1, (void *)i2);
 	_it_should("make a Pair object and set its first and rest values",
@@ -157,7 +158,7 @@ static char *test_mkfpair(void)
 	x_sys_free(p_obj);
 
 
-	p_base = x_interp_make(NULL, NULL);
+	p_base = x_eval_make(NULL, NULL);
 	p_obj = x_mkfpair(p_base, flags, (void *)i1, (void *)i2);
 	_it_should("make a Pair object with a real base and set its first and rest values",
 		! x_obj_isnil(p_base, p_obj)
@@ -178,7 +179,7 @@ static char *test_make_pair(void)
 	x_int_t i1 = rand(), i2 = rand();
 	x_obj_flag_t flags = rand();
 
-	p_base = x_interp_make(NULL, NULL);
+	p_base = x_eval_make(NULL, NULL);
 
 	p_obj = x_make_pair(p_base, flags, (void *)i1, (void *)i2);
 	_it_should("make a Pair object and set its first and rest values",
@@ -192,7 +193,7 @@ static char *test_make_pair(void)
 	x_sys_free(p_obj);
 
 
-	p_base = x_interp_make(NULL, NULL);
+	p_base = x_eval_make(NULL, NULL);
 	p_obj = x_make_pair(p_base, flags, (void *)i1, (void *)i2);
 	_it_should("make a Pair object with a real base and set its first and rest values",
 		! x_obj_isnil(p_base, p_obj)
@@ -211,14 +212,14 @@ static char *test_type_pair_register(void)
 {
 	x_obj_t *p_base, *p_type;
 
-	p_base = x_interp_make(NULL, NULL);
+	p_base = x_eval_make(NULL, NULL);
 
 	p_type = x_type_pair_register(p_base, p_base);
 	_it_should("return the Pair type object",
 		0 == x_lib_strcmp(X_TYPE_PAIR_SYMBOL, x_atomstr(x_type_field_name(p_type)))
 	);
 	_it_should("add the Pair type to the Type alist",
-		p_type == x_restobj(x_firstobj(x_firstobj(x_interp_field_type_alist(p_base))))
+		p_type == x_restobj(x_firstobj(x_firstobj(x_eval_field_type_alist(p_base))))
 	);
 
 	x_sys_free(p_base);
@@ -232,7 +233,7 @@ static char *test_type_pair_struct(void)
 
 	helper_alloc_reset();
 
-	p_base = x_interp_make(NULL, NULL);
+	p_base = x_eval_make(NULL, NULL);
 	p_type = x_type_pair_struct(p_base, p_base);
 	_it_should("return Pair Type list",
 		! x_obj_isnil(p_base, p_type)
@@ -307,10 +308,10 @@ static char *test_base_alist_assoc(void)
 
 	helper_alloc_reset();
 
-	p_base = x_interp_make(NULL, NULL);
-	x_interp_type_alist_extend(p_base, x_mkspair(p_base, X_OBJ_FLAG_NONE, x_mkspair(p_base, X_OBJ_FLAG_NONE, x_type_pair_name, NULL), atom(1)));
+	p_base = x_eval_make(NULL, NULL);
+	x_eval_type_alist_extend(p_base, x_mkspair(p_base, X_OBJ_FLAG_NONE, x_mkspair(p_base, X_OBJ_FLAG_NONE, x_type_pair_name, NULL), atom(1)));
 
-	p_type = x_interp_type_alist_assoc(p_base, x_mkspair(p_base, X_OBJ_FLAG_NONE, x_type_pair_name, NULL));
+	p_type = x_eval_type_alist_assoc(p_base, x_mkspair(p_base, X_OBJ_FLAG_NONE, x_type_pair_name, NULL));
 	_it_should("find the type in the Type alist and return its properties",
 		x_type_pair_name == x_type_field_name(p_type)
 	);
@@ -364,7 +365,7 @@ static char *test_type_pair_make(void)
 
 
 	/* Real base object */
-	p_base = x_interp_make(NULL, NULL);
+	p_base = x_eval_make(NULL, NULL);
 	p_pair = x_mkspair(p_base, X_OBJ_FLAG_NONE, rand(), rand());
 	p_args = x_mkspair(p_base, X_OBJ_FLAG_NONE, p_pair, NULL);
 
@@ -404,7 +405,7 @@ static char *test_type_pair_make(void)
 
 
 	/* With p_base object */
-	p_base = x_interp_make(NULL, NULL);
+	p_base = x_eval_make(NULL, NULL);
 	p_pair = x_mkspair(p_base, X_OBJ_FLAG_NONE, rand(), rand());
 	p_args = x_mkspair(p_base, X_OBJ_FLAG_NONE, p_pair, NULL);
 
@@ -454,7 +455,7 @@ static char *test_type_pair_length(void)
 
 	helper_alloc_reset();
 
-	p_base = x_interp_make(NULL, NULL);
+	p_base = x_eval_make(NULL, NULL);
 
 	/* Empty list */
 	p_args = x_mkspair(p_base, X_OBJ_FLAG_NONE, NULL, NULL);

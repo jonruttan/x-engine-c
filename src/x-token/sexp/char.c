@@ -12,7 +12,7 @@
  *      " "
  */
 
-#include "x-interp.h"
+#include "x-eval.h"
 #include "x-token.h"
 #include "x-type/buffer.h"
 #include "x-type/char.h"
@@ -251,7 +251,7 @@ x_obj_t *x_sexp_char_write(x_obj_t *p_base, x_obj_t *p_args)
 			X_OBJ_FLAG_NONE, { .s = (x_char_t *)"#\\" });
 		x_spair_t prefix_wrap = x_obj_set(NULL,
 			X_OBJ_FLAG_NONE, { prefix_str }, { NULL });
-		x_interp_write_str(p_base, (x_obj_t *)&prefix_wrap);
+		x_eval_write_str(p_base, (x_obj_t *)&prefix_wrap);
 	}
 
 	/* Named characters: reverse-lookup in type data alist */
@@ -268,7 +268,7 @@ x_obj_t *x_sexp_char_write(x_obj_t *p_base, x_obj_t *p_args)
 					{ .s = x_atomstr(x_firstobj(p_entry)) });
 				x_spair_t name_wrap = x_obj_set(NULL,
 					X_OBJ_FLAG_NONE, { name_str }, { NULL });
-				x_interp_write_str(p_base, (x_obj_t *)&name_wrap);
+				x_eval_write_str(p_base, (x_obj_t *)&name_wrap);
 				return x_firstobj(p_args);
 			}
 
@@ -291,7 +291,7 @@ x_obj_t *x_sexp_char_write(x_obj_t *p_base, x_obj_t *p_args)
 			x_obj_set(NULL, X_OBJ_FLAG_NONE, { sz }, { NULL })
 		};
 
-		p_ret = x_interp_write_str(p_base, (x_obj_t *)wrap);
+		p_ret = x_eval_write_str(p_base, (x_obj_t *)wrap);
 	}
 
 	if ( ! x_obj_isnil(p_base, p_ret)) {
@@ -326,7 +326,7 @@ x_obj_t *x_sexp_char_display(x_obj_t *p_base, x_obj_t *p_args)
 		x_obj_set(NULL, X_OBJ_FLAG_NONE, { sz }, { NULL })
 	};
 
-	x_interp_write_str(p_base, (x_obj_t *)wrap);
+	x_eval_write_str(p_base, (x_obj_t *)wrap);
 
 	return x_firstobj(p_args);
 }

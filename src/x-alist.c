@@ -14,7 +14,7 @@
  * # Includes
  */
 #include "x-alist.h"
-#include "x-interp.h"
+#include "x-eval.h"
 #include "x-type/symbol.h"
 
 /**
@@ -50,13 +50,13 @@ x_obj_t *x_alist_assoc(x_obj_t *p_base, x_obj_t *p_args)
 
 #ifdef X_PROFILE
 	if (x_base_isset(p_base))
-		x_atomint(x_firstobj(x_interp_field_profile_assoc_calls(p_base)))++;
+		x_atomint(x_firstobj(x_eval_field_profile_assoc_calls(p_base)))++;
 #endif
 
 	while ( ! x_obj_isnil(p_base, p_alist)) {
 #ifdef X_PROFILE
 		if (x_base_isset(p_base))
-			x_atomint(x_firstobj(x_interp_field_profile_assoc_steps(p_base)))++;
+			x_atomint(x_firstobj(x_eval_field_profile_assoc_steps(p_base)))++;
 #endif
 		if (x_firstobj(x_firstobj(x_firstobj(p_alist))) == x_firstobj(p_obj)) {
 			return x_firstobj(p_alist);
@@ -93,7 +93,7 @@ x_obj_t *x_alist_bst_lookup(x_obj_t *p_base, x_obj_t *p_tree,
 		if (x_firstobj(p_entry) == p_sym) {
 #ifdef X_PROFILE
 			if (x_base_isset(p_base))
-				x_atomint(x_firstobj(x_interp_field_profile_bst_hits(p_base)))++;
+				x_atomint(x_firstobj(x_eval_field_profile_bst_hits(p_base)))++;
 #endif
 			return p_entry;
 		}
@@ -102,7 +102,7 @@ x_obj_t *x_alist_bst_lookup(x_obj_t *p_base, x_obj_t *p_tree,
 		if (cmp == 0) {
 #ifdef X_PROFILE
 			if (x_base_isset(p_base))
-				x_atomint(x_firstobj(x_interp_field_profile_bst_hits(p_base)))++;
+				x_atomint(x_firstobj(x_eval_field_profile_bst_hits(p_base)))++;
 #endif
 			return p_entry;
 		}
@@ -114,7 +114,7 @@ x_obj_t *x_alist_bst_lookup(x_obj_t *p_base, x_obj_t *p_tree,
 
 #ifdef X_PROFILE
 	if (x_base_isset(p_base))
-		x_atomint(x_firstobj(x_interp_field_profile_bst_misses(p_base)))++;
+		x_atomint(x_firstobj(x_eval_field_profile_bst_misses(p_base)))++;
 #endif
 	return NULL;
 }
@@ -176,7 +176,7 @@ static x_obj_t *bst_pair(x_obj_t *p_base, x_obj_t *a, x_obj_t *b)
  * @return x_obj_t* -- New BST root
  *
  * @see x_alist_bst_lookup
- * @see x_interp_field_env_global_tree
+ * @see x_eval_field_env_global_tree
  */
 x_obj_t *x_alist_bst_insert(x_obj_t *p_base, x_obj_t *p_tree,
 	x_obj_t *p_entry)

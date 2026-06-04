@@ -13,7 +13,7 @@
 /*
  * # Includes
  */
-#include "x-interp.h"
+#include "x-eval.h"
 #include "x-obj.h"
 #include "x-token.h"
 #include "x-type.h"
@@ -44,7 +44,7 @@ x_obj_t *x_token_delimit(x_obj_t *p_base, x_obj_t *p_args)
 {
 	x_obj_t *p_buffer = x_firstobj(p_args),
 		*p_type = x_01(p_args),
-		*p_types = x_firstobj(x_interp_field_type_alist(p_base));
+		*p_types = x_firstobj(x_eval_field_type_alist(p_base));
 	x_spair_t prim_args[1] = {
 			x_obj_set(NULL, X_OBJ_FLAG_NONE, { NULL }, { p_args }),
 		};
@@ -121,7 +121,7 @@ x_obj_t *x_token_analyse(x_obj_t *p_base, x_obj_t *p_args)
 		arg_chr = x_obj_set(NULL, X_OBJ_FLAG_NONE, { .i = 0 });
 	x_spair_t
 		score = x_obj_set(NULL, X_OBJ_FLAG_NONE, {}),
-		type_iter = x_obj_set(NULL, X_OBJ_FLAG_NONE, { x_type_list_iter_prim }, { x_firstobj(x_interp_field_type_alist(p_base)) }),
+		type_iter = x_obj_set(NULL, X_OBJ_FLAG_NONE, { x_type_list_iter_prim }, { x_firstobj(x_eval_field_type_alist(p_base)) }),
 		iter_args[2] = {
 			x_obj_set(NULL, X_OBJ_FLAG_NONE, { type_iter }, { (x_obj_t *)(iter_args + 1) }),
 			x_obj_set(NULL, X_OBJ_FLAG_NONE, { NULL }, { NULL }),
@@ -160,25 +160,31 @@ x_obj_t *x_token_analyse(x_obj_t *p_base, x_obj_t *p_args)
 	while ( ! x_iterempty(p_base, (x_obj_t *)type_iter)) {
 		p_entry = x_type_iter_next(p_base, (x_obj_t *)iter_args);
 
-		if ( ! x_obj_isnil(p_base, p_entry)) {
+		if (x_obj_isnil(p_base, p_entry)) {
+			continue;
+		}
+
 		p_analyse_slot = x_type_field_analyse(x_restobj(p_entry));
 
-		if ( ! x_obj_isnil(p_base, p_analyse_slot)) {
-			/* Score every handler in the analyse slot.  A list is walked
-			 * directly; a lone handler is wrapped in an_one so the walk
-			 * stays uniform -- this lets the quote/quasi/unquote readers
-			 * live on the symbol type next to the symbol reader. */
-			x_firstobj((x_obj_t *)an_one) = p_analyse_slot;
-			x_restobj((x_obj_t *)an_iter) = x_obj_type_islist(p_base, p_analyse_slot)
-				? p_analyse_slot : (x_obj_t *)an_one;
+		if (x_obj_isnil(p_base, p_analyse_slot)) {
+			continue;
+		}
 
-			while ( ! x_iterempty(p_base, (x_obj_t *)an_iter)) {
+		/* Score every handler in the analyse slot.  A list is walked
+		 * directly; a lone handler is wrapped in an_one so the walk
+		 * stays uniform -- this lets the quote/quasi/unquote readers
+		 * live on the symbol type next to the symbol reader. */
+		x_firstobj((x_obj_t *)an_one) = p_analyse_slot;
+		x_restobj((x_obj_t *)an_iter) = x_obj_type_islist(p_base, p_analyse_slot)
+			? p_analyse_slot : (x_obj_t *)an_one;
+
+		while ( ! x_iterempty(p_base, (x_obj_t *)an_iter)) {
 			p_analyse = x_type_iter_next(p_base, (x_obj_t *)an_args);
 
 			/* Clear score for this handler. */
 			x_firstint(p_score) = 0;
 
-			while (1) {
+			for (;;) {
 
 				/* EOF for readonly buffers — don't reset,
 				 * let auto-score compute from bufferlen. */
@@ -241,9 +247,8 @@ x_obj_t *x_token_analyse(x_obj_t *p_base, x_obj_t *p_args)
 					p_winner = p_entry;
 				}
 			}
+
 			x_bufferread(p_buffer) = x_bufferval(p_buffer);
-			}
-		}
 		}
 	}
 
@@ -380,18 +385,18 @@ x_obj_t *x_token_write(x_obj_t *p_base, x_obj_t *p_args)
 		x_spair_t nil_args[1] = {
 			x_obj_set(NULL, X_OBJ_FLAG_NONE, { nil_str }, { NULL })
 		};
-		x_interp_write_str(p_base, (x_obj_t *)nil_args);
+		x_eval_write_str(p_base, (x_obj_t *)nil_args);
 		return NULL;
 	}
 
-	if (p_obj == x_firstobj(x_interp_field_true(p_base))
-			|| p_obj == x_firstobj(x_interp_field_false(p_base))) {
+	if (p_obj == x_firstobj(x_eval_field_true(p_base))
+			|| p_obj == x_firstobj(x_eval_field_false(p_base))) {
 		x_satom_t bool_str = x_obj_set(x_type_atom_obj,
 			X_OBJ_FLAG_NONE, { .s = x_atomstr(p_obj) });
 		x_spair_t bool_args[1] = {
 			x_obj_set(NULL, X_OBJ_FLAG_NONE, { bool_str }, { NULL })
 		};
-		x_interp_write_str(p_base, (x_obj_t *)bool_args);
+		x_eval_write_str(p_base, (x_obj_t *)bool_args);
 		return NULL;
 	}
 
@@ -434,18 +439,18 @@ x_obj_t *x_token_display(x_obj_t *p_base, x_obj_t *p_args)
 		x_spair_t nil_args[1] = {
 			x_obj_set(NULL, X_OBJ_FLAG_NONE, { nil_str }, { NULL })
 		};
-		x_interp_write_str(p_base, (x_obj_t *)nil_args);
+		x_eval_write_str(p_base, (x_obj_t *)nil_args);
 		return NULL;
 	}
 
-	if (p_obj == x_firstobj(x_interp_field_true(p_base))
-			|| p_obj == x_firstobj(x_interp_field_false(p_base))) {
+	if (p_obj == x_firstobj(x_eval_field_true(p_base))
+			|| p_obj == x_firstobj(x_eval_field_false(p_base))) {
 		x_satom_t bool_str = x_obj_set(x_type_atom_obj,
 			X_OBJ_FLAG_NONE, { .s = x_atomstr(p_obj) });
 		x_spair_t bool_args[1] = {
 			x_obj_set(NULL, X_OBJ_FLAG_NONE, { bool_str }, { NULL })
 		};
-		x_interp_write_str(p_base, (x_obj_t *)bool_args);
+		x_eval_write_str(p_base, (x_obj_t *)bool_args);
 		return NULL;
 	}
 
