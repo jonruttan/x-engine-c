@@ -723,6 +723,50 @@ static x_obj_t *x_prim_prim_ref(x_obj_t *p_base, x_obj_t *p_args)
 	return x_prims_ref(p_base, p_ns, p_method);
 }
 
+/** (use ns) -- define ns's catalog methods into the env as @c ns/method.
+ *  Qualified names keep the bulk collision-free (e.g. obj/ref vs ptr/ref vs
+ *  buf/ref).  Side-effecting: returns nil.  This is the fetch+define step
+ *  that replaces direct registration under the lean env. */
+static x_obj_t *x_prim_use(x_obj_t *p_base, x_obj_t *p_args)
+{
+	x_obj_t  *p_ns, *p_dom;
+	x_char_t *p_ns_str;
+	size_t    ns_len;
+
+	x_eargs(p_base, p_args, 2, NULL, &p_ns);
+	p_ns_str = x_atomstr(p_ns);
+	ns_len = x_lib_strlen(p_ns_str);
+
+	p_dom = x_prims_domain(p_base, p_ns);
+	while ( ! x_obj_isnil(p_base, p_dom)) {
+		x_obj_t  *p_entry = x_firstobj(p_dom);       /* (method . #<prim>) */
+		x_char_t *p_m_str = x_atomstr(x_firstobj(p_entry));
+		size_t    m_len = x_lib_strlen(p_m_str);
+		/* "ns/method".  x_make_symbol stores the name pointer (it does not
+		 * copy unless OWN), so the name must outlive the symbol -- allocate it
+		 * persistently, exactly as an interned symbol's name would live. */
+		x_char_t *p_name = (x_char_t *)x_sys_malloc(ns_len + m_len + 2);
+
+		x_lib_memcpy(p_name, p_ns_str, ns_len);
+		p_name[ns_len] = '/';
+		x_lib_memcpy(p_name + ns_len + 1, p_m_str, m_len + 1);
+
+		/* Root the remaining domain across the allocations below. */
+		x_obj_push_field(p_base, &x_eval_field_eval_list(p_base), p_dom, X_OBJ_FLAG_NONE);
+		/* Idempotent: define ns/method only when it is not already bound, so a
+		 * later (use ns) never clobbers an intervening redefinition -- e.g.
+		 * arithmetic.x's variadic int/+, set after its own (use (lit int)). */
+		if (x_alist_bst_lookup(p_base, x_eval_field_env_global_tree(p_base),
+				x_make_symbol(p_base, X_OBJ_FLAG_NONE, p_name)) == NULL)
+			x_value_bind(p_base, p_name, x_restobj(p_entry));
+		x_obj_pop_field(p_base, &x_eval_field_eval_list(p_base));
+
+		p_dom = x_restobj(p_dom);
+	}
+
+	return NULL;
+}
+
 /**
  * Register all built-in primitives into the environment.
  *
@@ -749,6 +793,7 @@ x_obj_t *x_prim_register(x_obj_t *p_base, x_obj_t *p_args)
 	x_callable_bind(p_base, "prims", x_prim_prims);
 	x_callable_bind(p_base, "prim-domain", x_prim_prim_domain);
 	x_callable_bind(p_base, "prim-ref", x_prim_prim_ref);
+	x_callable_bind(p_base, "use", x_prim_use);
 
 	x_prim_core_register(p_base, p_args);
 	x_syntax_quote_register(p_base, p_args);
