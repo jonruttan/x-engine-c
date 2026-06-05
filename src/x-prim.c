@@ -581,6 +581,148 @@ void x_callable_bind_table(x_obj_t *p_base, const x_callable_entry_t *table, int
 	}
 }
 
+/*
+ * # Primitives catalog
+ *
+ * Stored in the base's prims slot as an alist-of-alists
+ * ((type . ((method . #<prim>) ...)) ...) keyed by type/section namespace,
+ * with bare method names.  Built at registration time alongside the env
+ * bindings; it becomes the source the (lean) env is populated from once
+ * de-registration lands, and later migrates onto the type objects as static
+ * methods.  Namespace/method names are interned, so lookups compare by pointer.
+ */
+
+/** The catalog value (car of the prims cell); nil before any registration. */
+x_obj_t *x_prims(x_obj_t *p_base)
+{
+	return x_firstobj(x_eval_field_prims(p_base));
+}
+
+/* The (ns . methods) domain pair for p_ns, or NULL.  ns is interned. */
+static x_obj_t *x_prims_domain_pair(x_obj_t *p_base, x_obj_t *p_ns)
+{
+	x_obj_t *p_cur = x_prims(p_base);
+
+	while ( ! x_obj_isnil(p_base, p_cur)) {
+		if (x_firstobj(x_firstobj(p_cur)) == p_ns)
+			return x_firstobj(p_cur);
+		p_cur = x_restobj(p_cur);
+	}
+	return NULL;
+}
+
+x_obj_t *x_prims_domain(x_obj_t *p_base, x_obj_t *p_ns)
+{
+	x_obj_t *p_dom = x_prims_domain_pair(p_base, p_ns);
+
+	return p_dom == NULL ? NULL : x_restobj(p_dom);
+}
+
+x_obj_t *x_prims_ref(x_obj_t *p_base, x_obj_t *p_ns, x_obj_t *p_method)
+{
+	x_obj_t *p_cur = x_prims_domain(p_base, p_ns);
+
+	while ( ! x_obj_isnil(p_base, p_cur)) {
+		if (x_firstobj(x_firstobj(p_cur)) == p_method)
+			return x_restobj(x_firstobj(p_cur));
+		p_cur = x_restobj(p_cur);
+	}
+	return NULL;
+}
+
+/* File one (ns/method -> fn) entry into the catalog, creating the namespace
+ * domain on first use.  The freshly interned symbols, prim, and conses are
+ * pinned on the eval-list root across the allocations that follow, since they
+ * are not yet reachable from the base and -O2 stack scanning is unreliable
+ * (see the gc-rooting note). */
+static void x_prims_add(x_obj_t *p_base, x_char_t *ns, x_char_t *method, x_fn_t fn)
+{
+	x_obj_t *p_ns, *p_entry, *p_dom;
+
+	p_ns = x_make_symbol(p_base, X_OBJ_FLAG_NONE, ns);
+	x_obj_push_field(p_base, &x_eval_field_eval_list(p_base), p_ns, X_OBJ_FLAG_NONE);
+
+	/* (method . #<prim>) */
+	p_entry = x_mkspair(p_base, X_OBJ_FLAG_NONE,
+		x_make_symbol(p_base, X_OBJ_FLAG_NONE, method),
+		x_mkprim(p_base, fn));
+	x_obj_push_field(p_base, &x_eval_field_eval_list(p_base), p_entry, X_OBJ_FLAG_NONE);
+
+	p_dom = x_prims_domain_pair(p_base, p_ns);
+	if (p_dom != NULL) {
+		/* Existing namespace: prepend the entry to its method alist. */
+		x_restobj(p_dom) = x_mkspair(p_base, X_OBJ_FLAG_NONE,
+			p_entry, x_restobj(p_dom));
+	} else {
+		/* New namespace: prepend (ns . (entry)) to the catalog, rooting the
+		 * partial spine across each subsequent cons. */
+		x_obj_t *p_methods, *p_newdom;
+
+		p_methods = x_mkspair(p_base, X_OBJ_FLAG_NONE, p_entry, NULL);
+		x_obj_push_field(p_base, &x_eval_field_eval_list(p_base), p_methods, X_OBJ_FLAG_NONE);
+		p_newdom = x_mkspair(p_base, X_OBJ_FLAG_NONE, p_ns, p_methods);
+		x_obj_push_field(p_base, &x_eval_field_eval_list(p_base), p_newdom, X_OBJ_FLAG_NONE);
+		x_firstobj(x_eval_field_prims(p_base)) = x_mkspair(p_base, X_OBJ_FLAG_NONE,
+			p_newdom, x_prims(p_base));
+		x_obj_pop_field(p_base, &x_eval_field_eval_list(p_base));  /* p_newdom */
+		x_obj_pop_field(p_base, &x_eval_field_eval_list(p_base));  /* p_methods */
+	}
+
+	x_obj_pop_field(p_base, &x_eval_field_eval_list(p_base));  /* p_entry */
+	x_obj_pop_field(p_base, &x_eval_field_eval_list(p_base));  /* p_ns */
+}
+
+/**
+ * Bind a table into the env and file its cataloged entries.
+ *
+ * Each entry is bound into the env by @c name (transitional, so existing code
+ * keeps working) and, when it carries a namespace, filed into the catalog
+ * under @c (ns . ((method . prim) ...)).  De-registration removes the env
+ * binding here, leaving the catalog as the single source.
+ *
+ * @param p_base  x_obj_t* -- Execution context
+ * @param table   const x_prim_entry_t* -- Array of entries
+ * @param count   int -- Number of entries
+ */
+void x_prims_bind_table(x_obj_t *p_base, const x_prim_entry_t *table, int count)
+{
+	int i;
+
+	for (i = 0; i < count; i++) {
+		x_callable_bind(p_base, table[i].name, table[i].fn);
+		if (table[i].ns != NULL)
+			x_prims_add(p_base, table[i].ns, table[i].method, table[i].fn);
+	}
+}
+
+/** (prims) -- the primitives catalog, for introspection and the X fetch protocol. */
+static x_obj_t *x_prim_prims(x_obj_t *p_base, x_obj_t *p_args)
+{
+	(void)p_args;
+
+	return x_prims(p_base);
+}
+
+/** (prim-domain ns) -- the method alist filed under a namespace, or nil. */
+static x_obj_t *x_prim_prim_domain(x_obj_t *p_base, x_obj_t *p_args)
+{
+	x_obj_t *p_ns;
+
+	x_eargs(p_base, p_args, 2, NULL, &p_ns);
+
+	return x_prims_domain(p_base, p_ns);
+}
+
+/** (prim-ref ns method) -- the prim filed under ns/method, or nil. */
+static x_obj_t *x_prim_prim_ref(x_obj_t *p_base, x_obj_t *p_args)
+{
+	x_obj_t *p_ns, *p_method;
+
+	x_eargs(p_base, p_args, 3, NULL, &p_ns, &p_method);
+
+	return x_prims_ref(p_base, p_ns, p_method);
+}
+
 /**
  * Register all built-in primitives into the environment.
  *
@@ -601,6 +743,12 @@ x_obj_t *x_prim_register(x_obj_t *p_base, x_obj_t *p_args)
 
 	x_value_bind(p_base, x_atomstr(x_false_obj), (x_obj_t *)&x_false_obj);
 	x_firstobj(x_eval_field_false(p_base)) = (x_obj_t *)&x_false_obj;
+
+	/* Catalog access protocol -- part of the lean core (stays in the env so X
+	 * code can reach the catalog to fetch+define the rest). */
+	x_callable_bind(p_base, "prims", x_prim_prims);
+	x_callable_bind(p_base, "prim-domain", x_prim_prim_domain);
+	x_callable_bind(p_base, "prim-ref", x_prim_prim_ref);
 
 	x_prim_core_register(p_base, p_args);
 	x_syntax_quote_register(p_base, p_args);

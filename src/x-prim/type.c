@@ -837,36 +837,36 @@ static x_obj_t *x_prim_buffer_read_text(x_obj_t *p_base, x_obj_t *p_args)
  */
 x_obj_t *x_prim_type_register(x_obj_t *p_base, x_obj_t *p_args)
 {
-	static const x_callable_entry_t entries[] = {
-		{ "make-type", x_prim_make_type },
-		{ "base-make-type", x_prim_base_make_type },
-		{ "make-instance", x_prim_make_instance },
-		{ "make-obj", x_prim_make_obj },
-		{ "obj-ref", x_prim_obj_ref },
-		{ "obj-set!", x_prim_obj_set },
-		{ "type?", x_prim_typep },
-		{ "type-of", x_prim_type_of },
-		{ "type-name", x_prim_type_name },
-		{ "buffer-token", x_prim_buffer_token },
-		{ "buffer-last-char", x_prim_buffer_last_char },
-		{ "make-token-base", x_prim_make_token_base },
-		{ "make-base", x_prim_make_base },
-		{ "base-eval", x_prim_base_eval },
-		{ "base-bind", x_prim_base_bind },
-		{ "token-read", x_prim_token_read },
-		{ "token-read-string", x_prim_token_read_string },
-		{ "iter", x_prim_iter },
-		{ "make-iter", x_prim_make_iter },
-		{ "iter-next", x_prim_iter_next },
-		{ "iter-empty?", x_prim_iter_empty },
-		{ "buffer-reset", x_prim_buffer_reset },
-		{ "buffer-retain", x_prim_buffer_retain },
-		{ "buffer-append", x_prim_buffer_append },
-		{ "buffer-read", x_prim_buffer_read },
-		{ "buffer-read-text", x_prim_buffer_read_text }
+	static const x_prim_entry_t entries[] = {
+		{ "make-type",         x_prim_make_type,         "type",   "make"          },
+		{ "base-make-type",    x_prim_base_make_type,    "base",   "make-type"     },
+		{ "make-instance",     x_prim_make_instance,     "type",   "make-instance" },
+		{ "make-obj",          x_prim_make_obj,          "obj",    "make"          },
+		{ "obj-ref",           x_prim_obj_ref,           "obj",    "ref"           },
+		{ "obj-set!",          x_prim_obj_set,           "obj",    "set!"          },
+		{ "type?",             x_prim_typep,             "type",   "?"             },
+		{ "type-of",           x_prim_type_of,           "type",   "of"            },
+		{ "type-name",         x_prim_type_name,         "type",   "name"          },
+		{ "buffer-token",      x_prim_buffer_token,      "buf", "tok"         },
+		{ "buffer-last-char",  x_prim_buffer_last_char,  "buf", "last-char"     },
+		{ "make-token-base",   x_prim_make_token_base,   "base",   "make-tok"      },
+		{ "make-base",         x_prim_make_base,         "base",   "make"          },
+		{ "base-eval",         x_prim_base_eval,         "base",   "eval"          },
+		{ "base-bind",         x_prim_base_bind,         "base",   "bind"          },
+		{ "token-read",        x_prim_token_read,        "tok",  "read"          },
+		{ "token-read-string", x_prim_token_read_string, "tok",  "read-str"      },
+		{ "iter",              x_prim_iter,              "iter",   "new"           },
+		{ "make-iter",         x_prim_make_iter,         "iter",   "make"          },
+		{ "iter-next",         x_prim_iter_next,         "iter",   "next"          },
+		{ "iter-empty?",       x_prim_iter_empty,        "iter",   "empty?"        },
+		{ "buffer-reset",      x_prim_buffer_reset,      "buf", "reset"         },
+		{ "buffer-retain",     x_prim_buffer_retain,     "buf", "retain"        },
+		{ "buffer-append",     x_prim_buffer_append,     "buf", "append"        },
+		{ "buffer-read",       x_prim_buffer_read,       "buf", "read"          },
+		{ "buffer-read-text",  x_prim_buffer_read_text,  "buf", "read-text"     }
 	};
 
-	x_callable_bind_table(p_base, entries,
+	x_prims_bind_table(p_base, entries,
 		sizeof(entries) / sizeof(entries[0]));
 
 	return p_base;

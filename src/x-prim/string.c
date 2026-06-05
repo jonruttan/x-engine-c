@@ -205,19 +205,21 @@ static x_obj_t *x_prim_str_lt(x_obj_t *p_base, x_obj_t *p_args)
  */
 x_obj_t *x_prim_string_register(x_obj_t *p_base, x_obj_t *p_args)
 {
-	static const x_callable_entry_t entries[] = {
-		{ "str-append", x_prim_string_append },
-		{ "str->symbol", x_prim_string_to_symbol },
-		{ "symbol->str", x_prim_symbol_to_string },
-		{ "bytes->str", x_prim_list_to_string },
-		{ "list->str", x_prim_list_to_string },
-		{ "str-byte-len", x_prim_str_byte_len },
-		{ "str-byte-ref", x_prim_str_byte_ref },
-		{ "str-byte-sub", x_prim_str_byte_sub },
-		{ "str<?", x_prim_str_lt }
+	/* { env-name, fn, catalog-ns, catalog-method }.  Conversions are filed
+	 * under their source type (the eventual method receiver). */
+	static const x_prim_entry_t entries[] = {
+		{ "str-append",   x_prim_string_append,    "str",   "append"   },
+		{ "str->symbol",  x_prim_string_to_symbol, "str",   "->sym"    },
+		{ "symbol->str",  x_prim_symbol_to_string, "sym",   "->str"    },
+		{ "bytes->str",   x_prim_list_to_string,   "bytes", "->str"    },
+		{ "list->str",    x_prim_list_to_string,   "list",  "->str"    },
+		{ "str-byte-len", x_prim_str_byte_len,     "str",   "byte-len" },
+		{ "str-byte-ref", x_prim_str_byte_ref,     "str",   "byte-ref" },
+		{ "str-byte-sub", x_prim_str_byte_sub,     "str",   "byte-sub" },
+		{ "str<?",        x_prim_str_lt,           "str",   "<?"       }
 	};
 
-	x_callable_bind_table(p_base, entries,
+	x_prims_bind_table(p_base, entries,
 		sizeof(entries) / sizeof(entries[0]));
 
 	return p_base;

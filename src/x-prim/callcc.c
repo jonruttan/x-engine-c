@@ -267,12 +267,12 @@ static x_obj_t *x_prim_callcc(x_obj_t *p_base, x_obj_t *p_args)
  */
 x_obj_t *x_prim_callcc_register(x_obj_t *p_base, x_obj_t *p_args)
 {
-	static const x_callable_entry_t entries[] = {
-		{ "%cc-invoke", x_prim_cc_invoke },
-		{ "call/cc", x_prim_callcc }
+	static const x_prim_entry_t entries[] = {
+		{ "%cc-invoke", x_prim_cc_invoke, NULL,   NULL      },
+		{ "call/cc",    x_prim_callcc,    "ctrl", "call/cc" }
 	};
 
-	x_callable_bind_table(p_base, entries,
+	x_prims_bind_table(p_base, entries,
 		sizeof(entries) / sizeof(entries[0]));
 
 	return p_base;

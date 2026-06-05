@@ -602,34 +602,34 @@ static x_obj_t *x_prim_repl_read(x_obj_t *p_base, x_obj_t *p_args)
  */
 x_obj_t *x_prim_io_register(x_obj_t *p_base, x_obj_t *p_args)
 {
-	static const x_callable_entry_t entries[] = {
-		{ "write", x_prim_write },
-		{ "display", x_prim_display },
-		{ "read", x_prim_read_expr },
-		{ "read-char", x_prim_read_char },
-		{ "write-to-str", x_prim_write_to_string },
-		{ "display-to-str", x_prim_display_to_string },
-		{ "heap-collect", x_prim_heap_collect },
-		{ "heap-mark", x_prim_heap_mark },
-		{ "heap-sweep", x_prim_heap_sweep },
-		{ "heap-count", x_prim_heap_count },
-		{ "heap-mark-hook!", x_prim_heap_mark_hook },
-		{ "heap-free-hook!", x_prim_heap_free_hook },
-		{ "heap-mark-root!", x_prim_heap_mark_root },
-		{ "gc-pin!", x_prim_system_mark },
-		{ "error-line", x_prim_error_line },
-		{ "repl-read", x_prim_repl_read }
+	static const x_prim_entry_t entries[] = {
+		{ "write",           x_prim_write,             "io",   "write"          },
+		{ "display",         x_prim_display,           "io",   "display"        },
+		{ "read",            x_prim_read_expr,         "io",   "read"           },
+		{ "read-char",       x_prim_read_char,         "io",   "read-char"      },
+		{ "write-to-str",    x_prim_write_to_string,   "io",   "write-to-str"   },
+		{ "display-to-str",  x_prim_display_to_string, "io",   "display-to-str" },
+		{ "heap-collect",    x_prim_heap_collect,      "heap", "collect"        },
+		{ "heap-mark",       x_prim_heap_mark,         "heap", "mark"           },
+		{ "heap-sweep",      x_prim_heap_sweep,        "heap", "sweep"          },
+		{ "heap-count",      x_prim_heap_count,        "heap", "count"          },
+		{ "heap-mark-hook!", x_prim_heap_mark_hook,    "heap", "mark-hook!"     },
+		{ "heap-free-hook!", x_prim_heap_free_hook,    "heap", "free-hook!"     },
+		{ "heap-mark-root!", x_prim_heap_mark_root,    "heap", "mark-root!"     },
+		{ "gc-pin!",         x_prim_system_mark,       "heap", "pin!"           },
+		{ "error-line",      x_prim_error_line,        "io",   "error-line"     },
+		{ "repl-read",       x_prim_repl_read,         "io",   "repl-read"      }
 	};
 #ifdef X_CLOCK
-	static const x_callable_entry_t clock_entry[] = {
-		{ "clock", x_prim_clock }
+	static const x_prim_entry_t clock_entry[] = {
+		{ "clock", x_prim_clock, "sys", "clock" }
 	};
 #endif /* X_CLOCK */
 
-	x_callable_bind_table(p_base, entries,
+	x_prims_bind_table(p_base, entries,
 		sizeof(entries) / sizeof(entries[0]));
 #ifdef X_CLOCK
-	x_callable_bind_table(p_base, clock_entry,
+	x_prims_bind_table(p_base, clock_entry,
 		sizeof(clock_entry) / sizeof(clock_entry[0]));
 #endif /* X_CLOCK */
 

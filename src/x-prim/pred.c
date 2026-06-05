@@ -109,16 +109,16 @@ static x_obj_t *x_prim_integer_to_char(x_obj_t *p_base, x_obj_t *p_args)
  */
 x_obj_t *x_prim_pred_register(x_obj_t *p_base, x_obj_t *p_args)
 {
-	static const x_callable_entry_t entries[] = {
-		{ "same?", x_prim_same },
-		{ "eq?", x_prim_eq },
-		{ "=", x_prim_eq },
-		{ "<", x_prim_lt },
-		{ "char->integer", x_prim_char_to_integer },
-		{ "integer->char", x_prim_integer_to_char }
+	static const x_prim_entry_t entries[] = {
+		{ "same?",         x_prim_same,            "obj",  "same?"     },
+		{ "eq?",           x_prim_eq,              "obj",  "eq?"       },
+		{ "=",             x_prim_eq,              "int",  "="         },
+		{ "<",             x_prim_lt,              "int",  "<"         },
+		{ "char->integer", x_prim_char_to_integer, "char", "->int"     },
+		{ "integer->char", x_prim_integer_to_char, "int",  "->char"    }
 	};
 
-	x_callable_bind_table(p_base, entries,
+	x_prims_bind_table(p_base, entries,
 		sizeof(entries) / sizeof(entries[0]));
 
 	return p_base;

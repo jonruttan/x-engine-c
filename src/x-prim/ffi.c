@@ -717,28 +717,28 @@ static x_obj_t *x_prim_make_callable(x_obj_t *p_base, x_obj_t *p_args)
  */
 x_obj_t *x_prim_ffi_register(x_obj_t *p_base, x_obj_t *p_args)
 {
-	static const x_callable_entry_t entries[] = {
-		{ "dlopen", x_prim_dlopen },
-		{ "dlsym", x_prim_dlsym },
-		{ "ffi-call", x_prim_ffi_call },
-		{ "ptr-call", x_prim_ptr_call },
-		{ "int->ptr", x_prim_int_to_ptr },
-		{ "ptr->int", x_prim_ptr_to_int },
-		{ "ptr-set!", x_prim_ptr_set },
-		{ "ptr-ref", x_prim_ptr_ref },
-		{ "ptr-ref-word", x_prim_ptr_ref_word },
-		{ "ptr-set-word!", x_prim_ptr_set_word },
-		{ "obj->ptr", x_prim_obj_to_ptr },
-		{ "str->ptr", x_prim_string_to_ptr },
-		{ "ptr->str", x_prim_ptr_to_string },
-		{ "obj-meta-count", x_prim_obj_meta_extra },
-		{ "obj-meta-count!", x_prim_obj_meta_extra_set },
-		{ "obj-meta-ref", x_prim_obj_meta_ref },
-		{ "obj-meta-set!", x_prim_obj_meta_set },
-		{ "make-callable", x_prim_make_callable }
+	static const x_prim_entry_t entries[] = {
+		{ "dlopen",          x_prim_dlopen,             "ffi", "dlopen"        },
+		{ "dlsym",           x_prim_dlsym,              "ffi", "dlsym"         },
+		{ "ffi-call",        x_prim_ffi_call,           "ffi", "call"          },
+		{ "ptr-call",        x_prim_ptr_call,           "ptr", "call"          },
+		{ "int->ptr",        x_prim_int_to_ptr,         "int", "->ptr"         },
+		{ "ptr->int",        x_prim_ptr_to_int,         "ptr", "->int"         },
+		{ "ptr-set!",        x_prim_ptr_set,            "ptr", "set!"          },
+		{ "ptr-ref",         x_prim_ptr_ref,            "ptr", "ref"           },
+		{ "ptr-ref-word",    x_prim_ptr_ref_word,       "ptr", "ref-word"      },
+		{ "ptr-set-word!",   x_prim_ptr_set_word,       "ptr", "set-word!"     },
+		{ "obj->ptr",        x_prim_obj_to_ptr,         "obj", "->ptr"         },
+		{ "str->ptr",        x_prim_string_to_ptr,      "str", "->ptr"         },
+		{ "ptr->str",        x_prim_ptr_to_string,      "ptr", "->str"         },
+		{ "obj-meta-count",  x_prim_obj_meta_extra,     "obj", "meta-count"    },
+		{ "obj-meta-count!", x_prim_obj_meta_extra_set, "obj", "meta-count!"   },
+		{ "obj-meta-ref",    x_prim_obj_meta_ref,       "obj", "meta-ref"      },
+		{ "obj-meta-set!",   x_prim_obj_meta_set,       "obj", "meta-set!"     },
+		{ "make-callable",   x_prim_make_callable,      "obj", "make-callable" }
 	};
 
-	x_callable_bind_table(p_base, entries,
+	x_prims_bind_table(p_base, entries,
 		sizeof(entries) / sizeof(entries[0]));
 
 	/* Bind platform constants */
