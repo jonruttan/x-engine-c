@@ -634,7 +634,12 @@ x_obj_t *x_prims_ref(x_obj_t *p_base, x_obj_t *p_ns, x_obj_t *p_method)
  * domain on first use.  The freshly interned symbols, prim, and conses are
  * pinned on the eval-list root across the allocations that follow, since they
  * are not yet reachable from the base and -O2 stack scanning is unreliable
- * (see the gc-rooting note). */
+ * (see the gc-rooting note).
+ *
+ * Conses are built with x_mklist (the list-pair type), NOT x_mkspair: the
+ * catalog must be an ordinary iterable x-lang list so (prims) supports pair?,
+ * map, fold, etc. -- the x-lang catalog->methods mapping walks it.  Structural
+ * x_mkspair pairs are not pair? and segfault the iterator protocol. */
 static void x_prims_add(x_obj_t *p_base, x_char_t *ns, x_char_t *method, x_fn_t fn)
 {
 	x_obj_t *p_ns, *p_entry, *p_dom;
@@ -643,7 +648,7 @@ static void x_prims_add(x_obj_t *p_base, x_char_t *ns, x_char_t *method, x_fn_t 
 	x_obj_push_field(p_base, &x_eval_field_eval_list(p_base), p_ns, X_OBJ_FLAG_NONE);
 
 	/* (method . #<prim>) */
-	p_entry = x_mkspair(p_base, X_OBJ_FLAG_NONE,
+	p_entry = x_mklist(p_base,
 		x_make_symbol(p_base, X_OBJ_FLAG_NONE, method),
 		x_mkprim(p_base, fn));
 	x_obj_push_field(p_base, &x_eval_field_eval_list(p_base), p_entry, X_OBJ_FLAG_NONE);
@@ -651,18 +656,18 @@ static void x_prims_add(x_obj_t *p_base, x_char_t *ns, x_char_t *method, x_fn_t 
 	p_dom = x_prims_domain_pair(p_base, p_ns);
 	if (p_dom != NULL) {
 		/* Existing namespace: prepend the entry to its method alist. */
-		x_restobj(p_dom) = x_mkspair(p_base, X_OBJ_FLAG_NONE,
+		x_restobj(p_dom) = x_mklist(p_base,
 			p_entry, x_restobj(p_dom));
 	} else {
 		/* New namespace: prepend (ns . (entry)) to the catalog, rooting the
 		 * partial spine across each subsequent cons. */
 		x_obj_t *p_methods, *p_newdom;
 
-		p_methods = x_mkspair(p_base, X_OBJ_FLAG_NONE, p_entry, NULL);
+		p_methods = x_mklist(p_base, p_entry, NULL);
 		x_obj_push_field(p_base, &x_eval_field_eval_list(p_base), p_methods, X_OBJ_FLAG_NONE);
-		p_newdom = x_mkspair(p_base, X_OBJ_FLAG_NONE, p_ns, p_methods);
+		p_newdom = x_mklist(p_base, p_ns, p_methods);
 		x_obj_push_field(p_base, &x_eval_field_eval_list(p_base), p_newdom, X_OBJ_FLAG_NONE);
-		x_firstobj(x_eval_field_prims(p_base)) = x_mkspair(p_base, X_OBJ_FLAG_NONE,
+		x_firstobj(x_eval_field_prims(p_base)) = x_mklist(p_base,
 			p_newdom, x_prims(p_base));
 		x_obj_pop_field(p_base, &x_eval_field_eval_list(p_base));  /* p_newdom */
 		x_obj_pop_field(p_base, &x_eval_field_eval_list(p_base));  /* p_methods */
