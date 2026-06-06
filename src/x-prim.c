@@ -677,6 +677,24 @@ static void x_prims_add(x_obj_t *p_base, x_char_t *ns, x_char_t *method, x_fn_t 
 	x_obj_pop_field(p_base, &x_eval_field_eval_list(p_base));  /* p_ns */
 }
 
+/* Namespaces whose bare env names have been de-registered: their prims live
+ * only in the catalog and the object-system classes, not as transitional bare
+ * names.  Migrating call sites to the class access (e.g. (clock) -> (Sys clock))
+ * lets a namespace move here; the list shrinks the env one namespace at a time,
+ * and the whole de-registration check is removed once it is empty. */
+static int x_prims_ns_deregistered(const x_char_t *ns)
+{
+	static const char *const list[] = { "sys", NULL };
+	int i;
+
+	if (ns == NULL)
+		return 0;
+	for (i = 0; list[i] != NULL; i++)
+		if (x_lib_strcmp(ns, list[i]) == 0)
+			return 1;
+	return 0;
+}
+
 /**
  * Bind a table into the env and file its cataloged entries.
  *
@@ -694,7 +712,10 @@ void x_prims_bind_table(x_obj_t *p_base, const x_prim_entry_t *table, int count)
 	int i;
 
 	for (i = 0; i < count; i++) {
-		x_callable_bind(p_base, table[i].name, table[i].fn);
+		/* Bind the transitional bare name unless the namespace has been
+		 * de-registered -- then the catalog/classes are the only source. */
+		if ( ! x_prims_ns_deregistered(table[i].ns))
+			x_callable_bind(p_base, table[i].name, table[i].fn);
 		if (table[i].ns != NULL)
 			x_prims_add(p_base, table[i].ns, table[i].method, table[i].fn);
 	}
