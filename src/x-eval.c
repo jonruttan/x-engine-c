@@ -263,10 +263,13 @@ x_obj_t *x_eval(x_obj_t *p_base, x_obj_t *p_args)
 	x_obj_t *p_exp;
 	x_obj_t *p_tco_env_save = NULL;   /* first procedure env compound */
 	x_obj_t *p_op_save = NULL;        /* first operative restore record */
+	x_obj_t *p_te;                    /* tco_env fetched per trampoline pass */
 	x_spair_t prim_args = x_obj_set(NULL, X_OBJ_FLAG_NONE, { NULL }, { NULL });
 	int trampolining = 0;
 	int op_outermost = 0;             /* the first record kept is an op record */
 	int kept_any = 0;                 /* a tco_env (either channel) was kept */
+	int is_op;
+	int has_proc, has_op;
 #ifdef X_SIGNAL
 	/* Interrupt-flag pointer, resolved once from the base (signal-register
 	 * publishes signal.c's static atom here).  Cached so the trampoline pays
@@ -328,7 +331,7 @@ eval_start:
 
 	/* TCO trampoline: re-evaluate tail expression if set. */
 	if (x_base_isset(p_base) && ! x_obj_isnil(p_base, x_firstobj(x_eval_field_tco_expr(p_base)))) {
-		x_obj_t *p_te = x_firstobj(x_eval_field_tco_env(p_base));
+		p_te = x_firstobj(x_eval_field_tco_env(p_base));
 
 		trampolining = 1;
 
@@ -338,7 +341,7 @@ eval_start:
 		 * op_outermost records whether the very first kept record is an op, so
 		 * the exit can apply the records in reverse capture order. */
 		if ( ! x_obj_isnil(p_base, p_te)) {
-			int is_op = (x_firstobj(p_te) == (x_obj_t *)&x_tco_op_tag);
+			is_op = (x_firstobj(p_te) == (x_obj_t *)&x_tco_op_tag);
 
 			if ( ! kept_any) {
 				op_outermost = is_op;
@@ -375,9 +378,9 @@ eval_start:
 	 * compound here means the op's tail resolved to an applied procedure (let),
 	 * whose closure frame must be shed rather than kept. */
 	if (trampolining && x_base_isset(p_base)) {
-		int has_proc = (p_tco_env_save != NULL
+		has_proc = (p_tco_env_save != NULL
 			&& ! x_obj_isnil(p_base, p_tco_env_save));
-		int has_op = (p_op_save != NULL
+		has_op = (p_op_save != NULL
 			&& ! x_obj_isnil(p_base, p_op_save));
 
 		x_firstobj(x_eval_field_tco_env(p_base)) = NULL;
@@ -581,6 +584,12 @@ void x_eval_error(x_obj_t *p_base, x_char_t *message, x_obj_t *p_obj)
 {
 	int fd;
 	x_char_t *symbol = NULL;
+	x_obj_t *p_handler;
+	x_obj_t *p_err;
+	x_char_t *buf;
+	x_char_t *p_src;
+	int n;
+	int cap;
 
 	/* Extract symbol string from object if possible. */
 	if (p_obj != NULL && x_obj_type_issatom(p_obj)) {
@@ -590,14 +599,14 @@ void x_eval_error(x_obj_t *p_base, x_char_t *message, x_obj_t *p_obj)
 	/* If an error handler is installed, store message and longjmp. */
 	if (x_base_isset(p_base)
 		&& ! x_obj_isnil(p_base, x_firstobj(x_eval_field_error_handler(p_base)))) {
-		x_obj_t *p_handler = x_firstobj(x_eval_field_error_handler(p_base));
+		p_handler = x_firstobj(x_eval_field_error_handler(p_base));
 		/* The base-resident error atom; its string is the scratch buffer
 		 * (X_ERROR_BUF_SIZE), reached only through the base. */
-		x_obj_t *p_err = x_firstobj(x_eval_field_error_str(p_base));
-		x_char_t *buf = x_atomstr(p_err);
-		int n = 0;
-		int cap = X_ERROR_BUF_SIZE - 2;		/* room for closing "'" + '\0' */
-		x_char_t *p_src = message;
+		p_err = x_firstobj(x_eval_field_error_str(p_base));
+		buf = x_atomstr(p_err);
+		n = 0;
+		cap = X_ERROR_BUF_SIZE - 2;		/* room for closing "'" + '\0' */
+		p_src = message;
 
 		/* Copy the message; when the error names a symbol, append " '<symbol>'"
 		 * so the guard reads e.g. "Unbound SYMBOL 'str'".  Formatting in place

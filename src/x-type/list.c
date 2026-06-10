@@ -149,7 +149,9 @@ x_obj_t *x_type_list_call(x_obj_t *p_base, x_obj_t *p_args)
 {
 	x_obj_t *proc = x_firstobj(p_args), *vals = x_restobj(p_args);
 	x_obj_t *arg1, *arg2;
+	x_obj_t *p_result, *p_tail, *p_new, *p_walk;
 	x_int_t n, i;
+	x_int_t start, len;
 
 	/* Evaluate first arg. */
 	if (x_obj_isnil(p_base, vals)) {
@@ -161,9 +163,9 @@ x_obj_t *x_type_list_call(x_obj_t *p_base, x_obj_t *p_args)
 
 	if (! x_obj_isnil(p_base, vals)) {
 		/* Slice: (list start len) -> sublist */
-		x_int_t start = x_atomint(arg1);
-		x_int_t len;
-		x_obj_t *p_result = NULL, *p_tail = NULL;
+		start = x_atomint(arg1);
+		p_result = NULL;
+		p_tail = NULL;
 
 		arg2 = x_eval_arg(p_base, x_firstobj(vals));
 		len = x_atomint(arg2);
@@ -175,7 +177,7 @@ x_obj_t *x_type_list_call(x_obj_t *p_base, x_obj_t *p_args)
 
 		/* Collect len elements. */
 		for (i = 0; i < len && ! x_obj_isnil(p_base, proc); i++) {
-			x_obj_t *p_new = x_mklist(p_base, x_firstobj(proc), NULL);
+			p_new = x_mklist(p_base, x_firstobj(proc), NULL);
 
 			if (x_obj_isnil(p_base, p_result)) {
 				p_result = p_new;
@@ -195,8 +197,8 @@ x_obj_t *x_type_list_call(x_obj_t *p_base, x_obj_t *p_args)
 
 	/* Negative index: count from end. */
 	if (n < 0) {
-		x_obj_t *p_walk = proc;
-		x_int_t len = 0;
+		p_walk = proc;
+		len = 0;
 
 		while (! x_obj_isnil(p_base, p_walk)) {
 			len++;
@@ -231,7 +233,7 @@ x_obj_t *x_type_list_call(x_obj_t *p_base, x_obj_t *p_args)
  */
 x_obj_t *x_type_list_eval(x_obj_t *p_base, x_obj_t *p_args)
 {
-	x_obj_t *p_exp = x_firstobj(x_eval_arg_exp(p_args)), *p_proc;
+	x_obj_t *p_exp = x_firstobj(x_eval_arg_exp(p_args)), *p_proc, *p_result;
 	x_satom_t first_atom = x_obj_set(NULL, X_OBJ_FLAG_NONE, { x_firstobj(p_exp) });
 	x_spair_t eval_args[1] = {
 		x_obj_set(NULL, X_OBJ_FLAG_NONE, { first_atom }, { NULL })
@@ -258,11 +260,9 @@ x_obj_t *x_type_list_eval(x_obj_t *p_base, x_obj_t *p_args)
 		return p_exp;
 	}
 
-	{
-		x_obj_t *p_result = x_callable_call(p_base, (x_obj_t *)prim_args);
-		x_obj_pop_field(p_base, &x_eval_field_eval_list(p_base));
-		return p_result;
-	}
+	p_result = x_callable_call(p_base, (x_obj_t *)prim_args);
+	x_obj_pop_field(p_base, &x_eval_field_eval_list(p_base));
+	return p_result;
 }
 
 /**

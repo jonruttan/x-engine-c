@@ -101,6 +101,7 @@ x_obj_t *jit_build_args(x_obj_t *p_base, long nargs,
 	long a0, long a1, long a2, long a3)
 {
 	x_obj_t *p_list = NULL;
+	x_obj_t *p_atom;
 	long args[4];
 	int i;
 
@@ -108,7 +109,7 @@ x_obj_t *jit_build_args(x_obj_t *p_base, long nargs,
 
 	/* Build list right-to-left */
 	for (i = (int)nargs - 1; i >= 0; i--) {
-		x_obj_t *p_atom = x_mkint(p_base, (x_int_t)args[i]);
+		p_atom = x_mkint(p_base, (x_int_t)args[i]);
 		p_list = x_mkspair(p_base, X_OBJ_FLAG_NONE, p_atom, p_list);
 	}
 

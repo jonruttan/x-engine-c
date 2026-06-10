@@ -125,6 +125,7 @@ static x_obj_t *x_prim_guard(x_obj_t *p_base, x_obj_t *p_args)
 		*p_prev_handler = x_firstobj(x_eval_field_error_handler(p_base)),
 		*p_saved_save_stack = x_eval_field_save_stack(p_base),
 		*p_handler, *p_result = NULL;
+	x_obj_t *p_err, *p_pair;
 	x_args(p_args, 2, NULL, &p_clause);
 	p_var = x_firstobj(p_clause);
 	p_handler_body = x_restobj(p_clause);
@@ -144,8 +145,8 @@ static x_obj_t *x_prim_guard(x_obj_t *p_base, x_obj_t *p_args)
 		p_result = x_eval_body(p_base, p_body);
 	} else {
 		/* Error caught: restore save-stack and boundary to guard point. */
-		x_obj_t *p_err = x_error_handler_error(p_handler);
-		x_obj_t *p_pair = x_mkspair(p_base, X_OBJ_FLAG_NONE, p_var, p_err);
+		p_err = x_error_handler_error(p_handler);
+		p_pair = x_mkspair(p_base, X_OBJ_FLAG_NONE, p_var, p_err);
 
 		x_eval_field_save_stack(p_base) = p_saved_save_stack;
 		/* Drop any tail a longjmp'd-out-of procedure or operative left

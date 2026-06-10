@@ -144,6 +144,7 @@ x_obj_t *x_type_str_call(x_obj_t *p_base, x_obj_t *p_args)
 	x_obj_t *proc = x_firstobj(p_args), *vals = x_restobj(p_args);
 	x_obj_t *arg1, *arg2;
 	x_int_t n;
+	x_int_t start;
 
 	/* No args: return length */
 	if (x_obj_isnil(p_base, vals)) {
@@ -155,7 +156,7 @@ x_obj_t *x_type_str_call(x_obj_t *p_base, x_obj_t *p_args)
 
 	if (! x_obj_isnil(p_base, vals)) {
 		/* Slice: (str start len) -> substring */
-		x_int_t start = x_atomint(arg1);
+		start = x_atomint(arg1);
 
 		arg2 = x_eval_arg(p_base, x_firstobj(vals));
 

@@ -158,6 +158,7 @@ static x_obj_t *x_prim_callcc(x_obj_t *p_base, x_obj_t *p_args)
 	x_callcc_cont_t *cont;
 	char *stack_lo;
 	size_t stack_size, total;
+	x_spair_t call_args[2];
 
 	/* Evaluate the procedure argument. */
 	x_eargs(p_base, p_args, 2, NULL, &p_proc);
@@ -243,16 +244,16 @@ static x_obj_t *x_prim_callcc(x_obj_t *p_base, x_obj_t *p_args)
 		x_eval_field_env_global_tree(p_base));
 
 	/* Call proc(k) using type_prim_apply: (proc k) */
-	{
-		x_spair_t call_args[2] = {
-			x_obj_set(NULL, X_OBJ_FLAG_NONE,
-				{ p_proc }, { (x_obj_t *)(call_args + 1) }),
-			x_obj_set(NULL, X_OBJ_FLAG_NONE,
-				{ p_k }, { NULL })
-		};
+	call_args[0][X_OBJ_META_TYPE].p = NULL;
+	call_args[0][X_OBJ_META_FLAGS].i = X_OBJ_FLAG_NONE;
+	x_firstobj((x_obj_t *)call_args) = p_proc;
+	x_restobj((x_obj_t *)call_args) = (x_obj_t *)(call_args + 1);
+	call_args[1][X_OBJ_META_TYPE].p = NULL;
+	call_args[1][X_OBJ_META_FLAGS].i = X_OBJ_FLAG_NONE;
+	x_firstobj((x_obj_t *)(call_args + 1)) = p_k;
+	x_restobj((x_obj_t *)(call_args + 1)) = NULL;
 
-		p_result = x_callable_apply(p_base, (x_obj_t *)call_args);
-	}
+	p_result = x_callable_apply(p_base, (x_obj_t *)call_args);
 
 	return p_result;
 }

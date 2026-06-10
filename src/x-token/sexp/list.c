@@ -149,6 +149,9 @@ x_obj_t *x_sexp_list_read(x_obj_t *p_base, x_obj_t *p_args)
 {
 	x_obj_t *p_buffer = x_token_read_arg_buffer(p_args);
 	x_char_t c = x_bufferlastchar(p_buffer);
+	x_obj_t *head = NULL, *tail = NULL, *elem, *pair;
+	x_spair_t read_args = x_obj_set(NULL, X_OBJ_FLAG_NONE,
+		{ p_buffer }, { p_base });
 
 	if (c == *X_SEXP_LIST_POST_STR) {
 		return x_sexp_list_read_prim;
@@ -159,45 +162,39 @@ x_obj_t *x_sexp_list_read(x_obj_t *p_base, x_obj_t *p_args)
 	}
 
 	/* '(' — read list contents. */
-	{
-		x_obj_t *head = NULL, *tail = NULL, *elem, *pair;
-		x_spair_t read_args = x_obj_set(NULL, X_OBJ_FLAG_NONE,
-			{ p_buffer }, { p_base });
+	x_type_buffer_retain(p_base, (x_obj_t *)read_args);
 
-		x_type_buffer_retain(p_base, (x_obj_t *)read_args);
+	for (;;) {
+		elem = x_token_read(p_base, (x_obj_t *)read_args);
 
-		for (;;) {
-			elem = x_token_read(p_base, (x_obj_t *)read_args);
-
-			if (elem == (x_obj_t *)x_sexp_list_read_prim) {
-				break;
-			}
-
-			if (elem == (x_obj_t *)x_sexp_list_delimit_prim) {
-				x_restobj(tail) = x_token_read(p_base, (x_obj_t *)read_args);
-				x_token_read(p_base, (x_obj_t *)read_args);
-				break;
-			}
-
-			pair = x_mklist(p_base, elem, NULL);
-
-			if (x_obj_isnil(p_base, head)) {
-				head = pair;
-				/* Root head so GC can reach the list under construction */
-				x_obj_push_field(p_base, &x_eval_field_eval_list(p_base), head, X_OBJ_FLAG_NONE);
-			} else {
-				x_restobj(tail) = pair;
-			}
-			tail = pair;
+		if (elem == (x_obj_t *)x_sexp_list_read_prim) {
+			break;
 		}
 
-		/* Unroot if we rooted */
-		if ( ! x_obj_isnil(p_base, head)) {
-			x_obj_pop_field(p_base, &x_eval_field_eval_list(p_base));
+		if (elem == (x_obj_t *)x_sexp_list_delimit_prim) {
+			x_restobj(tail) = x_token_read(p_base, (x_obj_t *)read_args);
+			x_token_read(p_base, (x_obj_t *)read_args);
+			break;
 		}
 
-		return head;
+		pair = x_mklist(p_base, elem, NULL);
+
+		if (x_obj_isnil(p_base, head)) {
+			head = pair;
+			/* Root head so GC can reach the list under construction */
+			x_obj_push_field(p_base, &x_eval_field_eval_list(p_base), head, X_OBJ_FLAG_NONE);
+		} else {
+			x_restobj(tail) = pair;
+		}
+		tail = pair;
 	}
+
+	/* Unroot if we rooted */
+	if ( ! x_obj_isnil(p_base, head)) {
+		x_obj_pop_field(p_base, &x_eval_field_eval_list(p_base));
+	}
+
+	return head;
 }
 /**
  * Write the external representation of a list.

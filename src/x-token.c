@@ -378,24 +378,29 @@ x_obj_t *x_token_read(x_obj_t *p_base, x_obj_t *p_args)
 x_obj_t *x_token_write(x_obj_t *p_base, x_obj_t *p_args)
 {
 	x_obj_t *p_obj = x_firstobj(p_args);
+	x_satom_t nil_str = x_obj_set(x_type_atom_obj,
+		X_OBJ_FLAG_NONE, { .s = (x_char_t *)"()" });
+	x_spair_t nil_args[1] = {
+		x_obj_set(NULL, X_OBJ_FLAG_NONE, { nil_str }, { NULL })
+	};
+	/* bool_str's value derefs p_obj, which may be nil -- fill in-branch. */
+	x_satom_t bool_str;
+	x_spair_t bool_args[1];
 
 	if (x_obj_isnil(p_base, p_obj)) {
-		x_satom_t nil_str = x_obj_set(x_type_atom_obj,
-			X_OBJ_FLAG_NONE, { .s = (x_char_t *)"()" });
-		x_spair_t nil_args[1] = {
-			x_obj_set(NULL, X_OBJ_FLAG_NONE, { nil_str }, { NULL })
-		};
 		x_eval_write_str(p_base, (x_obj_t *)nil_args);
 		return NULL;
 	}
 
 	if (p_obj == x_firstobj(x_eval_field_true(p_base))
 			|| p_obj == x_firstobj(x_eval_field_false(p_base))) {
-		x_satom_t bool_str = x_obj_set(x_type_atom_obj,
-			X_OBJ_FLAG_NONE, { .s = x_atomstr(p_obj) });
-		x_spair_t bool_args[1] = {
-			x_obj_set(NULL, X_OBJ_FLAG_NONE, { bool_str }, { NULL })
-		};
+		bool_str[X_OBJ_META_TYPE].p = (x_obj_t *)x_type_atom_obj;
+		bool_str[X_OBJ_META_FLAGS].i = X_OBJ_FLAG_NONE;
+		x_atomstr((x_obj_t *)bool_str) = x_atomstr(p_obj);
+		bool_args[0][X_OBJ_META_TYPE].p = NULL;
+		bool_args[0][X_OBJ_META_FLAGS].i = X_OBJ_FLAG_NONE;
+		x_firstobj((x_obj_t *)bool_args) = (x_obj_t *)bool_str;
+		x_restobj((x_obj_t *)bool_args) = NULL;
 		x_eval_write_str(p_base, (x_obj_t *)bool_args);
 		return NULL;
 	}
@@ -432,24 +437,29 @@ x_obj_t *x_token_write(x_obj_t *p_base, x_obj_t *p_args)
 x_obj_t *x_token_display(x_obj_t *p_base, x_obj_t *p_args)
 {
 	x_obj_t *p_obj = x_firstobj(p_args);
+	x_satom_t nil_str = x_obj_set(x_type_atom_obj,
+		X_OBJ_FLAG_NONE, { .s = (x_char_t *)"()" });
+	x_spair_t nil_args[1] = {
+		x_obj_set(NULL, X_OBJ_FLAG_NONE, { nil_str }, { NULL })
+	};
+	/* bool_str's value derefs p_obj, which may be nil -- fill in-branch. */
+	x_satom_t bool_str;
+	x_spair_t bool_args[1];
 
 	if (x_obj_isnil(p_base, p_obj)) {
-		x_satom_t nil_str = x_obj_set(x_type_atom_obj,
-			X_OBJ_FLAG_NONE, { .s = (x_char_t *)"()" });
-		x_spair_t nil_args[1] = {
-			x_obj_set(NULL, X_OBJ_FLAG_NONE, { nil_str }, { NULL })
-		};
 		x_eval_write_str(p_base, (x_obj_t *)nil_args);
 		return NULL;
 	}
 
 	if (p_obj == x_firstobj(x_eval_field_true(p_base))
 			|| p_obj == x_firstobj(x_eval_field_false(p_base))) {
-		x_satom_t bool_str = x_obj_set(x_type_atom_obj,
-			X_OBJ_FLAG_NONE, { .s = x_atomstr(p_obj) });
-		x_spair_t bool_args[1] = {
-			x_obj_set(NULL, X_OBJ_FLAG_NONE, { bool_str }, { NULL })
-		};
+		bool_str[X_OBJ_META_TYPE].p = (x_obj_t *)x_type_atom_obj;
+		bool_str[X_OBJ_META_FLAGS].i = X_OBJ_FLAG_NONE;
+		x_atomstr((x_obj_t *)bool_str) = x_atomstr(p_obj);
+		bool_args[0][X_OBJ_META_TYPE].p = NULL;
+		bool_args[0][X_OBJ_META_FLAGS].i = X_OBJ_FLAG_NONE;
+		x_firstobj((x_obj_t *)bool_args) = (x_obj_t *)bool_str;
+		x_restobj((x_obj_t *)bool_args) = NULL;
 		x_eval_write_str(p_base, (x_obj_t *)bool_args);
 		return NULL;
 	}

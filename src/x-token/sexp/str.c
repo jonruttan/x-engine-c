@@ -191,6 +191,7 @@ x_obj_t *x_sexp_str_write(x_obj_t *p_base, x_obj_t *p_args)
 	x_char_t hex[5];
 	const x_char_t *esc;
 	size_t run_start;
+	x_char_t c;
 	x_satom_t data = x_obj_set(x_type_atom_obj, X_OBJ_FLAG_NONE, { .s = NULL }),
 		sz = x_obj_set(x_type_atom_obj, X_OBJ_FLAG_NONE, { .i = 0 });
 	x_spair_t args[2] = {
@@ -206,7 +207,7 @@ x_obj_t *x_sexp_str_write(x_obj_t *p_base, x_obj_t *p_args)
 		/* Find next character that needs escaping */
 		run_start = i;
 		while (i < len) {
-			x_char_t c = s[i];
+			c = s[i];
 			if (c == '"' || c == '\\' || c == '\n' || c == '\t'
 				|| c == '\r' || c == '\0'
 				|| ((unsigned char)c < 0x20

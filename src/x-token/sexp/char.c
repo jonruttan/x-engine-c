@@ -244,15 +244,25 @@ x_obj_t *x_sexp_char_write(x_obj_t *p_base, x_obj_t *p_args)
 {
 	x_obj_t *p_ret, *p_type, *p_data, *p_entry;
 	x_int_t cp = x_atomint(x_firstobj(p_args));
+	x_satom_t prefix_str = x_obj_set(x_type_atom_obj,
+		X_OBJ_FLAG_NONE, { .s = (x_char_t *)"#\\" });
+	x_spair_t prefix_wrap = x_obj_set(NULL,
+		X_OBJ_FLAG_NONE, { prefix_str }, { NULL });
+	/* name_str's value derefs the loop entry -- filled in-loop. */
+	x_satom_t name_str;
+	x_spair_t name_wrap;
+	x_char_t byte;
+	x_satom_t str = x_obj_set(x_type_atom_obj, X_OBJ_FLAG_NONE,
+		{ .s = &byte }),
+		sz = x_obj_set(x_type_atom_obj, X_OBJ_FLAG_NONE, { .i = 1 });
+	x_spair_t wrap[2] = {
+		x_obj_set(NULL, X_OBJ_FLAG_NONE,
+			{ str }, { (x_obj_t *)(wrap + 1) }),
+		x_obj_set(NULL, X_OBJ_FLAG_NONE, { sz }, { NULL })
+	};
 
 	/* Write #\ prefix */
-	{
-		x_satom_t prefix_str = x_obj_set(x_type_atom_obj,
-			X_OBJ_FLAG_NONE, { .s = (x_char_t *)"#\\" });
-		x_spair_t prefix_wrap = x_obj_set(NULL,
-			X_OBJ_FLAG_NONE, { prefix_str }, { NULL });
-		x_eval_write_str(p_base, (x_obj_t *)&prefix_wrap);
-	}
+	x_eval_write_str(p_base, (x_obj_t *)&prefix_wrap);
 
 	/* Named characters: reverse-lookup in type data alist */
 	if (x_base_isset(p_base)) {
@@ -263,11 +273,13 @@ x_obj_t *x_sexp_char_write(x_obj_t *p_base, x_obj_t *p_args)
 			p_entry = x_firstobj(p_data);
 
 			if (x_intval(x_restobj(p_entry)) == cp) {
-				x_satom_t name_str = x_obj_set(x_type_atom_obj,
-					X_OBJ_FLAG_NONE,
-					{ .s = x_atomstr(x_firstobj(p_entry)) });
-				x_spair_t name_wrap = x_obj_set(NULL,
-					X_OBJ_FLAG_NONE, { name_str }, { NULL });
+				name_str[X_OBJ_META_TYPE].p = (x_obj_t *)x_type_atom_obj;
+				name_str[X_OBJ_META_FLAGS].i = X_OBJ_FLAG_NONE;
+				x_atomstr((x_obj_t *)name_str) = x_atomstr(x_firstobj(p_entry));
+				name_wrap[X_OBJ_META_TYPE].p = NULL;
+				name_wrap[X_OBJ_META_FLAGS].i = X_OBJ_FLAG_NONE;
+				x_firstobj((x_obj_t *)name_wrap) = (x_obj_t *)name_str;
+				x_restobj((x_obj_t *)name_wrap) = NULL;
 				x_eval_write_str(p_base, (x_obj_t *)&name_wrap);
 				return x_firstobj(p_args);
 			}
@@ -280,19 +292,8 @@ x_obj_t *x_sexp_char_write(x_obj_t *p_base, x_obj_t *p_args)
 	 * the x-lang write handler (type-push-write) emits full UTF-8 for non-ASCII
 	 * via x/codec/utf8 and shadows this before any non-ASCII char is written.
 	 * No UTF-8 encoding in C. */
-	{
-		x_char_t byte = (x_char_t)(cp & 0xFF);
-		x_satom_t str = x_obj_set(x_type_atom_obj, X_OBJ_FLAG_NONE,
-			{ .s = &byte }),
-			sz = x_obj_set(x_type_atom_obj, X_OBJ_FLAG_NONE, { .i = 1 });
-		x_spair_t wrap[2] = {
-			x_obj_set(NULL, X_OBJ_FLAG_NONE,
-				{ str }, { (x_obj_t *)(wrap + 1) }),
-			x_obj_set(NULL, X_OBJ_FLAG_NONE, { sz }, { NULL })
-		};
-
-		p_ret = x_eval_write_str(p_base, (x_obj_t *)wrap);
-	}
+	byte = (x_char_t)(cp & 0xFF);
+	p_ret = x_eval_write_str(p_base, (x_obj_t *)wrap);
 
 	if ( ! x_obj_isnil(p_base, p_ret)) {
 		return x_firstobj(p_args);

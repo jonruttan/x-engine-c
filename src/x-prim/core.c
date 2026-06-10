@@ -80,6 +80,9 @@ static x_obj_t *x_prim_rest(x_obj_t *p_base, x_obj_t *p_args)
 static x_obj_t *x_prim_apply(x_obj_t *p_base, x_obj_t *p_args)
 {
 	x_obj_t *p_fn, *p_evaled, *p_vals, *p_walk;
+	x_obj_t *p_result;
+	x_spair_t apply_args[1];
+
 	x_eargs(p_base, p_args, 2, NULL, &p_fn);
 	p_evaled = x_eval_list(p_base, x_11(p_args));
 
@@ -136,18 +139,17 @@ static x_obj_t *x_prim_apply(x_obj_t *p_base, x_obj_t *p_args)
 	}
 
 	/* Operative / C primitive: delegate to type dispatch. */
-	{
-		x_spair_t apply_args[1] = {
-			x_obj_set(NULL, X_OBJ_FLAG_NONE, { p_fn }, { p_vals })
-		};
-		x_obj_t *p_result = x_callable_apply(p_base, (x_obj_t *)apply_args);
+	apply_args[0][X_OBJ_META_TYPE].p = NULL;
+	apply_args[0][X_OBJ_META_FLAGS].i = X_OBJ_FLAG_NONE;
+	x_firstobj((x_obj_t *)apply_args) = p_fn;
+	x_restobj((x_obj_t *)apply_args) = p_vals;
+	p_result = x_callable_apply(p_base, (x_obj_t *)apply_args);
 
-		/* Unroot */
-		x_obj_pop_field(p_base, &x_eval_field_eval_list(p_base));
-		x_obj_pop_field(p_base, &x_eval_field_eval_list(p_base));
+	/* Unroot */
+	x_obj_pop_field(p_base, &x_eval_field_eval_list(p_base));
+	x_obj_pop_field(p_base, &x_eval_field_eval_list(p_base));
 
-		return p_result;
-	}
+	return p_result;
 }
 
 /** Evaluate an expression, optionally in a given environment.
@@ -164,13 +166,14 @@ static x_obj_t *x_prim_apply(x_obj_t *p_base, x_obj_t *p_args)
 static x_obj_t *x_prim_eval(x_obj_t *p_base, x_obj_t *p_args)
 {
 	x_obj_t *p_expr, *p_env_arg;
+	x_obj_t *p_env, *p_result;
+
 	x_eargs(p_base, p_args, 2, NULL, &p_expr);
 	p_env_arg = x_11(p_args);
 
 	if ( ! x_obj_isnil(p_base, p_env_arg)) {
 		/* eval with env: save/restore via base save-stack */
-		x_obj_t *p_env = x_eval_arg(p_base, x_firstobj(p_env_arg));
-		x_obj_t *p_result;
+		p_env = x_eval_arg(p_base, x_firstobj(p_env_arg));
 
 		/* Push ((env . boundary) . (bst . shadow_head)) onto save-stack */
 		x_tco_compound_save(p_base);

@@ -183,6 +183,8 @@ static x_obj_t *x_prim_ffi_call(x_obj_t *p_base, x_obj_t *p_args)
 	x_char_t *conv;
 	void *fptr;
 	double a, b, r;
+	x_char_t buf[32];
+	int len;
 
 	x_eargs(p_base, p_args, 3, NULL, &p_conv, &p_fptr);
 	p_rest = x_111(p_args);
@@ -309,8 +311,6 @@ static x_obj_t *x_prim_ffi_call(x_obj_t *p_base, x_obj_t *p_args)
 	}
 
 	if (x_lib_strcmp(conv, "d->s") == 0) {
-		x_char_t buf[32];
-		int len;
 		p_a = x_eval_arg(p_base, x_firstobj(p_rest));
 		x_ffi_to_double(p_base, p_a, &a);
 		len = sprintf((char *)buf, "%.15g", a);
@@ -737,26 +737,23 @@ x_obj_t *x_prim_ffi_register(x_obj_t *p_base, x_obj_t *p_args)
 		{ "obj-meta-set!",   x_prim_obj_meta_set,       "obj", "meta-set!"     },
 		{ "make-callable",   x_prim_make_callable,      "obj", "make-callable" }
 	};
+	static const struct { x_char_t *name; x_int_t val; } consts[] = {
+		{ "%word-size", (x_int_t)sizeof(void *) },
+		{ "%O_RDONLY",  O_RDONLY },
+		{ "%O_WRONLY",  O_WRONLY },
+		{ "%O_CREAT",   O_CREAT },
+		{ "%O_TRUNC",   O_TRUNC },
+		{ "%O_APPEND",  O_APPEND }
+	};
+	int i;
 
 	x_prims_bind_table(p_base, entries,
 		sizeof(entries) / sizeof(entries[0]));
 
 	/* Bind platform constants */
-	{
-		static const struct { x_char_t *name; x_int_t val; } consts[] = {
-			{ "%word-size", (x_int_t)sizeof(void *) },
-			{ "%O_RDONLY",  O_RDONLY },
-			{ "%O_WRONLY",  O_WRONLY },
-			{ "%O_CREAT",   O_CREAT },
-			{ "%O_TRUNC",   O_TRUNC },
-			{ "%O_APPEND",  O_APPEND }
-		};
-		int i;
-
-		for (i = 0; i < (int)(sizeof(consts) / sizeof(consts[0])); i++) {
-			x_value_bind(p_base, consts[i].name,
-				x_mkint(p_base, consts[i].val));
-		}
+	for (i = 0; i < (int)(sizeof(consts) / sizeof(consts[0])); i++) {
+		x_value_bind(p_base, consts[i].name,
+			x_mkint(p_base, consts[i].val));
 	}
 
 	return p_base;

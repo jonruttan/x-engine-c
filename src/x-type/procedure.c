@@ -184,42 +184,44 @@ x_obj_t *x_type_procedure_call(x_obj_t *p_base, x_obj_t *p_args)
 	x_obj_t *p_proc = x_firstobj(p_args),
 		*p_unevaluated_args = x_restobj(p_args),
 		*p_evaled_args;
+	x_obj_t *p_combiner;
+	x_obj_t *p_call_args;
+	/* Self-passing stack pair; filled at use (needs p_evaled_args). */
+	x_spair_t sp;
 
 	/* Eval each argument in the current env. */
 	p_evaled_args = x_eval_list(p_base, p_unevaluated_args);
 
 	/* Wrapped combiner: dispatch to underlying combiner with eval'd args. */
 	if (x_obj_flags(p_proc) & X_OBJ_FLAG_WRAP) {
-		x_obj_t *p_combiner = x_procenv(p_proc),
-			*p_call_args = x_mkspair(p_base, X_OBJ_FLAG_NONE, p_combiner, p_evaled_args);
+		p_combiner = x_procenv(p_proc);
+		p_call_args = x_mkspair(p_base, X_OBJ_FLAG_NONE, p_combiner, p_evaled_args);
 
 		return x_obj_prim_call(p_base, p_call_args);
 	}
 
-	{
-		/* Push ((env . boundary) . (bst . shadow_head)) onto save-stack */
-		x_tco_compound_save(p_base);
+	/* Push ((env . boundary) . (bst . shadow_head)) onto save-stack */
+	x_tco_compound_save(p_base);
 
-		/* Set boundary to closure env and BST to closure's captured BST.
-		 * Skip BST swap if captured is NULL -- see x_obj_prim_call. */
-		x_eval_field_env_local_boundary(p_base) = x_procenv(p_proc);
-		if (x_procbst(p_proc) != NULL) {
-			x_eval_field_env_global_tree(p_base) = x_procbst(p_proc);
-		}
-
-		/* Self-passing via stack pair (zero allocation) */
-		{
-		x_spair_t sp = x_obj_set(NULL, X_OBJ_FLAG_NONE,
-			{ p_proc }, { p_evaled_args });
-		p_evaled_args = (x_obj_t *)&sp;
-
-		x_firstobj(x_eval_field_env_alist(p_base)) = x_env_extend(
-			p_base, x_procenv(p_proc), x_procparams(p_proc),
-			p_evaled_args);
-		}
-
-		return x_eval_body_tco(p_base, x_procbody(p_proc));
+	/* Set boundary to closure env and BST to closure's captured BST.
+	 * Skip BST swap if captured is NULL -- see x_obj_prim_call. */
+	x_eval_field_env_local_boundary(p_base) = x_procenv(p_proc);
+	if (x_procbst(p_proc) != NULL) {
+		x_eval_field_env_global_tree(p_base) = x_procbst(p_proc);
 	}
+
+	/* Self-passing via stack pair (zero allocation) */
+	sp[X_OBJ_META_TYPE].p = NULL;
+	sp[X_OBJ_META_FLAGS].i = X_OBJ_FLAG_NONE;
+	x_firstobj((x_obj_t *)sp) = p_proc;
+	x_restobj((x_obj_t *)sp) = p_evaled_args;
+	p_evaled_args = (x_obj_t *)&sp;
+
+	x_firstobj(x_eval_field_env_alist(p_base)) = x_env_extend(
+		p_base, x_procenv(p_proc), x_procparams(p_proc),
+		p_evaled_args);
+
+	return x_eval_body_tco(p_base, x_procbody(p_proc));
 }
 
 /**

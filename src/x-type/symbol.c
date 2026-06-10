@@ -318,6 +318,8 @@ x_obj_t *x_type_symbol_eval(x_obj_t *p_base, x_obj_t *p_args)
 {
 	x_obj_t *p_sym_obj = x_firstobj(x_eval_arg_exp(p_args));
 	x_obj_t *p_alist, *p_boundary, *p_entry;
+	/* Error-path name wrapper; filled only when the lookup misses. */
+	x_satom_t sym_name;
 
 	if ( ! x_base_isset(p_base)) {
 		return NULL;
@@ -356,12 +358,11 @@ x_obj_t *x_type_symbol_eval(x_obj_t *p_base, x_obj_t *p_args)
 	}
 
 	/* Not found: error */
-	{
-		x_satom_t sym_name = x_obj_set(x_type_atom_obj, X_OBJ_FLAG_NONE,
-			{ .s = x_symbolval(p_sym_obj) });
-		x_obj_error(p_base, "Unbound "X_TYPE_SYMBOL_NAME,
-			(x_obj_t *)&sym_name);
-	}
+	sym_name[X_OBJ_META_TYPE].p = (x_obj_t *)x_type_atom_obj;
+	sym_name[X_OBJ_META_FLAGS].i = X_OBJ_FLAG_NONE;
+	x_atomstr((x_obj_t *)sym_name) = x_symbolval(p_sym_obj);
+	x_obj_error(p_base, "Unbound "X_TYPE_SYMBOL_NAME,
+		(x_obj_t *)&sym_name);
 
 	return NULL;
 }
