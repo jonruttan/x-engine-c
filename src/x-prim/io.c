@@ -233,11 +233,15 @@ static x_obj_t *x_prim_clock(x_obj_t *p_base, x_obj_t *p_args)
  */
 static void x_heap_mark_phase(x_obj_t *p_base)
 {
+	x_obj_t *p_roots;
+	x_obj_t *p_hooks;
+	x_spair_t hook_args[1];
+
 	x_heap_tree_mark(p_base, x_atomobj(p_base), X_OBJ_FLAG_HEAP);
 	x_heap_callstack_mark(p_base, X_OBJ_FLAG_HEAP);
 
 	if (x_base_isset(p_base)) {
-		x_obj_t *p_roots = x_firstobj(x_base_field_heap_mark_roots(p_base));
+		p_roots = x_firstobj(x_base_field_heap_mark_roots(p_base));
 
 		while ( ! x_obj_isnil(p_base, p_roots)) {
 			x_heap_tree_mark(p_base, x_firstobj(p_roots),
@@ -247,8 +251,7 @@ static void x_heap_mark_phase(x_obj_t *p_base)
 	}
 
 	if (x_base_isset(p_base)) {
-		x_obj_t *p_hooks = x_firstobj(x_base_field_heap_mark_hooks(p_base));
-		x_spair_t hook_args[1];
+		p_hooks = x_firstobj(x_base_field_heap_mark_hooks(p_base));
 
 		hook_args[0][X_OBJ_META_TYPE].p = NULL;
 		hook_args[0][X_OBJ_META_FLAGS].i = X_OBJ_FLAG_NONE;
@@ -276,9 +279,11 @@ static void x_heap_mark_phase(x_obj_t *p_base)
  */
 static void x_heap_sweep_phase(x_obj_t *p_base)
 {
+	x_obj_t *p_hooks;
+	x_spair_t hook_args[1];
+
 	if (x_base_isset(p_base)) {
-		x_obj_t *p_hooks = x_firstobj(x_base_field_heap_free_hooks(p_base));
-		x_spair_t hook_args[1];
+		p_hooks = x_firstobj(x_base_field_heap_free_hooks(p_base));
 
 		hook_args[0][X_OBJ_META_TYPE].p = NULL;
 		hook_args[0][X_OBJ_META_FLAGS].i = X_OBJ_FLAG_NONE;
@@ -344,6 +349,42 @@ static x_obj_t *x_prim_heap_count(x_obj_t *p_base, x_obj_t *p_args)
 	}
 
 	return x_mkint(p_base, count);
+}
+
+/** Set the allocation ceiling (the runaway-memory guard).
+ *  x-lang: (alloc-limit! n)  -- n > 0 arms the guard; 0 disables (the
+ *  default; negative input is treated as 0).
+ *
+ *  When armed, x_obj_alloc reports an error through the standard error path
+ *  and stops the process rather than allocate past n objects; once tripped
+ *  the limit latches, so an intercepting guard handler cannot spin it (see
+ *  x_obj_alloc).  The trip-message text is stored here at arm time --
+ *  x-expr's mechanism layer holds no prose.  Configuration is in-language
+ *  (the interpreter reads no environment): the spec runner feeds
+ *  (alloc-limit! n) ahead of each library load, so a runaway ./x stops
+ *  itself instead of exhausting system memory.  A development guard against
+ *  runaway allocation, not a sandbox -- code can re-set or disable it.
+ *
+ *  @param p_base  Execution context.
+ *  @param p_args  Unevaluated (n); x_eargs evaluates it.
+ *  @return NULL.
+ *  @note Fexpr: args unevaluated; x_eargs evaluates n.
+ */
+static x_obj_t *x_prim_alloc_limit(x_obj_t *p_base, x_obj_t *p_args)
+{
+	x_obj_t *p_val;
+	x_int_t n;
+
+	x_eargs(p_base, p_args, 2, NULL, &p_val);
+	n = x_intval(p_val);
+	/* Negative cell values are reserved for the allocator's tripped latch. */
+	x_atomint(x_firstobj(x_base_field_alloc_limit(p_base))) = n < 0 ? 0 : n;
+	/* The trip message lives with the policy, not the mechanism: x-expr
+	 * holds no prose, so arming supplies what the allocator reports. */
+	x_firstobj(x_base_field_alloc_error(p_base)) =
+		x_mkstr(p_base, (x_char_t *)"allocation limit exceeded");
+
+	return NULL;
 }
 
 /** Mark all reachable objects on the heap (GC phase 1, low-level).
@@ -613,6 +654,7 @@ x_obj_t *x_prim_io_register(x_obj_t *p_base, x_obj_t *p_args)
 		{ "heap-mark",       x_prim_heap_mark,         "heap", "mark"           },
 		{ "heap-sweep",      x_prim_heap_sweep,        "heap", "sweep"          },
 		{ "heap-count",      x_prim_heap_count,        "heap", "count"          },
+		{ "alloc-limit!",    x_prim_alloc_limit,       "alloc", "limit!"        },
 		{ "heap-mark-hook!", x_prim_heap_mark_hook,    "heap", "mark-hook!"     },
 		{ "heap-free-hook!", x_prim_heap_free_hook,    "heap", "free-hook!"     },
 		{ "heap-mark-root!", x_prim_heap_mark_root,    "heap", "mark-root!"     },

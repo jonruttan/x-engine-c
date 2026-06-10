@@ -63,15 +63,17 @@
                     (pair (cell profile-bst-misses)
                           (nil))))))))))))
 
-; --- meta group: the state group (was 'extras'), now carrying prims ---
+; --- meta group: x-expr's alloc group, then the state group (was 'extras') ---
 (node meta-group
   (todo profile-hooks)
   (pair
     (todo heap)
-    (build
-      (node state
-        (cell eval-list)
-        (pair (cell token-cache)
-          (pair (cell sigint)
-            (pair (cell error-str)
-                  (cell prims))))))))
+    (pair
+      (todo alloc)
+      (build
+        (node state
+          (cell eval-list)
+          (pair (cell token-cache)
+            (pair (cell sigint)
+              (pair (cell error-str)
+                    (cell prims)))))))))
