@@ -188,10 +188,14 @@ x_obj_t *x_eval_list(x_obj_t *p_base, x_obj_t *p_args)
 x_obj_t *x_env_extend(x_obj_t *p_base, x_obj_t *p_env,
 	x_obj_t *p_params, x_obj_t *p_vals)
 {
+	x_obj_t *p_pair;
+	x_obj_t *p_val;
+	x_obj_t *p_rest;
+
 	/* Variadic: single symbol binds to entire remaining arg list. */
 	if ( ! x_obj_isnil(p_base, p_params)
 		&& x_obj_type_issymbol(p_base, p_params)) {
-		x_obj_t *p_pair = x_mkspair(p_base, X_OBJ_FLAG_NONE, p_params, p_vals);
+		p_pair = x_mkspair(p_base, X_OBJ_FLAG_NONE, p_params, p_vals);
 
 		/* Flag if param shadows a BST global; track for clearing */
 		if (x_base_isset(p_base)
@@ -218,33 +222,31 @@ x_obj_t *x_env_extend(x_obj_t *p_base, x_obj_t *p_env,
 	 * bind the remaining params to nil -- symmetric with surplus args, which
 	 * are ignored once params run out.  Without this guard x_firstobj/
 	 * x_restobj would dereference a nil p_vals and crash. */
-	{
-		x_obj_t *p_val  = x_obj_isnil(p_base, p_vals)
-			? NULL : x_firstobj(p_vals);
-		x_obj_t *p_rest = x_obj_isnil(p_base, p_vals)
-			? NULL : x_restobj(p_vals);
-		x_obj_t *p_pair = x_mkspair(p_base, X_OBJ_FLAG_NONE,
-			x_firstobj(p_params), p_val);
+	p_val  = x_obj_isnil(p_base, p_vals)
+		? NULL : x_firstobj(p_vals);
+	p_rest = x_obj_isnil(p_base, p_vals)
+		? NULL : x_restobj(p_vals);
+	p_pair = x_mkspair(p_base, X_OBJ_FLAG_NONE,
+		x_firstobj(p_params), p_val);
 
-		/* Flag if param shadows a BST global; track for clearing */
-		if (x_base_isset(p_base)
-			&& x_obj_type_issymbol(p_base, x_firstobj(p_params))
-			&& x_alist_bst_lookup(p_base,
-				x_eval_field_env_global_tree(p_base),
-				x_firstobj(p_params)) != NULL) {
-			if ( ! (x_obj_flags(x_firstobj(p_params)) & X_OBJ_FLAG_SHADOW)) {
-				x_obj_flags(x_firstobj(p_params)) |= X_OBJ_FLAG_SHADOW;
-				x_eval_field_shadow_list(p_base) = x_mkspair(p_base, X_OBJ_FLAG_NONE,
-					x_firstobj(p_params),
-					x_eval_field_shadow_list(p_base));
-			}
+	/* Flag if param shadows a BST global; track for clearing */
+	if (x_base_isset(p_base)
+		&& x_obj_type_issymbol(p_base, x_firstobj(p_params))
+		&& x_alist_bst_lookup(p_base,
+			x_eval_field_env_global_tree(p_base),
+			x_firstobj(p_params)) != NULL) {
+		if ( ! (x_obj_flags(x_firstobj(p_params)) & X_OBJ_FLAG_SHADOW)) {
+			x_obj_flags(x_firstobj(p_params)) |= X_OBJ_FLAG_SHADOW;
+			x_eval_field_shadow_list(p_base) = x_mkspair(p_base, X_OBJ_FLAG_NONE,
+				x_firstobj(p_params),
+				x_eval_field_shadow_list(p_base));
 		}
-
-		return x_env_extend(p_base,
-			x_mkspair(p_base, X_OBJ_FLAG_NONE, p_pair, p_env),
-			x_restobj(p_params),
-			p_rest);
 	}
+
+	return x_env_extend(p_base,
+		x_mkspair(p_base, X_OBJ_FLAG_NONE, p_pair, p_env),
+		x_restobj(p_params),
+		p_rest);
 }
 
 /**
@@ -435,6 +437,8 @@ x_obj_t *x_eval_tco_trampoline(x_obj_t *p_base, x_obj_t *p_result)
 {
 	x_obj_t *p_tco, *p_te, *p_tco_env = NULL, *p_op_save = NULL;
 	int op_outermost = 0, kept_any = 0;
+	int is_op;
+	int has_proc, has_op;
 
 	while ( ! x_obj_isnil(p_base, x_firstobj(x_eval_field_tco_expr(p_base)))) {
 		p_tco = x_firstobj(x_eval_field_tco_expr(p_base));
@@ -444,7 +448,7 @@ x_obj_t *x_eval_tco_trampoline(x_obj_t *p_base, x_obj_t *p_result)
 		 * x_eval's trampoline). */
 		p_te = x_firstobj(x_eval_field_tco_env(p_base));
 		if ( ! x_obj_isnil(p_base, p_te)) {
-			int is_op = (x_firstobj(p_te) == (x_obj_t *)&x_tco_op_tag);
+			is_op = (x_firstobj(p_te) == (x_obj_t *)&x_tco_op_tag);
 
 			if ( ! kept_any) { op_outermost = is_op; kept_any = 1; }
 			if (is_op) {
@@ -463,21 +467,19 @@ x_obj_t *x_eval_tco_trampoline(x_obj_t *p_base, x_obj_t *p_result)
 	/* Apply the two channels in REVERSE capture order so the outermost frame
 	 * (captured first) wins env-alist; see x_eval for the rationale.  has_proc
 	 * forces the op record's env restore to the caller (applied-procedure tail). */
-	{
-		int has_proc = (p_tco_env != NULL && ! x_obj_isnil(p_base, p_tco_env));
-		int has_op = (p_op_save != NULL && ! x_obj_isnil(p_base, p_op_save));
+	has_proc = (p_tco_env != NULL && ! x_obj_isnil(p_base, p_tco_env));
+	has_op = (p_op_save != NULL && ! x_obj_isnil(p_base, p_op_save));
 
-		if (op_outermost) {
-			if (has_proc)
-				x_tco_restore(p_base, p_tco_env);
-			if (has_op)
-				x_op_restore(p_base, p_op_save, has_proc);
-		} else {
-			if (has_op)
-				x_op_restore(p_base, p_op_save, has_proc);
-			if (has_proc)
-				x_tco_restore(p_base, p_tco_env);
-		}
+	if (op_outermost) {
+		if (has_proc)
+			x_tco_restore(p_base, p_tco_env);
+		if (has_op)
+			x_op_restore(p_base, p_op_save, has_proc);
+	} else {
+		if (has_op)
+			x_op_restore(p_base, p_op_save, has_proc);
+		if (has_proc)
+			x_tco_restore(p_base, p_tco_env);
 	}
 
 	return p_result;
@@ -630,19 +632,47 @@ x_obj_t *x_prims_ref(x_obj_t *p_base, x_obj_t *p_ns, x_obj_t *p_method)
 	return NULL;
 }
 
-/* File one (ns/method -> fn) entry into the catalog, creating the namespace
- * domain on first use.  The freshly interned symbols, prim, and conses are
- * pinned on the eval-list root across the allocations that follow, since they
- * are not yet reachable from the base and -O2 stack scanning is unreliable
- * (see the gc-rooting note).
+/* Splice one (method . value) entry into p_ns's catalog domain, creating the
+ * domain on first use.  The shared filing core of C-side registration
+ * (x_prims_add) and x-lang-side registration (prim-reg!).  p_ns and p_entry
+ * must already be pinned by the caller -- the conses here can trigger GC.
  *
  * Conses are built with x_mklist (the list-pair type), NOT x_mkspair: the
  * catalog must be an ordinary iterable x-lang list so (prims) supports pair?,
  * map, fold, etc. -- the x-lang catalog->methods mapping walks it.  Structural
  * x_mkspair pairs are not pair? and segfault the iterator protocol. */
+static void x_prims_file(x_obj_t *p_base, x_obj_t *p_ns, x_obj_t *p_entry)
+{
+	x_obj_t *p_dom, *p_methods, *p_newdom;
+
+	p_dom = x_prims_domain_pair(p_base, p_ns);
+
+	if (p_dom != NULL) {
+		/* Existing namespace: prepend the entry to its method alist (a
+		 * re-registration shadows the older entry on lookup). */
+		x_restobj(p_dom) = x_mklist(p_base,
+			p_entry, x_restobj(p_dom));
+	} else {
+		/* New namespace: prepend (ns . (entry)) to the catalog, rooting the
+		 * partial spine across each subsequent cons. */
+		p_methods = x_mklist(p_base, p_entry, NULL);
+		x_obj_push_field(p_base, &x_eval_field_eval_list(p_base), p_methods, X_OBJ_FLAG_NONE);
+		p_newdom = x_mklist(p_base, p_ns, p_methods);
+		x_obj_push_field(p_base, &x_eval_field_eval_list(p_base), p_newdom, X_OBJ_FLAG_NONE);
+		x_firstobj(x_eval_field_prims(p_base)) = x_mklist(p_base,
+			p_newdom, x_prims(p_base));
+		x_obj_pop_field(p_base, &x_eval_field_eval_list(p_base));  /* p_newdom */
+		x_obj_pop_field(p_base, &x_eval_field_eval_list(p_base));  /* p_methods */
+	}
+}
+
+/* File one (ns/method -> fn) entry into the catalog.  The freshly interned
+ * symbols, prim, and conses are pinned on the eval-list root across the
+ * allocations that follow, since they are not yet reachable from the base and
+ * -O2 stack scanning is unreliable (see the gc-rooting note). */
 static void x_prims_add(x_obj_t *p_base, x_char_t *ns, x_char_t *method, x_fn_t fn)
 {
-	x_obj_t *p_ns, *p_entry, *p_dom;
+	x_obj_t *p_ns, *p_entry;
 
 	p_ns = x_make_symbol(p_base, X_OBJ_FLAG_NONE, ns);
 	x_obj_push_field(p_base, &x_eval_field_eval_list(p_base), p_ns, X_OBJ_FLAG_NONE);
@@ -653,25 +683,7 @@ static void x_prims_add(x_obj_t *p_base, x_char_t *ns, x_char_t *method, x_fn_t 
 		x_mkprim(p_base, fn));
 	x_obj_push_field(p_base, &x_eval_field_eval_list(p_base), p_entry, X_OBJ_FLAG_NONE);
 
-	p_dom = x_prims_domain_pair(p_base, p_ns);
-	if (p_dom != NULL) {
-		/* Existing namespace: prepend the entry to its method alist. */
-		x_restobj(p_dom) = x_mklist(p_base,
-			p_entry, x_restobj(p_dom));
-	} else {
-		/* New namespace: prepend (ns . (entry)) to the catalog, rooting the
-		 * partial spine across each subsequent cons. */
-		x_obj_t *p_methods, *p_newdom;
-
-		p_methods = x_mklist(p_base, p_entry, NULL);
-		x_obj_push_field(p_base, &x_eval_field_eval_list(p_base), p_methods, X_OBJ_FLAG_NONE);
-		p_newdom = x_mklist(p_base, p_ns, p_methods);
-		x_obj_push_field(p_base, &x_eval_field_eval_list(p_base), p_newdom, X_OBJ_FLAG_NONE);
-		x_firstobj(x_eval_field_prims(p_base)) = x_mklist(p_base,
-			p_newdom, x_prims(p_base));
-		x_obj_pop_field(p_base, &x_eval_field_eval_list(p_base));  /* p_newdom */
-		x_obj_pop_field(p_base, &x_eval_field_eval_list(p_base));  /* p_methods */
-	}
+	x_prims_file(p_base, p_ns, p_entry);
 
 	x_obj_pop_field(p_base, &x_eval_field_eval_list(p_base));  /* p_entry */
 	x_obj_pop_field(p_base, &x_eval_field_eval_list(p_base));  /* p_ns */
@@ -749,6 +761,38 @@ static x_obj_t *x_prim_prim_ref(x_obj_t *p_base, x_obj_t *p_args)
 	return x_prims_ref(p_base, p_ns, p_method);
 }
 
+/** (prim-reg! ns method value) -- file an x-lang value into the catalog under
+ *  ns/method: the producer half of the fetch protocol (prim-ref is the
+ *  consumer half), so library implementations register under the same stable
+ *  identities as C prims.  Registration prepends; a re-registration shadows
+ *  the older entry on lookup.  Side-effecting: returns nil. */
+static x_obj_t *x_prim_prim_reg(x_obj_t *p_base, x_obj_t *p_args)
+{
+	x_obj_t *p_ns, *p_method, *p_value, *p_entry;
+
+	x_eargs(p_base, p_args, 4, NULL, &p_ns, &p_method, &p_value);
+
+	/* Pin the evaluated args across the conses below: they may be fresh
+	 * allocations reachable only from C locals, and -O2 stack scanning is
+	 * unreliable (see the gc-rooting note). */
+	x_obj_push_field(p_base, &x_eval_field_eval_list(p_base), p_ns, X_OBJ_FLAG_NONE);
+	x_obj_push_field(p_base, &x_eval_field_eval_list(p_base), p_value, X_OBJ_FLAG_NONE);
+	x_obj_push_field(p_base, &x_eval_field_eval_list(p_base), p_method, X_OBJ_FLAG_NONE);
+
+	/* (method . value) */
+	p_entry = x_mklist(p_base, p_method, p_value);
+	x_obj_push_field(p_base, &x_eval_field_eval_list(p_base), p_entry, X_OBJ_FLAG_NONE);
+
+	x_prims_file(p_base, p_ns, p_entry);
+
+	x_obj_pop_field(p_base, &x_eval_field_eval_list(p_base));  /* p_entry */
+	x_obj_pop_field(p_base, &x_eval_field_eval_list(p_base));  /* p_method */
+	x_obj_pop_field(p_base, &x_eval_field_eval_list(p_base));  /* p_value */
+	x_obj_pop_field(p_base, &x_eval_field_eval_list(p_base));  /* p_ns */
+
+	return NULL;
+}
+
 /** (use ns) -- define ns's catalog methods into the env as @c ns/method.
  *  Qualified names keep the bulk collision-free (e.g. obj/ref vs ptr/ref vs
  *  buf/ref).  Side-effecting: returns nil.  This is the fetch+define step
@@ -756,8 +800,12 @@ static x_obj_t *x_prim_prim_ref(x_obj_t *p_base, x_obj_t *p_args)
 static x_obj_t *x_prim_use(x_obj_t *p_base, x_obj_t *p_args)
 {
 	x_obj_t  *p_ns, *p_dom;
+	x_obj_t  *p_entry;
 	x_char_t *p_ns_str;
+	x_char_t *p_m_str;
+	x_char_t *p_name;
 	size_t    ns_len;
+	size_t    m_len;
 
 	x_eargs(p_base, p_args, 2, NULL, &p_ns);
 	p_ns_str = x_atomstr(p_ns);
@@ -765,13 +813,13 @@ static x_obj_t *x_prim_use(x_obj_t *p_base, x_obj_t *p_args)
 
 	p_dom = x_prims_domain(p_base, p_ns);
 	while ( ! x_obj_isnil(p_base, p_dom)) {
-		x_obj_t  *p_entry = x_firstobj(p_dom);       /* (method . #<prim>) */
-		x_char_t *p_m_str = x_atomstr(x_firstobj(p_entry));
-		size_t    m_len = x_lib_strlen(p_m_str);
+		p_entry = x_firstobj(p_dom);       /* (method . #<prim>) */
+		p_m_str = x_atomstr(x_firstobj(p_entry));
+		m_len = x_lib_strlen(p_m_str);
 		/* "ns/method".  x_make_symbol stores the name pointer (it does not
 		 * copy unless OWN), so the name must outlive the symbol -- allocate it
 		 * persistently, exactly as an interned symbol's name would live. */
-		x_char_t *p_name = (x_char_t *)x_sys_malloc(ns_len + m_len + 2);
+		p_name = (x_char_t *)x_sys_malloc(ns_len + m_len + 2);
 
 		x_lib_memcpy(p_name, p_ns_str, ns_len);
 		p_name[ns_len] = '/';
@@ -819,6 +867,7 @@ x_obj_t *x_prim_register(x_obj_t *p_base, x_obj_t *p_args)
 	x_callable_bind(p_base, "prims", x_prim_prims);
 	x_callable_bind(p_base, "prim-domain", x_prim_prim_domain);
 	x_callable_bind(p_base, "prim-ref", x_prim_prim_ref);
+	x_callable_bind(p_base, "prim-reg!", x_prim_prim_reg);
 	x_callable_bind(p_base, "use", x_prim_use);
 
 	x_prim_core_register(p_base, p_args);
