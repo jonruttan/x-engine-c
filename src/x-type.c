@@ -18,6 +18,8 @@
 #include "x-heap.h"
 #include "x-obj.h"
 #include "x-type/prim.h"
+#include "x-type/symbol.h"
+#include "x-type/int.h"
 
 #define nil			NULL
 #define pair(X,Y)	(x_mkspair(p_base, X_OBJ_FLAG_NONE, (X), (Y)))
@@ -30,7 +32,7 @@
  * in the type alist: name-stack, data-stack, heap group (mark, make,
  * free, clone, units, length), proc group (call, eval), cvt group
  * (from, to), IO group (analyse, delimit, read, write, display,
- * error), and iter group.
+ * error), iter group, and ops group.
  *
  * @param p_base  x_obj_t* -- Execution context (for allocation)
  * @param type    struct x_type_t -- Type descriptor with all hook pointers
@@ -69,7 +71,10 @@ x_obj_t *x_type_struct_make(x_obj_t *p_base, struct x_type_t type)
 		/* Iter: '(iter-stack) */
 		pair(pair(pair(type.p_iter, nil),
 			nil),
-		nil)))))));
+		/* Ops: '(ops-stack) */
+		pair(pair(pair(type.p_ops, nil),
+			nil),
+		nil))))))));
 
 	return p_type;
 }
@@ -77,6 +82,83 @@ x_obj_t *x_type_struct_make(x_obj_t *p_base, struct x_type_t type)
 #undef nil
 #undef pair
 #undef atom
+
+/* Look up p_sym in a ((op-sym . handler) ...) alist by interned pointer;
+ * NULL when absent.  Prepend-registration means the newest handler wins. */
+static x_obj_t *x_type_ops_lookup(x_obj_t *p_base, x_obj_t *p_ops, x_obj_t *p_sym)
+{
+	x_obj_t *p_cur;
+
+	for (p_cur = p_ops; ! x_obj_isnil(p_base, p_cur); p_cur = x_restobj(p_cur)) {
+		if (x_firstobj(x_firstobj(p_cur)) == p_sym)
+			return x_restobj(x_firstobj(p_cur));
+	}
+	return NULL;
+}
+
+/*
+ * Generic-operator dispatch: the ops half of the type system's hot path.
+ *
+ * EVERY value's type tag is its type pair tree -- ints included
+ * (x_type_int_make stamps the int tree) -- so "is it typed" is not the
+ * dispatch test; CARRYING A HANDLER is.  If either operand's type has a
+ * handler registered for the op in its ops alist, call it as (handler a b);
+ * the handler receives the raw operands and owns any coercion.  This
+ * replaces the load-order-dependent set! wrapper chain: types REGISTER ops
+ * (type-push-op), nothing wraps ambient names.
+ *
+ * When BOTH sides carry a handler for the op, the LEFT operand's wins for
+ * now.  The principled mixed rule is an open design decision for the tower
+ * layer: the cvt from-alists already declare the cross-type relation (e.g.
+ * complex registers conversions FROM float/rational/int), and basing the
+ * choice on that declared data is the candidate -- not decided here.
+ *
+ * Ops-less types (int, str, ...) have a nil ops alist, so int/int
+ * arithmetic falls through to the callers' pure-C path after a few pointer
+ * reads -- no interning, no allocation.  When a handler does fire, the call
+ * frame is stack-built (zero heap allocation) and the op symbol is interned
+ * so the alist walk compares by pointer.
+ */
+int x_type_op_try(x_obj_t *p_base, x_char_t *op, x_obj_t *p_a, x_obj_t *p_b,
+	x_obj_t **pp_result)
+{
+	x_obj_t *p_ta, *p_tb, *p_ops_a, *p_ops_b, *p_sym, *p_handler;
+	x_spair_t call[3] = {
+		x_obj_set(NULL, X_OBJ_FLAG_NONE, { NULL }, { NULL }),
+		x_obj_set(NULL, X_OBJ_FLAG_NONE, { NULL }, { NULL }),
+		x_obj_set(NULL, X_OBJ_FLAG_NONE, { NULL }, { NULL })
+	};
+
+	/* Resolve each side's ops alist (guard: a static atom's tag is not a
+	 * pair tree, and its fields must not be navigated). */
+	p_ta = p_a == NULL ? NULL : x_obj_type(p_a);
+	p_tb = p_b == NULL ? NULL : x_obj_type(p_b);
+	p_ops_a = (p_ta != NULL && x_obj_type_isspair(p_ta))
+		? x_type_field_ops(p_ta) : NULL;
+	p_ops_b = (p_tb != NULL && x_obj_type_isspair(p_tb))
+		? x_type_field_ops(p_tb) : NULL;
+	if (x_obj_isnil(p_base, p_ops_a) && x_obj_isnil(p_base, p_ops_b))
+		return 0;
+
+	p_sym = x_mksymbol(p_base, op);
+	p_handler = x_obj_isnil(p_base, p_ops_a)
+		? NULL : x_type_ops_lookup(p_base, p_ops_a, p_sym);
+	if (p_handler == NULL && ! x_obj_isnil(p_base, p_ops_b))
+		p_handler = x_type_ops_lookup(p_base, p_ops_b, p_sym);
+	if (p_handler == NULL)
+		return 0;
+
+	/* (handler a b) on a stack-built frame -- zero heap allocation. */
+	x_firstobj((x_obj_t *)call) = p_handler;
+	x_restobj((x_obj_t *)call) = (x_obj_t *)(call + 1);
+	x_firstobj((x_obj_t *)(call + 1)) = p_a;
+	x_restobj((x_obj_t *)(call + 1)) = (x_obj_t *)(call + 2);
+	x_firstobj((x_obj_t *)(call + 2)) = p_b;
+	x_restobj((x_obj_t *)(call + 2)) = NULL;
+
+	*pp_result = x_callable_call(p_base, (x_obj_t *)call);
+	return 1;
+}
 
 /**
  * Retrieve or create a type struct by name.
@@ -287,6 +369,11 @@ x_obj_t *x_type_prim_length(x_obj_t *p_base, x_obj_t *p_args)
 x_obj_t *x_type_heap_mark(x_obj_t *p_base, x_obj_t *p_obj, x_obj_flag_t flags)
 {
 	x_obj_t *p_type = x_obj_type(p_obj);
+	x_obj_t *p_mark;
+	x_obj_t *p_units;
+	x_spair_t mark_args[2];
+	x_int_t n;
+	x_int_t i;
 
 	/* Child base objects (e.g. %sh-base): traverse their pair tree
 	 * so type alist entries, env, etc. are not freed by GC. */
@@ -295,13 +382,11 @@ x_obj_t *x_type_heap_mark(x_obj_t *p_base, x_obj_t *p_obj, x_obj_flag_t flags)
 	}
 
 	if (p_type != NULL && x_obj_type_isspair(p_type)) {
-		x_obj_t *p_mark = x_type_field_mark(p_type);
+		p_mark = x_type_field_mark(p_type);
 
 		if (p_mark != NULL) {
 			/* Call type's custom mark callback:
 			 * (mark p_obj flags) */
-			x_spair_t mark_args[2];
-
 			mark_args[0][X_OBJ_META_TYPE].p = NULL;
 			mark_args[0][X_OBJ_META_FLAGS].i = X_OBJ_FLAG_NONE;
 			x_firstobj((x_obj_t *)mark_args) = p_obj;
@@ -317,23 +402,20 @@ x_obj_t *x_type_heap_mark(x_obj_t *p_base, x_obj_t *p_obj, x_obj_flag_t flags)
 			return NULL;
 		}
 
-		{
-			/* Fall back to p_units generic N-slot traversal.
-			 * Mark ALL slots via tree_mark (handles non-heap
-			 * values safely — they won't be on the heap chain). */
-			x_obj_t *p_units = x_type_field_units(p_type);
+		/* Fall back to p_units generic N-slot traversal.
+		 * Mark ALL slots via tree_mark (handles non-heap
+		 * values safely — they won't be on the heap chain). */
+		p_units = x_type_field_units(p_type);
 
-			if (p_units != NULL) {
-				x_int_t n = x_atomint(p_units);
-				x_int_t i;
+		if (p_units != NULL) {
+			n = x_atomint(p_units);
 
-				for (i = 0; i < n; i++) {
-					x_heap_tree_mark(p_base,
-						x_obj(x_obj_data_i(p_obj, i)),
-						flags);
-				}
-				return NULL;
+			for (i = 0; i < n; i++) {
+				x_heap_tree_mark(p_base,
+					x_obj(x_obj_data_i(p_obj, i)),
+					flags);
 			}
+			return NULL;
 		}
 	}
 
@@ -352,13 +434,13 @@ x_obj_t *x_type_heap_mark(x_obj_t *p_base, x_obj_t *p_obj, x_obj_flag_t flags)
 void x_type_heap_free(x_obj_t *p_base, x_obj_t *p_obj)
 {
 	x_obj_t *p_type = x_obj_type(p_obj);
+	x_obj_t *p_free;
+	x_spair_t a[1];
 
 	if (p_type != NULL && x_obj_type_isspair(p_type)) {
-		x_obj_t *p_free = x_type_field_free(p_type);
+		p_free = x_type_field_free(p_type);
 
 		if (p_free != NULL) {
-			x_spair_t a[1];
-
 			a[0][X_OBJ_META_TYPE].p = NULL;
 			a[0][X_OBJ_META_FLAGS].i = X_OBJ_FLAG_NONE;
 			x_firstobj((x_obj_t *)a) = p_obj;

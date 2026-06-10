@@ -32,6 +32,7 @@
  *     write        [S] writer (s-expression output)
  *     display)     [S] display (human-readable output)
  *    (iter)        [S] iterator constructor
+ *    (ops)         [S] generic-operator alist ((op-sym . handler) ...)
  * )
  * @endcode
  *
@@ -148,6 +149,16 @@
 #define x_type_field_iter(X)          x_firstobj(x_type_field_iter_stack((X))) /**< Current iterator handler. */
 /** @} */
 
+/** @name Ops Group -- Generic-Operator Dispatch
+ *  @c (ops) -- the per-type generic-operator alist.  A typed operand
+ *  dispatches @c + - * / % = < to its type's registered handler; a type
+ *  with a nil ops alist never dispatches (ints keep the pure-C fast path).
+ * @{ */
+#define x_type_field_ops_group(X)     x_firstobj(x_restobj(x_restobj(x_restobj(x_restobj(x_restobj(x_restobj(x_restobj(X)))))))) /**< Ops handler group. */
+#define x_type_field_ops_stack(X)     x_firstobj(x_type_field_ops_group((X))) /**< Ops alist stack cell. */
+#define x_type_field_ops(X)           x_firstobj(x_type_field_ops_stack((X))) /**< Current ops alist. */
+/** @} */
+
 /** Extract the type object from a type-dispatch argument list. */
 #define x_type_arg_type(X)            x_firstobj((X))
 
@@ -179,6 +190,7 @@ struct x_type_t
 	x_obj_t *p_write;      /**< Writer handler. */
 	x_obj_t *p_display;    /**< Display handler. */
 	x_obj_t *p_iter;       /**< Iterator handler. */
+	x_obj_t *p_ops;        /**< Generic-operator alist ((op-sym . handler) ...). */
 };
 
 /** @name Type Functions
@@ -186,6 +198,10 @@ struct x_type_t
 
 /** Build a type pair tree from a C x_type_t struct. */
 x_obj_t *x_type_struct_make(x_obj_t *p_base, struct x_type_t type);
+
+/** Try generic-operator dispatch for a binary op; 1 if dispatched. */
+int x_type_op_try(x_obj_t *p_base, x_char_t *op, x_obj_t *p_a, x_obj_t *p_b,
+	x_obj_t **pp_result);
 
 /** Look up a type struct from a type-dispatch argument list. */
 x_obj_t *x_type_struct_get(x_obj_t *p_base, x_obj_t *p_args);

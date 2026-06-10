@@ -17,19 +17,26 @@
  * # Includes
  */
 #include "x-prim.h"
+#include "x-type.h"
 #include "x-type/int.h"
 
 /**
- * Binary integer addition. x-lang: (+ a b)
+ * Binary integer addition, with typed-operand dispatch. x-lang: (+ a b)
+ *
+ * A typed operand (float, bignum, ...) dispatches through its type's ops
+ * alist (x_type_op_try); int/int keeps the pure-C path.
  *
  * @param p_base  x_obj_t* -- Execution context
  * @param p_args  x_obj_t* -- Unevaluated args, evaluated via x_eargs
- * @return x_obj_t* -- New integer object
+ * @return x_obj_t* -- New integer object, or the handler's result
  */
 static x_obj_t *x_prim_sum(x_obj_t *p_base, x_obj_t *p_args)
 {
-	x_obj_t *a, *b;
+	x_obj_t *a, *b, *p_result;
 	x_eargs(p_base, p_args, 3, NULL, &a, &b);
+
+	if (x_type_op_try(p_base, (x_char_t *)"+", a, b, &p_result))
+		return p_result;
 
 	return x_mkint(p_base, x_intval(a) + x_intval(b));
 }
@@ -47,14 +54,19 @@ static x_obj_t *x_prim_sum(x_obj_t *p_base, x_obj_t *p_args)
  */
 static x_obj_t *x_prim_sub(x_obj_t *p_base, x_obj_t *p_args)
 {
-	x_obj_t *a;
+	x_obj_t *a, *b, *p_result;
 	x_eargs(p_base, p_args, 2, NULL, &a);
 
+	/* Unary negation keeps the int path (typed negation is the tower
+	 * layer's concern, not binary op dispatch). */
 	if (x_obj_isnil(p_base, x_11(p_args)))
 		return x_mkint(p_base, -x_intval(a));
 
-	return x_mkint(p_base,
-		x_intval(a) - x_intval(x_eval_arg(p_base, x_011(p_args))));
+	b = x_eval_arg(p_base, x_011(p_args));
+	if (x_type_op_try(p_base, (x_char_t *)"-", a, b, &p_result))
+		return p_result;
+
+	return x_mkint(p_base, x_intval(a) - x_intval(b));
 }
 
 /**
@@ -66,8 +78,11 @@ static x_obj_t *x_prim_sub(x_obj_t *p_base, x_obj_t *p_args)
  */
 static x_obj_t *x_prim_prod(x_obj_t *p_base, x_obj_t *p_args)
 {
-	x_obj_t *a, *b;
+	x_obj_t *a, *b, *p_result;
 	x_eargs(p_base, p_args, 3, NULL, &a, &b);
+
+	if (x_type_op_try(p_base, (x_char_t *)"*", a, b, &p_result))
+		return p_result;
 
 	return x_mkint(p_base, x_intval(a) * x_intval(b));
 }
@@ -81,8 +96,11 @@ static x_obj_t *x_prim_prod(x_obj_t *p_base, x_obj_t *p_args)
  */
 static x_obj_t *x_prim_div(x_obj_t *p_base, x_obj_t *p_args)
 {
-	x_obj_t *a, *b;
+	x_obj_t *a, *b, *p_result;
 	x_eargs(p_base, p_args, 3, NULL, &a, &b);
+
+	if (x_type_op_try(p_base, (x_char_t *)"/", a, b, &p_result))
+		return p_result;
 
 	return x_mkint(p_base, x_intval(a) / x_intval(b));
 }
@@ -96,8 +114,11 @@ static x_obj_t *x_prim_div(x_obj_t *p_base, x_obj_t *p_args)
  */
 static x_obj_t *x_prim_mod(x_obj_t *p_base, x_obj_t *p_args)
 {
-	x_obj_t *a, *b;
+	x_obj_t *a, *b, *p_result;
 	x_eargs(p_base, p_args, 3, NULL, &a, &b);
+
+	if (x_type_op_try(p_base, (x_char_t *)"%", a, b, &p_result))
+		return p_result;
 
 	return x_mkint(p_base, x_intval(a) % x_intval(b));
 }

@@ -66,36 +66,35 @@ static x_obj_t *x_prim_type_build_struct(x_obj_t *p_base,
 		x_obj_set(NULL, X_OBJ_FLAG_NONE, { p_handlers }, { NULL })
 	};
 
+	static const struct { x_char_t *name; size_t offset; } fields[] = {
+		{ "call",    offsetof(struct x_type_t, p_call) },
+		{ "eval",    offsetof(struct x_type_t, p_eval) },
+		{ "write",   offsetof(struct x_type_t, p_write) },
+		{ "display", offsetof(struct x_type_t, p_display) },
+		{ "length",  offsetof(struct x_type_t, p_length) },
+		{ "analyse", offsetof(struct x_type_t, p_analyse) },
+		{ "delimit", offsetof(struct x_type_t, p_delimit) },
+		{ "read",    offsetof(struct x_type_t, p_read) },
+		{ "from",    offsetof(struct x_type_t, p_from) },
+		{ "to",      offsetof(struct x_type_t, p_to) },
+		{ "units",   offsetof(struct x_type_t, p_units) },
+		{ "free",    offsetof(struct x_type_t, p_free) },
+		{ "mark",    offsetof(struct x_type_t, p_mark) },
+		{ "iter",    offsetof(struct x_type_t, p_iter) },
+		{ "ops",     offsetof(struct x_type_t, p_ops) }
+	};
+	int i;
+
 	type.p_name = p_name_atom;
 	type.p_units = (x_obj_t *)&x_type_units_pair_obj;
 
 	/* Look up handler closures from the alist. */
-	{
-		static const struct { x_char_t *name; size_t offset; } fields[] = {
-			{ "call",    offsetof(struct x_type_t, p_call) },
-			{ "eval",    offsetof(struct x_type_t, p_eval) },
-			{ "write",   offsetof(struct x_type_t, p_write) },
-			{ "display", offsetof(struct x_type_t, p_display) },
-			{ "length",  offsetof(struct x_type_t, p_length) },
-			{ "analyse", offsetof(struct x_type_t, p_analyse) },
-			{ "delimit", offsetof(struct x_type_t, p_delimit) },
-			{ "read",    offsetof(struct x_type_t, p_read) },
-			{ "from",    offsetof(struct x_type_t, p_from) },
-			{ "to",      offsetof(struct x_type_t, p_to) },
-			{ "units",   offsetof(struct x_type_t, p_units) },
-			{ "free",    offsetof(struct x_type_t, p_free) },
-			{ "mark",    offsetof(struct x_type_t, p_mark) },
-			{ "iter",    offsetof(struct x_type_t, p_iter) }
-		};
-		int i;
-
-		for (i = 0; i < (int)(sizeof(fields) / sizeof(fields[0])); i++) {
-			p_sym = x_mksymbol(p_base, fields[i].name);
-			x_firstobj((x_obj_t *)assoc_args) = p_sym;
-			p_entry = x_alist_assoc(p_base, (x_obj_t *)assoc_args);
-			if ( ! x_obj_isnil(p_base, p_entry))
-				*(x_obj_t **)((char *)&type + fields[i].offset) = x_restobj(p_entry);
-		}
+	for (i = 0; i < (int)(sizeof(fields) / sizeof(fields[0])); i++) {
+		p_sym = x_mksymbol(p_base, fields[i].name);
+		x_firstobj((x_obj_t *)assoc_args) = p_sym;
+		p_entry = x_alist_assoc(p_base, (x_obj_t *)assoc_args);
+		if ( ! x_obj_isnil(p_base, p_entry))
+			*(x_obj_t **)((char *)&type + fields[i].offset) = x_restobj(p_entry);
 	}
 
 	return x_type_struct_make(p_base, type);
@@ -378,6 +377,7 @@ static x_obj_t *x_prim_base_eval(x_obj_t *p_base, x_obj_t *p_args)
 	jmp_buf jmp;
 	x_obj_t *p_target, *p_expr;
 	x_obj_t *p_handler, *p_result;
+	x_obj_t *p_err, *p_parent;
 
 	x_eargs(p_base, p_args, 3, NULL, &p_target, &p_expr);
 
@@ -395,7 +395,7 @@ static x_obj_t *x_prim_base_eval(x_obj_t *p_base, x_obj_t *p_args)
 	if (setjmp(jmp) == 0) {
 		p_result = x_eval_arg(p_target, p_expr);
 	} else {
-		x_obj_t *p_err = x_error_handler_error(p_handler);
+		p_err = x_error_handler_error(p_handler);
 
 		/* Error caught from target: pop handler, restore env, re-signal. */
 		x_eval_field_error_handler(p_target)
@@ -404,7 +404,7 @@ static x_obj_t *x_prim_base_eval(x_obj_t *p_base, x_obj_t *p_args)
 			= x_error_handler_saved_env(p_handler);
 
 		if ( ! x_obj_isnil(p_base, x_firstobj(x_eval_field_error_handler(p_base)))) {
-			x_obj_t *p_parent = x_firstobj(x_eval_field_error_handler(p_base));
+			p_parent = x_firstobj(x_eval_field_error_handler(p_base));
 
 			x_error_handler_error(p_parent) = p_err;
 			x_error_handler_line(p_parent) = x_error_handler_line(p_handler);
@@ -520,6 +520,7 @@ static x_obj_t *x_prim_token_read_string(x_obj_t *p_base, x_obj_t *p_args)
 	x_int_t len;
 	x_char_t *buf;
 	x_obj_t *p_buffer, *p_token, *p_result, *p_tail, *p_node;
+	x_spair_t read_args[1];
 
 	x_eargs(p_base, p_args, 3, NULL, &p_token_base, &p_str);
 	str = x_strval(p_str);
@@ -540,28 +541,27 @@ static x_obj_t *x_prim_token_read_string(x_obj_t *p_base, x_obj_t *p_args)
 	p_result = NULL;
 	p_tail = NULL;
 
-	{
-		x_spair_t read_args[1] = {
-			x_obj_set(NULL, X_OBJ_FLAG_NONE, { p_buffer }, { p_token_base })
-		};
+	read_args[0][X_OBJ_META_TYPE].p = NULL;
+	read_args[0][X_OBJ_META_FLAGS].i = X_OBJ_FLAG_NONE;
+	x_firstobj((x_obj_t *)read_args) = p_buffer;
+	x_restobj((x_obj_t *)read_args) = p_token_base;
 
-		for (;;) {
-			p_token = x_token_read(p_token_base, (x_obj_t *)read_args);
+	for (;;) {
+		p_token = x_token_read(p_token_base, (x_obj_t *)read_args);
 
-			if (x_obj_isnil(p_token_base, p_token)) {
-				break;
-			}
-
-			p_node = x_mklist(p_base, p_token, NULL);
-
-			if (x_obj_isnil(p_base, p_result)) {
-				p_result = p_node;
-			} else {
-				x_restobj(p_tail) = p_node;
-			}
-
-			p_tail = p_node;
+		if (x_obj_isnil(p_token_base, p_token)) {
+			break;
 		}
+
+		p_node = x_mklist(p_base, p_token, NULL);
+
+		if (x_obj_isnil(p_base, p_result)) {
+			p_result = p_node;
+		} else {
+			x_restobj(p_tail) = p_node;
+		}
+
+		p_tail = p_node;
 	}
 
 	return p_result;
@@ -667,6 +667,7 @@ static x_obj_t *x_prim_iter(x_obj_t *p_base, x_obj_t *p_args)
 	x_obj_t *p_obj;
 	x_obj_t *p_type;
 	x_obj_t *p_iter_fn;
+	x_spair_t iter_call[1];
 
 	x_eargs(p_base, p_args, 2, NULL, &p_obj);
 	p_type = x_obj_type(p_obj);
@@ -681,13 +682,11 @@ static x_obj_t *x_prim_iter(x_obj_t *p_base, x_obj_t *p_args)
 	}
 
 	/* Call the iter handler as (iter-fn obj) */
-	{
-		x_spair_t iter_call[1] = {
-			x_obj_set(NULL, X_OBJ_FLAG_NONE, { p_iter_fn }, { NULL })
-		};
-		x_restobj((x_obj_t *)iter_call) = x_mkspair(p_base, X_OBJ_FLAG_NONE, p_obj, NULL);
-		return x_callable_call(p_base, (x_obj_t *)iter_call);
-	}
+	iter_call[0][X_OBJ_META_TYPE].p = NULL;
+	iter_call[0][X_OBJ_META_FLAGS].i = X_OBJ_FLAG_NONE;
+	x_firstobj((x_obj_t *)iter_call) = p_iter_fn;
+	x_restobj((x_obj_t *)iter_call) = x_mkspair(p_base, X_OBJ_FLAG_NONE, p_obj, NULL);
+	return x_callable_call(p_base, (x_obj_t *)iter_call);
 }
 
 /**

@@ -11,6 +11,7 @@
  *      " "
  */
 #include "x-prim.h"
+#include "x-type.h"
 #include "x-type/char.h"
 #include "x-type/int.h"
 
@@ -54,7 +55,33 @@ static x_obj_t *x_prim_eq(x_obj_t *p_base, x_obj_t *p_args)
 		: x_firstobj(x_eval_field_false(p_base));
 }
 
-/** Integer less-than comparison.
+/** Numeric equality with typed-operand dispatch (bound as @c = only).
+ *  x-lang: (= a b)
+ *  @param p_base Interpreter base context.
+ *  @param p_args Unevaluated argument list: (= a b).
+ *  @return #t if equal, #f otherwise.
+ *  @note Distinct from x_prim_eq, which doubles as @c eq? -- identity
+ *        semantics must never dispatch through a type's ops (eq? on two
+ *        floats is value-word identity, not f=).  Evaluates its own args,
+ *        so the fallthrough repeats x_prim_eq's comparison inline rather
+ *        than delegating (delegation would re-evaluate the args).
+ */
+static x_obj_t *x_prim_num_eq(x_obj_t *p_base, x_obj_t *p_args)
+{
+	x_obj_t *a, *b, *p_result;
+	x_eargs(p_base, p_args, 3, NULL, &a, &b);
+
+	if (x_type_op_try(p_base, (x_char_t *)"=", a, b, &p_result))
+		return p_result;
+
+	return (a == b
+		|| (!x_obj_isnil(p_base, a) && !x_obj_isnil(p_base, b)
+			&& x_intval(a) == x_intval(b)))
+		? x_firstobj(x_eval_field_true(p_base))
+		: x_firstobj(x_eval_field_false(p_base));
+}
+
+/** Integer less-than comparison, with typed-operand dispatch.
  *  x-lang: (< a b)
  *  @param p_base Interpreter base context.
  *  @param p_args Unevaluated argument list: (< a b).
@@ -62,8 +89,11 @@ static x_obj_t *x_prim_eq(x_obj_t *p_base, x_obj_t *p_args)
  */
 static x_obj_t *x_prim_lt(x_obj_t *p_base, x_obj_t *p_args)
 {
-	x_obj_t *a, *b;
+	x_obj_t *a, *b, *p_result;
 	x_eargs(p_base, p_args, 3, NULL, &a, &b);
+
+	if (x_type_op_try(p_base, (x_char_t *)"<", a, b, &p_result))
+		return p_result;
 
 	return x_intval(a) < x_intval(b)
 		? x_firstobj(x_eval_field_true(p_base)) : x_firstobj(x_eval_field_false(p_base));
@@ -112,7 +142,7 @@ x_obj_t *x_prim_pred_register(x_obj_t *p_base, x_obj_t *p_args)
 	static const x_prim_entry_t entries[] = {
 		{ "same?",         x_prim_same,            "obj",  "same?"     },
 		{ "eq?",           x_prim_eq,              "obj",  "eq?"       },
-		{ "=",             x_prim_eq,              "int",  "="         },
+		{ "=",             x_prim_num_eq,          "int",  "="         },
 		{ "<",             x_prim_lt,              "int",  "<"         },
 		{ "char->integer", x_prim_char_to_integer, "char", "->int"     },
 		{ "integer->char", x_prim_integer_to_char, "int",  "->char"    }
