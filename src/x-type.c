@@ -96,6 +96,21 @@ static x_obj_t *x_type_ops_lookup(x_obj_t *p_base, x_obj_t *p_ops, x_obj_t *p_sy
 	return NULL;
 }
 
+/* 1 if p_type's from-conversion alist declares a conversion from the type
+ * named p_name (entries are (type-handle . handler); the handle IS the
+ * type's name atom, so the walk compares by pointer). */
+static int x_type_from_has(x_obj_t *p_base, x_obj_t *p_type, x_obj_t *p_name)
+{
+	x_obj_t *p_cur;
+
+	for (p_cur = x_type_field_from(p_type); ! x_obj_isnil(p_base, p_cur);
+			p_cur = x_restobj(p_cur)) {
+		if (x_firstobj(x_firstobj(p_cur)) == p_name)
+			return 1;
+	}
+	return 0;
+}
+
 /*
  * Generic-operator dispatch: the ops half of the type system's hot path.
  *
@@ -107,11 +122,14 @@ static x_obj_t *x_type_ops_lookup(x_obj_t *p_base, x_obj_t *p_ops, x_obj_t *p_sy
  * replaces the load-order-dependent set! wrapper chain: types REGISTER ops
  * (type-push-op), nothing wraps ambient names.
  *
- * When BOTH sides carry a handler for the op, the LEFT operand's wins for
- * now.  The principled mixed rule is an open design decision for the tower
- * layer: the cvt from-alists already declare the cross-type relation (e.g.
- * complex registers conversions FROM float/rational/int), and basing the
- * choice on that declared data is the candidate -- not decided here.
+ * When BOTH sides carry a handler for the op:
+ *   - same type        -> that type's handler (no promotion question);
+ *   - different types  -> the declared from-relation decides: the side whose
+ *     type registers a conversion FROM the other side's type absorbs it (e.g.
+ *     complex declares from float/rational/int, so complex wins over float).
+ *     The winning handler owns the coercion.  No invented ordering: the rule
+ *     reads the relation the cvt from-alists already declare.  Neither side
+ *     declaring the other falls through.
  *
  * Ops-less types (int, str, ...) have a nil ops alist, so int/int
  * arithmetic falls through to the callers' pure-C path after a few pointer
@@ -122,7 +140,7 @@ static x_obj_t *x_type_ops_lookup(x_obj_t *p_base, x_obj_t *p_ops, x_obj_t *p_sy
 int x_type_op_try(x_obj_t *p_base, x_char_t *op, x_obj_t *p_a, x_obj_t *p_b,
 	x_obj_t **pp_result)
 {
-	x_obj_t *p_ta, *p_tb, *p_ops_a, *p_ops_b, *p_sym, *p_handler;
+	x_obj_t *p_ta, *p_tb, *p_ops_a, *p_ops_b, *p_sym, *p_ha, *p_hb, *p_handler;
 	x_spair_t call[3] = {
 		x_obj_set(NULL, X_OBJ_FLAG_NONE, { NULL }, { NULL }),
 		x_obj_set(NULL, X_OBJ_FLAG_NONE, { NULL }, { NULL }),
@@ -141,12 +159,27 @@ int x_type_op_try(x_obj_t *p_base, x_char_t *op, x_obj_t *p_a, x_obj_t *p_b,
 		return 0;
 
 	p_sym = x_mksymbol(p_base, op);
-	p_handler = x_obj_isnil(p_base, p_ops_a)
+	p_ha = x_obj_isnil(p_base, p_ops_a)
 		? NULL : x_type_ops_lookup(p_base, p_ops_a, p_sym);
-	if (p_handler == NULL && ! x_obj_isnil(p_base, p_ops_b))
-		p_handler = x_type_ops_lookup(p_base, p_ops_b, p_sym);
-	if (p_handler == NULL)
+	p_hb = x_obj_isnil(p_base, p_ops_b)
+		? NULL : x_type_ops_lookup(p_base, p_ops_b, p_sym);
+
+	if (p_ha == NULL && p_hb == NULL)
 		return 0;
+	if (p_hb == NULL) {
+		p_handler = p_ha;
+	} else if (p_ha == NULL) {
+		p_handler = p_hb;
+	} else if (p_ta == p_tb) {
+		/* Same type on both sides: no promotion question. */
+		p_handler = p_ha;
+	} else if (x_type_from_has(p_base, p_ta, x_type_field_name(p_tb))) {
+		p_handler = p_ha;             /* a's type absorbs b's */
+	} else if (x_type_from_has(p_base, p_tb, x_type_field_name(p_ta))) {
+		p_handler = p_hb;             /* b's type absorbs a's */
+	} else {
+		return 0;                     /* unrelated types: not ours to decide */
+	}
 
 	/* (handler a b) on a stack-built frame -- zero heap allocation. */
 	x_firstobj((x_obj_t *)call) = p_handler;
