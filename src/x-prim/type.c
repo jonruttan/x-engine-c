@@ -253,28 +253,53 @@ static x_obj_t *x_prim_type_of(x_obj_t *p_base, x_obj_t *p_args)
 }
 
 /**
- * @brief Return the type name as a string for an object.
+ * @brief Return the type name as a string for an object or type handle.
  *
- * x-lang form: @code (type-name obj) @endcode
+ * x-lang form: @code (type-name obj-or-handle) @endcode
  *
- * Extracts the name atom from the object's type and converts it to a
- * heap-allocated string.
+ * For a type handle (the interned name atom type-of returns), resolves it
+ * against the type registry and returns the registered name. For any other
+ * object, extracts the name atom from the object's type. Either way the
+ * result is a heap-allocated string.
  *
  * @param p_base  Execution context.
- * @param p_args  Unevaluated: (self obj).
- * @return String containing the type name, or NULL for nil/untyped objects.
+ * @param p_args  Unevaluated: (self obj-or-handle).
+ * @return String containing the type name, or NULL for nil/untyped objects
+ *         and unregistered handles.
  */
 static x_obj_t *x_prim_type_name(x_obj_t *p_base, x_obj_t *p_args)
 {
 	x_obj_t *p_obj, *p_name;
+	x_spair_t lookup_args[1] = {
+		x_obj_set(NULL, X_OBJ_FLAG_NONE, { NULL }, { NULL })
+	};
+	x_obj_t *p_type;
 
 	x_eargs(p_base, p_args, 2, NULL, &p_obj);
 
-	if (x_obj_isnil(p_base, p_obj) || x_obj_isnil(p_base, x_obj_type(p_obj))) {
+	if (x_obj_isnil(p_base, p_obj)) {
 		return NULL;
 	}
 
-	p_name = x_type_field_name(x_obj_type(p_obj));
+	/* A type HANDLE is the type's interned name atom; its own type field
+	 * holds the stack sentinel, not a type tree, so the navigation below
+	 * would dereference the sentinel (SIGSEGV). Resolve it against the
+	 * registry instead. Unregistered atoms (and stack scratch) resolve to
+	 * nil rather than having their payload misread as a string. */
+	if (x_obj_type_issatom(p_obj) || x_obj_type_isspair(p_obj)) {
+		x_firstobj((x_obj_t *)lookup_args) = p_obj;
+		p_type = x_eval_type_alist_assoc(p_base, (x_obj_t *)lookup_args);
+
+		if (x_obj_isnil(p_base, p_type)) {
+			return NULL;
+		}
+
+		p_name = x_type_field_name(p_type);
+	} else if (x_obj_isnil(p_base, x_obj_type(p_obj))) {
+		return NULL;
+	} else {
+		p_name = x_type_field_name(x_obj_type(p_obj));
+	}
 
 	if (x_obj_isnil(p_base, p_name)) {
 		return NULL;
