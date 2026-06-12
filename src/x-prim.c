@@ -696,7 +696,7 @@ static void x_prims_add(x_obj_t *p_base, x_char_t *ns, x_char_t *method, x_fn_t 
  * and the whole de-registration check is removed once it is empty. */
 static int x_prims_ns_deregistered(const x_char_t *ns)
 {
-	static const char *const list[] = { "sys", "iter", "base", NULL };
+	static const char *const list[] = { "sys", "iter", "base", "heap", NULL };
 	int i;
 
 	if (ns == NULL)
