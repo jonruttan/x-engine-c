@@ -23,6 +23,7 @@
  */
 
 #include "x-obj.h"
+#include "x-heap.h"
 #include <stdarg.h>
 
 /** Evaluate a single argument expression. */
@@ -78,16 +79,41 @@ static void __attribute__((unused)) x_eargs(x_obj_t *p_base, x_obj_t *p_args, in
 {
 	va_list ap;
 	int i;
+	int held = 0;
+	x_obj_t **p_cell = x_heap_root_cell(p_base);
+	/* Earlier results may be fresh objects whose only other homes are the
+	 * caller's out-slots -- bare C stack the collector does not scan under
+	 * precise rooting -- so each result is parked in a registered slot
+	 * while the later arguments evaluate.  Two pair cells give four slots:
+	 * enough for the deepest x_eargs caller (count 5 = four results, of
+	 * which the last needs no protection here). */
+	x_spair_t roots[2] = {
+		x_obj_set((x_obj_t *)x_type_pair_obj, X_OBJ_FLAG_NONE,
+			{ NULL }, { NULL }),
+		x_obj_set((x_obj_t *)x_type_pair_obj, X_OBJ_FLAG_NONE,
+			{ NULL }, { NULL })
+	};
+
+	x_heap_root_push(p_cell, roots[0]);
+	x_heap_root_push(p_cell, roots[1]);
 
 	va_start(ap, count);
 	for (i = 0; i < count; i++) {
 		x_obj_t **slot = va_arg(ap, x_obj_t **);
 		if (p_args == NULL) { if (slot) *slot = NULL; continue; }
-		if (slot != NULL)
+		if (slot != NULL) {
 			*slot = x_eval_arg(p_base, x_firstobj(p_args));
+			if (held < 4) {
+				x_obj_data_i((x_obj_t *)roots[held >> 1], held & 1).p = *slot;
+				held++;
+			}
+		}
 		p_args = x_restobj(p_args);
 	}
 	va_end(ap);
+
+	x_heap_root_pop(p_cell);
+	x_heap_root_pop(p_cell);
 }
 
 /** @} */ /* end arg_helpers */

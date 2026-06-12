@@ -16,6 +16,7 @@
 #include "x-type/buffer.h"
 #include "x-type/symbol.h"
 #include "x-eval.h"
+#include "x-heap.h"
 #include "x-token.h"
 #include "x-token.h"
 #include "x-token/sexp/list.h"
@@ -150,8 +151,11 @@ x_obj_t *x_sexp_list_read(x_obj_t *p_base, x_obj_t *p_args)
 	x_obj_t *p_buffer = x_token_read_arg_buffer(p_args);
 	x_char_t c = x_bufferlastchar(p_buffer);
 	x_obj_t *head = NULL, *tail = NULL, *elem, *pair;
+	x_obj_t **p_cell = x_heap_root_cell(p_base);
 	x_spair_t read_args = x_obj_set(NULL, X_OBJ_FLAG_NONE,
-		{ p_buffer }, { p_base });
+		{ p_buffer }, { p_base }),
+		root = x_obj_set((x_obj_t *)x_type_pair_obj, X_OBJ_FLAG_NONE,
+			{ NULL }, { NULL });
 
 	if (c == *X_SEXP_LIST_POST_STR) {
 		return x_sexp_list_read_prim;
@@ -161,7 +165,9 @@ x_obj_t *x_sexp_list_read(x_obj_t *p_base, x_obj_t *p_args)
 		return x_sexp_list_delimit_prim;
 	}
 
-	/* '(' — read list contents. */
+	/* '(' — read list contents.  Root the list under construction: each
+	 * nested x_token_read runs reader code that can collect. */
+	x_heap_root_push(p_cell, root);
 	x_type_buffer_retain(p_base, (x_obj_t *)read_args);
 
 	for (;;) {
@@ -181,18 +187,14 @@ x_obj_t *x_sexp_list_read(x_obj_t *p_base, x_obj_t *p_args)
 
 		if (x_obj_isnil(p_base, head)) {
 			head = pair;
-			/* Root head so GC can reach the list under construction */
-			x_obj_push_field(p_base, &x_eval_field_eval_list(p_base), head, X_OBJ_FLAG_NONE);
+			x_firstobj((x_obj_t *)root) = head;
 		} else {
 			x_restobj(tail) = pair;
 		}
 		tail = pair;
 	}
 
-	/* Unroot if we rooted */
-	if ( ! x_obj_isnil(p_base, head)) {
-		x_obj_pop_field(p_base, &x_eval_field_eval_list(p_base));
-	}
+	x_heap_root_pop(p_cell);
 
 	return head;
 }

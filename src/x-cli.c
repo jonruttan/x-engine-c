@@ -244,15 +244,9 @@ int main(int argc, char *argv[])
 	x_obj_t *p_list = NULL;
 	int i;
 
-	(void)0; /* stack base set after init creates base */
-
 	x_callcc_init();
 
 	p_base = init(NULL, buffer);
-
-	/* Record stack base for conservative GC stack scanning. */
-	x_atomint(x_firstobj(x_base_field_stack_base(p_base)))
-		= (x_int_t)(void *)&p_base;
 
 	if (p_base == NULL) {
 		x_error(STDERR_FILENO, "Error: ", "Initialization");

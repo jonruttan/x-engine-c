@@ -12,7 +12,7 @@
  */
 #include "x-prim.h"
 #include "x-eval.h"
-#include "x-eval.h"
+#include "x-heap.h"
 #include <setjmp.h>
 #include <string.h>
 #include "x-type/list.h"
@@ -47,6 +47,9 @@ typedef struct {
 	x_obj_t    *p_local_boundary;
 	x_obj_t    *p_global_tree;
 	x_obj_t    *p_eval_list_stack;
+	x_obj_t    *p_root_chain;     /* GC root-chain head; points into the
+	                               * captured segment, valid only after
+	                               * the stack bytes are restored */
 } x_callcc_cont_t;
 
 /** @} */
@@ -126,6 +129,8 @@ static x_obj_t *x_prim_cc_invoke(x_obj_t *p_base, x_obj_t *p_args)
 	cont->p_local_boundary = x_firstobj(x_restobj(x_restobj(x_restobj(p_state))));
 	cont->p_global_tree = x_firstobj(x_restobj(x_restobj(x_restobj(x_restobj(p_state)))));
 	cont->p_eval_list_stack = x_firstobj(x_restobj(x_restobj(x_restobj(x_restobj(x_restobj(p_state))))));
+	cont->p_root_chain = (x_obj_t *)x_ptrval(
+		x_firstobj(x_restobj(x_restobj(x_restobj(x_restobj(x_restobj(x_restobj(p_state))))))));
 
 	/* Grow stack and restore. Does not return. */
 	x_callcc_restore(cont);
@@ -182,6 +187,10 @@ static x_obj_t *x_prim_callcc(x_obj_t *p_base, x_obj_t *p_args)
 		x_eval_field_save_stack(p_base) = cont->p_save_stack;
 		x_firstobj(x_eval_field_error_handler(p_base)) = cont->p_error_handler;
 		x_firstobj(x_eval_field_eval_list(p_base)) = cont->p_eval_list_stack;
+		/* The chain's nodes live in the restored stack bytes, so the
+		 * head is valid again exactly here -- after the memcpy in
+		 * x_callcc_restore, never while the continuation is dormant. */
+		x_heap_root_chain(p_base) = cont->p_root_chain;
 		x_firstobj(x_eval_field_tco_expr(p_base)) = NULL;
 		x_firstobj(x_eval_field_tco_env(p_base)) = NULL;
 
@@ -194,7 +203,11 @@ static x_obj_t *x_prim_callcc(x_obj_t *p_base, x_obj_t *p_args)
 	cont->stack_lo = stack_lo;
 
 	/* Build GC-visible interpreter state list:
-	 * (env-alist save-stack error-handler local-boundary global-tree) */
+	 * (env-alist save-stack error-handler local-boundary global-tree
+	 *  eval-list root-chain).  The root-chain head is wrapped as an
+	 * opaque ptr atom: its nodes are stack memory, dead while the
+	 * continuation is dormant, so tree-marking this state list must
+	 * not traverse them. */
 	p_state = x_mklist(p_base,
 		x_firstobj(x_eval_field_env_alist(p_base)),
 		x_mklist(p_base,
@@ -207,7 +220,10 @@ static x_obj_t *x_prim_callcc(x_obj_t *p_base, x_obj_t *p_args)
 						x_eval_field_env_global_tree(p_base),
 						x_mklist(p_base,
 							x_firstobj(x_eval_field_eval_list(p_base)),
-							NULL))))));
+							x_mklist(p_base,
+								x_mkptr(p_base,
+									(void *)x_heap_root_chain(p_base)),
+								NULL)))))));
 
 	/* Wrap continuation struct as POINTER with OWN flag.
 	 * GC will free the struct (and embedded stack copy). */

@@ -130,20 +130,30 @@ x_obj_t *x_eval_arg(x_obj_t *p_base, x_obj_t *p_arg)
  */
 x_obj_t *x_eval_list(x_obj_t *p_base, x_obj_t *p_args)
 {
-	x_obj_t *p_val;
+	x_obj_t *p_val, *p_rest;
+	x_obj_t **p_cell = x_heap_root_cell(p_base);
+	x_spair_t root = x_obj_set((x_obj_t *)x_type_pair_obj, X_OBJ_FLAG_NONE,
+		{ NULL }, { NULL });
 
 	if (x_obj_isnil(p_base, p_args)) {
 		return NULL;
 	}
 
-	/* Root p_args so GC doesn't free rest while evaluating first */
-	x_obj_push_field(p_base, &x_eval_field_eval_list(p_base), p_args, X_OBJ_FLAG_NONE);
+	/* Root p_args so GC doesn't free rest while evaluating first; the
+	 * cell's rest slot then keeps the fresh result alive across the
+	 * recursion (a hold the eval-list idiom never covered -- only the
+	 * conservative scan did). */
+	x_firstobj((x_obj_t *)root) = p_args;
+	x_heap_root_push(p_cell, root);
 
 	p_val = x_eval_arg(p_base, x_firstobj(p_args));
+	x_restobj((x_obj_t *)root) = p_val;
 
-	x_obj_pop_field(p_base, &x_eval_field_eval_list(p_base));
+	p_rest = x_eval_list(p_base, x_restobj(p_args));
 
-	return x_mklist(p_base, p_val, x_eval_list(p_base, x_restobj(p_args)));
+	x_heap_root_pop(p_cell);
+
+	return x_mklist(p_base, p_val, p_rest);
 }
 
 /**
@@ -264,20 +274,27 @@ x_obj_t *x_env_extend(x_obj_t *p_base, x_obj_t *p_env,
 x_obj_t *x_eval_body(x_obj_t *p_base, x_obj_t *p_body)
 {
 	x_obj_t *p_result = NULL;
+	x_obj_t **p_cell = x_heap_root_cell(p_base);
+	x_spair_t root = x_obj_set((x_obj_t *)x_type_pair_obj, X_OBJ_FLAG_NONE,
+		{ NULL }, { NULL });
+
+	/* Root the advancing body so GC doesn't free remaining exprs --
+	 * one registered cell for the whole walk instead of an eval-list
+	 * cons per element. */
+	x_heap_root_push(p_cell, root);
 
 	while ( ! x_obj_isnil(p_base, p_body)) {
 #ifdef X_COV
 		x_obj_flags(p_body) |= X_OBJ_FLAG_COV;
 #endif
-		/* Root body so GC doesn't free remaining exprs */
-		x_obj_push_field(p_base, &x_eval_field_eval_list(p_base), p_body, X_OBJ_FLAG_NONE);
+		x_firstobj((x_obj_t *)root) = p_body;
 
 		p_result = x_eval_arg(p_base, x_firstobj(p_body));
 
-		x_obj_pop_field(p_base, &x_eval_field_eval_list(p_base));
-
 		p_body = x_restobj(p_body);
 	}
+
+	x_heap_root_pop(p_cell);
 
 	return p_result;
 }
@@ -331,6 +348,13 @@ x_obj_t *x_eval_body(x_obj_t *p_base, x_obj_t *p_body)
 x_obj_t *x_eval_body_tco(x_obj_t *p_base, x_obj_t *p_body)
 {
 	x_obj_t *p_result = NULL;
+	x_obj_t **p_cell = x_heap_root_cell(p_base);
+	x_spair_t root = x_obj_set((x_obj_t *)x_type_pair_obj, X_OBJ_FLAG_NONE,
+		{ NULL }, { NULL });
+
+	/* Root the advancing body so GC doesn't free remaining exprs (one
+	 * cell for the walk; popped on every exit path). */
+	x_heap_root_push(p_cell, root);
 
 	while ( ! x_obj_isnil(p_base, p_body)) {
 #ifdef X_COV
@@ -346,6 +370,7 @@ x_obj_t *x_eval_body_tco(x_obj_t *p_base, x_obj_t *p_body)
 					x_firstobj(x_eval_field_save_stack(p_base)));
 				x_eval_field_save_stack(p_base)
 					= x_restobj(x_eval_field_save_stack(p_base));
+				x_heap_root_pop(p_cell);
 				return NULL;
 			}
 
@@ -360,15 +385,13 @@ x_obj_t *x_eval_body_tco(x_obj_t *p_base, x_obj_t *p_body)
 			x_eval_field_save_stack(p_base)
 				= x_restobj(x_eval_field_save_stack(p_base));
 
+			x_heap_root_pop(p_cell);
 			return NULL;
 		}
 
-		/* Root body so GC doesn't free remaining exprs */
-		x_obj_push_field(p_base, &x_eval_field_eval_list(p_base), p_body, X_OBJ_FLAG_NONE);
+		x_firstobj((x_obj_t *)root) = p_body;
 
 		p_result = x_eval_arg(p_base, x_firstobj(p_body));
-
-		x_obj_pop_field(p_base, &x_eval_field_eval_list(p_base));
 
 		p_body = x_restobj(p_body);
 	}
@@ -377,6 +400,8 @@ x_obj_t *x_eval_body_tco(x_obj_t *p_base, x_obj_t *p_body)
 	x_tco_restore(p_base, x_firstobj(x_eval_field_save_stack(p_base)));
 	x_eval_field_save_stack(p_base)
 		= x_restobj(x_eval_field_save_stack(p_base));
+
+	x_heap_root_pop(p_cell);
 
 	return p_result;
 }
@@ -545,14 +570,19 @@ void x_callable_bind(x_obj_t *p_base, x_char_t *name, x_fn_t fn)
 void x_value_bind(x_obj_t *p_base, x_char_t *name, x_obj_t *p_val)
 {
 	x_obj_t *p_sym, *p_pair;
+	x_obj_t **p_cell = x_heap_root_cell(p_base);
+	x_spair_t root = x_obj_set((x_obj_t *)x_type_pair_obj, X_OBJ_FLAG_NONE,
+		{ NULL }, { NULL });
 
-	/* Root p_val on the eval list so GC won't collect it while
-	 * x_make_symbol / x_mkspair allocate. */
-	x_obj_push_field(p_base, &x_eval_field_eval_list(p_base),
-		p_val, X_OBJ_FLAG_NONE);
+	/* Root p_val while x_make_symbol / x_mkspair allocate.  Allocation
+	 * itself cannot collect (the trigger is explicit-only), but the
+	 * registered cell keeps this frame correct should that policy ever
+	 * change -- at two stores instead of the eval-list cons it replaced. */
+	x_firstobj((x_obj_t *)root) = p_val;
+	x_heap_root_push(p_cell, root);
 	p_sym = x_make_symbol(p_base, X_OBJ_FLAG_NONE, name);
 	p_pair = x_mkspair(p_base, X_OBJ_FLAG_NONE, p_sym, p_val);
-	x_obj_pop_field(p_base, &x_eval_field_eval_list(p_base));
+	x_heap_root_pop(p_cell);
 
 	x_eval_env_alist_extend(p_base, p_pair);
 
@@ -644,6 +674,9 @@ x_obj_t *x_prims_ref(x_obj_t *p_base, x_obj_t *p_ns, x_obj_t *p_method)
 static void x_prims_file(x_obj_t *p_base, x_obj_t *p_ns, x_obj_t *p_entry)
 {
 	x_obj_t *p_dom, *p_methods, *p_newdom;
+	x_obj_t **p_cell = x_heap_root_cell(p_base);
+	x_spair_t root = x_obj_set((x_obj_t *)x_type_pair_obj, X_OBJ_FLAG_NONE,
+		{ NULL }, { NULL });
 
 	p_dom = x_prims_domain_pair(p_base, p_ns);
 
@@ -656,13 +689,13 @@ static void x_prims_file(x_obj_t *p_base, x_obj_t *p_ns, x_obj_t *p_entry)
 		/* New namespace: prepend (ns . (entry)) to the catalog, rooting the
 		 * partial spine across each subsequent cons. */
 		p_methods = x_mklist(p_base, p_entry, NULL);
-		x_obj_push_field(p_base, &x_eval_field_eval_list(p_base), p_methods, X_OBJ_FLAG_NONE);
+		x_firstobj((x_obj_t *)root) = p_methods;
+		x_heap_root_push(p_cell, root);
 		p_newdom = x_mklist(p_base, p_ns, p_methods);
-		x_obj_push_field(p_base, &x_eval_field_eval_list(p_base), p_newdom, X_OBJ_FLAG_NONE);
+		x_restobj((x_obj_t *)root) = p_newdom;
 		x_firstobj(x_eval_field_prims(p_base)) = x_mklist(p_base,
 			p_newdom, x_prims(p_base));
-		x_obj_pop_field(p_base, &x_eval_field_eval_list(p_base));  /* p_newdom */
-		x_obj_pop_field(p_base, &x_eval_field_eval_list(p_base));  /* p_methods */
+		x_heap_root_pop(p_cell);
 	}
 }
 
@@ -673,20 +706,23 @@ static void x_prims_file(x_obj_t *p_base, x_obj_t *p_ns, x_obj_t *p_entry)
 static void x_prims_add(x_obj_t *p_base, x_char_t *ns, x_char_t *method, x_fn_t fn)
 {
 	x_obj_t *p_ns, *p_entry;
+	x_obj_t **p_cell = x_heap_root_cell(p_base);
+	x_spair_t root = x_obj_set((x_obj_t *)x_type_pair_obj, X_OBJ_FLAG_NONE,
+		{ NULL }, { NULL });
 
 	p_ns = x_make_symbol(p_base, X_OBJ_FLAG_NONE, ns);
-	x_obj_push_field(p_base, &x_eval_field_eval_list(p_base), p_ns, X_OBJ_FLAG_NONE);
+	x_firstobj((x_obj_t *)root) = p_ns;
+	x_heap_root_push(p_cell, root);
 
 	/* (method . #<prim>) */
 	p_entry = x_mklist(p_base,
 		x_make_symbol(p_base, X_OBJ_FLAG_NONE, method),
 		x_mkprim(p_base, fn));
-	x_obj_push_field(p_base, &x_eval_field_eval_list(p_base), p_entry, X_OBJ_FLAG_NONE);
+	x_restobj((x_obj_t *)root) = p_entry;
 
 	x_prims_file(p_base, p_ns, p_entry);
 
-	x_obj_pop_field(p_base, &x_eval_field_eval_list(p_base));  /* p_entry */
-	x_obj_pop_field(p_base, &x_eval_field_eval_list(p_base));  /* p_ns */
+	x_heap_root_pop(p_cell);
 }
 
 /* Namespaces whose bare env names have been de-registered: their prims live
@@ -769,26 +805,31 @@ static x_obj_t *x_prim_prim_ref(x_obj_t *p_base, x_obj_t *p_args)
 static x_obj_t *x_prim_prim_reg(x_obj_t *p_base, x_obj_t *p_args)
 {
 	x_obj_t *p_ns, *p_method, *p_value, *p_entry;
+	x_obj_t **p_cell = x_heap_root_cell(p_base);
+	x_spair_t root_a = x_obj_set((x_obj_t *)x_type_pair_obj, X_OBJ_FLAG_NONE,
+		{ NULL }, { NULL });
+	x_spair_t root_b = x_obj_set((x_obj_t *)x_type_pair_obj, X_OBJ_FLAG_NONE,
+		{ NULL }, { NULL });
 
 	x_eargs(p_base, p_args, 4, NULL, &p_ns, &p_method, &p_value);
 
 	/* Pin the evaluated args across the conses below: they may be fresh
-	 * allocations reachable only from C locals, and -O2 stack scanning is
-	 * unreliable (see the gc-rooting note). */
-	x_obj_push_field(p_base, &x_eval_field_eval_list(p_base), p_ns, X_OBJ_FLAG_NONE);
-	x_obj_push_field(p_base, &x_eval_field_eval_list(p_base), p_value, X_OBJ_FLAG_NONE);
-	x_obj_push_field(p_base, &x_eval_field_eval_list(p_base), p_method, X_OBJ_FLAG_NONE);
+	 * allocations reachable only from C locals.  Two registered cells
+	 * hold all four values (see the gc-rooting note). */
+	x_firstobj((x_obj_t *)root_a) = p_ns;
+	x_restobj((x_obj_t *)root_a) = p_value;
+	x_heap_root_push(p_cell, root_a);
+	x_firstobj((x_obj_t *)root_b) = p_method;
+	x_heap_root_push(p_cell, root_b);
 
 	/* (method . value) */
 	p_entry = x_mklist(p_base, p_method, p_value);
-	x_obj_push_field(p_base, &x_eval_field_eval_list(p_base), p_entry, X_OBJ_FLAG_NONE);
+	x_restobj((x_obj_t *)root_b) = p_entry;
 
 	x_prims_file(p_base, p_ns, p_entry);
 
-	x_obj_pop_field(p_base, &x_eval_field_eval_list(p_base));  /* p_entry */
-	x_obj_pop_field(p_base, &x_eval_field_eval_list(p_base));  /* p_method */
-	x_obj_pop_field(p_base, &x_eval_field_eval_list(p_base));  /* p_value */
-	x_obj_pop_field(p_base, &x_eval_field_eval_list(p_base));  /* p_ns */
+	x_heap_root_pop(p_cell);
+	x_heap_root_pop(p_cell);
 
 	return NULL;
 }
@@ -801,6 +842,9 @@ static x_obj_t *x_prim_use(x_obj_t *p_base, x_obj_t *p_args)
 {
 	x_obj_t  *p_ns, *p_dom;
 	x_obj_t  *p_entry;
+	x_obj_t **p_cell = x_heap_root_cell(p_base);
+	x_spair_t root = x_obj_set((x_obj_t *)x_type_pair_obj, X_OBJ_FLAG_NONE,
+		{ NULL }, { NULL });
 	x_char_t *p_ns_str;
 	x_char_t *p_m_str;
 	x_char_t *p_name;
@@ -811,8 +855,13 @@ static x_obj_t *x_prim_use(x_obj_t *p_base, x_obj_t *p_args)
 	p_ns_str = x_atomstr(p_ns);
 	ns_len = x_lib_strlen(p_ns_str);
 
+	/* Root the advancing domain across the allocations in the loop (one
+	 * registered cell for the whole walk). */
+	x_heap_root_push(p_cell, root);
+
 	p_dom = x_prims_domain(p_base, p_ns);
 	while ( ! x_obj_isnil(p_base, p_dom)) {
+		x_firstobj((x_obj_t *)root) = p_dom;
 		p_entry = x_firstobj(p_dom);       /* (method . #<prim>) */
 		p_m_str = x_atomstr(x_firstobj(p_entry));
 		m_len = x_lib_strlen(p_m_str);
@@ -825,18 +874,17 @@ static x_obj_t *x_prim_use(x_obj_t *p_base, x_obj_t *p_args)
 		p_name[ns_len] = '/';
 		x_lib_memcpy(p_name + ns_len + 1, p_m_str, m_len + 1);
 
-		/* Root the remaining domain across the allocations below. */
-		x_obj_push_field(p_base, &x_eval_field_eval_list(p_base), p_dom, X_OBJ_FLAG_NONE);
 		/* Idempotent: define ns/method only when it is not already bound, so a
 		 * later (use ns) never clobbers an intervening redefinition -- e.g.
 		 * arithmetic.x's variadic int/+, set after its own (use (lit int)). */
 		if (x_alist_bst_lookup(p_base, x_eval_field_env_global_tree(p_base),
 				x_make_symbol(p_base, X_OBJ_FLAG_NONE, p_name)) == NULL)
 			x_value_bind(p_base, p_name, x_restobj(p_entry));
-		x_obj_pop_field(p_base, &x_eval_field_eval_list(p_base));
 
 		p_dom = x_restobj(p_dom);
 	}
+
+	x_heap_root_pop(p_cell);
 
 	return NULL;
 }

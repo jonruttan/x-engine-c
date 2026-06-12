@@ -12,6 +12,7 @@
  */
 #include "x-prim.h"
 #include "x-eval.h"
+#include "x-heap.h"
 #include "x-type/ptr.h"
 #include "x-type/str.h"
 #include <setjmp.h>
@@ -125,6 +126,7 @@ static x_obj_t *x_prim_guard(x_obj_t *p_base, x_obj_t *p_args)
 		*p_prev_handler = x_firstobj(x_eval_field_error_handler(p_base)),
 		*p_saved_save_stack = x_eval_field_save_stack(p_base),
 		*p_saved_eval_list = x_firstobj(x_eval_field_eval_list(p_base)),
+		*p_saved_root_chain = x_heap_root_chain(p_base),
 		*p_handler, *p_result = NULL;
 	x_obj_t *p_err, *p_pair;
 	x_args(p_args, 2, NULL, &p_clause);
@@ -157,6 +159,12 @@ static x_obj_t *x_prim_guard(x_obj_t *p_base, x_obj_t *p_args)
 		 * before this guard sit at or below the snapshot and are
 		 * preserved. */
 		x_firstobj(x_eval_field_eval_list(p_base)) = p_saved_eval_list;
+		/* Unwind the GC root chain with the C frames the longjmp cut
+		 * away: their x_heap_root_pop calls never ran, and the dead
+		 * frames' nodes must not stay registered -- the next mark
+		 * would walk freed stack memory.  Entries pushed before this
+		 * guard sit at or below the snapshot and are preserved. */
+		x_heap_root_chain(p_base) = p_saved_root_chain;
 		/* Drop any tail a longjmp'd-out-of procedure or operative left
 		 * deferred: its restore record rode the unwound save-stack / a
 		 * tco register, so the stale tco_expr/tco_env must not leak into
@@ -233,16 +241,27 @@ static x_obj_t *x_prim_error(x_obj_t *p_base, x_obj_t *p_args)
 static x_obj_t *x_prim_seq(x_obj_t *p_base, x_obj_t *p_args)
 {
 	x_obj_t *p_a, *p_b;
+	x_obj_t **p_cell = x_heap_root_cell(p_base);
+	/* Pair-typed so the root-chain mark traverses the payload (the
+	 * walk descends spair-typed pairs only). */
+	x_spair_t root = x_obj_set((x_obj_t *)x_type_pair_obj, X_OBJ_FLAG_NONE,
+		{ NULL }, { NULL });
 	x_args(p_args, 3, NULL, &p_a, &p_b);
 
-	/* Root args so GC doesn't free them during eval of first arg */
-	x_obj_push_field(p_base, &x_eval_field_eval_list(p_base), x_1(p_args), X_OBJ_FLAG_NONE);
+	/* Root args so GC doesn't free them during eval of first arg -- a
+	 * registered stack cell instead of an eval-list push: the same LIFO
+	 * protection without allocating a rooting pair per call.  If the
+	 * eval errors, the longjmp skips the pop; the guard handler restores
+	 * the chain head to its snapshot (see x_prim_guard), exactly as it
+	 * restores the save stack. */
+	x_firstobj((x_obj_t *)root) = x_1(p_args);
+	x_heap_root_push(p_cell, root);
 
 	x_eval_arg(p_base, p_a);
 	x_firstobj(x_eval_field_tco_expr(p_base)) = p_b;
 
 	/* Unroot */
-	x_obj_pop_field(p_base, &x_eval_field_eval_list(p_base));
+	x_heap_root_pop(p_cell);
 
 	return NULL;
 }

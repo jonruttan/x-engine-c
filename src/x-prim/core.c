@@ -81,9 +81,18 @@ static x_obj_t *x_prim_apply(x_obj_t *p_base, x_obj_t *p_args)
 {
 	x_obj_t *p_fn, *p_evaled, *p_vals, *p_walk;
 	x_obj_t *p_result;
+	x_obj_t **p_cell = x_heap_root_cell(p_base);
 	x_spair_t apply_args[1];
+	x_spair_t root = x_obj_set((x_obj_t *)x_type_pair_obj, X_OBJ_FLAG_NONE,
+		{ NULL }, { NULL });
 
 	x_eargs(p_base, p_args, 2, NULL, &p_fn);
+	/* Root p_fn before the operand evals: a fresh callee (e.g. a lambda
+	 * built by the caller's body) has no other reference, and
+	 * x_eval_list below runs arbitrary code.  The vals slot is filled
+	 * once the operands exist. */
+	x_restobj((x_obj_t *)root) = p_fn;
+	x_heap_root_push(p_cell, root);
 	p_evaled = x_eval_list(p_base, x_11(p_args));
 
 	/* Build combined arg list: prefix args prepended to tail list.
@@ -103,9 +112,8 @@ static x_obj_t *x_prim_apply(x_obj_t *p_base, x_obj_t *p_args)
 		p_vals = p_evaled;
 	}
 
-	/* Root p_fn and p_vals so GC doesn't free them during procedure setup */
-	x_obj_push_field(p_base, &x_eval_field_eval_list(p_base), p_vals, X_OBJ_FLAG_NONE);
-	x_obj_push_field(p_base, &x_eval_field_eval_list(p_base), p_fn, X_OBJ_FLAG_NONE);
+	/* Keep p_vals (fresh from x_eval_list) rooted through procedure setup. */
+	x_firstobj((x_obj_t *)root) = p_vals;
 
 	/* Procedure: bind params, eval body with TCO for eval trampoline. */
 	if (x_obj_type_isprocedure(p_base, p_fn)) {
@@ -132,8 +140,7 @@ static x_obj_t *x_prim_apply(x_obj_t *p_base, x_obj_t *p_args)
 			p_base, x_procenv(p_fn), x_procparams(p_fn), p_vals);
 
 		/* Unroot */
-		x_obj_pop_field(p_base, &x_eval_field_eval_list(p_base));
-		x_obj_pop_field(p_base, &x_eval_field_eval_list(p_base));
+		x_heap_root_pop(p_cell);
 
 		return x_eval_body_tco(p_base, x_procbody(p_fn));
 	}
@@ -146,8 +153,7 @@ static x_obj_t *x_prim_apply(x_obj_t *p_base, x_obj_t *p_args)
 	p_result = x_callable_apply(p_base, (x_obj_t *)apply_args);
 
 	/* Unroot */
-	x_obj_pop_field(p_base, &x_eval_field_eval_list(p_base));
-	x_obj_pop_field(p_base, &x_eval_field_eval_list(p_base));
+	x_heap_root_pop(p_cell);
 
 	return p_result;
 }
@@ -276,17 +282,23 @@ static x_obj_t *x_prim_unwrap(x_obj_t *p_base, x_obj_t *p_args)
 static x_obj_t *x_prim_atomic(x_obj_t *p_base, x_obj_t *p_args)
 {
 	x_obj_t *p_result = NULL;
+	x_obj_t **p_cell = x_heap_root_cell(p_base);
+	x_spair_t root = x_obj_set((x_obj_t *)x_type_pair_obj, X_OBJ_FLAG_NONE,
+		{ NULL }, { NULL });
+
+	/* Root the advancing args so GC doesn't free them (one registered
+	 * cell for the walk). */
+	x_heap_root_push(p_cell, root);
 
 	while ( ! x_obj_isnil(p_base, p_args)) {
-		/* Root remaining args so GC doesn't free them */
-		x_obj_push_field(p_base, &x_eval_field_eval_list(p_base), p_args, X_OBJ_FLAG_NONE);
+		x_firstobj((x_obj_t *)root) = p_args;
 
 		p_result = x_eval_arg(p_base, x_firstobj(p_args));
 
-		x_obj_pop_field(p_base, &x_eval_field_eval_list(p_base));
-
 		p_args = x_restobj(p_args);
 	}
+
+	x_heap_root_pop(p_cell);
 
 	return p_result;
 }

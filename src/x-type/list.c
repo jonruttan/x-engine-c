@@ -234,34 +234,42 @@ x_obj_t *x_type_list_call(x_obj_t *p_base, x_obj_t *p_args)
 x_obj_t *x_type_list_eval(x_obj_t *p_base, x_obj_t *p_args)
 {
 	x_obj_t *p_exp = x_firstobj(x_eval_arg_exp(p_args)), *p_proc, *p_result;
+	x_obj_t **p_cell = x_heap_root_cell(p_base);
 	x_satom_t first_atom = x_obj_set(NULL, X_OBJ_FLAG_NONE, { x_firstobj(p_exp) });
 	x_spair_t eval_args[1] = {
 		x_obj_set(NULL, X_OBJ_FLAG_NONE, { first_atom }, { NULL })
 	},
 	proc_exp = x_obj_set(NULL, X_OBJ_FLAG_NONE, { NULL }, { x_restobj(p_exp) }),
-	prim_args = x_obj_set(NULL, X_OBJ_FLAG_NONE, { NULL }, { (x_obj_t *)proc_exp });
+	prim_args = x_obj_set(NULL, X_OBJ_FLAG_NONE, { NULL }, { (x_obj_t *)proc_exp }),
+	root = x_obj_set((x_obj_t *)x_type_pair_obj, X_OBJ_FLAG_NONE,
+		{ NULL }, { NULL });
 
-	/* Root p_exp so GC doesn't free the arg list during eval/call */
-	x_obj_push_field(p_base, &x_eval_field_eval_list(p_base), p_exp, X_OBJ_FLAG_NONE);
+	/* Root p_exp so GC doesn't free the arg list during eval/call; the
+	 * rest slot then keeps the resolved operator alive across the call
+	 * -- it can be fresh when the operator position is itself a
+	 * combination, e.g. ((make-adder 2) 3). */
+	x_firstobj((x_obj_t *)root) = p_exp;
+	x_heap_root_push(p_cell, root);
 
 	/* Eval first to resolve operator (e.g. symbol -> prim). */
 	p_proc = x_eval(p_base, (x_obj_t *)eval_args);
 
 	if (x_obj_isnil(p_base, p_proc)) {
-		x_obj_pop_field(p_base, &x_eval_field_eval_list(p_base));
+		x_heap_root_pop(p_cell);
 		return p_exp;
 	}
 
+	x_restobj((x_obj_t *)root) = p_proc;
 	x_firstobj((x_obj_t *)proc_exp) = p_proc;
 	x_firstobj((x_obj_t *)prim_args) = x_type_field_call(x_obj_type(p_proc));
 
 	if (x_obj_isnil(p_base, x_firstobj((x_obj_t *)prim_args))) {
-		x_obj_pop_field(p_base, &x_eval_field_eval_list(p_base));
+		x_heap_root_pop(p_cell);
 		return p_exp;
 	}
 
 	p_result = x_callable_call(p_base, (x_obj_t *)prim_args);
-	x_obj_pop_field(p_base, &x_eval_field_eval_list(p_base));
+	x_heap_root_pop(p_cell);
 	return p_result;
 }
 

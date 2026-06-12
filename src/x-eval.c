@@ -171,6 +171,15 @@ x_obj_t *x_eval_op_body(x_obj_t *p_base, x_obj_t *p_body,
 		x_mkspair(p_base, X_OBJ_FLAG_NONE,
 			x_mkspair(p_base, X_OBJ_FLAG_NONE, p_caller, p_op_head),
 			x_mkspair(p_base, X_OBJ_FLAG_NONE, p_boundary, p_shadow)));
+	x_obj_t **p_cell = x_heap_root_cell(p_base);
+	x_spair_t root = x_obj_set((x_obj_t *)x_type_pair_obj, X_OBJ_FLAG_NONE,
+		{ NULL }, { NULL });
+
+	/* Root the restore record -- held only by this frame across every
+	 * body eval until it reaches the tco-env field -- and the advancing
+	 * body (one registered cell; popped on every exit path). */
+	x_firstobj((x_obj_t *)root) = p_record;
+	x_heap_root_push(p_cell, root);
 
 	while ( ! x_obj_isnil(p_base, p_body)) {
 		if (x_obj_isnil(p_base, x_restobj(p_body))) {
@@ -180,24 +189,26 @@ x_obj_t *x_eval_op_body(x_obj_t *p_base, x_obj_t *p_body,
 			if (x_obj_isnil(p_base,
 				x_firstobj(x_eval_field_tco_expr(p_base)))) {
 				x_op_restore(p_base, p_record, 0);
+				x_heap_root_pop(p_cell);
 				return NULL;
 			}
 
 			x_firstobj(x_eval_field_tco_env(p_base)) = p_record;
 
+			x_heap_root_pop(p_cell);
 			return NULL;
 		}
 
-		x_obj_push_field(p_base, &x_eval_field_eval_list(p_base),
-			p_body, X_OBJ_FLAG_NONE);
+		x_restobj((x_obj_t *)root) = p_body;
 		x_eval_arg(p_base, x_firstobj(p_body));
-		x_obj_pop_field(p_base, &x_eval_field_eval_list(p_base));
 
 		p_body = x_restobj(p_body);
 	}
 
 	/* Empty body: restore synchronously. */
 	x_op_restore(p_base, p_record, 0);
+
+	x_heap_root_pop(p_cell);
 
 	return NULL;
 }
@@ -265,6 +276,13 @@ x_obj_t *x_eval(x_obj_t *p_base, x_obj_t *p_args)
 	x_obj_t *p_op_save = NULL;        /* first operative restore record */
 	x_obj_t *p_te;                    /* tco_env fetched per trampoline pass */
 	x_spair_t prim_args = x_obj_set(NULL, X_OBJ_FLAG_NONE, { NULL }, { NULL });
+	/* Roots for the kept TCO restore records: they are popped off the
+	 * save-stack, the tco-env field is cleared, and the records live only
+	 * in the two locals above across every trampoline iteration --
+	 * arbitrary evaluation -- until the exit restores apply them. */
+	x_obj_t **p_cell = x_heap_root_cell(p_base);
+	x_spair_t tco_root = x_obj_set((x_obj_t *)x_type_pair_obj,
+		X_OBJ_FLAG_NONE, { NULL }, { NULL });
 	int trampolining = 0;
 	int op_outermost = 0;             /* the first record kept is an op record */
 	int kept_any = 0;                 /* a tco_env (either channel) was kept */
@@ -277,6 +295,8 @@ x_obj_t *x_eval(x_obj_t *p_base, x_obj_t *p_args)
 	 * mid-eval can't invalidate it -- the target is a non-heap static. */
 	x_obj_t *p_sigint = x_base_isset(p_base) ? x_firstobj(x_eval_field_sigint(p_base)) : NULL;
 #endif
+
+	x_heap_root_push(p_cell, tco_root);
 
 eval_start:
 #ifdef X_SIGNAL
@@ -309,12 +329,14 @@ eval_start:
 #endif
 
 	if (x_obj_isnil(p_base, p_exp)) {
+		x_heap_root_pop(p_cell);
 		return NULL;
 	}
 
 	/* Differentiate simple from complex types.
 	 * Guard: NULL-typed (raw stack) objects self-evaluate. */
 	if (x_obj_type(p_exp) == NULL || x_obj_isnil(p_base, x_obj_type(x_obj_type(p_exp)))) {
+		x_heap_root_pop(p_cell);
 		return p_exp;
 	}
 
@@ -351,9 +373,11 @@ eval_start:
 			if (is_op) {
 				if (p_op_save == NULL || x_obj_isnil(p_base, p_op_save)) {
 					p_op_save = p_te;
+					x_restobj((x_obj_t *)tco_root) = p_op_save;
 				}
 			} else if (p_tco_env_save == NULL || x_obj_isnil(p_base, p_tco_env_save)) {
 				p_tco_env_save = p_te;
+				x_firstobj((x_obj_t *)tco_root) = p_tco_env_save;
 			}
 		}
 
@@ -399,6 +423,8 @@ eval_start:
 				x_tco_restore(p_base, p_tco_env_save);
 		}
 	}
+
+	x_heap_root_pop(p_cell);
 
 	return p_exp;
 }
@@ -495,7 +521,6 @@ x_obj_t *x_eval_make(x_obj_t *p_base, x_obj_t *p_args)
 	base_cfg.obj_meta_extra = 0;
 	base_cfg.p_heap_mark = (x_obj_t *)x_type_heap_mark_hook;
 	base_cfg.p_heap_free = (x_obj_t *)x_type_heap_free_hook;
-	base_cfg.p_stack_base = nil;
 
 	p_base = x_base_make(p_base, base_cfg);
 

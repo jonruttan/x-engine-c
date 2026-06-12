@@ -14,6 +14,7 @@
  * # Includes
  */
 #include "x-eval.h"
+#include "x-heap.h"
 #include "x-obj.h"
 #include "x-token.h"
 #include "x-type.h"
@@ -146,9 +147,18 @@ x_obj_t *x_token_analyse(x_obj_t *p_base, x_obj_t *p_args)
 		an_args[2] = {
 			x_obj_set(NULL, X_OBJ_FLAG_NONE, { an_iter }, { (x_obj_t *)(an_args + 1) }),
 			x_obj_set(NULL, X_OBJ_FLAG_NONE, { NULL }, { NULL }),
-		};
+		},
+		analyse_root = x_obj_set((x_obj_t *)x_type_pair_obj, X_OBJ_FLAG_NONE,
+			{ NULL }, { NULL });
 	x_obj_t *p_score = (x_obj_t *)score;
+	x_obj_t **p_cell = x_heap_root_cell(p_base);
 	x_char_t *p_bw;
+
+	/* Root the active analyse handler: the replace-analyser protocol
+	 * below can hand this frame a freshly allocated handler whose only
+	 * reference is p_analyse, held across further handler applies.  The
+	 * cell mirrors p_analyse at both assignment sites. */
+	x_heap_root_push(p_cell, analyse_root);
 
 	/* Retain: ensure bufferval == bufferread for correct x_bufferlen. */
 	x_type_buffer_retain(p_base, (x_obj_t *)buffer_args);
@@ -180,6 +190,7 @@ x_obj_t *x_token_analyse(x_obj_t *p_base, x_obj_t *p_args)
 
 		while ( ! x_iterempty(p_base, (x_obj_t *)an_iter)) {
 			p_analyse = x_type_iter_next(p_base, (x_obj_t *)an_args);
+			x_firstobj((x_obj_t *)analyse_root) = p_analyse;
 
 			/* Clear score for this handler. */
 			x_firstint(p_score) = 0;
@@ -231,6 +242,7 @@ x_obj_t *x_token_analyse(x_obj_t *p_base, x_obj_t *p_args)
 
 				/* Replace Analyser. */
 				p_analyse = p_obj;
+				x_firstobj((x_obj_t *)analyse_root) = p_analyse;
 			}
 
 			/* EOF auto-score: if chars were consumed and a score
@@ -253,6 +265,8 @@ x_obj_t *x_token_analyse(x_obj_t *p_base, x_obj_t *p_args)
 	}
 
 	x_bufferread(p_buffer) = x_bufferread(p_buffer) + x_lib_abs(i_best);
+
+	x_heap_root_pop(p_cell);
 
 	return p_winner;
 }

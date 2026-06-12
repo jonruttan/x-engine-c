@@ -39,13 +39,22 @@
 static x_obj_t *x_prim_write(x_obj_t *p_base, x_obj_t *p_args)
 {
 	x_obj_t *p_val;
+	x_obj_t **p_cell = x_heap_root_cell(p_base);
 	x_spair_t write_args[1] = {
 		x_obj_set(NULL, X_OBJ_FLAG_NONE, { NULL }, { NULL })
 	};
+	x_spair_t root = x_obj_set((x_obj_t *)x_type_pair_obj, X_OBJ_FLAG_NONE,
+		{ NULL }, { NULL });
 
 	x_eargs(p_base, p_args, 2, NULL, &p_val);
+	/* Root the evaluated value across the write: custom types' write
+	 * hooks are x-lang code, which can collect, and p_val may be this
+	 * frame's only reference to a fresh object. */
+	x_firstobj((x_obj_t *)root) = p_val;
+	x_heap_root_push(p_cell, root);
 	x_firstobj((x_obj_t *)write_args) = p_val;
 	x_token_write(p_base, (x_obj_t *)write_args);
+	x_heap_root_pop(p_cell);
 
 	return NULL;
 }
@@ -62,13 +71,20 @@ static x_obj_t *x_prim_write(x_obj_t *p_base, x_obj_t *p_args)
 static x_obj_t *x_prim_display(x_obj_t *p_base, x_obj_t *p_args)
 {
 	x_obj_t *p_val;
+	x_obj_t **p_cell = x_heap_root_cell(p_base);
 	x_spair_t display_args[1] = {
 		x_obj_set(NULL, X_OBJ_FLAG_NONE, { NULL }, { NULL })
 	};
+	x_spair_t root = x_obj_set((x_obj_t *)x_type_pair_obj, X_OBJ_FLAG_NONE,
+		{ NULL }, { NULL });
 
 	x_eargs(p_base, p_args, 2, NULL, &p_val);
+	/* Root across the display hooks (see x_prim_write). */
+	x_firstobj((x_obj_t *)root) = p_val;
+	x_heap_root_push(p_cell, root);
 	x_firstobj((x_obj_t *)display_args) = p_val;
 	x_token_display(p_base, (x_obj_t *)display_args);
+	x_heap_root_pop(p_cell);
 
 	return NULL;
 }
@@ -133,6 +149,7 @@ static x_obj_t *x_prim_to_string(x_obj_t *p_base, x_obj_t *p_args,
 	x_obj_t *(*dispatch)(x_obj_t *, x_obj_t *))
 {
 	x_obj_t *p_val, *p_result;
+	x_obj_t **p_cell = x_heap_root_cell(p_base);
 	x_char_t *buf;
 	x_satom_t buf_pos = x_obj_set(NULL, X_OBJ_FLAG_NONE, { .i = 0 });
 	x_spair_t buf_obj[1] = {
@@ -142,6 +159,8 @@ static x_obj_t *x_prim_to_string(x_obj_t *p_base, x_obj_t *p_args,
 	x_spair_t dispatch_args[1] = {
 		x_obj_set(NULL, X_OBJ_FLAG_NONE, { NULL }, { NULL })
 	};
+	x_spair_t root = x_obj_set((x_obj_t *)x_type_pair_obj, X_OBJ_FLAG_NONE,
+		{ NULL }, { NULL });
 
 	p_val = x_eval_arg(p_base, x_firstobj(p_args));
 
@@ -157,8 +176,12 @@ static x_obj_t *x_prim_to_string(x_obj_t *p_base, x_obj_t *p_args,
 	x_base_field_write_buf(p_base) = x_mkspair(p_base, X_OBJ_FLAG_NONE,
 		(x_obj_t *)buf_obj, x_base_field_write_buf(p_base));
 
+	/* Root the value across dispatch (see x_prim_write). */
+	x_firstobj((x_obj_t *)root) = p_val;
+	x_heap_root_push(p_cell, root);
 	x_firstobj((x_obj_t *)dispatch_args) = p_val;
 	dispatch(p_base, (x_obj_t *)dispatch_args);
+	x_heap_root_pop(p_cell);
 
 	/* Pop write_buf_stack */
 	x_base_field_write_buf(p_base)
@@ -214,21 +237,17 @@ static x_obj_t *x_prim_clock(x_obj_t *p_base, x_obj_t *p_args)
 
 /** Mark phase: trace live objects from every root (GC phase 1).
  *
- *  Four passes: (1) tree-mark from the base data tree, (2) conservative
- *  C-stack scan, (3) tree-mark each registered GC root, (4) fire mark
- *  hooks.  The hook/root lists live in x-expr's heap-group; x-expr stores
- *  but cannot dispatch (no callable mechanism at that layer), so the walk
- *  + invoke happens here.
+ *  Four passes: (1) tree-mark from the base data tree, (2) root-chain
+ *  walk -- the off-chain stack objects frames registered via
+ *  x_heap_root_push, (3) tree-mark each registered GC root, (4) fire
+ *  mark hooks.  The hook/root lists live in x-expr's heap-group; x-expr
+ *  stores but cannot dispatch (no callable mechanism at that layer), so
+ *  the walk + invoke happens here.
  *
- *  @note Conservative C-stack scanning (pass 2) is active for the CLI --
- *        main() records &p_base as the stack base -- but inert in unit
- *        tests that build a base via x_eval_make directly (it leaves the
- *        stack-base atom nil).  Either way, a sweep must run with no
- *        allocation between it and this mark: a transient eval-list cell
- *        pushed *after* the mark is unmarked (and the stack scan, being
- *        part of this mark, already ran), so an intervening sweep frees it
- *        while the evaluator is still traversing it (see
- *        x_prim_heap_collect).
+ *  @note A sweep must run with no allocation between it and this mark:
+ *        a transient cell allocated *after* the mark is unmarked, so an
+ *        intervening sweep frees it while the evaluator is still
+ *        traversing it (see x_prim_heap_collect).
  *  @see x_heap_sweep_phase
  */
 static void x_heap_mark_phase(x_obj_t *p_base)
@@ -238,7 +257,7 @@ static void x_heap_mark_phase(x_obj_t *p_base)
 	x_spair_t hook_args[1];
 
 	x_heap_tree_mark(p_base, x_atomobj(p_base), X_OBJ_FLAG_HEAP);
-	x_heap_callstack_mark(p_base, X_OBJ_FLAG_HEAP);
+	x_heap_root_chain_mark(p_base, X_OBJ_FLAG_HEAP);
 
 	if (x_base_isset(p_base)) {
 		p_roots = x_firstobj(x_base_field_heap_mark_roots(p_base));
@@ -520,14 +539,21 @@ static x_obj_t *x_prim_heap_mark_root(x_obj_t *p_base, x_obj_t *p_args)
 static x_obj_t *x_prim_atomic(x_obj_t *p_base, x_obj_t *p_args)
 {
 	x_obj_t *p_result = NULL;
+	x_obj_t **p_cell = x_heap_root_cell(p_base);
 	x_spair_t call_args[1];
+	x_spair_t root = x_obj_set((x_obj_t *)x_type_pair_obj, X_OBJ_FLAG_NONE,
+		{ NULL }, { NULL });
 	p_args = x_1(p_args);
 
 	call_args[0][X_OBJ_META_TYPE].p = NULL;
 	call_args[0][X_OBJ_META_FLAGS].i = X_OBJ_FLAG_NONE;
 
-	/* Root p_args so mark+sweep inside the loop doesn't free them */
-	x_obj_push_field(p_base, &x_eval_field_eval_list(p_base), p_args, X_OBJ_FLAG_NONE);
+	/* Root p_args so mark+sweep inside the loop doesn't free them -- a
+	 * registered stack cell instead of an eval-list push (see %seq).
+	 * The cell's rest slot keeps the previous result alive across the
+	 * remaining combiner calls. */
+	x_firstobj((x_obj_t *)root) = p_args;
+	x_heap_root_push(p_cell, root);
 
 	while ( ! x_obj_isnil(p_base, p_args)) {
 		x_firstobj((x_obj_t *)call_args) = x_firstobj(p_args);
@@ -537,10 +563,11 @@ static x_obj_t *x_prim_atomic(x_obj_t *p_base, x_obj_t *p_args)
 		 * it (a no-op for C primitives, which return their value). */
 		p_result = x_eval_tco_trampoline(p_base,
 			x_obj_prim_call(p_base, (x_obj_t *)call_args));
+		x_restobj((x_obj_t *)root) = p_result;
 		p_args = x_restobj(p_args);
 	}
 
-	x_obj_pop_field(p_base, &x_eval_field_eval_list(p_base));
+	x_heap_root_pop(p_cell);
 
 	return p_result;
 }
@@ -556,19 +583,28 @@ static x_obj_t *x_prim_atomic(x_obj_t *p_base, x_obj_t *p_args)
 x_obj_t *x_prim_repl(x_obj_t *p_base, x_obj_t *p_args)
 {
 	x_obj_t *p_exp;
+	x_obj_t **p_cell = x_heap_root_cell(p_base);
 	x_spair_t read_state[1];
+	x_spair_t root = x_obj_set((x_obj_t *)x_type_pair_obj, X_OBJ_FLAG_NONE,
+		{ NULL }, { NULL });
 	read_state[0][X_OBJ_META_TYPE].p = NULL;
 	read_state[0][X_OBJ_META_FLAGS].i = X_OBJ_FLAG_NONE;
 	x_firstobj((x_obj_t *)read_state) = NULL;
 	x_restobj((x_obj_t *)read_state) = NULL;
 
+	x_heap_root_push(p_cell, root);
+
 	for (;;) {
 		p_exp = x_prim_read_expr(p_base, (x_obj_t *)read_state);
 		if (x_obj_isnil(p_base, p_exp))
 			break;
+		/* The freshly read form is this frame's only reference. */
+		x_firstobj((x_obj_t *)root) = p_exp;
 		x_eval_arg(p_base, p_exp);
 		x_prim_clear_shadows(p_base);
 	}
+
+	x_heap_root_pop(p_cell);
 
 	return NULL;
 }
