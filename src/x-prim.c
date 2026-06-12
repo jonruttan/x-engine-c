@@ -201,10 +201,26 @@ x_obj_t *x_env_extend(x_obj_t *p_base, x_obj_t *p_env,
 	x_obj_t *p_pair;
 	x_obj_t *p_val;
 	x_obj_t *p_rest;
+	x_obj_t **pp_spine;
 
 	/* Variadic: single symbol binds to entire remaining arg list. */
 	if ( ! x_obj_isnil(p_base, p_params)
 		&& x_obj_type_issymbol(p_base, p_params)) {
+		/* Callers self-pass via transient stack pairs (NULL type
+		 * slot) at the head of p_vals -- x_type_procedure_call's sp,
+		 * x_callable_apply sites' stack-built arg lists.  A bare-
+		 * variadic binding captures the spine itself, and the binding
+		 * outlives those frames (TCO defers the body to the
+		 * trampoline; apply-path closures can escape with the env),
+		 * so materialize every leading stack pair on the heap.  Heap
+		 * spines carry x_type_pair_obj and pass through untouched. */
+		for (pp_spine = &p_vals;
+			*pp_spine != NULL && x_obj_type(*pp_spine) == NULL;
+			pp_spine = &x_restobj(*pp_spine)) {
+			*pp_spine = x_mklist(p_base,
+				x_firstobj(*pp_spine), x_restobj(*pp_spine));
+		}
+
 		p_pair = x_mkspair(p_base, X_OBJ_FLAG_NONE, p_params, p_vals);
 
 		/* Flag if param shadows a BST global; track for clearing */

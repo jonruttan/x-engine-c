@@ -112,11 +112,16 @@ static void x_callcc_restore(x_callcc_cont_t *cont)
  */
 static x_obj_t *x_prim_cc_invoke(x_obj_t *p_base, x_obj_t *p_args)
 {
-	x_obj_t *p_ptr, *p_state, *p_args_list, *p_val;
+	x_obj_t *p_ptr, *p_state, *p_args_list, *p_passed, *p_val;
 	x_callcc_cont_t *cont;
 	x_eargs(p_base, p_args, 4, NULL, &p_ptr, &p_state, &p_args_list);
-	p_val = x_obj_isnil(p_base, p_args_list)
-		? NULL : x_firstobj(p_args_list);
+	/* %cc-args is bare-variadic, so it binds the full self-passed
+	 * list (k val ...): the continuation's value sits after the self
+	 * slot.  (k) with no value passes nil through. */
+	p_passed = x_obj_isnil(p_base, p_args_list)
+		? NULL : x_restobj(p_args_list);
+	p_val = x_obj_isnil(p_base, p_passed)
+		? NULL : x_firstobj(p_passed);
 	cont = (x_callcc_cont_t *)x_ptrval(p_ptr);
 
 	/* Store the return value and interpreter state in cont.

@@ -210,7 +210,9 @@ x_obj_t *x_type_procedure_call(x_obj_t *p_base, x_obj_t *p_args)
 		x_eval_field_env_global_tree(p_base) = x_procbst(p_proc);
 	}
 
-	/* Self-passing via stack pair (zero allocation) */
+	/* Self-passing via stack pair (zero allocation).  Safe across the
+	 * TCO deferral below because x_env_extend materializes this head
+	 * on the heap if a bare-variadic param binds the spine itself. */
 	sp[X_OBJ_META_TYPE].p = NULL;
 	sp[X_OBJ_META_FLAGS].i = X_OBJ_FLAG_NONE;
 	x_firstobj((x_obj_t *)sp) = p_proc;
