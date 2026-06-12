@@ -725,6 +725,27 @@ static void x_prims_add(x_obj_t *p_base, x_char_t *ns, x_char_t *method, x_fn_t 
 	x_heap_root_pop(p_cell);
 }
 
+/* Keep-list names: the approved permanent global vocabulary (the operators,
+ * the identity predicates, call/cc -- the R5 keep-list).  These bind bare
+ * even when their catalog namespace is de-registered: eq?/same? file under
+ * ns `obj`, the operators under ns `int`, call/cc under ns `ctrl`, and those
+ * namespaces' OTHER names retire while these stay. */
+static int x_prims_name_kept(const x_char_t *name)
+{
+	static const char *const list[] = {
+		"+", "-", "*", "/", "%", "~", "&", "|", "^", "<<", ">>",
+		"=", "<", "eq?", "same?", "call/cc", NULL
+	};
+	int i;
+
+	if (name == NULL)
+		return 0;
+	for (i = 0; list[i] != NULL; i++)
+		if (x_lib_strcmp(name, list[i]) == 0)
+			return 1;
+	return 0;
+}
+
 /* Namespaces whose bare env names have been de-registered: their prims live
  * only in the catalog and the object-system classes, not as transitional bare
  * names.  Migrating call sites to the class access (e.g. (clock) -> (Sys clock))
@@ -732,7 +753,7 @@ static void x_prims_add(x_obj_t *p_base, x_char_t *ns, x_char_t *method, x_fn_t 
  * and the whole de-registration check is removed once it is empty. */
 static int x_prims_ns_deregistered(const x_char_t *ns)
 {
-	static const char *const list[] = { "sys", "iter", "base", "heap", "str", NULL };
+	static const char *const list[] = { "sys", "iter", "base", "heap", "str", "obj", NULL };
 	int i;
 
 	if (ns == NULL)
@@ -761,8 +782,10 @@ void x_prims_bind_table(x_obj_t *p_base, const x_prim_entry_t *table, int count)
 
 	for (i = 0; i < count; i++) {
 		/* Bind the transitional bare name unless the namespace has been
-		 * de-registered -- then the catalog/classes are the only source. */
-		if ( ! x_prims_ns_deregistered(table[i].ns))
+		 * de-registered -- then the catalog/classes are the only source.
+		 * Keep-list names (the approved global vocabulary) always bind. */
+		if ( ! x_prims_ns_deregistered(table[i].ns)
+				|| x_prims_name_kept(table[i].name))
 			x_callable_bind(p_base, table[i].name, table[i].fn);
 		if (table[i].ns != NULL)
 			x_prims_add(p_base, table[i].ns, table[i].method, table[i].fn);
