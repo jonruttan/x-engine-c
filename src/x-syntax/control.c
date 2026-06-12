@@ -124,6 +124,7 @@ static x_obj_t *x_prim_guard(x_obj_t *p_base, x_obj_t *p_args)
 	x_obj_t *p_clause, *p_var, *p_handler_body, *p_body,
 		*p_prev_handler = x_firstobj(x_eval_field_error_handler(p_base)),
 		*p_saved_save_stack = x_eval_field_save_stack(p_base),
+		*p_saved_eval_list = x_firstobj(x_eval_field_eval_list(p_base)),
 		*p_handler, *p_result = NULL;
 	x_obj_t *p_err, *p_pair;
 	x_args(p_args, 2, NULL, &p_clause);
@@ -149,6 +150,13 @@ static x_obj_t *x_prim_guard(x_obj_t *p_base, x_obj_t *p_args)
 		p_pair = x_mkspair(p_base, X_OBJ_FLAG_NONE, p_var, p_err);
 
 		x_eval_field_save_stack(p_base) = p_saved_save_stack;
+		/* Drop the eval-list entries whose push windows the longjmp
+		 * cut away: their x_obj_pop_field calls never ran, so without
+		 * this the orphaned entries stay rooted forever -- the same
+		 * leak the save-stack restore above prevents.  Entries pushed
+		 * before this guard sit at or below the snapshot and are
+		 * preserved. */
+		x_firstobj(x_eval_field_eval_list(p_base)) = p_saved_eval_list;
 		/* Drop any tail a longjmp'd-out-of procedure or operative left
 		 * deferred: its restore record rode the unwound save-stack / a
 		 * tco register, so the stale tco_expr/tco_env must not leak into
