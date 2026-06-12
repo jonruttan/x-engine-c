@@ -55,6 +55,7 @@ x_obj_t *x_sexp_pair_write(x_obj_t *p_base, x_obj_t *p_args) { return p_args; }
 #define STUB_X_PROCEDURE_APPLY
 #define STUB_X_SEXP_PAIR_DISPLAY
 #define STUB_X_SEXP_LIST_DISPLAY
+#define STUB_X_SYMBOL
 #include "helper-stubs.c"
 
 
