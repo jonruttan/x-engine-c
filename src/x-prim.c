@@ -750,7 +750,10 @@ static int x_prims_name_kept(const x_char_t *name)
 {
 	static const char *const list[] = {
 		"+", "-", "*", "/", "%", "~", "&", "|", "^", "<<", ">>",
-		"=", "<", "eq?", "same?", "call/cc", NULL
+		"=", "<", "eq?", "same?", "call/cc",
+		/* the universal output verbs: as fundamental as the operators, kept
+		 * bare while the rest of ns `io` (read, write-to-str, ...) homes. */
+		"write", "display", NULL
 	};
 	int i;
 
@@ -771,7 +774,7 @@ static int x_prims_ns_deregistered(const x_char_t *ns)
 {
 	static const char *const list[] = {
 		"sys", "iter", "base", "heap", "str", "obj", "buf", "tok", "type",
-		"ptr", "ffi", NULL
+		"ptr", "ffi", "io", NULL
 	};
 	int i;
 
