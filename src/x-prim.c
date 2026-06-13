@@ -769,7 +769,9 @@ static int x_prims_name_kept(const x_char_t *name)
  * and the whole de-registration check is removed once it is empty. */
 static int x_prims_ns_deregistered(const x_char_t *ns)
 {
-	static const char *const list[] = { "sys", "iter", "base", "heap", "str", "obj", "buf", "tok", NULL };
+	static const char *const list[] = {
+		"sys", "iter", "base", "heap", "str", "obj", "buf", "tok", "type", NULL
+	};
 	int i;
 
 	if (ns == NULL)
