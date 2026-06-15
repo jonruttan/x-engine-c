@@ -5,7 +5,7 @@
  * @file x-type/operative.h
  * @brief Operative (fexpr / dynamic-scope combiner) type for x-lang.
  * @author Jon Ruttan (jonruttan@gmail.com)
- * @copyright 2024 Jon Ruttan
+ * @copyright 2026 Jon Ruttan
  * @license MIT No Attribution (MIT-0)
  *
  * @details

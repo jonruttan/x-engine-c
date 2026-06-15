@@ -1,7 +1,7 @@
 /** @file callcc.c
  *  @brief First-class continuation primitives (call/cc via stack copying).
  *  @author Jon Ruttan (jonruttan@gmail.com)
- *  @copyright 2024 Jon Ruttan
+ *  @copyright 2026 Jon Ruttan
  *  @license MIT No Attribution (MIT-0)
  */
 /*

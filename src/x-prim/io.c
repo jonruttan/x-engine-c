@@ -1,7 +1,7 @@
 /** @file io.c
  *  @brief I/O primitives: read, write, display, string conversion, heap/GC, system, REPL.
  *  @author Jon Ruttan (jonruttan@gmail.com)
- *  @copyright 2024 Jon Ruttan
+ *  @copyright 2026 Jon Ruttan
  *  @license MIT No Attribution (MIT-0)
  */
 /*

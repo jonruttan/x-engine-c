@@ -2,7 +2,7 @@
  * @file x-obj/obj.c
  * @brief The interpreter object (a specialized base object) sentinel.
  * @author Jon Ruttan (jonruttan@gmail.com)
- * @copyright 2021 Jon Ruttan
+ * @copyright 2026 Jon Ruttan
  * @license MIT No Attribution (MIT-0)
  */
 /*

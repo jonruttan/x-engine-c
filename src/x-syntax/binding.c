@@ -1,7 +1,7 @@
 /** @file binding.c
  *  @brief Syntax - Binding Forms (def, set!)
  *  @author Jon Ruttan (jonruttan@gmail.com)
- *  @copyright 2024 Jon Ruttan
+ *  @copyright 2026 Jon Ruttan
  *  @license MIT No Attribution (MIT-0)
  */
 

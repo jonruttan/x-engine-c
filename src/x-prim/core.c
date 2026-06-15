@@ -1,7 +1,7 @@
 /** @file core.c
  *  @brief Core primitives: pair, first, rest, apply, eval, wrap/unwrap, atomic, base.
  *  @author Jon Ruttan (jonruttan@gmail.com)
- *  @copyright 2024 Jon Ruttan
+ *  @copyright 2026 Jon Ruttan
  *  @license MIT No Attribution (MIT-0)
  */
 /*

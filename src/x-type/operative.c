@@ -2,7 +2,7 @@
  * @file x-type/operative.c
  * @brief Operative (fexpr / dynamic-scope combiner) type implementation.
  * @author Jon Ruttan (jonruttan@gmail.com)
- * @copyright 2024 Jon Ruttan
+ * @copyright 2026 Jon Ruttan
  * @license MIT No Attribution (MIT-0)
  */
 /*
