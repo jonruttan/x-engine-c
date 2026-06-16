@@ -706,12 +706,16 @@ static x_obj_t *x_prim_iter(x_obj_t *p_base, x_obj_t *p_args)
 		return NULL;
 	}
 
-	/* Call the iter handler as (iter-fn obj) */
+	/* Apply the iter handler to the already-evaluated obj: (iter-fn obj).
+	 * MUST be x_callable_apply, not x_callable_call -- call re-evaluates the
+	 * argument (the procedure-call path evaluates its args), which corrupts a
+	 * list of lists or objects (each element gets evaluated as a call-form).
+	 * apply binds the value as-is, the same path the write handler uses. */
 	iter_call[0][X_OBJ_META_TYPE].p = NULL;
 	iter_call[0][X_OBJ_META_FLAGS].i = X_OBJ_FLAG_NONE;
 	x_firstobj((x_obj_t *)iter_call) = p_iter_fn;
 	x_restobj((x_obj_t *)iter_call) = x_mkspair(p_base, X_OBJ_FLAG_NONE, p_obj, NULL);
-	return x_callable_call(p_base, (x_obj_t *)iter_call);
+	return x_callable_apply(p_base, (x_obj_t *)iter_call);
 }
 
 /**
