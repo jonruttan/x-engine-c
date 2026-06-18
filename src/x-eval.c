@@ -135,6 +135,28 @@ void x_op_restore(x_obj_t *p_base, x_obj_t *p_record, int force_caller)
 		}
 		if (p_walk == p_head) {
 			x_firstobj(x_eval_field_env_alist(p_base)) = p_caller;
+		} else {
+			/* op_head is gone from the chain.  Two ways that happens:
+			 * (1) the body tail-eval'd a top-level (def ...) into the
+			 *     caller, growing the caller's env in place -- the head now
+			 *     chains DOWN TO the caller, and we must keep it so the new
+			 *     binding survives (define-sugar, do-sequenced defs);
+			 * (2) the body's tail left the env-alist head on an unrelated
+			 *     frame -- e.g. a nested TCO recursion inside (eval expr e)
+			 *     (the interpolation operative parses holes that way) whose
+			 *     own restore was suppressed as a non-outermost trampoline.
+			 * Distinguish by walking for the caller: reachable -> case (1),
+			 * keep; not reachable -> case (2), the head is foreign, so
+			 * restore to the caller.  Without this an operative in if-tail
+			 * (simple-TCO) position leaks that foreign frame, and the next
+			 * form the caller evaluates sees the wrong scope (Unbound). */
+			p_walk = x_firstobj(x_eval_field_env_alist(p_base));
+			while ( ! x_obj_isnil(p_base, p_walk) && p_walk != p_caller) {
+				p_walk = x_restobj(p_walk);
+			}
+			if (p_walk != p_caller) {
+				x_firstobj(x_eval_field_env_alist(p_base)) = p_caller;
+			}
 		}
 	}
 
