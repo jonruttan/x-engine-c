@@ -193,6 +193,30 @@ test-x: $(EXECUTABLE) ## Run x-lang tests
 test: test-c test-x ## Run all tests
 .PHONY: test
 
+# Memory-safety gate: run BOTH suites against an AddressSanitizer build (reuses
+# the x-asan target). Catches the crash class we keep hitting -- e.g. an
+# unchecked `first` reading past a non-pair, which is silently wrong on 64-bit
+# but SIGSEGVs on 32-bit/Pi -- on the dev box, before a Pi run surfaces it.
+#   - address only: UBSan is deferred until its baseline noise on the C89
+#     stack-pair pointer tricks is assessed (it would flag intentional UB).
+#   - detect_leaks=0: the interpreter is a GC that does not free at exit, so
+#     LeakSanitizer reports are not bugs.
+#   - WRAPPER= disables the C runner's valgrind auto-wrap (ASan != valgrind).
+#   - TIMEOUT_UNIT_SECS raised: instrumentation slows each spec ~2-3x.
+test-asan: x-asan ## Run both suites under AddressSanitizer (memory-safety gate)
+	ASAN_OPTIONS=detect_leaks=0 TIMEOUT_UNIT_SECS=180 X_BIN=./x-asan sh tests/x/spec-runner.sh
+	ASAN_OPTIONS=detect_leaks=0 WRAPPER= CFLAGS="$(TEST_CFLAGS) -fsanitize=address -fno-omit-frame-pointer" sh $(PATH_TESTS_C)/test-runner/test-runner.sh $(TESTS)
+.PHONY: test-asan
+
+# Install the local pre-push gate (no CI; local-only remote). Points git at the
+# tracked .githooks/ dir so `make test` runs before every push. RUN_ASAN=1 in
+# the environment also runs `make test-asan` as a non-blocking advisory.
+install-hooks: ## Install the pre-push test gate (core.hooksPath=.githooks)
+	git config core.hooksPath .githooks
+	@chmod +x .githooks/* 2>/dev/null || true
+	@echo "pre-push gate active (core.hooksPath=.githooks). Bypass: git push --no-verify. Uninstall: git config --unset core.hooksPath."
+.PHONY: install-hooks
+
 # ============================================================================
 # Coverage
 # ============================================================================
@@ -325,7 +349,7 @@ uninstall: ## Uninstall from PREFIX
 .PHONY: uninstall
 
 clean: cov-clean ## Clean build artifacts
-	rm -f $(EXECUTABLE) x-debug x-profile *.out $(SRCDIR)/*.o $(SRCDIR)/**/*.o $(SRCDIR)/**/**/*.o $(OPTDIR)/**/*.o $(X_EXPR_DIR)/src/*.o *.core core
+	rm -f $(EXECUTABLE) x-debug x-profile x-asan *.out $(SRCDIR)/*.o $(SRCDIR)/**/*.o $(SRCDIR)/**/**/*.o $(OPTDIR)/**/*.o $(X_EXPR_DIR)/src/*.o *.core core
 .PHONY: clean
 
 help: ## Show targets
