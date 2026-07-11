@@ -1,6 +1,6 @@
 [submodule "specs/c/test-runner"]
 	path = tests/c/test-runner
-	url = git@github.com:jonruttan/test-runner.git
+	url = https://github.com/jonruttan/test-runner.git
 [submodule "ext/x-expr"]
 	path = ext/x-expr
-	url = git@github.com:jonruttan/x-expr.git
+	url = https://github.com/jonruttan/x-expr.git
