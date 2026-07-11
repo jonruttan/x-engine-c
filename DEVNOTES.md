@@ -3,7 +3,7 @@ Description: Development notes for X-Expressions.
 Keywords:    [#X, #X-Exp, #Computational, #Expressions, #Dev, #Notes]  
 Author:      "[Jon Ruttan](jonruttan@gmail.com)"  
 Date:        2021-10-05  
-Revision:    5 (2021-10-06)  
+Revision:    6 (2026-07-10)  
 
 # Notes
 
@@ -47,61 +47,18 @@ Filenames:
 ---
 
 
-
-## X-Objects
-
-### Freeing Using GC links
-
-```c
-  /* Free everything by following the GC links, p_base must be last. */
-  x_obj_t *p_base, *p_gc, *p_tmp;
-
-  p_gc = p_base->gc;
-  while (p_gc) {
-    p_tmp = p_gc->gc;
-    x_sys_free(p_gc);
-    p_gc = p_tmp;
-  }
-  x_sys_free(p_base);
-```
-
----
-
-
 ## Testing
 
 ### Testing a Single Spec
 
 ```sh
-TESTS=specs/c/1.0.x-lib.spec.c make test
+TESTS=tests/c/src/1.x-alist.spec.c make test-c
 ```
 
-### Test Helper File System
+### Test Helpers
 
-```c
-#include "test-runner.h"
-#include "test-helper-file.h"
-
-static char *test_type_init(void)
-{
-  x_obj_t *p_top, *p_obj;
-
-  char buffer[4096], *s;
-  memset(buffer, 0, sizeof(buffer));
-
-  helper_file_buffer_ptr[TEST_HELPER_FILE_STDOUT] = buffer;
-
-  p_top = x_atom(NULL, NULL);
-
-  helper_file_reset();
-  p_obj = x_type_init(p_top, NULL);
-  x_sexp_write(p_top, x_type_types(p_obj));
-  s = helper_file_str(TEST_HELPER_FILE_STDOUT);
-  x_debug(p_top, "TYPES:'%s'", s);
-
-  return NULL;
-}
-```
+The C specs link against the [test-runner](tests/c/test-runner/) harness,
+which provides helper systems for capturing and supplying file data.
 
 #### Capturing File Data
 
