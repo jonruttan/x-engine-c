@@ -70,6 +70,32 @@ void x_callcc_init(void)
 	g_stack_base = (void *)&anchor;
 }
 
+/** Store an address strictly below the caller's entire stack frame.
+ *
+ *  The capture in x_prim_callcc() must include EVERY slot of its own
+ *  frame: locals the compiler spills below the address taken (gcc puts
+ *  p_base/cont there) would otherwise be restored as garbage after
+ *  longjmp -- the crash class that only clang's register allocation
+ *  hid.  A callee's local is below the caller's whole frame by
+ *  construction, so its address is a safe lower bound.
+ *
+ *  @note Out-parameter, not a return value: gcc's -Wreturn-local-addr
+ *        pass REPLACES a returned local address with NULL at -O; a
+ *        store through a pointer (same idiom as x_callcc_init) is only
+ *        warned about, never rewritten.
+ */
+static void x_callcc_sp(void **pp_sp)
+{
+	volatile char anchor;
+
+	*pp_sp = (void *)&anchor;
+}
+
+/** Volatile call path to x_callcc_sp(): inlining would hoist the anchor
+ *  back into the caller's frame and re-create the under-capture; a call
+ *  through a volatile pointer cannot be inlined or sibling-call folded. */
+static void (*volatile x_callcc_sp_fn)(void **) = x_callcc_sp;
+
 /** Restore a captured continuation by replacing the current stack.
  *
  *  Recursively grows the C stack (via a 2 KiB pad per frame) until the
@@ -79,6 +105,14 @@ void x_callcc_init(void)
  *  @param cont Continuation whose stack segment and jmp_buf to restore.
  *  @note This function never returns.
  */
+static void x_callcc_restore(x_callcc_cont_t *cont);
+
+/** Volatile call path for the recursion: sibling-call optimization would
+ *  reuse the frame, so the pad would never advance and the descent would
+ *  spin forever.  A call through a volatile pointer cannot be folded. */
+static void (*volatile x_callcc_restore_fn)(x_callcc_cont_t *) =
+	x_callcc_restore;
+
 static void x_callcc_restore(x_callcc_cont_t *cont)
 {
 	volatile char pad[2048];
@@ -86,10 +120,13 @@ static void x_callcc_restore(x_callcc_cont_t *cont)
 	/* Touch pad to prevent compiler from eliminating it. */
 	pad[0] = 0;
 
-	/* Stack grows downward: keep recursing until we're past
-	 * the lower bound of the captured segment. */
-	if ((char *)&pad[0] > (char *)cont->stack_lo) {
-		x_callcc_restore(cont);
+	/* Stack grows downward: keep recursing until the WHOLE frame --
+	 * not just pad[0]; the compiler may place cont's spill slot and the
+	 * return address above the array -- clears the captured segment by
+	 * a full pad width.  Otherwise the memcpy below could overwrite
+	 * frame slots this call still needs (cont, for the longjmp). */
+	if ((char *)&pad[0] > (char *)cont->stack_lo - 2 * (long)sizeof(pad)) {
+		x_callcc_restore_fn(cont);
 		return; /* never reached */
 	}
 
@@ -167,14 +204,18 @@ static x_obj_t *x_prim_callcc(x_obj_t *p_base, x_obj_t *p_args)
 	x_obj_t *p_params, *p_body, *p_env;
 	x_callcc_cont_t *cont;
 	char *stack_lo;
+	void *sp_lo;
 	size_t stack_size, total;
 	x_spair_t call_args[2];
 
 	/* Evaluate the procedure argument. */
 	x_eargs(p_base, p_args, 2, NULL, &p_proc);
 
-	/* Approximate current stack pointer. */
-	stack_lo = (char *)&p_proc;
+	/* Lower capture bound: from a callee frame, so it sits below every
+	 * slot of THIS frame (see x_callcc_sp) -- &local would miss the
+	 * slots the compiler placed under it. */
+	x_callcc_sp_fn(&sp_lo);
+	stack_lo = (char *)sp_lo;
 	stack_size = (size_t)((char *)g_stack_base - stack_lo);
 
 	/* Allocate continuation struct + stack copy in one block. */
