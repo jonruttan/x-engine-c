@@ -47,6 +47,29 @@ Filenames:
 ---
 
 
+## X-Objects
+
+### Freeing Using Heap Links
+
+Every allocation is threaded onto the base's heap chain through the
+`x_obj_heap()` header slot (the link formerly named `gc`, back when objects
+were structs; they are unit arrays with metadata slots now). Freeing
+everything is one call — walk the chain, run the registered free hooks,
+release each object, base included:
+
+```c
+  /* Free everything by following the heap links; the sweep frees
+   * p_base itself partway through and returns the original pointer. */
+  x_heap_sweep(p_base, p_base, X_OBJ_FLAG_NONE);
+```
+
+The root chain (`x_heap_root_push()` / `x_heap_root_pop()`) links through the
+same `x_obj_heap()` slot from a different head, so registered stack-storage
+objects are never reached by the sweep.
+
+---
+
+
 ## Testing
 
 ### Testing a Single Spec
