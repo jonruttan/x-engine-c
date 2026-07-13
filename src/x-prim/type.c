@@ -218,7 +218,13 @@ static x_obj_t *x_prim_typep(x_obj_t *p_base, x_obj_t *p_args)
 
 	x_eargs(p_base, p_args, 3, NULL, &p_obj, &p_handle);
 
-	if (x_obj_isnil(p_base, p_obj) || x_obj_isnil(p_base, x_obj_type(p_obj))) {
+	/* Guard the non-pair-tree tags before navigating type fields: a child
+	 * base's type is the x_eval_obj sentinel (a static atom tagging the
+	 * raw string "BASE"), and x_type_field_name on it reads past the tag
+	 * string (ASan global-buffer-overflow). Same rule as x_type_op_try:
+	 * only a pair-tree type has fields. No handle can match -> #f. */
+	if (x_obj_isnil(p_base, p_obj) || x_obj_isnil(p_base, x_obj_type(p_obj))
+			|| ! x_obj_type_isspair(x_obj_type(p_obj))) {
 		return x_firstobj(x_eval_field_false(p_base));
 	}
 

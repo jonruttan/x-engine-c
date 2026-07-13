@@ -236,8 +236,11 @@ x_obj_t *x_type_struct_get(x_obj_t *p_base, x_obj_t *p_args)
  */
 x_obj_t *x_type_write(x_obj_t *p_base, x_obj_t *p_args)
 {
+	/* Only a pair-tree type carries a write hook; a non-pair-tree tag
+	 * (base sentinel) has no fields to navigate (see x_type_op_try). */
 	x_obj_t *p_obj = x_firstobj(p_args),
-		*p_fn = x_type_field_write(x_obj_type(p_obj));
+		*p_fn = x_obj_type_isspair(x_obj_type(p_obj))
+			? x_type_field_write(x_obj_type(p_obj)) : NULL;
 	x_spair_t args[2] = {
 		x_obj_set(NULL, X_OBJ_FLAG_NONE, { p_fn }, { (x_obj_t *)(args + 1) }),
 		x_obj_set(NULL, X_OBJ_FLAG_NONE, { p_obj }, { NULL })
@@ -267,8 +270,10 @@ x_obj_t *x_type_write(x_obj_t *p_base, x_obj_t *p_args)
  */
 x_obj_t *x_type_display(x_obj_t *p_base, x_obj_t *p_args)
 {
+	/* Same non-pair-tree guard as x_type_write above. */
 	x_obj_t *p_obj = x_firstobj(p_args),
-		*p_fn = x_type_field_display(x_obj_type(p_obj));
+		*p_fn = x_obj_type_isspair(x_obj_type(p_obj))
+			? x_type_field_display(x_obj_type(p_obj)) : NULL;
 	x_spair_t args[2] = {
 		x_obj_set(NULL, X_OBJ_FLAG_NONE, { p_fn }, { (x_obj_t *)(args + 1) }),
 		x_obj_set(NULL, X_OBJ_FLAG_NONE, { p_obj }, { NULL })
@@ -301,9 +306,13 @@ x_obj_t *x_type_prim_type_name(x_obj_t *p_base, x_obj_t *p_args)
 		return NULL;
 	}
 
+	/* The raw-pointer branch also covers non-pair-tree type tags (the
+	 * base sentinel x_eval_obj, a static atom): navigating their fields
+	 * reads past the tag string. Same rule as x_type_op_try. */
 	if (x_obj_type_issatom(p_obj)
 			|| x_obj_type_isspair(p_obj)
-			|| x_obj_isnil(p_base, x_obj_type(p_obj))) {
+			|| x_obj_isnil(p_base, x_obj_type(p_obj))
+			|| ! x_obj_type_isspair(x_obj_type(p_obj))) {
 		return x_obj_type(p_obj);
 	}
 
@@ -338,7 +347,10 @@ x_obj_t *x_type_prim_units(x_obj_t *p_base, x_obj_t *p_args)
 		return x_pair_prim_units(p_base, p_args);
 	}
 
-	if (x_obj_type_issatom(p_obj) || x_obj_isnil(p_base, x_obj_type(p_obj))) {
+	/* Non-pair-tree type tags (base sentinel) fall back to atom units:
+	 * their fields must not be navigated (see x_type_op_try). */
+	if (x_obj_type_issatom(p_obj) || x_obj_isnil(p_base, x_obj_type(p_obj))
+			|| ! x_obj_type_isspair(x_obj_type(p_obj))) {
 		return x_atom_prim_units(p_base, p_args);
 	}
 
@@ -373,7 +385,10 @@ x_obj_t *x_type_prim_length(x_obj_t *p_base, x_obj_t *p_args)
 		return x_pair_prim_length(p_base, p_args);
 	}
 
-	if (x_obj_type_issatom(p_obj) || x_obj_isnil(p_base, x_obj_type(p_obj))) {
+	/* Non-pair-tree type tags (base sentinel) fall back to atom length:
+	 * their fields must not be navigated (see x_type_op_try). */
+	if (x_obj_type_issatom(p_obj) || x_obj_isnil(p_base, x_obj_type(p_obj))
+			|| ! x_obj_type_isspair(x_obj_type(p_obj))) {
 		return x_atom_prim_length(p_base, p_args);
 	}
 
