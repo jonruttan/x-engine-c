@@ -110,7 +110,7 @@ DEFS+=$(X_SIGNAL)
 SOURCES+=$(OPTDIR)/x-prim/signal.c
 endif
 
-EXTRA_LIBS+=-ldl
+EXTRA_LIBS+=-ldl -lm
 
 # Where to install the stuff
 BINDIR?=$(PREFIX)/bin
