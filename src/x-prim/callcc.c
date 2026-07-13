@@ -21,6 +21,45 @@
 #include "x-type/procedure.h"
 #include "x-type/symbol.h"
 
+/* AddressSanitizer and stack-copying continuations need a truce. ASan
+ * moves instrumented functions' locals to a heap-side "fake stack", so
+ * (a) &local no longer orders against g_stack_base (the capture size
+ * went negative -> absurd malloc) and (b) the setjmp frame's locals
+ * would sit OUTSIDE the captured segment, resurrecting the clobbered-
+ * frame bug. Exempting the capture/restore functions keeps their frames
+ * on the real machine stack. X_CALLCC_ASAN additionally routes the
+ * segment copies through an uninstrumented byte loop: the intercepted
+ * memcpy consults shadow memory, and the captured segment legitimately
+ * spans other frames' poisoned redzones. */
+#if defined(__has_feature)
+# if __has_feature(address_sanitizer)
+#  define X_CALLCC_ASAN 1
+# endif
+#elif defined(__SANITIZE_ADDRESS__)
+# define X_CALLCC_ASAN 1
+#endif
+#ifdef X_CALLCC_ASAN
+# define X_CALLCC_NO_ASAN __attribute__((no_sanitize_address))
+#else
+# define X_CALLCC_NO_ASAN
+#endif
+
+/** Copy a captured stack segment. Under ASan this must be a plain byte
+ *  loop in an exempt function -- see the truce note above. */
+static X_CALLCC_NO_ASAN void x_callcc_copy(char *dst, const char *src,
+	size_t n)
+{
+#ifdef X_CALLCC_ASAN
+	size_t i;
+
+	for (i = 0; i < n; i++) {
+		dst[i] = src[i];
+	}
+#else
+	memcpy(dst, src, n);
+#endif
+}
+
 /** @name Continuation Data
  *  @{
  *
@@ -63,7 +102,7 @@ typedef struct {
  *  @note Uses a volatile local to prevent the compiler from eliminating
  *        the anchor variable.
  */
-void x_callcc_init(void)
+X_CALLCC_NO_ASAN void x_callcc_init(void)
 {
 	volatile int anchor;
 
@@ -84,7 +123,7 @@ void x_callcc_init(void)
  *        store through a pointer (same idiom as x_callcc_init) is only
  *        warned about, never rewritten.
  */
-static void x_callcc_sp(void **pp_sp)
+static X_CALLCC_NO_ASAN void x_callcc_sp(void **pp_sp)
 {
 	volatile char anchor;
 
@@ -113,7 +152,7 @@ static void x_callcc_restore(x_callcc_cont_t *cont);
 static void (*volatile x_callcc_restore_fn)(x_callcc_cont_t *) =
 	x_callcc_restore;
 
-static void x_callcc_restore(x_callcc_cont_t *cont)
+static X_CALLCC_NO_ASAN void x_callcc_restore(x_callcc_cont_t *cont)
 {
 	volatile char pad[2048];
 
@@ -131,7 +170,7 @@ static void x_callcc_restore(x_callcc_cont_t *cont)
 	}
 
 	/* Stack is deep enough. Restore captured segment and jump back. */
-	memcpy(cont->stack_lo, cont->stack_copy, cont->stack_size);
+	x_callcc_copy(cont->stack_lo, cont->stack_copy, cont->stack_size);
 	longjmp(cont->jmp, 1);
 }
 
@@ -197,7 +236,8 @@ static x_obj_t *x_prim_cc_invoke(x_obj_t *p_base, x_obj_t *p_args)
  *  @return The result of @p proc, or the value passed to the continuation.
  *  @see x_prim_cc_invoke, x_callcc_restore
  */
-static x_obj_t *x_prim_callcc(x_obj_t *p_base, x_obj_t *p_args)
+static X_CALLCC_NO_ASAN x_obj_t *x_prim_callcc(x_obj_t *p_base,
+	x_obj_t *p_args)
 {
 	x_obj_t *p_proc, *p_ptr, *p_state, *p_k, *p_result;
 	x_obj_t *p_val_sym, *p_ptr_sym, *p_state_sym, *p_invoke_sym;
@@ -244,7 +284,7 @@ static x_obj_t *x_prim_callcc(x_obj_t *p_base, x_obj_t *p_args)
 	}
 
 	/* Capture the stack segment. */
-	memcpy(cont->stack_copy, stack_lo, stack_size);
+	x_callcc_copy(cont->stack_copy, stack_lo, stack_size);
 	cont->stack_size = stack_size;
 	cont->stack_lo = stack_lo;
 
