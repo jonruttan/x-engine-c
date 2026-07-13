@@ -201,11 +201,18 @@ test: test-c test-x ## Run all tests
 #     stack-pair pointer tricks is assessed (it would flag intentional UB).
 #   - detect_leaks=0: the interpreter is a GC that does not free at exit, so
 #     LeakSanitizer reports are not bugs.
+#   - detect_stack_use_after_return=0: stack-copying call/cc cannot coexist
+#     with ASan's fake stack -- intermediate frames' locals live in heap-side
+#     fake frames that are recycled on return, so a continuation reinvoked
+#     later restores real-stack bytes pointing at dead fake frames (the same
+#     limitation every fiber/coroutine library documents). Off on some
+#     arch/compiler defaults already; pinned off so behavior matches.
 #   - WRAPPER= disables the C runner's valgrind auto-wrap (ASan != valgrind).
 #   - TIMEOUT_UNIT_SECS raised: instrumentation slows each spec ~2-3x.
+ASAN_RUN_OPTIONS=detect_leaks=0:detect_stack_use_after_return=0
 test-asan: x-asan ## Run both suites under AddressSanitizer (memory-safety gate)
-	ASAN_OPTIONS=detect_leaks=0 TIMEOUT_UNIT_SECS=180 X_BIN=./x-asan sh tests/x/spec-runner.sh
-	ASAN_OPTIONS=detect_leaks=0 WRAPPER= CFLAGS="$(TEST_CFLAGS) -fsanitize=address -fno-omit-frame-pointer" sh $(PATH_TESTS_C)/test-runner/test-runner.sh $(TESTS)
+	ASAN_OPTIONS=$(ASAN_RUN_OPTIONS) TIMEOUT_UNIT_SECS=180 X_BIN=./x-asan sh tests/x/spec-runner.sh
+	ASAN_OPTIONS=$(ASAN_RUN_OPTIONS) WRAPPER= CFLAGS="$(TEST_CFLAGS) -fsanitize=address -fno-omit-frame-pointer" sh $(PATH_TESTS_C)/test-runner/test-runner.sh $(TESTS)
 .PHONY: test-asan
 
 # Install the local pre-push gate (no CI; local-only remote). Points git at the
