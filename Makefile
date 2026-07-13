@@ -27,7 +27,7 @@ PREFIX?=/usr/local
 CC?=gcc
 CFLAGS?=-O2
 CFLAGS+=-Wall -Wextra -Wno-unused-parameter
-CFLAGS+=-DX_HEAP -DX_TYPE -DX_CLOCK
+CFLAGS+=-DX_HEAP -DX_TYPE -DX_SYS_CLOCK
 
 # Dead code elimination: each function/data in its own section, stripped at link
 CFLAGS+=-ffunction-sections -fdata-sections
@@ -215,9 +215,10 @@ test-asan: x-asan ## Run both suites under AddressSanitizer (memory-safety gate)
 	ASAN_OPTIONS=$(ASAN_RUN_OPTIONS) WRAPPER= CFLAGS="$(TEST_CFLAGS) -fsanitize=address -fno-omit-frame-pointer" sh $(PATH_TESTS_C)/test-runner/test-runner.sh $(TESTS)
 .PHONY: test-asan
 
-# Install the local pre-push gate (no CI; local-only remote). Points git at the
-# tracked .githooks/ dir so `make test` runs before every push. RUN_ASAN=1 in
-# the environment also runs `make test-asan` as a non-blocking advisory.
+# Install the local pre-push gate (first line of defence before the Actions
+# CI gates). Points git at the tracked .githooks/ dir so `make test` runs
+# before every push. RUN_ASAN=1 in the environment also runs `make test-asan`
+# as a non-blocking advisory.
 install-hooks: ## Install the pre-push test gate (core.hooksPath=.githooks)
 	git config core.hooksPath .githooks
 	@chmod +x .githooks/* 2>/dev/null || true

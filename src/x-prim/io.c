@@ -220,20 +220,20 @@ static x_obj_t *x_prim_display_to_string(x_obj_t *p_base, x_obj_t *p_args)
 	return x_prim_to_string(p_base, x_1(p_args), x_token_display);
 }
 
-#ifdef X_CLOCK
+#ifdef X_SYS_CLOCK
 /** Return CPU microseconds since process start.
  *  x-lang: (clock)
  *  @param p_base  Execution context.
  *  @param p_args  Unused.
  *  @return Integer with microseconds elapsed.
- *  @note Only available when X_CLOCK is defined.
+ *  @note Only available when X_SYS_CLOCK is defined.
  */
 static x_obj_t *x_prim_clock(x_obj_t *p_base, x_obj_t *p_args)
 {
 	(void)p_args;
 	return x_mkint(p_base, x_sys_clock());
 }
-#endif /* X_CLOCK */
+#endif /* X_SYS_CLOCK */
 
 /** Mark phase: trace live objects from every root (GC phase 1).
  *
@@ -670,7 +670,7 @@ static x_obj_t *x_prim_repl_read(x_obj_t *p_base, x_obj_t *p_args)
  *
  *  Binds: write, display, read, read-char, write-to-str, display-to-str,
  *  heap-mark, heap-sweep, heap-count, gc-pin!, error-line.
- *  Conditionally binds clock (when X_CLOCK defined).
+ *  Conditionally binds clock (when X_SYS_CLOCK defined).
  *  Also binds "applicative" as a wrapped combiner for atomic execution.
  *
  *  @param p_base  Execution context.
@@ -698,18 +698,18 @@ x_obj_t *x_prim_io_register(x_obj_t *p_base, x_obj_t *p_args)
 		{ "error-line",      x_prim_error_line,        "io",   "error-line"     },
 		{ "repl-read",       x_prim_repl_read,         "io",   "repl-read"      }
 	};
-#ifdef X_CLOCK
+#ifdef X_SYS_CLOCK
 	static const x_prim_entry_t clock_entry[] = {
 		{ "clock", x_prim_clock, "sys", "clock" }
 	};
-#endif /* X_CLOCK */
+#endif /* X_SYS_CLOCK */
 
 	x_prims_bind_table(p_base, entries,
 		sizeof(entries) / sizeof(entries[0]));
-#ifdef X_CLOCK
+#ifdef X_SYS_CLOCK
 	x_prims_bind_table(p_base, clock_entry,
 		sizeof(clock_entry) / sizeof(clock_entry[0]));
-#endif /* X_CLOCK */
+#endif /* X_SYS_CLOCK */
 
 	/* applicative: wrapped so args are pre-evaluated */
 	x_value_bind(p_base, "applicative",
