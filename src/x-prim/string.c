@@ -155,49 +155,15 @@ static x_obj_t *x_prim_str_byte_sub(x_obj_t *p_base, x_obj_t *p_args)
 		x_strval(p_str) + x_atomint(p_start), x_atomint(p_len)));
 }
 
-/** Lexicographic (byte-wise) string less-than.
- *
- *  x-lang form: @code (str<? a b) @endcode
- *
- *  Compares two strings byte by byte; the shorter string sorts first when it
- *  is a prefix of the longer.  A C primitive so callers (e.g. sorting the help
- *  module list) avoid an x-lang per-character loop, which is both slow and a
- *  GC-rooting hazard.
- *
- *  @param p_base Interpreter base context.
- *  @param p_args Unevaluated argument list: (str<? a b).
- *  @return #t if a sorts before b, else #f.
- */
-static x_obj_t *x_prim_str_lt(x_obj_t *p_base, x_obj_t *p_args)
-{
-	x_obj_t *p_a, *p_b;
-	x_char_t *a, *b;
-
-	x_eargs(p_base, p_args, 3, NULL, &p_a, &p_b);
-	a = x_strval(p_a);
-	b = x_strval(p_b);
-
-	while (*a != '\0' && *a == *b) {
-		a++;
-		b++;
-	}
-
-	return ((unsigned char)*a < (unsigned char)*b)
-		? x_firstobj(x_eval_field_true(p_base))
-		: x_firstobj(x_eval_field_false(p_base));
-}
-
 /** Register string manipulation primitives.
  *
  *  Binds: @c str-append, @c str->symbol, @c symbol->str, @c bytes->str,
- *  @c list->str, @c str-byte-len, @c str-byte-ref, @c str-byte-sub.
+ *  @c str-byte-len, @c str-byte-ref, @c str-byte-sub.
  *
- *  @note @c bytes->str and @c list->str are the SAME byte-packer here. The
- *        x-lang string layer (x/type/string) redefines @c list->str to be
- *        code-point aware (UTF-8 encoding each char via x/codec/utf8) on top of
- *        @c bytes->str, which keeps the raw byte-packing name. Until that
- *        redefinition loads, @c list->str is the byte-packer -- fine for the
- *        ASCII-only boot callers (e.g. number->str).
+ *  @note @c bytes->str is the raw byte-packer (one low byte per char).  The
+ *        code-point-aware @c list->str is pure x-lang (x/type/str-utf8),
+ *        UTF-8 encoding each char on top of @c bytes->str; boot-time callers
+ *        that want bytes call @c bytes->str directly.
  *
  *  @param p_base Interpreter base context.
  *  @param p_args Unused.
@@ -212,11 +178,9 @@ x_obj_t *x_prim_string_register(x_obj_t *p_base, x_obj_t *p_args)
 		{ "str->symbol",  x_prim_string_to_symbol, "str",   "->sym"    },
 		{ "symbol->str",  x_prim_symbol_to_string, "sym",   "->str"    },
 		{ "bytes->str",   x_prim_list_to_string,   "bytes", "->str"    },
-		{ "list->str",    x_prim_list_to_string,   "list",  "->str"    },
 		{ "str-byte-len", x_prim_str_byte_len,     "str",   "byte-len" },
 		{ "str-byte-ref", x_prim_str_byte_ref,     "str",   "byte-ref" },
-		{ "str-byte-sub", x_prim_str_byte_sub,     "str",   "byte-sub" },
-		{ "str<?",        x_prim_str_lt,           "str",   "<?"       }
+		{ "str-byte-sub", x_prim_str_byte_sub,     "str",   "byte-sub" }
 	};
 
 	x_prims_bind_table(p_base, entries,

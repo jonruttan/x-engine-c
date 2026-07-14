@@ -34,7 +34,6 @@
 #include <stdio.h>   /* sprintf */
 #include <math.h>    /* fmod (the d%d convention; -lm on Linux) */
 #include <dlfcn.h>   /* dlopen, dlsym */
-#include <fcntl.h>   /* O_RDONLY, O_WRONLY, O_CREAT, O_TRUNC, O_APPEND */
 
 /**
  * @name Double Bit-Pattern Helpers
@@ -719,8 +718,9 @@ static x_obj_t *x_prim_make_callable(x_obj_t *p_base, x_obj_t *p_args)
  * ptr->str, obj-meta-count, obj-meta-count!, obj-meta-ref, obj-meta-set!,
  * make-callable.
  *
- * Also binds platform constants: %word-size, %O_RDONLY, %O_WRONLY,
- * %O_CREAT, %O_TRUNC, %O_APPEND.
+ * Platform constants live in X, not here: word size is probed by
+ * boot/data.x, and the O_* open flags come from the per-OS tables in
+ * x/platform/syscall.x.
  *
  * @param p_base  Execution context to bind primitives into.
  * @param p_args  Unused.
@@ -748,24 +748,8 @@ x_obj_t *x_prim_ffi_register(x_obj_t *p_base, x_obj_t *p_args)
 		{ "obj-meta-set!",   x_prim_obj_meta_set,       "obj", "meta-set!"     },
 		{ "make-callable",   x_prim_make_callable,      "obj", "make-callable" }
 	};
-	static const struct { x_char_t *name; x_int_t val; } consts[] = {
-		{ "%word-size", (x_int_t)sizeof(void *) },
-		{ "%O_RDONLY",  O_RDONLY },
-		{ "%O_WRONLY",  O_WRONLY },
-		{ "%O_CREAT",   O_CREAT },
-		{ "%O_TRUNC",   O_TRUNC },
-		{ "%O_APPEND",  O_APPEND }
-	};
-	int i;
-
 	x_prims_bind_table(p_base, entries,
 		sizeof(entries) / sizeof(entries[0]));
-
-	/* Bind platform constants */
-	for (i = 0; i < (int)(sizeof(consts) / sizeof(consts[0])); i++) {
-		x_value_bind(p_base, consts[i].name,
-			x_mkint(p_base, consts[i].val));
-	}
 
 	return p_base;
 }

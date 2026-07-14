@@ -190,8 +190,16 @@ test-x: $(EXECUTABLE) ## Run x-lang tests
 	sh tests/x/spec-runner.sh
 .PHONY: test-x
 
-test: test-c test-x ## Run all tests
+test: check-isa test-c test-x ## Run all tests
 .PHONY: test
+
+# The C-surface ratchet, source half: every binding site in the C source must
+# appear in the committed manifest tools/isa.x, so growing the C layer requires
+# a deliberate manifest edit in the same commit.  The runtime half lives in
+# tests/x/specs/meta/isa.spec.md (runs under test-x).
+check-isa: ## Diff the C source's binding surface against tools/isa.x
+	sh tools/isa-scan.sh
+.PHONY: check-isa
 
 # Memory-safety gate: run BOTH suites against an AddressSanitizer build (reuses
 # the x-asan target). Catches the crash class we keep hitting -- e.g. an

@@ -527,51 +527,6 @@ static x_obj_t *x_prim_heap_mark_root(x_obj_t *p_base, x_obj_t *p_args)
 	return NULL;
 }
 
-/** Call each zero-arg function sequentially with no allocations between.
- *  x-lang: (applicative f1 f2 ...)
- *  @param p_base  Execution context.
- *  @param p_args  Pre-evaluated argument list of callables.
- *  @return Result of the last callable invoked.
- *  @note Registered as a wrapped combiner (applicative), so args are
- *        pre-evaluated before this function is called.
- *  @note Roots p_args during iteration to protect from GC.
- */
-static x_obj_t *x_prim_atomic(x_obj_t *p_base, x_obj_t *p_args)
-{
-	x_obj_t *p_result = NULL;
-	x_obj_t **p_cell = x_heap_root_cell(p_base);
-	x_spair_t call_args[1];
-	x_spair_t root = x_obj_set((x_obj_t *)x_type_pair_obj, X_OBJ_FLAG_NONE,
-		{ NULL }, { NULL });
-	p_args = x_1(p_args);
-
-	call_args[0][X_OBJ_META_TYPE].p = NULL;
-	call_args[0][X_OBJ_META_FLAGS].i = X_OBJ_FLAG_NONE;
-
-	/* Root p_args so mark+sweep inside the loop doesn't free them -- a
-	 * registered stack cell instead of an eval-list push (see %seq).
-	 * The cell's rest slot keeps the previous result alive across the
-	 * remaining combiner calls. */
-	x_firstobj((x_obj_t *)root) = p_args;
-	x_heap_root_push(p_cell, root);
-
-	while ( ! x_obj_isnil(p_base, p_args)) {
-		x_firstobj((x_obj_t *)call_args) = x_firstobj(p_args);
-		x_restobj((x_obj_t *)call_args) = NULL;
-		/* Drive the combiner to completion: a procedure or operative
-		 * combiner defers its tail via tco_expr; the trampoline resolves
-		 * it (a no-op for C primitives, which return their value). */
-		p_result = x_eval_tco_trampoline(p_base,
-			x_obj_prim_call(p_base, (x_obj_t *)call_args));
-		x_restobj((x_obj_t *)root) = p_result;
-		p_args = x_restobj(p_args);
-	}
-
-	x_heap_root_pop(p_cell);
-
-	return p_result;
-}
-
 /** Minimal read-eval loop: reads and evaluates expressions until EOF.
  *  @param p_base  Execution context.
  *  @param p_args  Unused.
@@ -671,7 +626,6 @@ static x_obj_t *x_prim_repl_read(x_obj_t *p_base, x_obj_t *p_args)
  *  Binds: write, display, read, read-char, write-to-str, display-to-str,
  *  heap-mark, heap-sweep, heap-count, gc-pin!, error-line.
  *  Conditionally binds clock (when X_SYS_CLOCK defined).
- *  Also binds "applicative" as a wrapped combiner for atomic execution.
  *
  *  @param p_base  Execution context.
  *  @param p_args  Unused.
@@ -710,10 +664,6 @@ x_obj_t *x_prim_io_register(x_obj_t *p_base, x_obj_t *p_args)
 	x_prims_bind_table(p_base, clock_entry,
 		sizeof(clock_entry) / sizeof(clock_entry[0]));
 #endif /* X_SYS_CLOCK */
-
-	/* applicative: wrapped so args are pre-evaluated */
-	x_value_bind(p_base, "applicative",
-		x_mkwrap(p_base, x_mkprim(p_base, x_prim_atomic)));
 
 	return p_base;
 }
