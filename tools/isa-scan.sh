@@ -13,11 +13,8 @@
 #
 # Usage: sh tools/isa-scan.sh
 
-ROOT="$(cd "$(dirname "$0")/.." && pwd)"
-SCRATCH="${TMPDIR:-/tmp}"
-SRC_LIST="$SCRATCH/isa-scan-src.$$"
-MAN_LIST="$SCRATCH/isa-scan-man.$$"
-trap 'rm -f "$SRC_LIST" "$MAN_LIST"' EXIT
+. "$(dirname "$0")/lib/contract-diff.sh"
+contract_diff_setup isa-scan
 
 # --- 1. the C source's view -------------------------------------------------
 # Table entries are one-per-line initializers.  Shapes:
@@ -88,15 +85,7 @@ awk '
 }' "$ROOT"/tools/isa.x > "$MAN_LIST"
 
 # --- 3. diff ------------------------------------------------------------------
-sort -o "$SRC_LIST" "$SRC_LIST"
-sort -o "$MAN_LIST" "$MAN_LIST"
-if ! diff -u "$MAN_LIST" "$SRC_LIST" > "$SCRATCH/isa-scan-diff.$$" 2>&1; then
-	echo "C surface and tools/isa.x disagree (-manifest +source):"
-	grep '^[-+][^-+]' "$SCRATCH/isa-scan-diff.$$"
-	rm -f "$SCRATCH/isa-scan-diff.$$"
-	echo "FAIL: the C ISA changed without a manifest edit (or the manifest is stale)."
-	exit 1
-fi
-rm -f "$SCRATCH/isa-scan-diff.$$"
-echo "ISA check: C source and tools/isa.x agree."
-exit 0
+contract_diff_check "$MAN_LIST" "$SRC_LIST" \
+	"C surface and tools/isa.x disagree (-manifest +source):" \
+	"FAIL: the C ISA changed without a manifest edit (or the manifest is stale)." \
+	"ISA check: C source and tools/isa.x agree."

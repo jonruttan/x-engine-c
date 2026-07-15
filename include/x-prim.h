@@ -247,9 +247,6 @@ x_obj_t *x_prim_io_register(x_obj_t *p_base, x_obj_t *p_args);
 /** Minimal C read-eval loop (no output, no hooks). */
 x_obj_t *x_prim_repl(x_obj_t *p_base, x_obj_t *p_args);
 
-/** Write an object to a string representation. */
-x_obj_t *x_prim_write_to_string(x_obj_t *p_base, x_obj_t *p_args);
-
 /** Register custom type primitives (make-type, type accessors, etc.). */
 x_obj_t *x_prim_type_register(x_obj_t *p_base, x_obj_t *p_args);
 

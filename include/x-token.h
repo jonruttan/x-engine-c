@@ -46,10 +46,6 @@ x_obj_t *x_token_analyse(x_obj_t *p_base, x_obj_t *p_obj);
 /** Read a single token from the input stream. */
 x_obj_t *x_token_read(x_obj_t *p_base, x_obj_t *p_obj);
 
-/** Serialise an object to its written (machine-readable) form. */
-
-/** Serialise an object to its display (human-readable) form. */
-
 /** @} */
 
 #endif /* X_TOKEN_H */

@@ -14,12 +14,9 @@
 #
 # Exit 0 when header and descriptor agree; exit 1 with a diff otherwise.
 
-ROOT="$(cd "$(dirname "$0")/.." && pwd)"
+. "$(dirname "$0")/lib/contract-diff.sh"
+contract_diff_setup obj-layout
 HDR="$ROOT/ext/x-expr/include/x-obj.h"
-SCRATCH="${TMPDIR:-/tmp}"
-SRC_LIST="$SCRATCH/obj-layout-src.$$"
-MAN_LIST="$SCRATCH/obj-layout-man.$$"
-trap 'rm -f "$SRC_LIST" "$MAN_LIST"' EXIT
 
 # --- 1. the header's view ----------------------------------------------------
 awk '
@@ -87,15 +84,7 @@ awk '/^\(def %obj-/ { gsub(/[()]/, ""); print $2 " " $3 }' \
 	"$ROOT/tools/obj-layout.x" > "$MAN_LIST"
 
 # --- 3. diff -------------------------------------------------------------------
-sort -o "$SRC_LIST" "$SRC_LIST"
-sort -o "$MAN_LIST" "$MAN_LIST"
-if ! diff -u "$MAN_LIST" "$SRC_LIST" > "$SCRATCH/obj-layout-diff.$$" 2>&1; then
-	echo "Object layout and tools/obj-layout.x disagree (-descriptor +header):"
-	grep '^[-+][^-+]' "$SCRATCH/obj-layout-diff.$$"
-	rm -f "$SCRATCH/obj-layout-diff.$$"
-	echo "FAIL: x-obj.h layout changed without a descriptor edit (or vice versa)."
-	exit 1
-fi
-rm -f "$SCRATCH/obj-layout-diff.$$"
-echo "Object-layout check: x-obj.h and tools/obj-layout.x agree."
-exit 0
+contract_diff_check "$MAN_LIST" "$SRC_LIST" \
+	"Object layout and tools/obj-layout.x disagree (-descriptor +header):" \
+	"FAIL: x-obj.h layout changed without a descriptor edit (or vice versa)." \
+	"Object-layout check: x-obj.h and tools/obj-layout.x agree."

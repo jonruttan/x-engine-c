@@ -37,7 +37,6 @@
 #define STUB_X_INT
 #define STUB_X_SYMBOL
 #define STUB_X_PRIM_REGISTER
-#define STUB_X_SEXP_PAIR_WRITE
 #define STUB_X_PRIM_SHADOW
 #define STUB_X_PROCEDURE_APPLY
 #include "helper-stubs.c"

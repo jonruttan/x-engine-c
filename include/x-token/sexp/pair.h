@@ -3,7 +3,7 @@
 
 /**
  * @file pair.h
- * @brief S-expression writer and display for stack-allocated pair objects.
+ * @brief S-expression reader declarations for stack-allocated pair objects.
  * @author Jon Ruttan (jonruttan@gmail.com)
  * @copyright 2023 Jon Ruttan
  * @license MIT No Attribution (MIT-0)
@@ -17,15 +17,8 @@
 
 #include "x-obj.h"
 
-/** @name Write / display primitives (satom). */
-/** @{ */
-extern x_satom_t x_sexp_pair_write_prim,
-	x_sexp_pair_display_prim;
-/** @} */
-
-/** Read a pair from the token stream (unused -- lists handle reading). */
-x_obj_t *x_sexp_pair_read(x_obj_t *p_base, x_obj_t *args);
-/** Write the external representation of a pair. */
-/** Display a pair in human-readable form. */
+/* Pair reading is handled by the list reader; pair printing lives in
+ * lib/x/boot/printer.x.  This header remains for the spec TUs that
+ * include the (now-empty) pair.c. */
 
 #endif /* X_SEXP_PAIR_H */

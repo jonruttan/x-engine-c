@@ -3,7 +3,7 @@
 
 /**
  * @file char.h
- * @brief S-expression analyser, reader, and writer for character literals.
+ * @brief S-expression analyser and reader for character literals.
  * @author Jon Ruttan (jonruttan@gmail.com)
  * @copyright 2023 Jon Ruttan
  * @license MIT No Attribution (MIT-0)
@@ -28,11 +28,9 @@ extern x_spair_t x_sexp_char_analyse1_prim,
 	x_sexp_char_analyse3_prim;
 /** @} */
 
-/** @name Read / write / display primitives (satom -- type-internal). */
+/** @name Read primitives (satom -- type-internal). */
 /** @{ */
-extern x_satom_t x_sexp_char_read_prim,
-	x_sexp_char_write_prim,
-	x_sexp_char_display_prim;
+extern x_satom_t x_sexp_char_read_prim;
 /** @} */
 
 /** Analyse state 1: match first char of @c #\\ prefix. */
@@ -43,7 +41,5 @@ x_obj_t *x_sexp_char_analyse2(x_obj_t *p_base, x_obj_t *p_args);
 x_obj_t *x_sexp_char_analyse3(x_obj_t *p_base, x_obj_t *p_args);
 /** Read a character literal from the token buffer. */
 x_obj_t *x_sexp_char_read(x_obj_t *p_base, x_obj_t *p_args);
-/** Write the external representation @c #\\c or @c #\\name. */
-/** Display a character (raw byte, no prefix). */
 
 #endif /* X_SEXP_CHAR_H */

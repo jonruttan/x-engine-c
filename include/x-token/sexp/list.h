@@ -3,7 +3,7 @@
 
 /**
  * @file list.h
- * @brief S-expression analyser, reader, writer, and display for list literals.
+ * @brief S-expression analyser and reader for list literals.
  * @author Jon Ruttan (jonruttan@gmail.com)
  * @copyright 2024 Jon Ruttan
  * @license MIT No Attribution (MIT-0)
@@ -33,13 +33,11 @@
 #define X_SEXP_LIST_CHARS_STR		X_SEXP_LIST_PRE_STR X_SEXP_LIST_DOT_STR X_SEXP_LIST_POST_STR /**< All list-related delimiter characters. */
 #endif /* X_SEXP_LIST_CHARS_STR */
 
-/** @name Analyser / reader / writer / display primitives (satom). */
+/** @name Analyser / reader primitives (satom). */
 /** @{ */
 extern x_satom_t x_sexp_list_analyse_prim,
 	x_sexp_list_delimit_prim,
-	x_sexp_list_read_prim,
-	x_sexp_list_write_prim,
-	x_sexp_list_display_prim;
+	x_sexp_list_read_prim;
 /** @} */
 
 /** Analyse: score on any list delimiter character. */
@@ -48,7 +46,5 @@ x_obj_t *x_sexp_list_analyse(x_obj_t *p_base, x_obj_t *args);
 x_obj_t *x_sexp_list_delimit(x_obj_t *p_base, x_obj_t *args);
 /** Read a list (or dotted pair) from the token stream. */
 x_obj_t *x_sexp_list_read(x_obj_t *p_base, x_obj_t *args);
-/** Write the external representation of a list. */
-/** Display a list (human-readable, no quoting). */
 
 #endif /* X_SEXP_LIST_H */

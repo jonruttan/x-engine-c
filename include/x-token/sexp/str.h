@@ -3,7 +3,7 @@
 
 /**
  * @file str.h
- * @brief S-expression analyser, reader, writer, and display for string literals.
+ * @brief S-expression analyser and reader for string literals.
  * @author Jon Ruttan (jonruttan@gmail.com)
  * @copyright 2023 Jon Ruttan
  * @license MIT No Attribution (MIT-0)
@@ -44,11 +44,9 @@ extern x_spair_t x_sexp_str_analyse1_prim,
 	x_sexp_str_analyse3_prim;
 /** @} */
 
-/** @name Read / write / display primitives (satom -- type-internal). */
+/** @name Read primitives (satom -- type-internal). */
 /** @{ */
-extern x_satom_t x_sexp_str_read_prim,
-	x_sexp_str_write_prim,
-	x_sexp_str_display_prim;
+extern x_satom_t x_sexp_str_read_prim;
 /** @} */
 
 /** Analyse state 1: match the opening quote. */
@@ -59,7 +57,5 @@ x_obj_t *x_sexp_str_analyse2(x_obj_t *p_base, x_obj_t *p_args);
 x_obj_t *x_sexp_str_analyse3(x_obj_t *p_base, x_obj_t *p_args);
 /** Read a string literal from the token buffer (with unescape). */
 x_obj_t *x_sexp_str_read(x_obj_t *p_base, x_obj_t *p_args);
-/** Write the external (escaped, quoted) representation of a string. */
-/** Display a string as raw content (no quotes, no escaping). */
 
 #endif /* X_SEXP_STR_H */

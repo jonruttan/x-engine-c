@@ -206,10 +206,6 @@ int x_type_op_try(x_obj_t *p_base, x_char_t *op, x_obj_t *p_a, x_obj_t *p_b,
 /** Look up a type struct from a type-dispatch argument list. */
 x_obj_t *x_type_struct_get(x_obj_t *p_base, x_obj_t *p_args);
 
-/** Write an object using its type's write handler. */
-
-/** Display an object using its type's display handler. */
-
 /** Primitive: return the name of an object's type. */
 x_obj_t *x_type_prim_type_name(x_obj_t *p_base, x_obj_t *p_args);
 

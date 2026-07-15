@@ -22,19 +22,7 @@
 #include "x-token/sexp/list.h"
 #include "x-token/sexp/whitespace.h"
 
-/**
- * Check if a list matches (name X) and write shorthand prefix + X.
- *
- * Tests whether @p p_obj is a two-element list whose first element is
- * a symbol matching one of quasi/unquote/unquote-splicing, and if so
- * outputs the corresponding reader shorthand (` , ,@) followed by the
- * second element.
- *
- * @param p_base    Execution context.
- * @param p_obj     The list to check.
- * @param dispatch  Output function (x_token_write or x_token_display).
- * @return 1 if shorthand was emitted, 0 otherwise.
- */
+/** Analyser / delimiter / reader primitive satoms for the list type. */
 x_satom_t x_sexp_list_analyse_prim = x_obj_set(x_type_atom_obj, X_OBJ_FLAG_NONE, { .fn = x_sexp_list_analyse }),
 	x_sexp_list_delimit_prim = x_obj_set(x_type_atom_obj, X_OBJ_FLAG_NONE, { .fn = x_sexp_list_delimit }),
 	x_sexp_list_read_prim = x_obj_set(x_type_atom_obj, X_OBJ_FLAG_NONE, { .fn = x_sexp_list_read });

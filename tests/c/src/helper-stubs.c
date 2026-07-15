@@ -133,18 +133,4 @@ x_obj_t *x_token_delimit(x_obj_t *p_base, x_obj_t *p_args) { return NULL; }
 x_obj_t *x_type_procedure_apply(x_obj_t *p_base, x_obj_t *p_args) { return NULL; }
 #endif
 
-#ifdef STUB_X_SEXP_PAIR_DISPLAY
-x_obj_t *x_sexp_pair_display(x_obj_t *p_base, x_obj_t *p_args) { return NULL; }
-x_satom_t x_sexp_pair_display_prim = x_obj_set(NULL, X_OBJ_FLAG_NONE, {.fn = NULL});
-#endif
-
-#ifdef STUB_X_SEXP_LIST_DISPLAY
-x_satom_t x_sexp_list_display_prim = x_obj_set(NULL, X_OBJ_FLAG_NONE, {.fn = NULL});
-#endif
-
-#ifdef STUB_X_SEXP_PAIR_WRITE
-x_satom_t x_sexp_pair_write_prim = x_obj_set(NULL, X_OBJ_FLAG_NONE,
-	{.fn = NULL});
-#endif
-
 #endif /* HELPER_STUBS_C */

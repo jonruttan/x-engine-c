@@ -36,7 +36,6 @@
  *  @note The byte door the pure-X printer (lib/x/boot/printer.x) bottoms
  *        out at.  Emits through x_eval_write_str, so it respects the
  *        write-buffer capture stack exactly as the C renderers did.
- *  @see x_prim_display, x_prim_write
  */
 static x_obj_t *x_prim_write_str(x_obj_t *p_base, x_obj_t *p_args)
 {

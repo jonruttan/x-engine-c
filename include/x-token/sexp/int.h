@@ -3,7 +3,7 @@
 
 /**
  * @file int.h
- * @brief S-expression analyser, reader, and writer for integer literals.
+ * @brief S-expression analyser and reader for integer literals.
  * @author Jon Ruttan (jonruttan@gmail.com)
  * @copyright 2023 Jon Ruttan
  * @license MIT No Attribution (MIT-0)
@@ -26,10 +26,9 @@ extern x_spair_t x_sexp_int_analyse_sign_prim,
 	x_sexp_int_analyse_xdigits_prim;
 /** @} */
 
-/** @name Read / write primitives (satom -- type-internal). */
+/** @name Read primitives (satom -- type-internal). */
 /** @{ */
-extern x_satom_t x_sexp_int_read_prim,
-	x_sexp_int_write_prim;
+extern x_satom_t x_sexp_int_read_prim;
 /** @} */
 
 /** Analyse: consume decimal digits and score. */
@@ -44,6 +43,5 @@ x_obj_t *x_sexp_int_analyse_prefix(x_obj_t *p_base, x_obj_t *p_args);
 x_obj_t *x_sexp_int_analyse_sign(x_obj_t *p_base, x_obj_t *p_args);
 /** Read an integer literal from the token buffer. */
 x_obj_t *x_sexp_int_read(x_obj_t *p_base, x_obj_t *p_args);
-/** Write the decimal representation of an integer. */
 
 #endif /* X_SEXP_INT_H */

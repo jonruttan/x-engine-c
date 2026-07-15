@@ -8,7 +8,10 @@
 # type-object tree).  This scan expands every chain-shaped macro into a
 # flat f/r step path and diffs the result against the committed descriptor
 # tools/base-paths.x, which reflective X code walks (lib/x/boot/reflect.x).
-# Non-chain macros (value casts, predicates) are skipped -- not paths.
+# Non-chain macros (value casts, predicates) are not paths, but they must
+# be listed in SKIP_MACROS below with a reason -- any macro the parser
+# cannot flatten that is NOT listed fails the scan, so a new accessor
+# written outside the grammar cannot silently bypass the contract.
 #
 # Roots: x_type_field_* macros are rooted at a TYPE object; other (X)
 # macros at the base object (%base); (H) macros at an error-handler.
@@ -16,14 +19,17 @@
 # Usage:  sh tools/base-paths-scan.sh          # check (diff, exit 1 on drift)
 #         sh tools/base-paths-scan.sh --gen    # print descriptor entries
 
-ROOT="$(cd "$(dirname "$0")/.." && pwd)"
-SCRATCH="${TMPDIR:-/tmp}"
-SRC_LIST="$SCRATCH/base-paths-src.$$"
-MAN_LIST="$SCRATCH/base-paths-man.$$"
-trap 'rm -f "$SRC_LIST" "$MAN_LIST"' EXIT
+. "$(dirname "$0")/lib/contract-diff.sh"
+contract_diff_setup base-paths
+
+# Macros the parser cannot flatten into an f/r path but which are KNOWN not
+# to be walkable paths.  Space-separated; every entry needs a reason here.
+#   x_error_handler_jmp -- a jmp-buffer pointer cast (x_ptrval), not a
+#                          walkable path.
+SKIP_MACROS="x_error_handler_jmp"
 
 extract() {
-awk '
+awk -v skip="$SKIP_MACROS" '
 /^#define x_[a-z0-9_]+\((X|H)\)/ {
 	line = $0
 	sub(/\/\*.*\*\//, "", line)          # strip trailing comment
@@ -93,36 +99,45 @@ function rootof(name, param) {
 	return "base"
 }
 END {
+	nskip = split(skip, sk, " ")
+	for (j = 1; j <= nskip; j++) skipset[sk[j]] = 1
+	bad = 0
 	for (i = 1; i <= n; i++) {
 		name = order[i]
 		p = pathof(defs[name], roots[name])
-		if (p == "!") continue
+		if (p == "!") {
+			if (name in skipset) continue
+			printf "FAIL: unparseable accessor macro %s (body %s) -- not a" \
+				" flattenable f/r chain; fix the macro or add it to" \
+				" SKIP_MACROS in tools/base-paths-scan.sh with a reason.\n", \
+				name, defs[name] > "/dev/stderr"
+			bad = 1
+			continue
+		}
 		sub(/ $/, "", p)
 		printf "(%s %s%s%s)\n", xname(name), rootof(name, roots[name]), \
 			(p == "" ? "" : " "), p
 	}
+	if (bad) exit 1
 }' "$ROOT/include/x-eval-layout.h" \
    "$ROOT/ext/x-expr/include/x-base.h" \
    "$ROOT/include/x-eval.h" \
    "$ROOT/include/x-type.h"
 }
 
+# extract runs outside a pipeline so an unparseable-macro failure (exit 1)
+# is not swallowed by the downstream sort/sed.
 if [ "$1" = "--gen" ]; then
-	extract | sed 's/^/  /'
+	extract > "$SRC_LIST" || exit 1
+	sed 's/^/  /' "$SRC_LIST"
 	exit 0
 fi
 
-extract | sort > "$SRC_LIST"
+extract > "$SRC_LIST" || exit 1
 awk '/^  \(/ { s = $0; sub(/^  /, "", s); print s }' \
-	"$ROOT/tools/base-paths.x" | sort > "$MAN_LIST"
+	"$ROOT/tools/base-paths.x" > "$MAN_LIST"
 
-if ! diff -u "$MAN_LIST" "$SRC_LIST" > "$SCRATCH/base-paths-diff.$$" 2>&1; then
-	echo "Base paths and tools/base-paths.x disagree (-descriptor +headers):"
-	grep '^[-+][^-+]' "$SCRATCH/base-paths-diff.$$"
-	rm -f "$SCRATCH/base-paths-diff.$$"
-	echo "FAIL: a base field path moved without a descriptor edit (or vice versa)."
-	exit 1
-fi
-rm -f "$SCRATCH/base-paths-diff.$$"
-echo "Base-paths check: headers and tools/base-paths.x agree."
-exit 0
+contract_diff_check "$MAN_LIST" "$SRC_LIST" \
+	"Base paths and tools/base-paths.x disagree (-descriptor +headers):" \
+	"FAIL: a base field path moved without a descriptor edit (or vice versa)." \
+	"Base-paths check: headers and tools/base-paths.x agree."

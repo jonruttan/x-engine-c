@@ -34,15 +34,11 @@
 #include "x-token/sexp/list.h"
 x_satom_t x_sexp_list_analyse_prim = x_obj_set(x_type_atom_obj, X_OBJ_FLAG_NONE, { .fn = NULL }),
 	x_sexp_list_delimit_prim = x_obj_set(x_type_atom_obj, X_OBJ_FLAG_NONE, { .fn = NULL }),
-	x_sexp_list_read_prim = x_obj_set(x_type_atom_obj, X_OBJ_FLAG_NONE, { .fn = NULL }),
-	x_sexp_list_write_prim = x_obj_set(x_type_atom_obj, X_OBJ_FLAG_NONE, { .fn = NULL });
+	x_sexp_list_read_prim = x_obj_set(x_type_atom_obj, X_OBJ_FLAG_NONE, { .fn = NULL });
 
 #include "src/x-eval.c"
 #include "src/x-type/list.c"
 #include "src/x-token.c"
-
-x_obj_t *x_sexp_atom_write(x_obj_t *p_base, x_obj_t *p_args) { return p_args; }
-x_obj_t *x_sexp_pair_write(x_obj_t *p_base, x_obj_t *p_args) { return p_args; }
 
 #define STUB_X_PRIM
 #define STUB_X_PROCEDURE
@@ -50,11 +46,8 @@ x_obj_t *x_sexp_pair_write(x_obj_t *p_base, x_obj_t *p_args) { return p_args; }
 #define STUB_X_HEAP
 #define STUB_X_OBJ_OBJ
 #define STUB_X_STR
-#define STUB_X_SEXP_PAIR_WRITE
 #define STUB_X_PRIM_SHADOW
 #define STUB_X_PROCEDURE_APPLY
-#define STUB_X_SEXP_PAIR_DISPLAY
-#define STUB_X_SEXP_LIST_DISPLAY
 #define STUB_X_SYMBOL
 #include "helper-stubs.c"
 

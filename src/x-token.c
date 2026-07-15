@@ -377,15 +377,3 @@ x_obj_t *x_token_read(x_obj_t *p_base, x_obj_t *p_args)
 		return p_obj;
 	}
 }
-
-/**
- * Write an object in its external (machine-readable) representation.
- *
- * Dispatches based on object type: nil prints "()", booleans print
- * their atom string (#t/#f), stack atoms and pairs use sexp writers,
- * and heap-typed objects delegate to their type's write hook.
- *
- * @param p_base  x_obj_t* -- Execution context
- * @param p_args  x_obj_t* -- (object)
- * @return x_obj_t* -- Write result, or NULL
- */
