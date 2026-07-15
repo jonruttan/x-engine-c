@@ -164,6 +164,40 @@
   (wrap spine)
 )))
 
+; The keep-list (x_prims_name_kept): the approved permanent global
+; vocabulary -- names that bind BARE even when their catalog namespace is
+; de-registered.  Tracked here so growing the C array requires a manifest
+; edit (isa-scan.sh extracts the array; the runtime env walk enforces that
+; every live PRIMITIVE-typed global is catalog-filed or manifested).
+(def %isa-keep (lit (
+  (% raw-op)
+  (& raw-op)
+  (* raw-op)
+  (+ raw-op)
+  (- raw-op)
+  (/ raw-op)
+  (< raw-op)
+  (<< raw-op)
+  (= raw-op)
+  (>> raw-op)
+  (^ raw-op)
+  (call/cc spine)
+  (eq? raw-op)
+  (same? raw-op)
+  (| raw-op)
+  (~ raw-op)
+)))
+
+; X-level value aliases of BARE prims: an x module captures the raw C prim
+; under a new global before shadowing the bare name with an X wrapper
+; (module.x: (def %raw-include include), then set!).  Not C binding sites --
+; the scan ignores this section -- but the runtime env walk must recognise
+; them, since the raw prim value is no longer reachable through its bare
+; name.  Each entry: (alias-name bare-name).
+(def %isa-aliases (lit (
+  (%raw-include include)
+)))
+
 (def %isa-values (lit (
   (#t)
   (#f)

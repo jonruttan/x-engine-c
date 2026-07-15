@@ -31,12 +31,26 @@ trap 'rm -f "$SRC_LIST" "$MAN_LIST"' EXIT
 # bound from interned singletons (x_prim_register), not name literals, so
 # they are seeded explicitly.
 awk '
-FNR == 1 { in_keep = 0 }
+FNR == 1 { in_keep = 0; in_kept_fn = 0 }
 /offsetof/ { next }
-# The keep-list / de-registration name arrays in x-prim.c are string tables,
-# not binding tables; they start with "static const char *const".
+# x_prims_name_kept: the keep-list -- names that bind bare even when their
+# namespace is de-registered.  Its array IS surface: extract every name as
+# a keep record so growing the array requires a manifest edit.
+/^static int x_prims_name_kept/ { in_kept_fn = 1 }
+# The other de-registration name arrays are string tables, not binding
+# tables; they start with "static const char *const" and are skipped.
 /static const char \*const/ { in_keep = 1 }
-in_keep { if (/};/) in_keep = 0; next }
+in_keep {
+	if (in_kept_fn) {
+		s = $0
+		while (match(s, /"[^"]*"/)) {
+			print "keep " substr(s, RSTART + 1, RLENGTH - 2)
+			s = substr(s, RSTART + RLENGTH)
+		}
+	}
+	if (/};/) { in_keep = 0; in_kept_fn = 0 }
+	next
+}
 {
 	line = $0
 	n = 0
@@ -61,6 +75,9 @@ printf 'value #t\nvalue #f\n' >> "$SRC_LIST"
 awk '
 /%isa-catalog/ { sect = "catalog"; next }
 /%isa-bare/    { sect = "bare"; next }
+/%isa-keep/    { sect = "keep"; next }
+# X-level aliases of bare prims: not C binding sites; runtime-walk-only.
+/%isa-aliases/ { sect = ""; next }
 /%isa-values/  { sect = "value"; next }
 /^  \(/ {
 	line = $0
