@@ -62,78 +62,7 @@ x_obj_t *x_token_write(x_obj_t *p_base, x_obj_t *p_obj)
 /*
  * ## Test Runners
  */
-static char *test_sexp_pair_write(void)
-{
-	x_obj_t *p_atoms[2], *p_pairs[4], *p_args;
-	x_char_t buffer[4096], *expected, *s;
-
-	helper_file_buffer_ptr[TEST_HELPER_FILE_STDOUT] = buffer;
-
-	p_atoms[0] = x_mksatom(NULL, X_OBJ_FLAG_NONE, 0);
-	p_atoms[1] = x_mksatom(NULL, X_OBJ_FLAG_NONE, 1);
-	p_pairs[0] = x_mkspair(NULL, X_OBJ_FLAG_NONE, NULL, NULL);
-	p_pairs[1] = x_mkspair(NULL, X_OBJ_FLAG_NONE, p_atoms[0], NULL);
-	p_pairs[2] = x_mkspair(NULL, X_OBJ_FLAG_NONE, p_atoms[0], p_atoms[1]);
-	p_pairs[3] = x_mkspair(NULL, X_OBJ_FLAG_NONE, p_atoms[1], p_pairs[1]);
-
-	p_args = x_mkspair(NULL, X_OBJ_FLAG_NONE, NULL, NULL);
-
-	helper_file_reset();
-	x_firstobj(p_args) = p_pairs[0];
-	x_sexp_pair_write(NULL, p_args);
-	expected = "(())";
-	s = helper_file_str(TEST_HELPER_FILE_STDOUT);
-	_it_should("write nil-pair s-exp to stdout",
-		0 == strncmp(expected, s, strlen(expected))
-		&& 0 == x_token_write_call_count
-	);
-
-
-	helper_file_reset();
-	x_firstobj(p_args) = p_pairs[1];
-	x_sexp_pair_write(NULL, p_args);
-	expected = "(<1>)";
-	s = helper_file_str(TEST_HELPER_FILE_STDOUT);
-	_it_should("write pair s-exp to stdout",
-		0 == strncmp(expected, s, strlen(expected))
-		&& 1 == x_token_write_call_count
-	);
-
-
-	helper_file_reset();
-	x_firstobj(p_args) = p_pairs[2];
-	x_sexp_pair_write(NULL, p_args);
-	expected = "(<2> . <3>)";
-	s = helper_file_str(TEST_HELPER_FILE_STDOUT);
-	_it_should("write broken pair s-exp to stdout",
-		0 == strncmp(expected, s, strlen(expected))
-		&& 3 == x_token_write_call_count
-	);
-
-
-	helper_file_reset();
-	x_firstobj(p_args) = p_pairs[3];
-	x_sexp_pair_write(NULL, p_args);
-	expected = "(<4> <5>)";
-	s = helper_file_str(TEST_HELPER_FILE_STDOUT);
-	_it_should("write list s-exp to stdout",
-		0 == strncmp(expected, s, strlen(expected))
-		&& 5 == x_token_write_call_count
-	);
-
-
-	x_sys_free(p_pairs[3]);
-	x_sys_free(p_pairs[2]);
-	x_sys_free(p_pairs[1]);
-	x_sys_free(p_pairs[0]);
-	x_sys_free(p_atoms[1]);
-	x_sys_free(p_atoms[0]);
-
-	return NULL;
-}
-
 static char *run_tests() {
-	_run_test(test_sexp_pair_write);
 
 	return NULL;
 }

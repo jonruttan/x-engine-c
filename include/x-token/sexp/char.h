@@ -44,8 +44,6 @@ x_obj_t *x_sexp_char_analyse3(x_obj_t *p_base, x_obj_t *p_args);
 /** Read a character literal from the token buffer. */
 x_obj_t *x_sexp_char_read(x_obj_t *p_base, x_obj_t *p_args);
 /** Write the external representation @c #\\c or @c #\\name. */
-x_obj_t *x_sexp_char_write(x_obj_t *p_base, x_obj_t *p_args);
 /** Display a character (raw byte, no prefix). */
-x_obj_t *x_sexp_char_display(x_obj_t *p_base, x_obj_t *p_args);
 
 #endif /* X_SEXP_CHAR_H */

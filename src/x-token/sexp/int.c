@@ -30,8 +30,7 @@ x_spair_t x_sexp_int_analyse_sign_prim = x_obj_set(NULL, X_OBJ_FLAG_NONE, { .fn 
 	x_sexp_int_analyse_xdigits_prim = x_obj_set(NULL, X_OBJ_FLAG_NONE, { .fn = x_sexp_int_analyse_xdigits }, { NULL });
 
 /* Read/write: satom (type-internal, no self-passing needed) */
-x_satom_t x_sexp_int_read_prim = x_obj_set(x_type_atom_obj, X_OBJ_FLAG_NONE, { .fn = x_sexp_int_read }),
-	x_sexp_int_write_prim = x_obj_set(x_type_atom_obj, X_OBJ_FLAG_NONE, { .fn = x_sexp_int_write });
+x_satom_t x_sexp_int_read_prim = x_obj_set(x_type_atom_obj, X_OBJ_FLAG_NONE, { .fn = x_sexp_int_read });
 
 /** Read next-state from callable state slot, with default fallback. */
 #define x_next_state(self, dflt) \
@@ -198,30 +197,3 @@ x_obj_t *x_sexp_int_read(x_obj_t *p_base, x_obj_t *p_args)
 	return p_int;
 }
 
-/**
- * Write the decimal representation of an integer to output.
- *
- * Converts the integer value to a base-10 string using a stack buffer
- * and writes it through the base output mechanism.
- *
- * @param p_base  Execution context.
- * @param p_args  Pair whose first element is the integer to write.
- * @return The integer object on success, or NULL on write failure.
- */
-x_obj_t *x_sexp_int_write(x_obj_t *p_base, x_obj_t *p_args)
-{
-	x_char_t s[22];
-	x_obj_t *p_ret;
-	x_satom_t str = x_obj_set(x_type_atom_obj, X_OBJ_FLAG_NONE, { .s = s });
-	x_spair_t wrap = x_obj_set(NULL, X_OBJ_FLAG_NONE, { str }, { NULL });
-
-	x_lib_inttostr(x_intval(x_firstobj(p_args)), s, 10);
-
-	p_ret = x_eval_write_str(p_base, (x_obj_t *)&wrap);
-
-	if ( ! x_obj_isnil(p_base, p_ret)) {
-		return x_firstobj(p_args);
-	}
-
-	return NULL;
-}

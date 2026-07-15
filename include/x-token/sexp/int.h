@@ -45,6 +45,5 @@ x_obj_t *x_sexp_int_analyse_sign(x_obj_t *p_base, x_obj_t *p_args);
 /** Read an integer literal from the token buffer. */
 x_obj_t *x_sexp_int_read(x_obj_t *p_base, x_obj_t *p_args);
 /** Write the decimal representation of an integer. */
-x_obj_t *x_sexp_int_write(x_obj_t *p_base, x_obj_t *p_args);
 
 #endif /* X_SEXP_INT_H */

@@ -294,33 +294,6 @@ static char *test_sexp_str_read_token(void)
 }
 
 
-static char *test_sexp_str_write(void)
-{
-	x_obj_t *p_args, *p_obj, *p_ret;
-	x_char_t *s, buffer[8] = "\0\0\0\0\0\0\0\0", tmp[32];
-
-	helper_file_buffer_ptr[TEST_HELPER_FILE_STDOUT] = buffer;
-	helper_file_reset();
-
-	s = "@ABC";
-
-	sprintf(tmp, X_SEXP_STR_PRE_STR "%s" X_SEXP_STR_POST_STR, s);
-	p_obj = x_mkstr(NULL, s);
-	p_args = x_mkspair(NULL, X_OBJ_FLAG_NONE, p_obj, NULL);
-	p_ret = x_sexp_str_write(NULL, p_args);
-	_it_should("write the value of the string object",
-		! x_obj_isnil(NULL, p_ret)
-		&& p_obj == p_ret
-		&& 0 == strncmp(tmp, buffer, strlen(tmp))
-	);
-
-	x_sys_free(p_args);
-	x_sys_free(p_obj);
-
-	return NULL;
-}
-
-
 static char *test_sexp_str_analyse2_escape(void)
 {
 	x_obj_t *p_base, *p_args, *p_buffer, *p_obj;
@@ -483,65 +456,14 @@ static char *test_sexp_str_read_escapes(void)
 	return NULL;
 }
 
-static char *test_sexp_str_write_escapes(void)
-{
-	x_obj_t *p_args, *p_obj;
-	x_char_t buffer[64];
-	x_char_t input[8];
-
-	/* Test writing a string with special characters */
-	x_lib_memset(buffer, 0, 64);
-	helper_file_buffer_ptr[TEST_HELPER_FILE_STDOUT] = buffer;
-	helper_file_reset();
-
-	/* String containing: quote, backslash, newline, tab, cr */
-	input[0] = '"';
-	input[1] = '\\';
-	input[2] = '\n';
-	input[3] = '\t';
-	input[4] = '\r';
-	input[5] = '\0';
-	p_obj = x_mkstr(NULL, input);
-	p_args = x_mkspair(NULL, X_OBJ_FLAG_NONE, p_obj, NULL);
-	x_sexp_str_write(NULL, p_args);
-	/* Should produce: "\"\\n\t\r" */
-	_it_should("write escapes special characters",
-		buffer[0] == '"' && buffer[1] == '\\' && buffer[2] == '"');
-
-	x_sys_free(p_args);
-	x_sys_free(p_obj);
-
-	/* Test writing a string with a control character (\x01) */
-	x_lib_memset(buffer, 0, 64);
-	helper_file_buffer_ptr[TEST_HELPER_FILE_STDOUT] = buffer;
-	helper_file_reset();
-
-	input[0] = 1; /* control char */
-	input[1] = '\0';
-	p_obj = x_mkstr(NULL, input);
-	p_args = x_mkspair(NULL, X_OBJ_FLAG_NONE, p_obj, NULL);
-	x_sexp_str_write(NULL, p_args);
-	/* Should produce: "\x01" */
-	_it_should("write hex-escapes control characters",
-		buffer[0] == '"' && buffer[1] == '\\' && buffer[2] == 'x'
-		&& buffer[3] == '0' && buffer[4] == '1');
-
-	x_sys_free(p_args);
-	x_sys_free(p_obj);
-
-	return NULL;
-}
-
 static char *run_tests() {
 	_run_test(test_sexp_str_analyse1);
 	_run_test(test_sexp_str_analyse2);
 	_run_test(test_sexp_str_read);
 	_run_test(test_sexp_str_read_token);
-	_run_test(test_sexp_str_write);
 	_run_test(test_sexp_str_analyse2_escape);
 	_run_test(test_sexp_str_analyse3_return);
 	_run_test(test_sexp_str_read_escapes);
-	_run_test(test_sexp_str_write_escapes);
 
 	return NULL;
 }

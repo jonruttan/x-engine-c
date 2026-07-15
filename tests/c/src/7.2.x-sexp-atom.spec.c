@@ -49,46 +49,7 @@ static void _teardown(void)
 /*
  * ## Test Runners
  */
-static char *test_sexp_atom_write(void)
-{
-	x_obj_t *p_atom, *p_pair, *p_args;
-	char buffer[4096], *expected;
-
-	helper_file_buffer_ptr[TEST_HELPER_FILE_STDOUT] = buffer;
-
-	helper_file_reset();
-
-	p_atom = x_mksatom(NULL, X_OBJ_FLAG_NONE, NULL);
-	p_args = x_mkspair(NULL, X_OBJ_FLAG_NONE, p_atom, NULL);
-
-	x_sexp_atom_write(NULL, p_args);
-
-	expected = "#<"X_TYPE_ATOM_SYMBOL":0x0>";
-	_it_should("write atom s-exp to stdout", 0 == strncmp(expected, buffer, strlen(expected)));
-
-	x_sys_free(p_args);
-	x_sys_free(p_atom);
-
-
-	helper_file_reset();
-	memset(buffer, 0, 4096);
-
-	p_pair = x_mkspair(NULL, X_OBJ_FLAG_NONE, NULL, NULL);
-	p_args = x_mkspair(NULL, X_OBJ_FLAG_NONE, p_pair, NULL);
-
-	x_sexp_atom_write(NULL, p_args);
-
-	expected = "#<"X_TYPE_PAIR_SYMBOL":0x0>";
-	_it_should("write pair as atom s-exp to stdout", 0 == strncmp(expected, buffer, strlen(expected)));
-
-	x_sys_free(p_args);
-	x_sys_free(p_pair);
-
-	return NULL;
-}
-
 static char *run_tests() {
-	_run_test(test_sexp_atom_write);
 
 	return NULL;
 }

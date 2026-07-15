@@ -30,7 +30,6 @@ x_obj_t *x_sexp_symbol_analyse(x_obj_t *p_base, x_obj_t *p_args);
 /** Read a symbol from the token buffer (intern via type_symbol_make). */
 x_obj_t *x_sexp_symbol_read(x_obj_t *p_base, x_obj_t *p_args);
 /** Write the external representation of a symbol (@c (lit name)). */
-x_obj_t *x_sexp_symbol_write(x_obj_t *p_base, x_obj_t *p_args);
 /** Display a symbol as its bare name. */
 x_obj_t *x_sexp_symbol_display(x_obj_t *p_base, x_obj_t *p_args);
 

@@ -49,8 +49,6 @@ x_obj_t *x_sexp_list_delimit(x_obj_t *p_base, x_obj_t *args);
 /** Read a list (or dotted pair) from the token stream. */
 x_obj_t *x_sexp_list_read(x_obj_t *p_base, x_obj_t *args);
 /** Write the external representation of a list. */
-x_obj_t *x_sexp_list_write(x_obj_t *p_base, x_obj_t *args);
 /** Display a list (human-readable, no quoting). */
-x_obj_t *x_sexp_list_display(x_obj_t *p_base, x_obj_t *args);
 
 #endif /* X_SEXP_LIST_H */

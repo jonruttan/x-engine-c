@@ -31,9 +31,7 @@ x_spair_t x_sexp_char_analyse1_prim = x_obj_set(NULL, X_OBJ_FLAG_NONE, { .fn = x
 	x_sexp_char_analyse3_prim = x_obj_set(NULL, X_OBJ_FLAG_NONE, { .fn = x_sexp_char_analyse3 }, { NULL });
 
 /* Read/write/display: satom (type-internal, no self needed) */
-x_satom_t x_sexp_char_read_prim = x_obj_set(x_type_atom_obj, X_OBJ_FLAG_NONE, { .fn = x_sexp_char_read }),
-	x_sexp_char_write_prim = x_obj_set(x_type_atom_obj, X_OBJ_FLAG_NONE, { .fn = x_sexp_char_write }),
-	x_sexp_char_display_prim = x_obj_set(x_type_atom_obj, X_OBJ_FLAG_NONE, { .fn = x_sexp_char_display });
+x_satom_t x_sexp_char_read_prim = x_obj_set(x_type_atom_obj, X_OBJ_FLAG_NONE, { .fn = x_sexp_char_read });
 
 static x_spair_t x_sexp_char_analyse4_prim =
 	x_obj_set(NULL, X_OBJ_FLAG_NONE, { .fn = x_sexp_char_analyse4 }, { NULL });
@@ -230,79 +228,6 @@ x_obj_t *x_sexp_char_read(x_obj_t *p_base, x_obj_t *p_args)
 }
 
 /**
- * Write the external representation of a character.
- *
- * Outputs the @c #\\ prefix followed by either a named character
- * (reverse-looked-up from the type data alist) or the raw byte.
- * Uses stack-allocated temporaries to avoid heap allocation.
- *
- * @param p_base  Execution context.
- * @param p_args  Pair whose first element is the character to write.
- * @return The character object on success, or NULL on write failure.
- */
-x_obj_t *x_sexp_char_write(x_obj_t *p_base, x_obj_t *p_args)
-{
-	x_obj_t *p_ret, *p_type, *p_data, *p_entry;
-	x_int_t cp = x_atomint(x_firstobj(p_args));
-	x_satom_t prefix_str = x_obj_set(x_type_atom_obj,
-		X_OBJ_FLAG_NONE, { .s = (x_char_t *)"#\\" });
-	x_spair_t prefix_wrap = x_obj_set(NULL,
-		X_OBJ_FLAG_NONE, { prefix_str }, { NULL });
-	/* name_str's value derefs the loop entry -- filled in-loop. */
-	x_satom_t name_str;
-	x_spair_t name_wrap;
-	x_char_t byte;
-	x_satom_t str = x_obj_set(x_type_atom_obj, X_OBJ_FLAG_NONE,
-		{ .s = &byte }),
-		sz = x_obj_set(x_type_atom_obj, X_OBJ_FLAG_NONE, { .i = 1 });
-	x_spair_t wrap[2] = {
-		x_obj_set(NULL, X_OBJ_FLAG_NONE,
-			{ str }, { (x_obj_t *)(wrap + 1) }),
-		x_obj_set(NULL, X_OBJ_FLAG_NONE, { sz }, { NULL })
-	};
-
-	/* Write #\ prefix */
-	x_eval_write_str(p_base, (x_obj_t *)&prefix_wrap);
-
-	/* Named characters: reverse-lookup in type data alist */
-	if (x_base_isset(p_base)) {
-		p_type = x_type_char_register(p_base, p_base);
-		p_data = x_type_field_data(p_type);
-
-		while ( ! x_obj_isnil(p_base, p_data)) {
-			p_entry = x_firstobj(p_data);
-
-			if (x_intval(x_restobj(p_entry)) == cp) {
-				name_str[X_OBJ_META_TYPE].p = (x_obj_t *)x_type_atom_obj;
-				name_str[X_OBJ_META_FLAGS].i = X_OBJ_FLAG_NONE;
-				x_atomstr((x_obj_t *)name_str) = x_atomstr(x_firstobj(p_entry));
-				name_wrap[X_OBJ_META_TYPE].p = NULL;
-				name_wrap[X_OBJ_META_FLAGS].i = X_OBJ_FLAG_NONE;
-				x_firstobj((x_obj_t *)name_wrap) = (x_obj_t *)name_str;
-				x_restobj((x_obj_t *)name_wrap) = NULL;
-				x_eval_write_str(p_base, (x_obj_t *)&name_wrap);
-				return x_firstobj(p_args);
-			}
-
-			p_data = x_restobj(p_data);
-		}
-	}
-
-	/* Glyph: emit the code point's low byte (ASCII-correct). Boot fallback --
-	 * the x-lang write handler (type-push-write) emits full UTF-8 for non-ASCII
-	 * via x/codec/utf8 and shadows this before any non-ASCII char is written.
-	 * No UTF-8 encoding in C. */
-	byte = (x_char_t)(cp & 0xFF);
-	p_ret = x_eval_write_str(p_base, (x_obj_t *)wrap);
-
-	if ( ! x_obj_isnil(p_base, p_ret)) {
-		return x_firstobj(p_args);
-	}
-
-	return NULL;
-}
-
-/**
  * Display a character as a single raw byte (its code point's low 8 bits).
  *
  * Protocol-agnostic boot fallback: this is the bottom of the CHARACTER
@@ -316,18 +241,3 @@ x_obj_t *x_sexp_char_write(x_obj_t *p_base, x_obj_t *p_args)
  * @param p_args  Pair whose first element is the character to display.
  * @return The character object.
  */
-x_obj_t *x_sexp_char_display(x_obj_t *p_base, x_obj_t *p_args)
-{
-	x_char_t byte = (x_char_t)(x_atomint(x_firstobj(p_args)) & 0xFF);
-	x_satom_t str = x_obj_set(x_type_atom_obj, X_OBJ_FLAG_NONE, { .s = &byte }),
-		sz = x_obj_set(x_type_atom_obj, X_OBJ_FLAG_NONE, { .i = 1 });
-	x_spair_t wrap[2] = {
-		x_obj_set(NULL, X_OBJ_FLAG_NONE,
-			{ str }, { (x_obj_t *)(wrap + 1) }),
-		x_obj_set(NULL, X_OBJ_FLAG_NONE, { sz }, { NULL })
-	};
-
-	x_eval_write_str(p_base, (x_obj_t *)wrap);
-
-	return x_firstobj(p_args);
-}

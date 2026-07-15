@@ -24,10 +24,9 @@ x_spair_t x_sexp_str_analyse1_prim = x_obj_set(NULL, X_OBJ_FLAG_NONE, { .fn = x_
 	x_sexp_str_analyse2_prim = x_obj_set(NULL, X_OBJ_FLAG_NONE, { .fn = x_sexp_str_analyse2 }, { NULL }),
 	x_sexp_str_analyse3_prim = x_obj_set(NULL, X_OBJ_FLAG_NONE, { .fn = x_sexp_str_analyse3 }, { NULL });
 
-/* Read/write/display: satom (type-internal, no self needed) */
-x_satom_t x_sexp_str_read_prim = x_obj_set(x_type_atom_obj, X_OBJ_FLAG_NONE, { .fn = x_sexp_str_read }),
-	x_sexp_str_write_prim = x_obj_set(x_type_atom_obj, X_OBJ_FLAG_NONE, { .fn = x_sexp_str_write }),
-	x_sexp_str_display_prim = x_obj_set(x_type_atom_obj, X_OBJ_FLAG_NONE, { .fn = x_sexp_str_display });
+/* Read: satom (type-internal, no self needed).  Write/display are pure
+ * x-lang (boot/printer.x). */
+x_satom_t x_sexp_str_read_prim = x_obj_set(x_type_atom_obj, X_OBJ_FLAG_NONE, { .fn = x_sexp_str_read });
 
 /* analyse3 prim: escape state — consumes one char after backslash */
 
@@ -171,106 +170,3 @@ x_obj_t *x_sexp_str_read(x_obj_t *p_base, x_obj_t *p_args)
 	return x_mkstrown(p_base, s);
 }
 
-/**
- * Write the external (escaped, quoted) representation of a string.
- *
- * Outputs the string surrounded by double quotes, escaping special
- * characters (@c ", @c \\, @c \\n, @c \\t, @c \\r) and non-printable
- * bytes as @c \\xHH sequences.  Safe runs are written in bulk for
- * efficiency.
- *
- * @param p_base  Execution context.
- * @param p_args  Pair whose first element is the string to write.
- * @return The string object.
- */
-x_obj_t *x_sexp_str_write(x_obj_t *p_base, x_obj_t *p_args)
-{
-	x_char_t *s = x_firststr(x_firstobj(p_args));
-	size_t len = x_lib_strlen(s);
-	size_t i = 0;
-	x_char_t hex[5];
-	const x_char_t *esc;
-	size_t run_start;
-	x_char_t c;
-	x_satom_t data = x_obj_set(x_type_atom_obj, X_OBJ_FLAG_NONE, { .s = NULL }),
-		sz = x_obj_set(x_type_atom_obj, X_OBJ_FLAG_NONE, { .i = 0 });
-	x_spair_t args[2] = {
-		x_obj_set(NULL, X_OBJ_FLAG_NONE, { data }, { (x_obj_t *)(args + 1) }),
-		x_obj_set(NULL, X_OBJ_FLAG_NONE, { sz }, { NULL })
-	};
-
-	x_atomstr(data) = X_SEXP_STR_PRE_STR;
-	x_atomint(sz) = X_SEXP_STR_PRE_STR_LEN;
-	x_eval_write_str(p_base, (x_obj_t *)args);
-
-	while (i < len) {
-		/* Find next character that needs escaping */
-		run_start = i;
-		while (i < len) {
-			c = s[i];
-			if (c == '"' || c == '\\' || c == '\n' || c == '\t'
-				|| c == '\r' || c == '\0'
-				|| ((unsigned char)c < 0x20
-					&& c != '\n' && c != '\t' && c != '\r')) {
-				break;
-			}
-			i++;
-		}
-
-		/* Write run of safe characters */
-		if (i > run_start) {
-			x_atomstr(data) = s + run_start;
-			x_atomint(sz) = i - run_start;
-			x_eval_write_str(p_base, (x_obj_t *)args);
-		}
-
-		/* Write escape sequence */
-		if (i < len) {
-			esc = NULL;
-			switch (s[i]) {
-			case '"':  esc = "\\\""; break;
-			case '\\': esc = "\\\\"; break;
-			case '\n': esc = "\\n";  break;
-			case '\t': esc = "\\t";  break;
-			case '\r': esc = "\\r";  break;
-			default:
-				/* Non-printable: \xHH */
-				hex[0] = '\\';
-				hex[1] = 'x';
-				hex[2] = "0123456789abcdef"[((unsigned char)s[i] >> 4) & 0xf];
-				hex[3] = "0123456789abcdef"[(unsigned char)s[i] & 0xf];
-				hex[4] = '\0';
-				esc = hex;
-				break;
-			}
-			x_atomstr(data) = (x_char_t *)esc;
-			x_atomint(sz) = x_lib_strlen(esc);
-			x_eval_write_str(p_base, (x_obj_t *)args);
-			i++;
-		}
-	}
-
-	x_atomstr(data) = X_SEXP_STR_POST_STR;
-	x_atomint(sz) = X_SEXP_STR_POST_STR_LEN;
-	x_eval_write_str(p_base, (x_obj_t *)args);
-
-	return x_firstobj(p_args);
-}
-
-/**
- * Display a string as raw content (no surrounding quotes, no escaping).
- *
- * @param p_base  Execution context.
- * @param p_args  Pair whose first element is the string to display.
- * @return The string object.
- */
-x_obj_t *x_sexp_str_display(x_obj_t *p_base, x_obj_t *p_args)
-{
-	x_satom_t str = x_obj_set(x_type_atom_obj, X_OBJ_FLAG_NONE,
-		{ .s = x_firststr(x_firstobj(p_args)) });
-	x_spair_t wrap = x_obj_set(NULL, X_OBJ_FLAG_NONE, { str }, { NULL });
-
-	x_eval_write_str(p_base, (x_obj_t *)&wrap);
-
-	return x_firstobj(p_args);
-}

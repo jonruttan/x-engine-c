@@ -60,8 +60,6 @@ x_obj_t *x_sexp_str_analyse3(x_obj_t *p_base, x_obj_t *p_args);
 /** Read a string literal from the token buffer (with unescape). */
 x_obj_t *x_sexp_str_read(x_obj_t *p_base, x_obj_t *p_args);
 /** Write the external (escaped, quoted) representation of a string. */
-x_obj_t *x_sexp_str_write(x_obj_t *p_base, x_obj_t *p_args);
 /** Display a string as raw content (no quotes, no escaping). */
-x_obj_t *x_sexp_str_display(x_obj_t *p_base, x_obj_t *p_args);
 
 #endif /* X_SEXP_STR_H */

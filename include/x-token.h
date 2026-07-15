@@ -47,10 +47,8 @@ x_obj_t *x_token_analyse(x_obj_t *p_base, x_obj_t *p_obj);
 x_obj_t *x_token_read(x_obj_t *p_base, x_obj_t *p_obj);
 
 /** Serialise an object to its written (machine-readable) form. */
-x_obj_t *x_token_write(x_obj_t *p_base, x_obj_t *p_obj);
 
 /** Serialise an object to its display (human-readable) form. */
-x_obj_t *x_token_display(x_obj_t *p_base, x_obj_t *p_obj);
 
 /** @} */
 

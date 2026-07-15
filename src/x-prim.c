@@ -731,10 +731,9 @@ static int x_prims_name_kept(const x_char_t *name)
 {
 	static const char *const list[] = {
 		"+", "-", "*", "/", "%", "~", "&", "|", "^", "<<", ">>",
-		"=", "<", "eq?", "same?", "call/cc",
-		/* the universal output verbs: as fundamental as the operators, kept
-		 * bare while the rest of ns `io` (read, write-to-str, ...) homes. */
-		"write", "display", NULL
+		"=", "<", "eq?", "same?", "call/cc", NULL
+		/* (write/display left this list when the printers homed to x:
+		 * boot/printer.x binds the bare verbs itself.) */
 	};
 	int i;
 

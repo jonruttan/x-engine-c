@@ -348,44 +348,6 @@ x_obj_t *type_write(x_obj_t *p_base, x_obj_t *p_args)
 }
 
 
-static char *test_type_write(void)
-{
-	x_obj_t *p_obj, *p_fn, *p_args, *p_ret;
-
-	p_obj = x_mkatom(NULL, NULL);
-	p_fn = x_mksatom(NULL, X_OBJ_FLAG_NONE, type_write);
-	x_type_field_write(x_obj_type(p_obj)) = p_fn;
-
-	p_args = x_mkspair(NULL, X_OBJ_FLAG_NONE, p_obj, NULL);
-
-	p_ret = x_type_write(NULL, p_args);
-
-	_it_should("call the object type's write primitive",
-		p_obj == p_ret
-		&& 1 == type_write_call_count
-	);
-
-	return NULL;
-}
-
-static char *test_type_write_null(void)
-{
-	x_obj_t *p_obj, *p_args, *p_ret;
-
-	p_obj = x_mkatom(NULL, NULL);
-	/* Explicitly clear the write field to test the NULL path */
-	x_type_field_write(x_obj_type(p_obj)) = NULL;
-	p_args = x_mkspair(NULL, X_OBJ_FLAG_NONE, p_obj, NULL);
-
-	p_ret = x_type_write(NULL, p_args);
-
-	_it_should("return NULL when write fn is nil",
-		p_ret == NULL
-	);
-
-	return NULL;
-}
-
 static char *test_type_prim_type_name(void)
 {
 	x_obj_t *p_base, *p_obj, *p_args, *p_ret;
@@ -720,8 +682,6 @@ static char *run_tests() {
 	_run_test(test_type_units);
 	_run_test(test_type_struct_make);
 	_run_test(test_type_struct_get);
-	_run_test(test_type_write);
-	_run_test(test_type_write_null);
 	_run_test(test_type_prim_type_name);
 	_run_test(test_type_prim_units);
 	_run_test(test_type_prim_length);

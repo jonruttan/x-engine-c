@@ -69,8 +69,6 @@ x_obj_t *x_type_str_struct(x_obj_t *p_base, x_obj_t *p_obj)
 		.p_call = x_type_str_call_prim,
 		.p_analyse = x_sexp_str_analyse1_prim,
 		.p_read = x_sexp_str_read_prim,
-		.p_write = x_sexp_str_write_prim,
-		.p_display = x_sexp_str_display_prim
 	};
 
 	return x_type_struct_make(p_base, type);

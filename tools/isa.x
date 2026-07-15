@@ -95,18 +95,13 @@
   (int ^ raw-op)
   (int | raw-op)
   (int ~ raw-op)
-  (io display review)        ; the structure-walking printer is POLICY; X owns repr already -- home over a raw byte-out door
-  (io display-to-str review)  ; printer capture; becomes X (Stream) once the printer homes
   (io read io)
   (io read-char io)
   (io repl-read io)
-  (io write review)           ; same as display
   (io write-str io)           ; the OUT port instruction: raw bytes of a string to the current output;
                               ;   the pure-X printer bottoms out here. Added 2026-07-14 (printer batch)
-  (io write-to-str review)    ; same as display-to-str
   (iter empty? hot)           ; derived dispatch, but per-ELEMENT hot (cached as %-vars in hot paths)
   (iter make types)
-  (iter new review)           ; = fetch type iter-cell + apply, cold (runs once per iteration START); next/empty? stay C (hot)
   (iter next hot)             ; derived dispatch, but per-ELEMENT hot
   (obj ->ptr ffi)
   (obj eq? raw-op)

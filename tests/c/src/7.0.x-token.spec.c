@@ -460,55 +460,6 @@ static char *test_token_read_eof(void)
 	return NULL;
 }
 
-static char *test_token_write(void)
-{
-	x_obj_t *p_base = x_eval_make(NULL, NULL), *p_obj, *p_args, *p_ret;
-	int fd_null = open("/dev/null", O_WRONLY);
-
-	/* Redirect output to /dev/null so writes don't pollute test output */
-	x_atomint(x_firstobj(x_base_field_fileout(p_base))) = fd_null;
-
-	/* Write satom — exercises x_sexp_atom_write path */
-	p_obj = x_mksatom(p_base, X_OBJ_FLAG_NONE, 'Z');
-	p_args = x_mkspair(p_base, X_OBJ_FLAG_NONE, p_obj, NULL);
-	p_ret = x_token_write(p_base, p_args);
-	_it_should("write satom returns non-NULL",
-		! x_obj_isnil(p_base, p_ret));
-
-	/* Write spair — exercises x_sexp_pair_write path */
-	p_obj = x_mkspair(p_base, X_OBJ_FLAG_NONE, x_mksatom(p_base, X_OBJ_FLAG_NONE, 'A'), x_mksatom(p_base, X_OBJ_FLAG_NONE, 'B'));
-	p_args = x_mkspair(p_base, X_OBJ_FLAG_NONE, p_obj, NULL);
-	p_ret = x_token_write(p_base, p_args);
-	_it_should("write spair returns non-NULL",
-		! x_obj_isnil(p_base, p_ret));
-
-	/* Write a typed heap object — exercises x_type_write path */
-	{
-		x_obj_t *p_base3 = x_eval_make(NULL, NULL);
-		x_obj_t *p_prim_obj = x_make_prim(p_base3, X_OBJ_FLAG_NONE,
-			test_token_read_read_catchall);
-
-		x_atomint(x_firstobj(x_base_field_fileout(p_base3))) = fd_null;
-		p_args = x_mkspair(p_base3, X_OBJ_FLAG_NONE, p_prim_obj, NULL);
-		p_ret = x_token_write(p_base3, p_args);
-		_it_should("write typed obj returns non-NULL",
-			! x_obj_isnil(p_base3, p_ret));
-		test_cleanup(p_base3);
-	}
-
-	/* Object with NULL type — exercises final return NULL */
-	p_obj = x_obj_make(p_base, NULL, X_OBJ_FLAG_NONE, X_OBJ_LENGTH_ATOM, NULL);
-	p_args = x_mkspair(p_base, X_OBJ_FLAG_NONE, p_obj, NULL);
-	p_ret = x_token_write(p_base, p_args);
-	_it_should("write untyped obj returns NULL",
-		x_obj_isnil(p_base, p_ret));
-
-	close(fd_null);
-	test_cleanup(p_base);
-
-	return NULL;
-}
-
 static char *test_token_read_null_reader(void)
 {
 	x_obj_t *p_base = x_eval_make(NULL, NULL),
@@ -600,7 +551,6 @@ static char *run_tests() {
 	_run_test(test_token_delimit);
 	_run_test(test_token_read);
 	_run_test(test_token_read_eof);
-	_run_test(test_token_write);
 	_run_test(test_token_read_null_reader);
 	_run_test(test_token_read_ro_eof);
 	_run_test(test_alist_iter_nil);

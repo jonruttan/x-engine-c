@@ -26,8 +26,6 @@ extern x_satom_t x_sexp_pair_write_prim,
 /** Read a pair from the token stream (unused -- lists handle reading). */
 x_obj_t *x_sexp_pair_read(x_obj_t *p_base, x_obj_t *args);
 /** Write the external representation of a pair. */
-x_obj_t *x_sexp_pair_write(x_obj_t *p_base, x_obj_t *args);
 /** Display a pair in human-readable form. */
-x_obj_t *x_sexp_pair_display(x_obj_t *p_base, x_obj_t *args);
 
 #endif /* X_SEXP_PAIR_H */

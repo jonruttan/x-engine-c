@@ -225,69 +225,6 @@ x_obj_t *x_type_struct_get(x_obj_t *p_base, x_obj_t *p_args)
 }
 
 /**
- * Dispatch the write hook for a typed object.
- *
- * Looks up the type's write function and applies it to the object.
- * Uses x_callable_apply (not call) to avoid TCO complications.
- *
- * @param p_base  x_obj_t* -- Execution context
- * @param p_args  x_obj_t* -- (object . ...)
- * @return x_obj_t* -- Write result, or NULL if no write hook
- */
-x_obj_t *x_type_write(x_obj_t *p_base, x_obj_t *p_args)
-{
-	/* Only a pair-tree type carries a write hook; a non-pair-tree tag
-	 * (base sentinel) has no fields to navigate (see x_type_op_try). */
-	x_obj_t *p_obj = x_firstobj(p_args),
-		*p_fn = x_obj_type_isspair(x_obj_type(p_obj))
-			? x_type_field_write(x_obj_type(p_obj)) : NULL;
-	x_spair_t args[2] = {
-		x_obj_set(NULL, X_OBJ_FLAG_NONE, { p_fn }, { (x_obj_t *)(args + 1) }),
-		x_obj_set(NULL, X_OBJ_FLAG_NONE, { p_obj }, { NULL })
-	};
-
-	if ( ! x_obj_isnil(p_base, p_fn)) {
-		/* Use prim_apply (no TCO) so all body forms execute
-		 * before returning to C. prim_call sets the last form
-		 * as a TCO expr that nobody would process here. */
-		return x_callable_apply(p_base, (x_obj_t *)args);
-	}
-
-	return NULL;
-}
-
-/**
- * Dispatch the display hook for a typed object.
- *
- * Looks up the type's display function and applies it. Falls back
- * to x_type_write if no display hook is registered.
- *
- * @param p_base  x_obj_t* -- Execution context
- * @param p_args  x_obj_t* -- (object . ...)
- * @return x_obj_t* -- Display result
- *
- * @see x_type_write
- */
-x_obj_t *x_type_display(x_obj_t *p_base, x_obj_t *p_args)
-{
-	/* Same non-pair-tree guard as x_type_write above. */
-	x_obj_t *p_obj = x_firstobj(p_args),
-		*p_fn = x_obj_type_isspair(x_obj_type(p_obj))
-			? x_type_field_display(x_obj_type(p_obj)) : NULL;
-	x_spair_t args[2] = {
-		x_obj_set(NULL, X_OBJ_FLAG_NONE, { p_fn }, { (x_obj_t *)(args + 1) }),
-		x_obj_set(NULL, X_OBJ_FLAG_NONE, { p_obj }, { NULL })
-	};
-
-	if ( ! x_obj_isnil(p_base, p_fn)) {
-		return x_callable_apply(p_base, (x_obj_t *)args);
-	}
-
-	/* Fallback: use write */
-	return x_type_write(p_base, p_args);
-}
-
-/**
  * Return the type name for an object. x-lang: (type-name obj)
  *
  * For stack atoms/pairs and untyped objects, returns the raw type

@@ -82,7 +82,6 @@ x_obj_t *x_type_pair_struct(x_obj_t *p_base, x_obj_t *p_args)
 		.p_units = (x_obj_t *)&x_type_units_pair_obj,
 		.p_make = x_type_pair_make_prim,
 		.p_length = x_type_pair_length_prim,
-		.p_write = x_sexp_pair_write_prim
 	};
 
 	return x_type_struct_make(p_base, type);

@@ -581,37 +581,6 @@ static char *test_sexp_int_read_token(void)
 	return NULL;
 }
 
-static char *test_sexp_int_write(void)
-{
-	x_obj_t *p_args, *p_obj, *p_ret;
-	x_char_t *s, buffer[8];
-	x_int_t i;
-
-	helper_file_buffer_ptr[TEST_HELPER_FILE_STDOUT] = buffer;
-	helper_file_reset();
-
-	i = 123;
-	s = "123";
-	p_obj = x_mkint(NULL, i);
-	p_args = x_mkspair(NULL, X_OBJ_FLAG_NONE, p_obj, NULL);
-	p_ret = x_sexp_int_write(NULL, p_args);
-	_it_should("write the value of the Integer object",
-		! x_obj_isnil(NULL, p_ret)
-		&& p_obj == p_ret
-		&& 0 == strncmp(s, buffer, strlen(s))
-	);
-
-	/* Force write failure: limit stdout to 0 bytes so x_sys_write
-	 * returns 0 while x_base_write expects strlen("123") → NULL. */
-	helper_file_buffer_length[TEST_HELPER_FILE_STDOUT] = 0;
-	p_ret = x_sexp_int_write(NULL, p_args);
-	_it_should("return NULL on write error", NULL == p_ret);
-
-	helper_file_buffer_length[TEST_HELPER_FILE_STDOUT] = TEST_HELPER_FILE_UNDEFINED;
-
-	return NULL;
-}
-
 static char *run_tests() {
 	_run_test(test_sexp_int_analyse_digits);
 	_run_test(test_sexp_int_analyse_xdigits);
@@ -620,7 +589,6 @@ static char *run_tests() {
 	_run_test(test_sexp_int_analyse_sign);
 	_run_test(test_sexp_int_read);
 	_run_test(test_sexp_int_read_token);
-	_run_test(test_sexp_int_write);
 
 	return NULL;
 }

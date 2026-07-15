@@ -591,51 +591,6 @@ static x_obj_t *x_prim_make_obj(x_obj_t *p_base, x_obj_t *p_args)
 }
 
 /**
- * @brief Obtain an iterator for an object via its type's iter handler.
- *
- * x-lang form: @code (iter obj) @endcode
- *
- * Looks up the @c iter handler on the object's type struct and calls it
- * as @code (iter-fn obj) @endcode. Returns NULL if the type has no iter
- * handler or the object is untyped.
- *
- * @param p_base  Execution context.
- * @param p_args  Unevaluated: (self obj).
- * @return Iterator object, or NULL if iteration is unsupported.
- * @note The iter handler is a type-level closure registered via make-type.
- */
-static x_obj_t *x_prim_iter(x_obj_t *p_base, x_obj_t *p_args)
-{
-	x_obj_t *p_obj;
-	x_obj_t *p_type;
-	x_obj_t *p_iter_fn;
-	x_spair_t iter_call[1];
-
-	x_eargs(p_base, p_args, 2, NULL, &p_obj);
-	p_type = x_obj_type(p_obj);
-
-	if (x_obj_isnil(p_base, p_type) || ! x_obj_type_isspair(p_type)) {
-		return NULL;
-	}
-
-	p_iter_fn = x_type_field_iter(p_type);
-	if (x_obj_isnil(p_base, p_iter_fn)) {
-		return NULL;
-	}
-
-	/* Apply the iter handler to the already-evaluated obj: (iter-fn obj).
-	 * MUST be x_callable_apply, not x_callable_call -- call re-evaluates the
-	 * argument (the procedure-call path evaluates its args), which corrupts a
-	 * list of lists or objects (each element gets evaluated as a call-form).
-	 * apply binds the value as-is, the same path the write handler uses. */
-	iter_call[0][X_OBJ_META_TYPE].p = NULL;
-	iter_call[0][X_OBJ_META_FLAGS].i = X_OBJ_FLAG_NONE;
-	x_firstobj((x_obj_t *)iter_call) = p_iter_fn;
-	x_restobj((x_obj_t *)iter_call) = x_mkspair(p_base, X_OBJ_FLAG_NONE, p_obj, NULL);
-	return x_callable_apply(p_base, (x_obj_t *)iter_call);
-}
-
-/**
  * Read the next expression from a tokenizer buffer.
  *
  * Exposes x_token_read to x-lang so that custom reader hooks (defined
@@ -774,7 +729,9 @@ static x_obj_t *x_prim_buffer_read_text(x_obj_t *p_base, x_obj_t *p_args)
  *
  * Binds: make-type, base-make-type, make-instance, make-obj,
  * type?, type-of, buffer-token, make-token-base,
- * make-base, base-eval, base-bind, token-read, token-read-string, iter.
+ * make-base, base-eval, base-bind, token-read, token-read-string.
+ * ((iter new) is pure x-lang now: boot/reflect.x dispatches the type
+ * tree's iter handler over the layout contracts.)
  * (obj-ref / obj-set! / type-name are pure x-lang now: boot/data.x +
  * boot/reflect.x implement them reflectively over the layout contracts.)
  *
@@ -799,7 +756,6 @@ x_obj_t *x_prim_type_register(x_obj_t *p_base, x_obj_t *p_args)
 		{ "base-bind",         x_prim_base_bind,         "base",   "bind"          },
 		{ "token-read",        x_prim_token_read,        "tok",  "read"          },
 		{ "token-read-string", x_prim_token_read_string, "tok",  "read-str"      },
-		{ "iter",              x_prim_iter,              "iter",   "new"           },
 		{ "make-iter",         x_prim_make_iter,         "iter",   "make"          },
 		{ "iter-next",         x_prim_iter_next,         "iter",   "next"          },
 		{ "iter-empty?",       x_prim_iter_empty,        "iter",   "empty?"        },

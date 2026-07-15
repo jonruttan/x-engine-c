@@ -28,37 +28,6 @@
 #include "x-type/symbol.h"
 #include "x-obj/prim.h"
 
-/** Output an object as an s-expression to stdout.
- *  x-lang: (write obj)
- *  @param p_base  Execution context.
- *  @param p_args  Unevaluated argument list (obj).
- *  @return NULL.
- *  @note Fexpr: args unevaluated; x_eargs evaluates obj.
- *  @see x_prim_display, x_prim_write_to_string
- */
-static x_obj_t *x_prim_write(x_obj_t *p_base, x_obj_t *p_args)
-{
-	x_obj_t *p_val;
-	x_obj_t **p_cell = x_heap_root_cell(p_base);
-	x_spair_t write_args[1] = {
-		x_obj_set(NULL, X_OBJ_FLAG_NONE, { NULL }, { NULL })
-	};
-	x_spair_t root = x_obj_set((x_obj_t *)x_type_pair_obj, X_OBJ_FLAG_NONE,
-		{ NULL }, { NULL });
-
-	x_eargs(p_base, p_args, 2, NULL, &p_val);
-	/* Root the evaluated value across the write: custom types' write
-	 * hooks are x-lang code, which can collect, and p_val may be this
-	 * frame's only reference to a fresh object. */
-	x_firstobj((x_obj_t *)root) = p_val;
-	x_heap_root_push(p_cell, root);
-	x_firstobj((x_obj_t *)write_args) = p_val;
-	x_token_write(p_base, (x_obj_t *)write_args);
-	x_heap_root_pop(p_cell);
-
-	return NULL;
-}
-
 /** Write a string's bytes to the current output: the OUT port instruction.
  *  x-lang: (write-str s)
  *  @param p_base  Execution context.
@@ -84,36 +53,6 @@ static x_obj_t *x_prim_write_str(x_obj_t *p_base, x_obj_t *p_args)
 	x_atomstr(data) = x_strval(p_s);
 	x_atomint(sz) = (x_int_t)x_lib_strlen(x_strval(p_s));
 	x_eval_write_str(p_base, (x_obj_t *)args);
-
-	return NULL;
-}
-
-/** Output an object in human-readable form via the type system.
- *  x-lang: (display obj)
- *  @param p_base  Execution context.
- *  @param p_args  Unevaluated argument list (obj).
- *  @return NULL.
- *  @note Fexpr: args unevaluated; x_eargs evaluates obj.
- *  @note Unlike write, display omits quoting (e.g. strings without quotes).
- *  @see x_prim_write, x_prim_display_to_string
- */
-static x_obj_t *x_prim_display(x_obj_t *p_base, x_obj_t *p_args)
-{
-	x_obj_t *p_val;
-	x_obj_t **p_cell = x_heap_root_cell(p_base);
-	x_spair_t display_args[1] = {
-		x_obj_set(NULL, X_OBJ_FLAG_NONE, { NULL }, { NULL })
-	};
-	x_spair_t root = x_obj_set((x_obj_t *)x_type_pair_obj, X_OBJ_FLAG_NONE,
-		{ NULL }, { NULL });
-
-	x_eargs(p_base, p_args, 2, NULL, &p_val);
-	/* Root across the display hooks (see x_prim_write). */
-	x_firstobj((x_obj_t *)root) = p_val;
-	x_heap_root_push(p_cell, root);
-	x_firstobj((x_obj_t *)display_args) = p_val;
-	x_token_display(p_base, (x_obj_t *)display_args);
-	x_heap_root_pop(p_cell);
 
 	return NULL;
 }
@@ -163,90 +102,6 @@ static x_obj_t *x_prim_read_char(x_obj_t *p_base, x_obj_t *p_args)
 
 	/* Byte-level read: a CHARACTER holding the raw byte (0-255). */
 	return x_mkchar(p_base, (unsigned char)x_bufferlastchar(p_buffer));
-}
-
-/** Capture output of a dispatch function (write or display) into a string.
- *  @param p_base    Execution context.
- *  @param p_args    Unevaluated argument list (obj).
- *  @param dispatch  Output function to redirect (x_token_write or x_token_display).
- *  @return New string containing the captured output.
- *  @note Pushes a temporary write buffer onto write_buf_stack, invokes
- *        dispatch, then pops and converts the buffer to a string.
- *  @note Returns "()" for nil values.
- */
-static x_obj_t *x_prim_to_string(x_obj_t *p_base, x_obj_t *p_args,
-	x_obj_t *(*dispatch)(x_obj_t *, x_obj_t *))
-{
-	x_obj_t *p_val, *p_result;
-	x_obj_t **p_cell = x_heap_root_cell(p_base);
-	x_char_t *buf;
-	x_satom_t buf_pos = x_obj_set(NULL, X_OBJ_FLAG_NONE, { .i = 0 });
-	x_spair_t buf_obj[1] = {
-		x_obj_set(NULL, X_OBJ_FLAG_NONE,
-			{ .v = NULL }, { (x_obj_t *)&buf_pos })
-	};
-	x_spair_t dispatch_args[1] = {
-		x_obj_set(NULL, X_OBJ_FLAG_NONE, { NULL }, { NULL })
-	};
-	x_spair_t root = x_obj_set((x_obj_t *)x_type_pair_obj, X_OBJ_FLAG_NONE,
-		{ NULL }, { NULL });
-
-	p_val = x_eval_arg(p_base, x_firstobj(p_args));
-
-	if (x_obj_isnil(p_base, p_val)) {
-		return x_mkstrown(p_base, x_lib_strndup((x_char_t *)"()", 2));
-	}
-
-	buf = (x_char_t *)x_sys_malloc(65536);
-	if (buf == NULL) return NULL;
-	x_first((x_obj_t *)buf_obj).v = buf;
-
-	/* Push write-buffer onto write_buf_stack */
-	x_base_field_write_buf(p_base) = x_mkspair(p_base, X_OBJ_FLAG_NONE,
-		(x_obj_t *)buf_obj, x_base_field_write_buf(p_base));
-
-	/* Root the value across dispatch (see x_prim_write). */
-	x_firstobj((x_obj_t *)root) = p_val;
-	x_heap_root_push(p_cell, root);
-	x_firstobj((x_obj_t *)dispatch_args) = p_val;
-	dispatch(p_base, (x_obj_t *)dispatch_args);
-	x_heap_root_pop(p_cell);
-
-	/* Pop write_buf_stack */
-	x_base_field_write_buf(p_base)
-		= x_restobj(x_base_field_write_buf(p_base));
-	buf[x_atomint(buf_pos)] = '\0';
-
-	p_result = x_mkstrown(p_base,
-		x_lib_strndup(buf, x_atomint(buf_pos)));
-	x_sys_free(buf);
-	return p_result;
-}
-
-/** Convert an object to its write (s-expression) string representation.
- *  x-lang: (write-to-str obj)
- *  @param p_base  Execution context.
- *  @param p_args  Unevaluated argument list (obj).
- *  @return String containing the write representation.
- *  @note Fexpr: args unevaluated; delegates to x_prim_to_string.
- *  @see x_prim_display_to_string, x_prim_to_string
- */
-x_obj_t *x_prim_write_to_string(x_obj_t *p_base, x_obj_t *p_args)
-{
-	return x_prim_to_string(p_base, x_1(p_args), x_token_write);
-}
-
-/** Convert an object to its display (human-readable) string representation.
- *  x-lang: (display-to-str obj)
- *  @param p_base  Execution context.
- *  @param p_args  Unevaluated argument list (obj).
- *  @return String containing the display representation.
- *  @note Fexpr: args unevaluated; delegates to x_prim_to_string.
- *  @see x_prim_write_to_string, x_prim_to_string
- */
-static x_obj_t *x_prim_display_to_string(x_obj_t *p_base, x_obj_t *p_args)
-{
-	return x_prim_to_string(p_base, x_1(p_args), x_token_display);
 }
 
 #ifdef X_SYS_CLOCK
@@ -627,11 +482,11 @@ static x_obj_t *x_prim_repl_read(x_obj_t *p_base, x_obj_t *p_args)
 
 /** Register I/O primitives into the environment.
  *
- *  Binds: write, display, read, read-char, write-to-str, display-to-str,
- *  heap-mark, heap-sweep, heap-count, gc-pin!.
- *  Conditionally binds clock (when X_SYS_CLOCK defined).
- *  (error-line is pure x-lang now: boot/reflect.x walks the error handler
- *  via tools/base-paths.x.)
+ *  Binds: write-str, read, read-char, heap-mark, heap-sweep, heap-count,
+ *  gc-pin!, repl-read.  Conditionally binds clock (when X_SYS_CLOCK defined).
+ *  (The printers -- write, display, write-to-str, display-to-str -- and
+ *  error-line are pure x-lang now: boot/printer.x renders over the
+ *  (io write-str) OUT door; boot/reflect.x walks the error handler.)
  *
  *  @param p_base  Execution context.
  *  @param p_args  Unused.
@@ -640,13 +495,9 @@ static x_obj_t *x_prim_repl_read(x_obj_t *p_base, x_obj_t *p_args)
 x_obj_t *x_prim_io_register(x_obj_t *p_base, x_obj_t *p_args)
 {
 	static const x_prim_entry_t entries[] = {
-		{ "write",           x_prim_write,             "io",   "write"          },
-		{ "display",         x_prim_display,           "io",   "display"        },
 		{ "write-str",       x_prim_write_str,         "io",   "write-str"      },
 		{ "read",            x_prim_read_expr,         "io",   "read"           },
 		{ "read-char",       x_prim_read_char,         "io",   "read-char"      },
-		{ "write-to-str",    x_prim_write_to_string,   "io",   "write-to-str"   },
-		{ "display-to-str",  x_prim_display_to_string, "io",   "display-to-str" },
 		{ "heap-collect",    x_prim_heap_collect,      "heap", "collect"        },
 		{ "heap-mark",       x_prim_heap_mark,         "heap", "mark"           },
 		{ "heap-sweep",      x_prim_heap_sweep,        "heap", "sweep"          },

@@ -270,93 +270,10 @@ static char *test_sexp_list_read(void)
 	return NULL;
 }
 
-static char *test_sexp_list_write(void)
-{
-	x_obj_t *p_base, *p_list, *p_args;
-	x_char_t s[64];
-
-	p_base = x_eval_make(NULL, NULL);
-	x_prim_register(p_base, NULL);
-
-	/* Write empty list: () */
-	p_list = x_mklist(p_base, NULL, NULL);
-
-	helper_file_buffer_ptr[TEST_HELPER_FILE_STDOUT] = s;
-	helper_file_buffer_length[TEST_HELPER_FILE_STDOUT] = 64;
-	helper_file_reset();
-	s[0] = '\0';
-
-	p_args = x_mkspair(p_base, X_OBJ_FLAG_NONE, p_list, NULL);
-	x_sexp_list_write(p_base, p_args);
-
-	_it_should("write (()) for empty list (nil first written as ())",
-		s[0] == '(' && s[1] == '(' && s[2] == ')' && s[3] == ')');
-
-	/* Write single-element list: (42) */
-	p_list = x_mklist(p_base,
-		x_mkint(p_base, 42),
-		NULL);
-
-	helper_file_buffer_ptr[TEST_HELPER_FILE_STDOUT] = s;
-	helper_file_buffer_length[TEST_HELPER_FILE_STDOUT] = 64;
-	helper_file_reset();
-	s[0] = '\0';
-
-	p_args = x_mkspair(p_base, X_OBJ_FLAG_NONE, p_list, NULL);
-	x_sexp_list_write(p_base, p_args);
-	helper_file_str(TEST_HELPER_FILE_STDOUT);
-
-	_it_should("write (42) for single-element list",
-		0 == x_lib_strncmp(s, "(42)", 4));
-
-	/* Write multi-element list: (1 2 3) */
-	p_list = x_mklist(p_base,
-		x_mkint(p_base, 1),
-		x_mklist(p_base,
-			x_mkint(p_base, 2),
-			x_mklist(p_base,
-				x_mkint(p_base, 3),
-				NULL)));
-
-	helper_file_buffer_ptr[TEST_HELPER_FILE_STDOUT] = s;
-	helper_file_buffer_length[TEST_HELPER_FILE_STDOUT] = 64;
-	helper_file_reset();
-	s[0] = '\0';
-
-	p_args = x_mkspair(p_base, X_OBJ_FLAG_NONE, p_list, NULL);
-	x_sexp_list_write(p_base, p_args);
-	helper_file_str(TEST_HELPER_FILE_STDOUT);
-
-	_it_should("write (1 2 3) for multi-element list",
-		0 == x_lib_strncmp(s, "(1 2 3)", 7));
-
-	/* Write dotted pair: (1 . 2) */
-	p_list = x_mklist(p_base,
-		x_mkint(p_base, 1),
-		x_mkint(p_base, 2));
-
-	helper_file_buffer_ptr[TEST_HELPER_FILE_STDOUT] = s;
-	helper_file_buffer_length[TEST_HELPER_FILE_STDOUT] = 64;
-	helper_file_reset();
-	s[0] = '\0';
-
-	p_args = x_mkspair(p_base, X_OBJ_FLAG_NONE, p_list, NULL);
-	x_sexp_list_write(p_base, p_args);
-	helper_file_str(TEST_HELPER_FILE_STDOUT);
-
-	_it_should("write (1 . 2) for dotted pair",
-		0 == x_lib_strncmp(s, "(1 . 2)", 7));
-
-	test_cleanup(p_base);
-
-	return NULL;
-}
-
 static char *run_tests() {
 	_run_test(test_sexp_list_analyse);
 	_run_test(test_sexp_list_delimit);
 	_run_test(test_sexp_list_read);
-	_run_test(test_sexp_list_write);
 
 	return NULL;
 }

@@ -430,89 +430,6 @@ static char *test_sexp_char_read_named_token(void)
 	return NULL;
 }
 
-static char *test_sexp_char_write(void)
-{
-	x_obj_t *p_args, *p_obj, *p_ret;
-	x_char_t c, buffer[8];
-
-	helper_file_buffer_ptr[TEST_HELPER_FILE_STDOUT] = buffer;
-	helper_file_reset();
-
-	c = '@';
-	p_obj = x_mkchar(NULL, c);
-	p_args = x_mkspair(NULL, X_OBJ_FLAG_NONE, p_obj, NULL);
-	p_ret = x_sexp_char_write(NULL, p_args);
-	_it_should("write #\\char for the Character object",
-		! x_obj_isnil(NULL, p_ret)
-		&& p_obj == p_ret
-		&& buffer[0] == '#'
-		&& buffer[1] == '\\'
-		&& buffer[2] == c
-	);
-
-	x_sys_free(p_args);
-	x_sys_free(p_obj);
-
-	return NULL;
-}
-
-static char *test_sexp_char_write_named(void)
-{
-	x_obj_t *p_base, *p_args, *p_obj, *p_ret;
-	x_char_t out_buffer[32];
-
-	/* Write newline char — should output "newline" (the named form) */
-	helper_file_buffer_ptr[TEST_HELPER_FILE_STDOUT] = out_buffer;
-	helper_file_reset();
-
-	p_base = x_eval_make(NULL, NULL);
-	x_type_char_register(p_base, p_base);
-
-	p_obj = x_mkchar(p_base, '\n');
-	p_args = x_mkspair(p_base, X_OBJ_FLAG_NONE, p_obj, p_base);
-	p_ret = x_sexp_char_write(p_base, p_args);
-	_it_should("return the char object for named write",
-		p_obj == p_ret
-	);
-	_it_should("write '#\\newline' for \\n",
-		0 == x_lib_strncmp(out_buffer, "#\\newline", 9)
-	);
-
-	test_cleanup(p_base);
-
-
-	/* Write non-named char with base — should fall through to raw byte */
-	helper_file_buffer_ptr[TEST_HELPER_FILE_STDOUT] = out_buffer;
-	helper_file_reset();
-
-	p_base = x_eval_make(NULL, NULL);
-	x_type_char_register(p_base, p_base);
-
-	p_obj = x_mkchar(p_base, 'Z');
-	p_args = x_mkspair(p_base, X_OBJ_FLAG_NONE, p_obj, p_base);
-	p_ret = x_sexp_char_write(p_base, p_args);
-	_it_should("return the char object for non-named write",
-		p_obj == p_ret
-	);
-	_it_should("write '#\\Z' for non-named char",
-		out_buffer[0] == '#'
-		&& out_buffer[1] == '\\'
-		&& out_buffer[2] == 'Z'
-	);
-
-	/* Write failure: limit stdout to 0 bytes */
-	helper_file_buffer_length[TEST_HELPER_FILE_STDOUT] = 0;
-	p_ret = x_sexp_char_write(p_base, p_args);
-	_it_should("return NULL on write failure", NULL == p_ret);
-	helper_file_buffer_length[TEST_HELPER_FILE_STDOUT]
-		= TEST_HELPER_FILE_UNDEFINED;
-
-	test_cleanup(p_base);
-
-
-	return NULL;
-}
-
 static int test_error_called = 0;
 static void test_error_hook(x_obj_t *p_base, x_char_t *msg, x_obj_t *p_obj)
 {
@@ -558,8 +475,6 @@ static char *run_tests() {
 	_run_test(test_sexp_char_read_token);
 	_run_test(test_sexp_char_read_named);
 	_run_test(test_sexp_char_read_named_token);
-	_run_test(test_sexp_char_write);
-	_run_test(test_sexp_char_write_named);
 	_run_test(test_sexp_char_read_unknown);
 
 	return NULL;

@@ -18,6 +18,5 @@
 #include "x-obj.h"
 
 /** Write the external representation of an atom (e.g. @c #<type:0xADDR>). */
-x_obj_t *x_sexp_atom_write(x_obj_t *p_base, x_obj_t *args);
 
 #endif /* X_SEXP_ATOM_H */

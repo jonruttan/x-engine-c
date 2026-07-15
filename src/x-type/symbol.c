@@ -62,9 +62,7 @@ x_obj_t *x_type_symbol_struct(x_obj_t *p_base, x_obj_t *p_obj)
 		.p_make = x_type_symbol_make_prim,
 		.p_eval = x_type_symbol_eval_prim,
 		.p_analyse = x_sexp_symbol_analyse_prim,
-		.p_read = x_sexp_symbol_read_prim,
-		.p_write = x_sexp_symbol_write_prim,
-		.p_display = x_sexp_symbol_display_prim
+		.p_read = x_sexp_symbol_read_prim
 	};
 
 	return x_type_struct_make(p_base, type);

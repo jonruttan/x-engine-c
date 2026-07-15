@@ -272,8 +272,8 @@ static char *test_type_char_struct(void)
 		NULL == x_type_field_delimit(p_type)
 	);
 
-	_it_should("set the Write primitive",
-		x_sexp_char_write_prim == x_type_field_write(p_type)
+	_it_should("leaves the Write cell empty (the printer is x-lang)",
+		x_type_field_write(p_type) == NULL
 	);
 
 	test_cleanup(p_base);
