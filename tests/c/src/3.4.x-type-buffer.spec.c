@@ -424,8 +424,8 @@ static char *test_type_buffer_struct(void)
 		NULL == x_type_field_delimit(p_type)
 	);
 
-	_it_should("set the Write primitive",
-		x_type_buffer_write_prim == x_type_field_write(p_type)
+	_it_should("leaves the Write cell empty (the printer is x-lang)",
+		x_type_field_write(p_type) == NULL
 	);
 
 	test_cleanup(p_base);
@@ -720,35 +720,6 @@ static char *test_type_buffer_mark(void)
 	return NULL;
 }
 
-static char *test_type_buffer_write(void)
-{
-	x_obj_t *p_base, *p_buffer, *p_args, *p_ret;
-	char buf[64];
-	x_char_t buffer[8];
-
-	helper_alloc_reset();
-	memset(buf, 0, sizeof(buf));
-
-	p_base = x_eval_make(NULL, NULL);
-	p_buffer = x_mkbuffer(p_base, buffer);
-	p_args = x_mkspair(p_base, X_OBJ_FLAG_NONE, p_buffer, NULL);
-
-	helper_file_buffer_ptr[STDOUT_FILENO] = buf;
-	file_buffer_ptr[STDOUT_FILENO][TEST_HELPER_FILE_WRITE] = buf;
-
-	p_ret = x_type_buffer_write(p_base, p_args);
-
-	file_buffer_ptr[STDOUT_FILENO][TEST_HELPER_FILE_WRITE] = NULL;
-	helper_file_buffer_ptr[STDOUT_FILENO] = NULL;
-
-	_it_should("return the buffer object", p_buffer == p_ret);
-	_it_should("write the buffer representation",
-		0 == x_lib_strncmp(buf, X_TYPE_BUFFER_WRITE_STR,
-			X_TYPE_BUFFER_WRITE_LEN));
-
-	return NULL;
-}
-
 static char *test_type_buffer_read_readonly(void)
 {
 	x_obj_t *p_args, *p_buffer, *p_ret;
@@ -792,7 +763,6 @@ static char *run_tests() {
 	_run_test(test_type_buffer_read);
 	_run_test(test_type_buffer_read_text);
 	_run_test(test_type_buffer_mark);
-	_run_test(test_type_buffer_write);
 	_run_test(test_type_buffer_read_readonly);
 
 	return NULL;

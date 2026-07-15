@@ -330,8 +330,8 @@ static char *test_type_ptr_struct(void)
 		NULL == x_type_field_delimit(p_type)
 	);
 
-	_it_should("set the Write primitive",
-		x_type_ptr_write_prim == x_type_field_write(p_type)
+	_it_should("leaves the Write cell empty (the printer is x-lang)",
+		x_type_field_write(p_type) == NULL
 	);
 
 	test_cleanup(p_base);
@@ -459,30 +459,6 @@ static char *test_type_ptr_make(void)
 	return NULL;
 }
 
-static char *test_type_ptr_write(void)
-{
-	x_obj_t *p_base, *p_args, *p_obj, *p_result;
-	x_char_t buffer[32];
-
-	x_lib_memset(buffer, 0, 32);
-	helper_file_buffer_ptr[TEST_HELPER_FILE_STDOUT] = buffer;
-	helper_file_reset();
-
-	p_base = x_eval_make(NULL, NULL);
-	x_type_ptr_register(p_base, p_base);
-	p_obj = x_mkptr(p_base, (void *)0x42);
-	p_args = x_mkspair(p_base, X_OBJ_FLAG_NONE, p_obj, NULL);
-	p_result = x_type_ptr_write(p_base, p_args);
-
-	_it_should("ptr_write returns the ptr object",
-		p_result == p_obj);
-	_it_should("ptr_write writes pointer representation",
-		x_lib_strlen(buffer) > 0);
-
-	test_cleanup(p_base);
-	return NULL;
-}
-
 static char *test_type_ptr_make_with_flags(void)
 {
 	x_obj_t *p_base, *p_obj;
@@ -511,7 +487,6 @@ static char *run_tests() {
 	_run_test(test_type_ptr_register);
 	_run_test(test_base_alist_assoc);
 	_run_test(test_type_ptr_make);
-	_run_test(test_type_ptr_write);
 	_run_test(test_type_ptr_make_with_flags);
 
 	return NULL;

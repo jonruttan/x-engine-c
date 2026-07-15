@@ -39,7 +39,6 @@ static x_satom_t x_type_operative_units_obj = x_obj_set(NULL, X_OBJ_FLAG_NONE, {
 x_satom_t x_type_operative_name = x_obj_set(x_type_atom_obj, X_OBJ_FLAG_NONE, { .s = (x_char_t *)X_TYPE_OPERATIVE_NAME }),
 	x_type_operative_make_prim = x_obj_set(x_type_atom_obj, X_OBJ_FLAG_NONE, { (x_obj_t *)&x_type_operative_make }),
 	x_type_operative_call_prim = x_obj_set(x_type_atom_obj, X_OBJ_FLAG_NONE, { (x_obj_t *)&x_type_operative_call }),
-	x_type_operative_write_prim = x_obj_set(x_type_atom_obj, X_OBJ_FLAG_NONE, { (x_obj_t *)&x_type_operative_write }),
 	x_type_operative_struct_prim = x_obj_set(x_type_atom_obj, X_OBJ_FLAG_NONE, { (x_obj_t *)&x_type_operative_struct });
 
 /**
@@ -82,7 +81,6 @@ x_obj_t *x_type_operative_struct(x_obj_t *p_base, x_obj_t *p_args)
 		.p_units = (x_obj_t *)&x_type_operative_units_obj,
 		.p_make = x_type_operative_make_prim,
 		.p_call = x_type_operative_call_prim,
-		.p_write = x_type_operative_write_prim,
 		.p_mark = x_type_operative_mark_prim
 	};
 
@@ -214,22 +212,4 @@ x_obj_t *x_type_operative_call(x_obj_t *p_base, x_obj_t *p_args)
 	 * the tail's own evaluation left behind. */
 	return x_eval_op_body(p_base, p_body, p_caller_env, p_env,
 		p_saved_boundary, p_saved_shadow);
-}
-
-/**
- * Type-dispatch write callback: print "#<op>".
- *
- * @param p_base  x_obj_t* -- Execution context
- * @param p_args  x_obj_t* -- (operative)
- * @return The operative object (pass-through)
- */
-x_obj_t *x_type_operative_write(x_obj_t *p_base, x_obj_t *p_args)
-{
-	x_satom_t str = x_obj_set(x_type_atom_obj, X_OBJ_FLAG_NONE,
-		{ .s = (x_char_t *)X_TYPE_OPERATIVE_WRITE_STR });
-	x_spair_t wrap = x_obj_set(NULL, X_OBJ_FLAG_NONE, { str }, { NULL });
-
-	x_eval_write_str(p_base, (x_obj_t *)&wrap);
-
-	return x_firstobj(p_args);
 }

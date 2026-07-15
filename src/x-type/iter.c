@@ -18,7 +18,6 @@
 
 x_satom_t x_type_iter_name = x_obj_set(x_type_atom_obj, X_OBJ_FLAG_NONE, { .s = (x_char_t *)X_TYPE_ITER_NAME }),
 	x_type_iter_make_prim = x_obj_set(x_type_atom_obj, X_OBJ_FLAG_NONE, { (x_obj_t *)&x_type_iter_make }),
-	x_type_iter_write_prim = x_obj_set(x_type_atom_obj, X_OBJ_FLAG_NONE, { (x_obj_t *)&x_type_iter_write }),
 	x_type_iter_struct_prim = x_obj_set(x_type_pair_obj, X_OBJ_FLAG_NONE, { (x_obj_t *)&x_type_iter_struct });
 
 /**
@@ -56,8 +55,7 @@ x_obj_t *x_type_iter_struct(x_obj_t *p_base, x_obj_t *p_args)
 {
 	struct x_type_t type = {
 		.p_name = x_type_iter_name,
-		.p_make = x_type_iter_make_prim,
-		.p_write = x_type_iter_write_prim
+		.p_make = x_type_iter_make_prim
 	};
 
 	return x_type_struct_make(p_base, type);
@@ -96,24 +94,6 @@ x_obj_t *x_type_iter_make(x_obj_t *p_base, x_obj_t *p_args)
 		? 0 : x_firstint(x_01(p_args));
 
 	return x_obj_make(p_base, p_type, flags, X_OBJ_LENGTH_PAIR, x_00(p_args), x_10(p_args));
-}
-
-/**
- * Type-dispatch write callback: print "#<iter>".
- *
- * @param p_base  x_obj_t* -- Execution context
- * @param p_args  x_obj_t* -- (iterator)
- * @return The iterator object (pass-through)
- */
-x_obj_t *x_type_iter_write(x_obj_t *p_base, x_obj_t *p_args)
-{
-	x_satom_t str = x_obj_set(x_type_atom_obj, X_OBJ_FLAG_NONE,
-		{ .s = (x_char_t *)X_TYPE_ITER_WRITE_STR });
-	x_spair_t wrap = x_obj_set(NULL, X_OBJ_FLAG_NONE, { str }, { NULL });
-
-	x_eval_write_str(p_base, (x_obj_t *)&wrap);
-
-	return x_firstobj(p_args);
 }
 
 /**

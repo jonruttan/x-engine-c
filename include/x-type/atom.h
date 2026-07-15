@@ -23,9 +23,6 @@
 #define X_TYPE_ATOM_SYMBOL		"ATOM"		/**< Type-system symbol name */
 #endif /* X_TYPE_ATOM_SYMBOL */
 
-#define X_TYPE_ATOM_WRITE_STR	"#<atom>"	/**< Display representation */
-#define X_TYPE_ATOM_WRITE_LEN	7			/**< Length of display string */
-
 /*
  * # Macros
  */
@@ -59,7 +56,5 @@ x_obj_t *x_type_atom_struct(x_obj_t *p_base, x_obj_t *p_args);
 x_obj_t *x_type_atom_make(x_obj_t *p_base, x_obj_t *p_args);
 /** Type-system call callback for atom. */
 x_obj_t *x_type_atom_call(x_obj_t *p_base, x_obj_t *p_args);
-/** Type-system write callback -- prints "#<atom>". */
-x_obj_t *x_type_atom_write(x_obj_t *p_base, x_obj_t *p_args);
 
 #endif /* X_TYPE_ATOM_H */

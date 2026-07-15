@@ -19,8 +19,6 @@
 #include "x-type.h"
 
 #define X_TYPE_PTR_NAME		"POINTER"        /**< Canonical type name. */
-#define X_TYPE_PTR_WRITE_STR	"#<ptr>"     /**< External representation. */
-#define X_TYPE_PTR_WRITE_LEN	6            /**< Length of write string. */
 
 /** @name Predicates
  * @{ */
@@ -55,7 +53,5 @@ x_obj_t *x_type_ptr_struct(x_obj_t *p_base, x_obj_t *p_args);
 x_obj_t *x_type_ptr_register(x_obj_t *p_base, x_obj_t *p_args);
 /** Type-system make handler for POINTER objects. */
 x_obj_t *x_type_ptr_make(x_obj_t *p_base, x_obj_t *p_args);
-/** Type-system write handler -- outputs @c #\<ptr\>. */
-x_obj_t *x_type_ptr_write(x_obj_t *p_base, x_obj_t *p_args);
 
 #endif /* X_TYPE_PTR_H */

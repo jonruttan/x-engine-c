@@ -19,7 +19,6 @@
 x_satom_t x_type_buffer_name = x_obj_set(x_type_atom_obj, X_OBJ_FLAG_NONE, { .s = (x_char_t *)X_TYPE_BUFFER_NAME }),
 	x_type_buffer_mark_prim = x_obj_set(x_type_atom_obj, X_OBJ_FLAG_NONE, { (x_obj_t *)&x_type_buffer_mark }),
 	x_type_buffer_make_prim = x_obj_set(x_type_atom_obj, X_OBJ_FLAG_NONE, { (x_obj_t *)&x_type_buffer_make }),
-	x_type_buffer_write_prim = x_obj_set(x_type_atom_obj, X_OBJ_FLAG_NONE, { (x_obj_t *)&x_type_buffer_write }),
 	x_type_buffer_struct_prim = x_obj_set(x_type_atom_obj, X_OBJ_FLAG_NONE, { (x_obj_t *)&x_type_buffer_struct });
 
 /**
@@ -72,7 +71,7 @@ x_obj_t *x_type_buffer_mark(x_obj_t *p_base, x_obj_t *p_args)
 /**
  * Build the BUFFER type struct descriptor.
  *
- * Populates name, mark, make, and write hooks.
+ * Populates name, mark, and make hooks.
  *
  * @param p_base  Execution context.
  * @param p_args  Unused.
@@ -83,8 +82,7 @@ x_obj_t *x_type_buffer_struct(x_obj_t *p_base, x_obj_t *p_args)
 	struct x_type_t type = {
 		.p_name = x_type_buffer_name,
 		.p_mark = x_type_buffer_mark_prim,
-		.p_make = x_type_buffer_make_prim,
-		.p_write = x_type_buffer_write_prim
+		.p_make = x_type_buffer_make_prim
 	};
 
 	return x_type_struct_make(p_base, type);
@@ -131,26 +129,6 @@ x_obj_t *x_type_buffer_make(x_obj_t *p_base, x_obj_t *p_args)
 			x_obj_make(p_base, p_type,
 				flags & ~X_OBJ_FLAG_OWN, X_OBJ_LENGTH_PAIR,
 				x_bufferval(p_buffer), x_bufferval(p_buffer)));
-}
-
-/**
- * Write handler for BUFFER objects.
- *
- * Outputs the fixed string @c #\<buffer\> to the base output channel.
- *
- * @param p_base  Execution context.
- * @param p_args  Argument list whose first element is the buffer.
- * @return The buffer object (pass-through).
- */
-x_obj_t *x_type_buffer_write(x_obj_t *p_base, x_obj_t *p_args)
-{
-	x_satom_t str = x_obj_set(x_type_atom_obj, X_OBJ_FLAG_NONE,
-		{ .s = (x_char_t *)X_TYPE_BUFFER_WRITE_STR });
-	x_spair_t wrap = x_obj_set(NULL, X_OBJ_FLAG_NONE, { str }, { NULL });
-
-	x_eval_write_str(p_base, (x_obj_t *)&wrap);
-
-	return x_firstobj(p_args);
 }
 
 /**

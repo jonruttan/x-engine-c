@@ -20,7 +20,6 @@
 x_satom_t x_type_prim_name = x_obj_set(x_type_atom_obj, X_OBJ_FLAG_NONE, { .s = (x_char_t *)X_TYPE_PRIM_NAME }),
 	x_type_prim_make_prim = x_obj_set(x_type_atom_obj, X_OBJ_FLAG_NONE, { (x_obj_t *)&x_type_prim_make }),
 	x_callable_call_prim = x_obj_set(x_type_atom_obj, X_OBJ_FLAG_NONE, { (x_obj_t *)&x_callable_call }),
-	x_callable_write_prim = x_obj_set(x_type_atom_obj, X_OBJ_FLAG_NONE, { (x_obj_t *)&x_callable_write }),
 	x_type_prim_struct_prim = x_obj_set(x_type_atom_obj, X_OBJ_FLAG_NONE, { (x_obj_t *)&x_type_prim_struct });
 
 /**
@@ -46,7 +45,7 @@ x_obj_t *x_make_prim(x_obj_t *p_base, x_obj_flag_t flags, x_fn_t fn)
 /**
  * Build the PRIMITIVE type struct descriptor.
  *
- * Populates name, make, call, and write hooks.
+ * Populates name, make, and call hooks.
  *
  * @param p_base  Execution context.
  * @param p_args  Unused.
@@ -57,8 +56,7 @@ x_obj_t *x_type_prim_struct(x_obj_t *p_base, x_obj_t *p_args)
 	struct x_type_t type = {
 		.p_name = x_type_prim_name,
 		.p_make = x_type_prim_make_prim,
-		.p_call = x_callable_call_prim,
-		.p_write = x_callable_write_prim
+		.p_call = x_callable_call_prim
 	};
 
 	return x_type_struct_make(p_base, type);
@@ -162,24 +160,4 @@ x_obj_t *x_callable_apply(x_obj_t *p_base, x_obj_t *p_args)
 
 	/* C prim: call through fn-ptr with (fn . args) */
 	return (*x_primval(p_fn))(p_base, p_args);
-}
-
-/**
- * Write handler for callable types.
- *
- * Outputs the fixed string @c #\<prim\> to the base output channel.
- *
- * @param p_base  Execution context.
- * @param p_args  Argument list whose first element is the callable.
- * @return The callable object (pass-through).
- */
-x_obj_t *x_callable_write(x_obj_t *p_base, x_obj_t *p_args)
-{
-	x_satom_t str = x_obj_set(x_type_atom_obj, X_OBJ_FLAG_NONE,
-		{ .s = (x_char_t *)X_TYPE_PRIM_WRITE_STR });
-	x_spair_t wrap = x_obj_set(NULL, X_OBJ_FLAG_NONE, { str }, { NULL });
-
-	x_eval_write_str(p_base, (x_obj_t *)&wrap);
-
-	return x_firstobj(p_args);
 }

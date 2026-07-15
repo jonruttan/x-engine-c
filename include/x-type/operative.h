@@ -43,8 +43,6 @@
 #include "x-type/prim.h"
 
 #define X_TYPE_OPERATIVE_NAME		"OPERATIVE"   /**< Type name string. */
-#define X_TYPE_OPERATIVE_WRITE_STR	"#<op>"       /**< Display representation. */
-#define X_TYPE_OPERATIVE_WRITE_LEN	5             /**< Length of display string. */
 
 /** @name Type predicates */
 /** @{ */
@@ -74,7 +72,6 @@
 extern x_satom_t x_type_operative_name,
 	x_type_operative_make_prim,
 	x_type_operative_call_prim,
-	x_type_operative_write_prim,
 	x_type_operative_struct_prim;
 /** @} */
 
@@ -90,7 +87,5 @@ x_obj_t *x_type_operative_struct(x_obj_t *p_base, x_obj_t *p_args);
 x_obj_t *x_type_operative_make(x_obj_t *p_base, x_obj_t *p_args);
 /** Type-dispatch call callback -- evaluate an operative application. */
 x_obj_t *x_type_operative_call(x_obj_t *p_base, x_obj_t *p_args);
-/** Type-dispatch write callback -- print "#<op>". */
-x_obj_t *x_type_operative_write(x_obj_t *p_base, x_obj_t *p_args);
 
 #endif /* X_TYPE_OPERATIVE_H */

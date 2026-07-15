@@ -45,8 +45,6 @@
 #include "x-type/prim.h"
 
 #define X_TYPE_PROCEDURE_NAME		"PROCEDURE"     /**< Type name string. */
-#define X_TYPE_PROCEDURE_WRITE_STR	"#<fn>"         /**< Display representation. */
-#define X_TYPE_PROCEDURE_WRITE_LEN	5               /**< Length of display string. */
 
 /** @name Type predicates */
 /** @{ */
@@ -80,7 +78,6 @@
 extern x_satom_t x_type_procedure_name,
 	x_type_procedure_make_prim,
 	x_type_procedure_call_prim,
-	x_type_procedure_write_prim,
 	x_type_procedure_struct_prim;
 /** @} */
 
@@ -98,7 +95,5 @@ x_obj_t *x_type_procedure_make(x_obj_t *p_base, x_obj_t *p_args);
 x_obj_t *x_type_procedure_call(x_obj_t *p_base, x_obj_t *p_args);
 /** Non-TCO apply path for (apply f args). */
 x_obj_t *x_type_procedure_apply(x_obj_t *p_base, x_obj_t *p_args);
-/** Type-dispatch write callback -- print "#<fn>". */
-x_obj_t *x_type_procedure_write(x_obj_t *p_base, x_obj_t *p_args);
 
 #endif /* X_TYPE_PROCEDURE_H */

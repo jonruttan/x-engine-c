@@ -113,8 +113,8 @@ static char *test_procedure_struct(void)
 		x_type_field_make(p_type) != NULL);
 	_it_should("have call fn",
 		x_type_field_call(p_type) != NULL);
-	_it_should("have write fn",
-		x_type_field_write(p_type) != NULL);
+	_it_should("leaves the Write cell empty (the printer is x-lang)",
+		x_type_field_write(p_type) == NULL);
 
 	test_cleanup(p_base);
 
@@ -233,40 +233,12 @@ static char *test_procedure_call_wrapped(void)
 	return NULL;
 }
 
-static char *test_procedure_write(void)
-{
-	x_obj_t *p_base, *p_proc, *p_args, *p_ret;
-	x_char_t s[64];
-
-	p_base = x_eval_make(NULL, NULL);
-
-	p_proc = x_make_procedure(p_base, X_OBJ_FLAG_NONE,
-		NULL, NULL, NULL, NULL);
-
-	helper_file_buffer_ptr[TEST_HELPER_FILE_STDOUT] = s;
-	helper_file_buffer_length[TEST_HELPER_FILE_STDOUT] = 64;
-	helper_file_reset();
-
-	p_args = x_mkspair(p_base, X_OBJ_FLAG_NONE, p_proc, NULL);
-	p_ret = x_type_procedure_write(p_base, p_args);
-
-	_it_should("return the procedure",
-		p_ret == p_proc);
-	_it_should("write output",
-		s[0] != '\0');
-
-	test_cleanup(p_base);
-
-	return NULL;
-}
-
 static char *run_tests() {
 	_run_test(test_procedure_struct);
 	_run_test(test_procedure_register);
 	_run_test(test_procedure_make);
 	_run_test(test_procedure_call);
 	_run_test(test_procedure_call_wrapped);
-	_run_test(test_procedure_write);
 
 	return NULL;
 }

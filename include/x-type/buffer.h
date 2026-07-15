@@ -31,8 +31,6 @@
 #define X_TYPE_BUFFER_NAME		"BUFFER"     /**< Canonical type name (overridable). */
 #endif /* X_TYPE_BUFFER_NAME */
 
-#define X_TYPE_BUFFER_WRITE_STR		"#<buffer>"  /**< External representation. */
-#define X_TYPE_BUFFER_WRITE_LEN		9            /**< Length of write string. */
 
 /** @name Predicates
  * @{ */
@@ -93,7 +91,5 @@ x_obj_t *x_type_buffer_append(x_obj_t *p_base, x_obj_t *p_args);
 x_obj_t *x_type_buffer_read(x_obj_t *p_base, x_obj_t *p_args);
 /** Read one text character, treating NUL as EOF. */
 x_obj_t *x_type_buffer_read_text(x_obj_t *p_base, x_obj_t *p_args);
-/** Write handler -- outputs @c #\<buffer\>. */
-x_obj_t *x_type_buffer_write(x_obj_t *p_base, x_obj_t *p_args);
 
 #endif /* X_TYPE_BUFFER_H */

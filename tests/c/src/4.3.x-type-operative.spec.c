@@ -113,8 +113,8 @@ static char *test_operative_struct(void)
 		x_type_field_make(p_type) != NULL);
 	_it_should("have a call fn",
 		x_type_field_call(p_type) != NULL);
-	_it_should("have a write fn",
-		x_type_field_write(p_type) != NULL);
+	_it_should("leaves the Write cell empty (the printer is x-lang)",
+		x_type_field_write(p_type) == NULL);
 
 	test_cleanup(p_base);
 
@@ -246,40 +246,12 @@ static char *test_operative_call_envparam(void)
 	return NULL;
 }
 
-static char *test_operative_write(void)
-{
-	x_obj_t *p_base, *p_op, *p_args, *p_ret;
-	x_char_t s[64];
-
-	p_base = x_eval_make(NULL, NULL);
-
-	p_op = x_make_operative(p_base, X_OBJ_FLAG_NONE,
-		NULL, NULL, NULL, NULL);
-
-	helper_file_buffer_ptr[TEST_HELPER_FILE_STDOUT] = s;
-	helper_file_buffer_length[TEST_HELPER_FILE_STDOUT] = 64;
-	helper_file_reset();
-
-	p_args = x_mkspair(p_base, X_OBJ_FLAG_NONE, p_op, NULL);
-	p_ret = x_type_operative_write(p_base, p_args);
-
-	_it_should("return the operative",
-		p_ret == p_op);
-	_it_should("write output",
-		s[0] != '\0');
-
-	test_cleanup(p_base);
-
-	return NULL;
-}
-
 static char *run_tests() {
 	_run_test(test_operative_struct);
 	_run_test(test_operative_register);
 	_run_test(test_operative_make);
 	_run_test(test_operative_call);
 	_run_test(test_operative_call_envparam);
-	_run_test(test_operative_write);
 
 	return NULL;
 }

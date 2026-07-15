@@ -20,8 +20,6 @@
 #define X_TYPE_ITER_NAME			"ITER"      /**< Type name string (overridable). */
 #endif /* X_TYPE_ITER_NAME */
 
-#define X_TYPE_ITER_WRITE_STR		"#<iter>"   /**< Display representation. */
-#define X_TYPE_ITER_WRITE_LEN		7           /**< Length of display string. */
 
 /** @name Type predicates */
 /** @{ */
@@ -55,7 +53,5 @@ x_obj_t *x_type_iter_make(x_obj_t *p_base, x_obj_t *p_args);
 x_obj_t *x_type_iter_isempty(x_obj_t *p_base, x_obj_t *p_args);
 /** Advance an iterator by one step, returning the current element. */
 x_obj_t *x_type_iter_next(x_obj_t *p_base, x_obj_t *p_args);
-/** Type-dispatch write callback -- print "#<iter>". */
-x_obj_t *x_type_iter_write(x_obj_t *p_base, x_obj_t *p_args);
 
 #endif /* X_TYPE_ITER_H */

@@ -25,8 +25,6 @@
 #include "x-type.h"
 
 #define X_TYPE_PRIM_NAME		"PRIMITIVE"  /**< Canonical type name. */
-#define X_TYPE_PRIM_WRITE_STR	"#<prim>"    /**< External representation. */
-#define X_TYPE_PRIM_WRITE_LEN	7            /**< Length of write string. */
 
 /** @name Predicates
  * @{ */
@@ -71,7 +69,5 @@ x_obj_t *x_type_prim_make(x_obj_t *p_base, x_obj_t *p_args);
 x_obj_t *x_callable_call(x_obj_t *p_base, x_obj_t *p_args);
 /** Unified apply dispatch with TCO trampoline support. */
 x_obj_t *x_callable_apply(x_obj_t *p_base, x_obj_t *p_args);
-/** Write handler for callable types -- outputs @c #\<prim\>. */
-x_obj_t *x_callable_write(x_obj_t *p_base, x_obj_t *p_args);
 
 #endif /* X_TYPE_PRIM_H */

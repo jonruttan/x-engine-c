@@ -347,8 +347,8 @@ static char *test_type_iter_struct(void)
 		NULL == x_type_field_delimit(p_type)
 	);
 
-	_it_should("set the Write primitive",
-		x_type_iter_write_prim == x_type_field_write(p_type)
+	_it_should("leaves the Write cell empty (the printer is x-lang)",
+		x_type_field_write(p_type) == NULL
 	);
 
 	test_cleanup(p_base);
@@ -477,27 +477,6 @@ static char *test_type_iter_next(void)
 	return NULL;
 }
 
-static char *test_type_iter_write(void)
-{
-	x_obj_t *p_base, *p_iter, *p_args, *p_ret;
-	x_char_t buf[64];
-
-	helper_alloc_reset();
-	helper_file_buffer_ptr[TEST_HELPER_FILE_STDOUT] = buf;
-	helper_file_reset();
-
-	p_base = x_eval_make(NULL, NULL);
-	p_iter = x_mkiter(p_base, NULL, NULL);
-	p_args = x_mkspair(p_base, X_OBJ_FLAG_NONE, p_iter, NULL);
-
-	p_ret = x_type_iter_write(p_base, p_args);
-	_it_should("return the iter object", p_iter == p_ret);
-	_it_should("write iter representation",
-		0 == strncmp(X_TYPE_ITER_WRITE_STR, buf, X_TYPE_ITER_WRITE_LEN));
-
-	return NULL;
-}
-
 static char *test_type_iter_isempty_fn(void)
 {
 	x_obj_t *p_base, *p_iter, *p_args, *p_ret;
@@ -532,7 +511,6 @@ static char *run_tests() {
 	_run_test(test_base_alist_assoc);
 	_run_test(test_type_iter_make);
 	_run_test(test_type_iter_next);
-	_run_test(test_type_iter_write);
 	_run_test(test_type_iter_isempty_fn);
 
 	return NULL;
