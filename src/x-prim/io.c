@@ -59,6 +59,35 @@ static x_obj_t *x_prim_write(x_obj_t *p_base, x_obj_t *p_args)
 	return NULL;
 }
 
+/** Write a string's bytes to the current output: the OUT port instruction.
+ *  x-lang: (write-str s)
+ *  @param p_base  Execution context.
+ *  @param p_args  Unevaluated argument list (s).
+ *  @return NULL.
+ *  @note The byte door the pure-X printer (lib/x/boot/printer.x) bottoms
+ *        out at.  Emits through x_eval_write_str, so it respects the
+ *        write-buffer capture stack exactly as the C renderers did.
+ *  @see x_prim_display, x_prim_write
+ */
+static x_obj_t *x_prim_write_str(x_obj_t *p_base, x_obj_t *p_args)
+{
+	x_obj_t *p_s;
+	x_satom_t data = x_obj_set(x_type_atom_obj, X_OBJ_FLAG_NONE,
+		{ .s = NULL }),
+		sz = x_obj_set(x_type_atom_obj, X_OBJ_FLAG_NONE, { .i = 0 });
+	x_spair_t args[2] = {
+		x_obj_set(NULL, X_OBJ_FLAG_NONE, { data }, { (x_obj_t *)(args + 1) }),
+		x_obj_set(NULL, X_OBJ_FLAG_NONE, { sz }, { NULL })
+	};
+
+	x_eargs(p_base, p_args, 2, NULL, &p_s);
+	x_atomstr(data) = x_strval(p_s);
+	x_atomint(sz) = (x_int_t)x_lib_strlen(x_strval(p_s));
+	x_eval_write_str(p_base, (x_obj_t *)args);
+
+	return NULL;
+}
+
 /** Output an object in human-readable form via the type system.
  *  x-lang: (display obj)
  *  @param p_base  Execution context.
@@ -613,6 +642,7 @@ x_obj_t *x_prim_io_register(x_obj_t *p_base, x_obj_t *p_args)
 	static const x_prim_entry_t entries[] = {
 		{ "write",           x_prim_write,             "io",   "write"          },
 		{ "display",         x_prim_display,           "io",   "display"        },
+		{ "write-str",       x_prim_write_str,         "io",   "write-str"      },
 		{ "read",            x_prim_read_expr,         "io",   "read"           },
 		{ "read-char",       x_prim_read_char,         "io",   "read-char"      },
 		{ "write-to-str",    x_prim_write_to_string,   "io",   "write-to-str"   },
