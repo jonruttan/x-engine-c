@@ -171,37 +171,9 @@ static char *test_type_type_of(void)
 	return NULL;
 }
 
-static char *test_type_type_name(void)
-{
-	x_obj_t *p_base, *p_args, *p_result, *p_int;
-
-	p_base = x_eval_make(NULL, NULL);
-	x_prim_register(p_base, NULL);
-
-	p_int = x_mkint(p_base, (x_int_t)42);
-	x_eval_env_alist_extend(p_base,
-		x_mkspair(p_base, X_OBJ_FLAG_NONE, x_mksymbol(p_base, "myint"), p_int));
-
-	/* (type-name myint) -> "int" */
-	p_args = x_mkspair(p_base, X_OBJ_FLAG_NONE, NULL,
-		x_mkspair(p_base, X_OBJ_FLAG_NONE,
-		x_mksymbol(p_base, "myint"), NULL));
-	p_result = x_prim_type_name(p_base, p_args);
-	_it_should("type-name returns string",
-		p_result != NULL);
-	_it_should("type-name of int is 'INTEGER'",
-		x_lib_strcmp(x_strval(p_result), X_TYPE_INT_NAME) == 0);
-
-	/* (type-name nil) -> nil */
-	p_args = x_mkspair(p_base, X_OBJ_FLAG_NONE, NULL,
-		x_mkspair(p_base, X_OBJ_FLAG_NONE, NULL, NULL));
-	p_result = x_prim_type_name(p_base, p_args);
-	_it_should("type-name of nil returns nil",
-		p_result == NULL);
-
-	test_cleanup(p_base);
-	return NULL;
-}
+/* (type name ...) is pure x-lang now (boot/reflect.x); its contract --
+ * handle resolution, object form, nil, nil-name types -- is pinned by
+ * tests/x/specs/lib/type.spec.md. */
 
 static char *test_type_make_instance(void)
 {
@@ -712,35 +684,6 @@ static char *test_type_convert(void)
 }
 #endif /* convert test disabled */
 
-static char *test_type_type_name_nil_name(void)
-{
-	x_obj_t *p_base, *p_args, *p_result, *p_obj;
-	x_obj_t *p_type;
-	struct x_type_t type_desc;
-
-	p_base = x_eval_make(NULL, NULL);
-	x_prim_register(p_base, NULL);
-
-	/* Create a type with nil name — do NOT register on type alist
-	 * since nil name breaks alist lookup. */
-	memset(&type_desc, 0, sizeof(type_desc));
-	type_desc.p_units = (x_obj_t *)&x_type_units_pair_obj;
-	p_type = x_type_struct_make(p_base, type_desc);
-
-	/* Make instance directly (bypass type alist) */
-	p_obj = x_obj_make(p_base, p_type, 0, X_OBJ_LENGTH_PAIR,
-		x_mksatom(p_base, X_OBJ_FLAG_NONE, (x_int_t)1), NULL);
-
-	/* Call x_prim_type_name directly with unevaluated arg */
-	p_args = x_mkspair(p_base, X_OBJ_FLAG_NONE, NULL,
-		x_mkspair(p_base, X_OBJ_FLAG_NONE, p_obj, NULL));
-	p_result = x_prim_type_name(p_base, p_args);
-	_it_should("type-name with nil name returns nil",
-		p_result == NULL);
-
-	test_cleanup(p_base);
-	return NULL;
-}
 
 #if 0 /* convert tests disabled */
 static x_obj_t *test_convert_handler(x_obj_t *p_base, x_obj_t *p_args)
@@ -1102,7 +1045,6 @@ static char *test_type_base_eval_error_no_parent(void)
 static char *run_tests() {
 	_run_test(test_type_typep);
 	_run_test(test_type_type_of);
-	_run_test(test_type_type_name);
 	_run_test(test_type_make_instance);
 	_run_test(test_type_make_token_base);
 	_run_test(test_type_null_read_discard);
@@ -1118,7 +1060,6 @@ static char *run_tests() {
 	_run_test(test_type_token_read_string);
 	/* convert tests disabled — primitive moved to x-lang */
 	_run_test(test_type_make_instance_nil_type);
-	_run_test(test_type_type_name_nil_name);
 	_run_test(test_type_token_read_string_tokens);
 	_run_test(test_type_base_eval_error_no_parent);
 

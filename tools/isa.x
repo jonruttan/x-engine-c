@@ -51,7 +51,8 @@
 ; special-cases them.
 
 (def %isa-catalog (lit (
-  (alloc limit! review)       ; writes two base-tree cells (alloc-limit int, alloc-error str) -- reflective cell writes
+  (alloc limit! gc)           ; the runaway guard: the spec harness arms it BEFORE any lib loads, so it
+                              ;   must exist in a bare env -- C by necessity (derived otherwise)
   (base bind spine)           ; SURVIVES the reflective test: allocates a STRUCTURAL spair for the env spine, which X pair cannot make
   (base eval spine)
   (base make spine)
@@ -71,7 +72,8 @@
   (ffi dlopen ffi)
   (ffi dlsym ffi)
   (heap collect gc)
-  (heap count review)         ; cold diagnostic: walks the heap chain via header word 0, X-walkable from %base
+  (heap count gc)             ; derived (heap-chain walk from header word 0) but O(heap): an interpreted
+                              ;   walk of millions of objects takes minutes vs ms -- perf-pinned in C
   (heap free-hook! gc)
   (heap mark gc)
   (heap mark-hook! gc)
@@ -95,7 +97,6 @@
   (int ~ raw-op)
   (io display review)        ; the structure-walking printer is POLICY; X owns repr already -- home over a raw byte-out door
   (io display-to-str review)  ; printer capture; becomes X (Stream) once the printer homes
-  (io error-line review)      ; reads io-state (cell line) -- a reflective cell read
   (io read io)
   (io read-char io)
   (io repl-read io)
@@ -109,14 +110,11 @@
   (obj eq? raw-op)
   (obj make alloc)
   (obj make-callable alloc)
-  (obj meta-count review)     ; header-word sugar: all four meta ops are %ptr-ref/set-word at fixed offsets
-  (obj meta-count! review)
-  (obj meta-ref review)
-  (obj meta-set! review)
-  (obj ref review)            ; C body is literally (&firstobj(obj))[i] -- an indexed word read
   (obj same? raw-op)
-  (obj set! review)           ; indexed word write; data.x set-first!/set-rest! already front it in X
   (ptr ->int ffi)
+  (ptr ->obj ffi)             ; the materialization instruction (inverse of obj ->ptr): read a word AS an
+                              ;   object. UNCHECKED like first/rest. Added 2026-07-14 (user-approved) --
+                              ;   the ONE instruction that lets reflective X accessors return objects
   (ptr ->str ffi)
   (ptr call ffi)
   (ptr ref raw-mem)
@@ -133,11 +131,12 @@
   (sys clock sys)
   (tok read tok)
   (tok read-str tok)
-  (type ? review)             ; = eq? of the type name field against a handle, expressible over (type of)
+  (type ? hot)                ; derived (tag compare) but HOT: runs per `do` form (dotted-body validator)
+                              ;   and per predicate call (pair?, str?, ...) -- the hottest sites in the system
   (type make types)
   (type make-instance alloc)
-  (type name review)          ; type-object field walk; callers are boot-time cold -- audit reader lambdas on migration
-  (type of review)            ; header word 1 read + name walk; lib uses are boot-time registration (cold)
+  (type of hot)               ; derived (header word 1 + name walk) but HOT: operatives.x's do-body
+                              ;   validator (%boot-cell?) and the predicate layer call it per invocation
 )))
 
 (def %isa-bare (lit (
@@ -158,10 +157,6 @@
   (match spine)
   (op spine)
   (pair alloc)
-  (prim-domain review)        ; ZERO callers (doc prose only); a two-line X assoc over (prims)
-  (prim-ref review)           ; assoc walk over the prims cell; callers fetch at BOOT (cold), caching the result
-  (prim-reg! review)          ; setcar splice into the prims cell -- X has set-first! (data.x, via %obj-set!)
-  (prims review)              ; reads (cell prims) from the base spine (base-layout.x state group)
   (rest raw-mem)
   (set! spine)
   (sigint-install sys)
@@ -169,7 +164,6 @@
   (syscall ffi)
   (tail-eval spine)
   (unwrap spine)
-  (use review)                ; ZERO callers (doc prose only); X def-loop over (prims) + eval!
   (wrap spine)
 )))
 

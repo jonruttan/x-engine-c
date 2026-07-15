@@ -659,25 +659,6 @@ static x_obj_t *x_prims_domain_pair(x_obj_t *p_base, x_obj_t *p_ns)
 	return NULL;
 }
 
-x_obj_t *x_prims_domain(x_obj_t *p_base, x_obj_t *p_ns)
-{
-	x_obj_t *p_dom = x_prims_domain_pair(p_base, p_ns);
-
-	return p_dom == NULL ? NULL : x_restobj(p_dom);
-}
-
-x_obj_t *x_prims_ref(x_obj_t *p_base, x_obj_t *p_ns, x_obj_t *p_method)
-{
-	x_obj_t *p_cur = x_prims_domain(p_base, p_ns);
-
-	while ( ! x_obj_isnil(p_base, p_cur)) {
-		if (x_firstobj(x_firstobj(p_cur)) == p_method)
-			return x_restobj(x_firstobj(p_cur));
-		p_cur = x_restobj(p_cur);
-	}
-	return NULL;
-}
-
 /* Splice one (method . value) entry into p_ns's catalog domain, creating the
  * domain on first use.  The shared filing core of C-side registration
  * (x_prims_add) and x-lang-side registration (prim-reg!).  p_ns and p_entry
@@ -814,125 +795,10 @@ void x_prims_bind_table(x_obj_t *p_base, const x_prim_entry_t *table, int count)
 	}
 }
 
-/** (prims) -- the primitives catalog, for introspection and the X fetch protocol. */
-static x_obj_t *x_prim_prims(x_obj_t *p_base, x_obj_t *p_args)
-{
-	(void)p_args;
-
-	return x_prims(p_base);
-}
-
-/** (prim-domain ns) -- the method alist filed under a namespace, or nil. */
-static x_obj_t *x_prim_prim_domain(x_obj_t *p_base, x_obj_t *p_args)
-{
-	x_obj_t *p_ns;
-
-	x_eargs(p_base, p_args, 2, NULL, &p_ns);
-
-	return x_prims_domain(p_base, p_ns);
-}
-
-/** (prim-ref ns method) -- the prim filed under ns/method, or nil. */
-static x_obj_t *x_prim_prim_ref(x_obj_t *p_base, x_obj_t *p_args)
-{
-	x_obj_t *p_ns, *p_method;
-
-	x_eargs(p_base, p_args, 3, NULL, &p_ns, &p_method);
-
-	return x_prims_ref(p_base, p_ns, p_method);
-}
-
-/** (prim-reg! ns method value) -- file an x-lang value into the catalog under
- *  ns/method: the producer half of the fetch protocol (prim-ref is the
- *  consumer half), so library implementations register under the same stable
- *  identities as C prims.  Registration prepends; a re-registration shadows
- *  the older entry on lookup.  Side-effecting: returns nil. */
-static x_obj_t *x_prim_prim_reg(x_obj_t *p_base, x_obj_t *p_args)
-{
-	x_obj_t *p_ns, *p_method, *p_value, *p_entry;
-	x_obj_t **p_cell = x_heap_root_cell(p_base);
-	x_spair_t root_a = x_obj_set((x_obj_t *)x_type_pair_obj, X_OBJ_FLAG_NONE,
-		{ NULL }, { NULL });
-	x_spair_t root_b = x_obj_set((x_obj_t *)x_type_pair_obj, X_OBJ_FLAG_NONE,
-		{ NULL }, { NULL });
-
-	x_eargs(p_base, p_args, 4, NULL, &p_ns, &p_method, &p_value);
-
-	/* Pin the evaluated args across the conses below: they may be fresh
-	 * allocations reachable only from C locals.  Two registered cells
-	 * hold all four values (see the gc-rooting note). */
-	x_firstobj((x_obj_t *)root_a) = p_ns;
-	x_restobj((x_obj_t *)root_a) = p_value;
-	x_heap_root_push(p_cell, root_a);
-	x_firstobj((x_obj_t *)root_b) = p_method;
-	x_heap_root_push(p_cell, root_b);
-
-	/* (method . value) */
-	p_entry = x_mklist(p_base, p_method, p_value);
-	x_restobj((x_obj_t *)root_b) = p_entry;
-
-	x_prims_file(p_base, p_ns, p_entry);
-
-	x_heap_root_pop(p_cell);
-	x_heap_root_pop(p_cell);
-
-	return NULL;
-}
-
-/** (use ns) -- define ns's catalog methods into the env as @c ns/method.
- *  Qualified names keep the bulk collision-free (e.g. obj/ref vs ptr/ref vs
- *  buf/ref).  Side-effecting: returns nil.  This is the fetch+define step
- *  that replaces direct registration under the lean env. */
-static x_obj_t *x_prim_use(x_obj_t *p_base, x_obj_t *p_args)
-{
-	x_obj_t  *p_ns, *p_dom;
-	x_obj_t  *p_entry;
-	x_obj_t **p_cell = x_heap_root_cell(p_base);
-	x_spair_t root = x_obj_set((x_obj_t *)x_type_pair_obj, X_OBJ_FLAG_NONE,
-		{ NULL }, { NULL });
-	x_char_t *p_ns_str;
-	x_char_t *p_m_str;
-	x_char_t *p_name;
-	size_t    ns_len;
-	size_t    m_len;
-
-	x_eargs(p_base, p_args, 2, NULL, &p_ns);
-	p_ns_str = x_atomstr(p_ns);
-	ns_len = x_lib_strlen(p_ns_str);
-
-	/* Root the advancing domain across the allocations in the loop (one
-	 * registered cell for the whole walk). */
-	x_heap_root_push(p_cell, root);
-
-	p_dom = x_prims_domain(p_base, p_ns);
-	while ( ! x_obj_isnil(p_base, p_dom)) {
-		x_firstobj((x_obj_t *)root) = p_dom;
-		p_entry = x_firstobj(p_dom);       /* (method . #<prim>) */
-		p_m_str = x_atomstr(x_firstobj(p_entry));
-		m_len = x_lib_strlen(p_m_str);
-		/* "ns/method".  x_make_symbol stores the name pointer (it does not
-		 * copy unless OWN), so the name must outlive the symbol -- allocate it
-		 * persistently, exactly as an interned symbol's name would live. */
-		p_name = (x_char_t *)x_sys_malloc(ns_len + m_len + 2);
-
-		x_lib_memcpy(p_name, p_ns_str, ns_len);
-		p_name[ns_len] = '/';
-		x_lib_memcpy(p_name + ns_len + 1, p_m_str, m_len + 1);
-
-		/* Idempotent: define ns/method only when it is not already bound, so a
-		 * later (use ns) never clobbers an intervening redefinition -- e.g.
-		 * arithmetic.x's variadic int/+, set after its own (use (lit int)). */
-		if (x_alist_bst_lookup(p_base, x_eval_field_env_global_tree(p_base),
-				x_make_symbol(p_base, X_OBJ_FLAG_NONE, p_name)) == NULL)
-			x_value_bind(p_base, p_name, x_restobj(p_entry));
-
-		p_dom = x_restobj(p_dom);
-	}
-
-	x_heap_root_pop(p_cell);
-
-	return NULL;
-}
+/* The x-lang-facing catalog protocol (prims / prim-domain / prim-ref /
+ * prim-reg! / use) used to live here as C prims; it is pure x-lang now
+ * (boot/registry.x reads, boot/reflect.x writes), walking the same prims
+ * cell via the committed path contract tools/base-paths.x. */
 
 /**
  * Register all built-in primitives into the environment.
@@ -955,14 +821,10 @@ x_obj_t *x_prim_register(x_obj_t *p_base, x_obj_t *p_args)
 	x_value_bind(p_base, x_atomstr(x_false_obj), (x_obj_t *)&x_false_obj);
 	x_firstobj(x_eval_field_false(p_base)) = (x_obj_t *)&x_false_obj;
 
-	/* Catalog access protocol -- part of the lean core (stays in the env so X
-	 * code can reach the catalog to fetch+define the rest). */
-	x_callable_bind(p_base, "prims", x_prim_prims);
-	x_callable_bind(p_base, "prim-domain", x_prim_prim_domain);
-	x_callable_bind(p_base, "prim-ref", x_prim_prim_ref);
-	x_callable_bind(p_base, "prim-reg!", x_prim_prim_reg);
-	x_callable_bind(p_base, "use", x_prim_use);
-
+	/* The catalog access protocol (prims / prim-domain / prim-ref /
+	 * prim-reg!) is pure x-lang: boot/registry.x walks the prims cell via
+	 * tools/base-paths.x before any other X code loads, and boot/reflect.x
+	 * supplies the mutating half.  C only FILES the catalog, right here. */
 	x_prim_core_register(p_base, p_args);
 	x_syntax_quote_register(p_base, p_args);
 	x_syntax_binding_register(p_base, p_args);

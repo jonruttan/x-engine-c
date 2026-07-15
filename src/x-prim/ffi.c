@@ -557,6 +557,34 @@ static x_obj_t *x_prim_obj_to_ptr(x_obj_t *p_base, x_obj_t *p_args)
 }
 
 /**
+ * @brief Materialize an object reference from a raw pointer.
+ *
+ * x-lang form: @code (ptr->obj p) @endcode
+ *
+ * The inverse of obj->ptr and the reflective ISA's load-word-as-reference
+ * instruction: it lets X read a word (e.g. an object's data or type slot
+ * via ptr-ref-word) and treat it as the object it addresses, which is what
+ * makes the reflective accessors in lib/x/boot/reflect.x able to RETURN
+ * objects, not just integers.
+ *
+ * UNCHECKED, like first/rest: an address that is not a live object is
+ * undefined behavior.  Safe under the explicit-only GC (allocation never
+ * relocates), same argument as holding obj->ptr across an expression.
+ *
+ * @param p_base  Execution context.
+ * @param p_args  Unevaluated: (self ptr).
+ * @return The object at the pointer's address (nil for a NULL pointer).
+ */
+static x_obj_t *x_prim_ptr_to_obj(x_obj_t *p_base, x_obj_t *p_args)
+{
+	x_obj_t *p_p;
+
+	x_eargs(p_base, p_args, 2, NULL, &p_p);
+
+	return (x_obj_t *)x_ptrval(p_p);
+}
+
+/**
  * @brief Read a machine-word-sized value from raw memory at ptr+offset.
  *
  * x-lang form: @code (ptr-ref-word ptr offset) @endcode
@@ -580,110 +608,6 @@ static x_obj_t *x_prim_ptr_ref_word(x_obj_t *p_base, x_obj_t *p_args)
 	memcpy(&val, mem + x_intval(p_offset), sizeof(long));
 
 	return x_mkint(p_base, (x_int_t)val);
-}
-
-/**
- * @brief Get the current object metadata extra-slot count.
- *
- * x-lang form: @code (obj-meta-count) @endcode
- *
- * Returns the number of extra metadata integer slots allocated per object
- * on the current base. This controls per-object metadata capacity.
- *
- * @param p_base  Execution context.
- * @param p_args  Unused.
- * @return Integer with the current extra-slot count.
- * @note Type system internals: metadata slots are appended to each object
- *       header when the count is > 0 and X_OBJ_FLAG_META is set.
- * @see x_prim_obj_meta_extra_set, x_prim_obj_meta_ref
- */
-static x_obj_t *x_prim_obj_meta_extra(x_obj_t *p_base, x_obj_t *p_args)
-{
-	(void)p_args;
-	return x_mkint(p_base, x_atomint(x_firstobj(x_base_field_obj_meta_extra(p_base))));
-}
-
-/**
- * @brief Set the object metadata extra-slot count.
- *
- * x-lang form: @code (obj-meta-count! n) @endcode
- *
- * Changes the number of extra metadata integer slots for newly allocated
- * objects. Returns the previous count.
- *
- * @param p_base  Execution context.
- * @param p_args  Unevaluated: (self n).
- * @return Integer with the previous extra-slot count.
- * @note Type system internals: affects all subsequent object allocations
- *       on this base.
- * @see x_prim_obj_meta_extra
- */
-static x_obj_t *x_prim_obj_meta_extra_set(x_obj_t *p_base, x_obj_t *p_args)
-{
-	x_int_t old = x_atomint(x_firstobj(x_base_field_obj_meta_extra(p_base)));
-	x_obj_t *p_n;
-
-	x_eargs(p_base, p_args, 2, NULL, &p_n);
-
-	x_atomint(x_firstobj(x_base_field_obj_meta_extra(p_base))) = x_intval(p_n);
-
-	return x_mkint(p_base, old);
-}
-
-/**
- * @brief Read a metadata integer slot from an object.
- *
- * x-lang form: @code (obj-meta-ref obj i) @endcode
- *
- * Returns the integer value at metadata slot @p i. Returns 0 if the
- * object is nil or does not have the META flag set.
- *
- * @param p_base  Execution context.
- * @param p_args  Unevaluated: (self obj i).
- * @return Integer value at metadata slot @p i.
- * @note Type system internals: requires X_OBJ_FLAG_META on the object.
- * @see x_prim_obj_meta_set
- */
-static x_obj_t *x_prim_obj_meta_ref(x_obj_t *p_base, x_obj_t *p_args)
-{
-	x_obj_t *p_obj, *p_i;
-
-	x_eargs(p_base, p_args, 3, NULL, &p_obj, &p_i);
-
-	if (x_obj_isnil(p_base, p_obj)
-			|| !(x_obj_flags(p_obj) & X_OBJ_FLAG_META)) {
-		return x_mkint(p_base, 0);
-	}
-
-	return x_mkint(p_base, x_obj_meta_i(p_obj, x_intval(p_i)).i);
-}
-
-/**
- * @brief Write an integer value into an object's metadata slot.
- *
- * x-lang form: @code (obj-meta-set! obj i val) @endcode
- *
- * Sets metadata slot @p i to @p val. No-op if the object is nil or
- * lacks the META flag.
- *
- * @param p_base  Execution context.
- * @param p_args  Unevaluated: (self obj i val).
- * @return The value @p val.
- * @note Type system internals: requires X_OBJ_FLAG_META on the object.
- * @see x_prim_obj_meta_ref
- */
-static x_obj_t *x_prim_obj_meta_set(x_obj_t *p_base, x_obj_t *p_args)
-{
-	x_obj_t *p_obj, *p_i, *p_val;
-
-	x_eargs(p_base, p_args, 4, NULL, &p_obj, &p_i, &p_val);
-
-	if (!x_obj_isnil(p_base, p_obj)
-			&& (x_obj_flags(p_obj) & X_OBJ_FLAG_META)) {
-		x_obj_meta_i(p_obj, x_intval(p_i)).i = x_intval(p_val);
-	}
-
-	return p_val;
 }
 
 /**
@@ -713,10 +637,12 @@ static x_obj_t *x_prim_make_callable(x_obj_t *p_base, x_obj_t *p_args)
 /**
  * @brief Register all FFI primitives and platform constants.
  *
- * Binds: dlopen, dlsym, ffi-call, ptr-call, int->ptr, ptr->int,
+ * Binds: dlopen, dlsym, ffi-call, ptr-call, int->ptr, ptr->int, ptr->obj,
  * ptr-set!, ptr-ref, ptr-ref-word, ptr-set-word!, obj->ptr, str->ptr,
- * ptr->str, obj-meta-count, obj-meta-count!, obj-meta-ref, obj-meta-set!,
- * make-callable.
+ * ptr->str, make-callable.
+ * (The obj-meta-* accessors are pure x-lang now: boot/reflect.x files
+ * reflective implementations into the catalog over tools/obj-layout.x
+ * and tools/base-paths.x.)
  *
  * Platform constants live in X, not here: word size is probed by
  * boot/data.x, and the O_* open flags come from the per-OS tables in
@@ -740,12 +666,9 @@ x_obj_t *x_prim_ffi_register(x_obj_t *p_base, x_obj_t *p_args)
 		{ "ptr-ref-word",    x_prim_ptr_ref_word,       "ptr", "ref-word"      },
 		{ "ptr-set-word!",   x_prim_ptr_set_word,       "ptr", "set-word!"     },
 		{ "obj->ptr",        x_prim_obj_to_ptr,         "obj", "->ptr"         },
+		{ "ptr->obj",        x_prim_ptr_to_obj,         "ptr", "->obj"         },
 		{ "str->ptr",        x_prim_string_to_ptr,      "str", "->ptr"         },
 		{ "ptr->str",        x_prim_ptr_to_string,      "ptr", "->str"         },
-		{ "obj-meta-count",  x_prim_obj_meta_extra,     "obj", "meta-count"    },
-		{ "obj-meta-count!", x_prim_obj_meta_extra_set, "obj", "meta-count!"   },
-		{ "obj-meta-ref",    x_prim_obj_meta_ref,       "obj", "meta-ref"      },
-		{ "obj-meta-set!",   x_prim_obj_meta_set,       "obj", "meta-set!"     },
 		{ "make-callable",   x_prim_make_callable,      "obj", "make-callable" }
 	};
 	x_prims_bind_table(p_base, entries,

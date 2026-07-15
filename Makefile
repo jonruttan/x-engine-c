@@ -190,7 +190,7 @@ test-x: $(EXECUTABLE) ## Run x-lang tests
 	sh tests/x/spec-runner.sh
 .PHONY: test-x
 
-test: check-isa test-c test-x ## Run all tests
+test: check-isa check-obj-layout check-base-paths test-c test-x ## Run all tests
 .PHONY: test
 
 # The C-surface ratchet, source half: every binding site in the C source must
@@ -200,6 +200,22 @@ test: check-isa test-c test-x ## Run all tests
 check-isa: ## Diff the C source's binding surface against tools/isa.x
 	sh tools/isa-scan.sh
 .PHONY: check-isa
+
+# The object-layout contract, source half: the header-word layout parsed out
+# of ext/x-expr/include/x-obj.h must match the committed descriptor
+# tools/obj-layout.x, which reflective X code reads its offsets from.  The
+# runtime half is tests/x/specs/meta/obj-layout.spec.md (runs under test-x).
+check-obj-layout: ## Diff x-obj.h's object layout against tools/obj-layout.x
+	sh tools/obj-layout-scan.sh
+.PHONY: check-obj-layout
+
+# The base-paths contract, source half: every base-field accessor macro
+# (x-eval-layout.h, x-base.h, the error-handler in x-eval.h) flattened to a
+# first/rest path must match tools/base-paths.x, which reflect.x walks.
+# The runtime half is tests/x/specs/meta/base-paths.spec.md.
+check-base-paths: ## Diff the base-field macro chains against tools/base-paths.x
+	sh tools/base-paths-scan.sh
+.PHONY: check-base-paths
 
 # Memory-safety gate: run BOTH suites against an AddressSanitizer build (reuses
 # the x-asan target). Catches the crash class we keep hitting -- e.g. an

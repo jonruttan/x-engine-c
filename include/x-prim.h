@@ -204,14 +204,10 @@ void x_callable_bind_table(x_obj_t *p_base, const x_callable_entry_t *table, int
  * @{
  */
 
-/** The primitives catalog (the prims-slot value); nil before registration. */
+/** The primitives catalog (the prims-slot value); nil before registration.
+ *  Catalog LOOKUP is pure x-lang (boot/registry.x over tools/base-paths.x);
+ *  C only files entries, via x_prims_bind_table below. */
 x_obj_t *x_prims(x_obj_t *p_base);
-
-/** Find a namespace's method alist in the catalog, or NULL if absent. */
-x_obj_t *x_prims_domain(x_obj_t *p_base, x_obj_t *p_ns);
-
-/** Find a method's prim within the catalog, or NULL if absent. */
-x_obj_t *x_prims_ref(x_obj_t *p_base, x_obj_t *p_ns, x_obj_t *p_method);
 
 /** A primitive's env name + catalog coordinates, for x_prims_bind_table().
  *  @c ns NULL => bound into the env only (not cataloged).  A module adopts the

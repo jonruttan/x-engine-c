@@ -3,10 +3,12 @@
  * @brief Type system and sandboxing primitives for x-lang.
  *
  * Provides runtime type creation (make-type), type introspection (type-of,
- * type?, type-name), object allocation (make-obj, make-instance), slot
- * access (obj-ref, obj-set!), sandboxed interpreter creation (make-base),
- * cross-base evaluation (base-eval, base-bind), tokenization helpers
- * (make-token-base, token-read-string, buffer-token), and iteration (iter).
+ * type?, type-name), object allocation (make-obj, make-instance),
+ * sandboxed interpreter creation (make-base), cross-base evaluation
+ * (base-eval, base-bind), tokenization helpers (make-token-base,
+ * token-read-string, buffer-token), and iteration (iter).  Slot access
+ * (obj ref / obj set!) is pure x-lang now: boot/data.x + boot/reflect.x
+ * implement it reflectively over tools/obj-layout.x.
  *
  * @author Jon Ruttan (jonruttan@gmail.com)
  * @copyright 2026 Jon Ruttan
@@ -258,61 +260,10 @@ static x_obj_t *x_prim_type_of(x_obj_t *p_base, x_obj_t *p_args)
 	return x_type_prim_type_name(p_base, (x_obj_t *)name_args);
 }
 
-/**
- * @brief Return the type name as a string for an object or type handle.
- *
- * x-lang form: @code (type-name obj-or-handle) @endcode
- *
- * For a type handle (the interned name atom type-of returns), resolves it
- * against the type registry and returns the registered name. For any other
- * object, extracts the name atom from the object's type. Either way the
- * result is a heap-allocated string.
- *
- * @param p_base  Execution context.
- * @param p_args  Unevaluated: (self obj-or-handle).
- * @return String containing the type name, or NULL for nil/untyped objects
- *         and unregistered handles.
- */
-static x_obj_t *x_prim_type_name(x_obj_t *p_base, x_obj_t *p_args)
-{
-	x_obj_t *p_obj, *p_name;
-	x_spair_t lookup_args[1] = {
-		x_obj_set(NULL, X_OBJ_FLAG_NONE, { NULL }, { NULL })
-	};
-	x_obj_t *p_type;
-
-	x_eargs(p_base, p_args, 2, NULL, &p_obj);
-
-	if (x_obj_isnil(p_base, p_obj)) {
-		return NULL;
-	}
-
-	/* A type HANDLE is the type's interned name atom; its own type field
-	 * holds the stack sentinel, not a type tree, so the navigation below
-	 * would dereference the sentinel (SIGSEGV). Resolve it against the
-	 * registry instead. Unregistered atoms (and stack scratch) resolve to
-	 * nil rather than having their payload misread as a string. */
-	if (x_obj_type_issatom(p_obj) || x_obj_type_isspair(p_obj)) {
-		x_firstobj((x_obj_t *)lookup_args) = p_obj;
-		p_type = x_eval_type_alist_assoc(p_base, (x_obj_t *)lookup_args);
-
-		if (x_obj_isnil(p_base, p_type)) {
-			return NULL;
-		}
-
-		p_name = x_type_field_name(p_type);
-	} else if (x_obj_isnil(p_base, x_obj_type(p_obj))) {
-		return NULL;
-	} else {
-		p_name = x_type_field_name(x_obj_type(p_obj));
-	}
-
-	if (x_obj_isnil(p_base, p_name)) {
-		return NULL;
-	}
-
-	return x_mkstr(p_base, x_atomstr(p_name));
-}
+/* (type name obj-or-handle) is pure x-lang now: boot/reflect.x mirrors the
+ * handle/object/nil branches over the layout contracts (the sentinel tags
+ * come from live probes at boot, the name walk from tools/base-paths.x's
+ * type-rooted entries). */
 
 /**
  * @brief Create a bare base suitable for tokenization only.
@@ -609,7 +560,7 @@ static x_obj_t *x_prim_token_read_string(x_obj_t *p_base, x_obj_t *p_args)
  * @param p_base  Execution context.
  * @param p_args  Unevaluated: (self type-handle n).
  * @return New object with @p n NULL slots, or NULL if type not found.
- * @see x_prim_obj_ref, x_prim_obj_set
+ * @see x_prim_make_type
  */
 static x_obj_t *x_prim_make_obj(x_obj_t *p_base, x_obj_t *p_args)
 {
@@ -637,46 +588,6 @@ static x_obj_t *x_prim_make_obj(x_obj_t *p_base, x_obj_t *p_args)
 	}
 
 	return p_obj;
-}
-
-/**
- * @brief Read a slot from a multi-slot object.
- *
- * x-lang form: @code (obj-ref obj i) @endcode
- *
- * @param p_base  Execution context.
- * @param p_args  Unevaluated: (self obj i).
- * @return Value at slot index @p i (zero-based).
- * @see x_prim_obj_set, x_prim_make_obj
- */
-static x_obj_t *x_prim_obj_ref(x_obj_t *p_base, x_obj_t *p_args)
-{
-	x_obj_t *p_obj, *p_i;
-
-	x_eargs(p_base, p_args, 3, NULL, &p_obj, &p_i);
-
-	return (&x_firstobj(p_obj))[x_intval(p_i)];
-}
-
-/**
- * @brief Write a value into a slot of a multi-slot object.
- *
- * x-lang form: @code (obj-set! obj i val) @endcode
- *
- * @param p_base  Execution context.
- * @param p_args  Unevaluated: (self obj i val).
- * @return The stored value @p val.
- * @see x_prim_obj_ref, x_prim_make_obj
- */
-static x_obj_t *x_prim_obj_set(x_obj_t *p_base, x_obj_t *p_args)
-{
-	x_obj_t *p_obj, *p_i, *p_val;
-
-	x_eargs(p_base, p_args, 4, NULL, &p_obj, &p_i, &p_val);
-
-	(&x_firstobj(p_obj))[x_intval(p_i)] = p_val;
-
-	return p_val;
 }
 
 /**
@@ -861,9 +772,11 @@ static x_obj_t *x_prim_buffer_read_text(x_obj_t *p_base, x_obj_t *p_args)
 /**
  * @brief Register all type-system and sandboxing primitives.
  *
- * Binds: make-type, base-make-type, make-instance, make-obj, obj-ref,
- * obj-set!, type?, type-of, type-name, buffer-token, make-token-base,
+ * Binds: make-type, base-make-type, make-instance, make-obj,
+ * type?, type-of, buffer-token, make-token-base,
  * make-base, base-eval, base-bind, token-read, token-read-string, iter.
+ * (obj-ref / obj-set! / type-name are pure x-lang now: boot/data.x +
+ * boot/reflect.x implement them reflectively over the layout contracts.)
  *
  * @param p_base  Execution context to bind primitives into.
  * @param p_args  Unused.
@@ -876,11 +789,8 @@ x_obj_t *x_prim_type_register(x_obj_t *p_base, x_obj_t *p_args)
 		{ "base-make-type",    x_prim_base_make_type,    "base",   "make-type"     },
 		{ "make-instance",     x_prim_make_instance,     "type",   "make-instance" },
 		{ "make-obj",          x_prim_make_obj,          "obj",    "make"          },
-		{ "obj-ref",           x_prim_obj_ref,           "obj",    "ref"           },
-		{ "obj-set!",          x_prim_obj_set,           "obj",    "set!"          },
 		{ "type?",             x_prim_typep,             "type",   "?"             },
 		{ "type-of",           x_prim_type_of,           "type",   "of"            },
-		{ "type-name",         x_prim_type_name,         "type",   "name"          },
 		{ "buffer-token",      x_prim_buffer_token,      "buf", "tok"         },
 		{ "buffer-last-char",  x_prim_buffer_last_char,  "buf", "last-char"     },
 		{ "make-token-base",   x_prim_make_token_base,   "base",   "make-tok"      },
