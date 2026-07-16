@@ -619,9 +619,12 @@ x_obj_t *x_eval_make(x_obj_t *p_base, x_obj_t *p_args)
  *          frames between the error site and the guard -- any local
  *          state in those frames is lost.
  *
- * @note When no handler is installed, falls through to x_error which
- *       writes to stderr and is typically fatal.  The interpreter does
- *       NOT abort; the caller may continue if x_error returns.
+ * @note When no handler is installed, writes the error via x_error and
+ *       terminates the process (docs/spec.md pins this contract for
+ *       `error`).  Returning instead would resume the raising primitive
+ *       mid-operation with a garbage value -- at boot, where no guard is
+ *       installed yet and the harness discards stderr, that silently
+ *       corrupted the load (the class-call trap).
  *
  * @see x_prim_guard  -- installs the handler and setjmp site
  * @see x_prim_error  -- x-lang (error msg) primitive that calls this
@@ -692,6 +695,14 @@ void x_eval_error(x_obj_t *p_base, x_char_t *message, x_obj_t *p_obj)
 	fd = x_base_isset(p_base) ? x_atomint(x_firstobj(x_base_field_fileerr(p_base))) : STDERR_FILENO;
 
 	x_error(fd, message, symbol);
+	x_sys_write(fd, X_STR_LITERAL("\n"));
+
+	/* Uncaught errors are fatal (spec: "Without a handler, `error`
+	 * terminates the process").  The raising primitive cannot be resumed
+	 * -- returning here used to continue it with a garbage value, so an
+	 * unbound head mid-boot yielded nil and x_type_list_eval silently
+	 * passed the form through unevaluated. */
+	x_sys_exit(X_SYS_EXIT_FAILURE);
 }
 #endif /* !STUB_X_BASE_ERROR */
 

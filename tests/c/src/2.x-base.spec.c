@@ -452,14 +452,21 @@ static char *test_base_error_no_handler(void)
 	x_obj_t *p_base;
 	x_char_t s[64];
 
+	/* Uncaught errors are FATAL: x_eval_error must exit non-zero after
+	 * reporting (docs/spec.md `error`).  The mocked exit records the
+	 * status and returns, so the calls below fall through to the asserts. */
+
 	/* Without base — writes to stderr (fd 2) */
 	helper_file_buffer_ptr[TEST_HELPER_FILE_STDERR] = s;
 	helper_file_buffer_length[TEST_HELPER_FILE_STDERR] = 64;
 	helper_file_reset();
+	helper_sys_exit_status = X_SYS_EXIT_SUCCESS;
 
 	x_eval_error(NULL, "test error", NULL);
 	_it_should("write error to stderr without base",
 		s[0] != '\0');
+	_it_should("exit non-zero without base",
+		X_SYS_EXIT_FAILURE == helper_sys_exit_status);
 
 	/* With base, no handler — writes to base's stderr fd */
 	p_base = x_eval_make(NULL, NULL);
@@ -468,20 +475,26 @@ static char *test_base_error_no_handler(void)
 	helper_file_buffer_length[TEST_HELPER_FILE_STDERR] = 64;
 	helper_file_reset();
 	s[0] = '\0';
+	helper_sys_exit_status = X_SYS_EXIT_SUCCESS;
 
 	x_eval_error(p_base, "base error", NULL);
 	_it_should("write error to stderr with base",
 		s[0] != '\0');
+	_it_should("exit non-zero with base",
+		X_SYS_EXIT_FAILURE == helper_sys_exit_status);
 
 	/* With symbol */
 	helper_file_buffer_ptr[TEST_HELPER_FILE_STDERR] = s;
 	helper_file_buffer_length[TEST_HELPER_FILE_STDERR] = 64;
 	helper_file_reset();
 	s[0] = '\0';
+	helper_sys_exit_status = X_SYS_EXIT_SUCCESS;
 
 	x_eval_error(p_base, "undef", x_mksatom(p_base, X_OBJ_FLAG_NONE, "foo"));
 	_it_should("write error with symbol",
 		s[0] != '\0');
+	_it_should("exit non-zero with symbol",
+		X_SYS_EXIT_FAILURE == helper_sys_exit_status);
 
 	x_sys_free(p_base);
 

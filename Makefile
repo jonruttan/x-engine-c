@@ -190,7 +190,7 @@ test-x: $(EXECUTABLE) ## Run x-lang tests
 	sh tests/x/spec-runner.sh
 .PHONY: test-x
 
-test: check-isa check-obj-layout check-base-paths test-c test-x ## Run all tests
+test: check-isa check-obj-layout check-base-paths check-boot-order test-c test-x ## Run all tests
 .PHONY: test
 
 # The C-surface ratchet, source half: every binding site in the C source must
@@ -216,6 +216,15 @@ check-obj-layout: ## Diff x-obj.h's object layout against tools/obj-layout.x
 check-base-paths: ## Diff the base-field macro chains against tools/base-paths.x
 	sh tools/base-paths-scan.sh
 .PHONY: check-base-paths
+
+# The boot-order lint: derives the effective load order from lib/x-core.x
+# (include forms, the %include-list-cell pre-seed, import expansion) and
+# flags load-time-evaluated class-calls whose def-class comes later in the
+# order -- the silent class-call trap (a not-yet-callable head passes the
+# form through unevaluated; see tools/boot-order.x).
+check-boot-order: $(EXECUTABLE) ## Lint the boot load order for class-calls before their def-class
+	sh tools/boot-order.sh
+.PHONY: check-boot-order
 
 # Memory-safety gate: run BOTH suites against an AddressSanitizer build (reuses
 # the x-asan target). Catches the crash class we keep hitting -- e.g. an
