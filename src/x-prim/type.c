@@ -680,6 +680,20 @@ static x_obj_t *x_prim_iter_empty(x_obj_t *p_base, x_obj_t *p_args)
 		: x_firstobj(x_eval_field_false(p_base));
 }
 
+/** x-lang (buffer-make str): a BUFFER viewing @p str's bytes.
+ *  NON-OWNING (the wrap rule): the buffer's cursors walk the string's own
+ *  storage, so the string must outlive the buffer and (str make) is the
+ *  natural backing store.  Both cursors start at the base -- append then
+ *  read, or fill the string first and walk the read cursor. */
+static x_obj_t *x_prim_buffer_make(x_obj_t *p_base, x_obj_t *p_args)
+{
+	x_obj_t *p_str;
+
+	x_eargs(p_base, p_args, 2, NULL, &p_str);
+
+	return x_make_buffer(p_base, X_OBJ_FLAG_NONE, x_strval(p_str));
+}
+
 /** x-lang (buffer-reset buffer): empty the buffer (cursors back to base). */
 static x_obj_t *x_prim_buffer_reset(x_obj_t *p_base, x_obj_t *p_args)
 {
@@ -759,6 +773,7 @@ x_obj_t *x_prim_type_register(x_obj_t *p_base, x_obj_t *p_args)
 		{ "make-iter",         x_prim_make_iter,         "iter",   "make"          },
 		{ "iter-next",         x_prim_iter_next,         "iter",   "next"          },
 		{ "iter-empty?",       x_prim_iter_empty,        "iter",   "empty?"        },
+		{ "buffer-make",       x_prim_buffer_make,       "buf", "make"          },
 		{ "buffer-reset",      x_prim_buffer_reset,      "buf", "reset"         },
 		{ "buffer-retain",     x_prim_buffer_retain,     "buf", "retain"        },
 		{ "buffer-append",     x_prim_buffer_append,     "buf", "append"        },

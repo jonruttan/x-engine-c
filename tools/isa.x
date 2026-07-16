@@ -59,6 +59,8 @@
   (base make-tok spine)
   (base make-type spine)
   (buf append tok)
+  (buf make alloc)            ; a BUFFER viewing a string's bytes (non-owning, the wrap rule);
+                              ;   revives buffer construction from x. Added 2026-07-15 (user-approved)
   (buf last-char tok)
   (buf read tok)
   (buf read-text tok)
@@ -99,10 +101,15 @@
   (io read-char io)
   (io repl-read io)
   (io write-str io)           ; the OUT port instruction: raw bytes of a string to the current output;
-                              ;   the pure-X printer bottoms out here. Added 2026-07-14 (printer batch)
+                              ;   the pure-X printer bottoms out here. UNCHECKED like first/rest --
+                              ;   callers pass a STR. Added 2026-07-14 (printer batch)
   (iter empty? hot)           ; derived dispatch, but per-ELEMENT hot (cached as %-vars in hot paths)
   (iter make types)
   (iter next hot)             ; derived dispatch, but per-ELEMENT hot
+  (mem alloc alloc)           ; raw UNMANAGED region as a ptr, zeroed; caller must (mem free) it.
+                              ;   Prefer (str make) (GC-owned). UNCHECKED like first/rest.
+                              ;   Added 2026-07-15 (user-approved: the missing malloc door)
+  (mem free alloc)            ; release a (mem alloc) region; double/foreign free is UB as in C
   (obj ->ptr ffi)
   (obj eq? raw-op)
   (obj make alloc)
@@ -124,6 +131,10 @@
   (str byte-len hot)          ; derived (atom header read) but string inner-loop hot (utf8 codec, reader lambdas)
   (str byte-ref hot)          ; derived (byte read) but same inner-loop heat
   (str byte-sub raw-mem)
+  (str make alloc)            ; a fresh OWNED n-byte string region (space-filled, NUL-terminated so
+                              ;   byte-len sees n); the GC frees it -- no free door. Fill via
+                              ;   (str ->ptr) + raw-mem stores, File read, or FFI. UNCHECKED (n trusted).
+                              ;   Added 2026-07-15 (user-approved: make-str for File/FFI/buffers)
   (sym ->str alloc)
   (sys clock sys)
   (tok read tok)

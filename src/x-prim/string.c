@@ -41,6 +41,33 @@ static x_obj_t *x_prim_string_append(x_obj_t *p_base, x_obj_t *p_args)
 	return x_mkstrown(p_base, s);
 }
 
+/** Allocate a fresh writable byte region as a string object.
+ *  x-lang: (make-str n)
+ *  @param p_base Interpreter base context.
+ *  @param p_args Unevaluated argument list: (make-str n).
+ *  @return A new OWNED string of exactly @p n bytes.
+ *  @note SPACE-filled and NUL-terminated so the strlen-based byte
+ *        accessors see exactly n bytes.  Callers fill it in place via
+ *        (str ->ptr) + the raw-mem stores, File read, or FFI calls.
+ *        The object OWNS the region -- the GC frees it, so there is no
+ *        free door and no leak on an error path.  UNCHECKED like
+ *        first/rest: n is trusted (the x layer guards).
+ */
+static x_obj_t *x_prim_make_str(x_obj_t *p_base, x_obj_t *p_args)
+{
+	x_obj_t *p_n;
+	x_char_t *s;
+	size_t n;
+
+	x_eargs(p_base, p_args, 2, NULL, &p_n);
+	n = (size_t)x_intval(p_n);
+	s = (x_char_t *)x_sys_malloc(n + 1);
+	x_lib_memset(s, ' ', n);
+	s[n] = '\0';
+
+	return x_mkstrown(p_base, s);
+}
+
 /** Convert a string to an interned symbol.
  *  x-lang: (str->symbol str)
  *  @param p_base Interpreter base context.
@@ -175,6 +202,7 @@ x_obj_t *x_prim_string_register(x_obj_t *p_base, x_obj_t *p_args)
 	 * under their source type (the eventual method receiver). */
 	static const x_prim_entry_t entries[] = {
 		{ "str-append",   x_prim_string_append,    "str",   "append"   },
+		{ "make-str",     x_prim_make_str,         "str",   "make"     },
 		{ "str->symbol",  x_prim_string_to_symbol, "str",   "->sym"    },
 		{ "symbol->str",  x_prim_symbol_to_string, "sym",   "->str"    },
 		{ "bytes->str",   x_prim_list_to_string,   "bytes", "->str"    },

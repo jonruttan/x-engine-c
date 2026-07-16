@@ -754,7 +754,7 @@ static int x_prims_ns_deregistered(const x_char_t *ns)
 {
 	static const char *const list[] = {
 		"sys", "iter", "base", "heap", "str", "obj", "buf", "tok", "type",
-		"ptr", "ffi", "io", "char", "int", NULL
+		"ptr", "ffi", "io", "char", "int", "mem", NULL
 	};
 	int i;
 

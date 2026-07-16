@@ -4,10 +4,11 @@
  *
  * Provides dynamic library loading (dlopen, dlsym), typed foreign calls
  * (ffi-call with convention strings), raw pointer calls (ptr-call),
- * pointer/integer/string conversions (int->ptr, ptr->int, str->ptr,
- * ptr->str, obj->ptr), raw memory access (ptr-ref, ptr-set!, ptr-ref-word,
- * ptr-set-word!), object metadata access (obj-meta-count, obj-meta-ref,
- * obj-meta-set!), and callable construction (make-callable).
+ * pointer/integer/string/object conversions (int->ptr, ptr->int, str->ptr,
+ * ptr->str, obj->ptr, ptr->obj), raw memory access (ptr-ref, ptr-set!,
+ * ptr-ref-word, ptr-set-word!), and callable construction (make-callable).
+ * (The obj-meta-* accessors are pure x-lang now: boot/reflect.x files
+ * reflective implementations into the catalog over the layout contracts.)
  *
  * @author Jon Ruttan (jonruttan@gmail.com)
  * @copyright 2026 Jon Ruttan
@@ -409,6 +410,58 @@ static x_obj_t *x_prim_ptr_to_int(x_obj_t *p_base, x_obj_t *p_args)
 }
 
 /**
+ * @brief Allocate a raw, UNMANAGED byte region.
+ *
+ * x-lang form: @code (mem-alloc n) @endcode
+ *
+ * The region is zeroed (calloc semantics -- deterministic contents) and
+ * returned as a POINTER object that does NOT own it: the caller must
+ * release it with (mem free), or it leaks.  Prefer (str make) -- a
+ * GC-owned region -- unless a header-less block is required (FFI structs,
+ * alignment-sensitive out-params).  UNCHECKED like first/rest: n is
+ * trusted.
+ *
+ * @param p_base  Execution context.
+ * @param p_args  Unevaluated: (self n).
+ * @return Pointer object addressing the fresh region.
+ */
+static x_obj_t *x_prim_mem_alloc(x_obj_t *p_base, x_obj_t *p_args)
+{
+	x_obj_t *p_n;
+	void *p;
+	size_t n;
+
+	x_eargs(p_base, p_args, 2, NULL, &p_n);
+	n = (size_t)x_intval(p_n);
+	p = x_sys_malloc(n);
+	x_lib_memset(p, 0, n);
+
+	return x_mkptr(p_base, p);
+}
+
+/**
+ * @brief Release a region obtained from (mem alloc).
+ *
+ * x-lang form: @code (mem-free ptr) @endcode
+ *
+ * UNCHECKED: freeing anything not returned by (mem alloc), or freeing
+ * twice, is UB exactly as in C.  Side-effect prim: returns NULL.
+ *
+ * @param p_base  Execution context.
+ * @param p_args  Unevaluated: (self ptr).
+ * @return NULL.
+ */
+static x_obj_t *x_prim_mem_free(x_obj_t *p_base, x_obj_t *p_args)
+{
+	x_obj_t *p_p;
+
+	x_eargs(p_base, p_args, 2, NULL, &p_p);
+	x_sys_free(x_ptrval(p_p));
+
+	return NULL;
+}
+
+/**
  * @brief Write nbytes of an integer value into raw memory at ptr+offset.
  *
  * x-lang form: @code (ptr-set! ptr offset value nbytes) @endcode
@@ -661,6 +714,8 @@ x_obj_t *x_prim_ffi_register(x_obj_t *p_base, x_obj_t *p_args)
 		{ "ptr-call",        x_prim_ptr_call,           "ptr", "call"          },
 		{ "int->ptr",        x_prim_int_to_ptr,         "int", "->ptr"         },
 		{ "ptr->int",        x_prim_ptr_to_int,         "ptr", "->int"         },
+		{ "mem-alloc",       x_prim_mem_alloc,          "mem", "alloc"         },
+		{ "mem-free",        x_prim_mem_free,           "mem", "free"          },
 		{ "ptr-set!",        x_prim_ptr_set,            "ptr", "set!"          },
 		{ "ptr-ref",         x_prim_ptr_ref,            "ptr", "ref"           },
 		{ "ptr-ref-word",    x_prim_ptr_ref_word,       "ptr", "ref-word"      },
