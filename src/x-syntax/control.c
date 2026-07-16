@@ -171,6 +171,12 @@ static x_obj_t *x_prim_guard(x_obj_t *p_base, x_obj_t *p_args)
 		 * the handler body. */
 		x_firstobj(x_eval_field_tco_expr(p_base)) = NULL;
 		x_firstobj(x_eval_field_tco_env(p_base)) = NULL;
+		/* Pop the handler BEFORE the handler body runs: a re-raise --
+		 * (error e) inside the body, the documented propagation idiom
+		 * -- must reach the ENCLOSING guard.  With this guard still
+		 * installed, the re-raise would longjmp back into its own
+		 * setjmp and re-run the body forever, allocating every pass. */
+		x_firstobj(x_eval_field_error_handler(p_base)) = p_prev_handler;
 		x_eval_env_alist_extend(p_base, p_pair);
 		p_result = x_eval_body(p_base, p_handler_body);
 		x_firstobj(x_eval_field_env_alist(p_base))

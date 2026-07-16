@@ -3,7 +3,7 @@
 
 /**
  * @file atom.h
- * @brief S-expression writer for opaque atom objects.
+ * @brief S-expression reader declarations for opaque atom objects.
  * @author Jon Ruttan (jonruttan@gmail.com)
  * @copyright 2023 Jon Ruttan
  * @license MIT No Attribution (MIT-0)
@@ -17,6 +17,8 @@
 
 #include "x-obj.h"
 
-/** Write the external representation of an atom (e.g. @c #<type:0xADDR>). */
+/* Atom printing (e.g. #<type:0xADDR>) lives in lib/x/boot/printer.x.
+ * This header remains for the spec TUs that include the (now-empty)
+ * atom.c. */
 
 #endif /* X_SEXP_ATOM_H */

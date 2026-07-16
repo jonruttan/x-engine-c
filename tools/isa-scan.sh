@@ -50,6 +50,21 @@ in_keep {
 }
 {
 	line = $0
+	# The two call forms may wrap across lines (table entries stay
+	# one-per-line by the manifest contract).  Join continuation lines
+	# until the parens balance, then extract from the joined line.
+	if (line ~ /x_callable_bind\(|x_value_bind\(/) {
+		t = line; o = gsub(/\(/, "(", t); c = gsub(/\)/, ")", t)
+		while (o > c) {
+			if ((getline nxt) <= 0) {
+				printf "FAIL: unterminated bind call in %s: %s\n", \
+					FILENAME, line > "/dev/stderr"
+				exit 1
+			}
+			line = line " " nxt
+			t = nxt; o += gsub(/\(/, "(", t); c += gsub(/\)/, ")", t)
+		}
+	}
 	n = 0
 	s = line
 	while (match(s, /"[^"]*"/)) {
@@ -65,17 +80,21 @@ in_keep {
 	if (line ~ /x_prim_|x_syntax_/)      { print "bare " str[1]; next }
 	print "value " str[1]
 }' "$ROOT"/src/*.c "$ROOT"/src/x-prim/*.c "$ROOT"/src/x-syntax/*.c \
-   "$ROOT"/opt/x-prim/*.c > "$SRC_LIST"
+   "$ROOT"/opt/x-prim/*.c > "$SRC_LIST" || exit 1
 printf 'value #t\nvalue #f\n' >> "$SRC_LIST"
 
 # --- 2. the manifest's view -------------------------------------------------
 awk '
-/%isa-catalog/ { sect = "catalog"; next }
-/%isa-bare/    { sect = "bare"; next }
-/%isa-keep/    { sect = "keep"; next }
-# X-level aliases of bare prims: not C binding sites; runtime-walk-only.
-/%isa-aliases/ { sect = ""; next }
-/%isa-values/  { sect = "value"; next }
+# Section heads are anchored def forms: (def %isa-<name> (lit (
+# aliases are X-level aliases of bare prims (not C binding sites;
+# runtime-walk-only) and are ignored; values entries print as "value".
+/^\(def %isa-/ {
+	sect = $2
+	sub(/^%isa-/, "", sect)
+	if (sect == "aliases") sect = ""
+	else if (sect == "values") sect = "value"
+	next
+}
 /^  \(/ {
 	line = $0
 	gsub(/[()]/, "", line)
