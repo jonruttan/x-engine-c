@@ -109,7 +109,14 @@
   (mem alloc alloc)           ; raw UNMANAGED region as a ptr, zeroed; caller must (mem free) it.
                               ;   Prefer (str make) (GC-owned). UNCHECKED like first/rest.
                               ;   Added 2026-07-15 (user-approved: the missing malloc door)
+  (mem cmp raw-mem)           ; block compare (TRUE memcmp: NULs don't terminate) -> 0/-1/1.
+                              ;   The machine's rep-cmps; str=? bottoms out here. UNCHECKED.
+                              ;   Added 2026-07-15 (user-approved: block-op round)
+  (mem copy raw-mem)          ; block copy (memcpy, non-overlapping); the machine's rep-movs.
+                              ;   UNCHECKED. Added 2026-07-15 (user-approved: block-op round)
   (mem free alloc)            ; release a (mem alloc) region; double/foreign free is UB as in C
+  (mem set raw-mem)           ; block fill (memset); the machine's rep-stos. UNCHECKED.
+                              ;   Added 2026-07-15 (user-approved: block-op round)
   (obj ->ptr ffi)
   (obj eq? raw-op)
   (obj make alloc)

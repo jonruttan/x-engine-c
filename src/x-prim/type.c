@@ -680,18 +680,25 @@ static x_obj_t *x_prim_iter_empty(x_obj_t *p_base, x_obj_t *p_args)
 		: x_firstobj(x_eval_field_false(p_base));
 }
 
-/** x-lang (buffer-make str): a BUFFER viewing @p str's bytes.
+/** x-lang (buffer-make str [flags]): a BUFFER viewing @p str's bytes.
  *  NON-OWNING (the wrap rule): the buffer's cursors walk the string's own
  *  storage, so the string must outlive the buffer and (str make) is the
  *  natural backing store.  Both cursors start at the base -- append then
- *  read, or fill the string first and walk the read cursor. */
+ *  read, or fill the string first and walk the read cursor.  Optional
+ *  flags (descriptor names, e.g. %obj-flag-ro): a read-only buffer
+ *  returns EOF at exhaustion instead of extending from stdin. */
 static x_obj_t *x_prim_buffer_make(x_obj_t *p_base, x_obj_t *p_args)
 {
-	x_obj_t *p_str;
+	x_obj_t *p_str, *p_rest;
+	x_obj_flag_t flags = 0;
 
 	x_eargs(p_base, p_args, 2, NULL, &p_str);
+	p_rest = x_11(p_args);
+	if ( ! x_obj_isnil(p_base, p_rest))
+		flags = (x_obj_flag_t)x_intval(
+			x_eval_arg(p_base, x_firstobj(p_rest)));
 
-	return x_make_buffer(p_base, X_OBJ_FLAG_NONE, x_strval(p_str));
+	return x_make_buffer(p_base, flags, x_strval(p_str));
 }
 
 /** x-lang (buffer-reset buffer): empty the buffer (cursors back to base). */

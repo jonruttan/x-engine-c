@@ -440,6 +440,83 @@ static x_obj_t *x_prim_mem_alloc(x_obj_t *p_base, x_obj_t *p_args)
 }
 
 /**
+ * @brief Block copy: the machine's rep-movs instruction.
+ *
+ * x-lang form: @code (mem-copy dst src n) @endcode
+ *
+ * Copies @p n bytes from src to dst (x_lib_memcpy; regions must not
+ * overlap).  UNCHECKED like first/rest: pointers and n are trusted.
+ * Side-effect prim: returns NULL.
+ *
+ * @param p_base  Execution context.
+ * @param p_args  Unevaluated: (self dst src n).
+ * @return NULL.
+ */
+static x_obj_t *x_prim_mem_copy(x_obj_t *p_base, x_obj_t *p_args)
+{
+	x_obj_t *p_dst, *p_src, *p_n;
+
+	x_eargs(p_base, p_args, 4, NULL, &p_dst, &p_src, &p_n);
+	x_lib_memcpy(x_ptrval(p_dst), x_ptrval(p_src), (size_t)x_intval(p_n));
+
+	return NULL;
+}
+
+/**
+ * @brief Block compare: the machine's rep-cmps instruction.
+ *
+ * x-lang form: @code (mem-cmp a b n) @endcode
+ *
+ * TRUE memcmp semantics (NUL bytes do not terminate -- strncmp would be
+ * wrong for raw regions), implemented as a local byte loop so x-lib
+ * needs no new entry.  Returns 0 on equality, else the sign of the
+ * first differing byte pair (-1/1).  UNCHECKED.
+ *
+ * @param p_base  Execution context.
+ * @param p_args  Unevaluated: (self a b n).
+ * @return Integer 0, -1, or 1.
+ */
+static x_obj_t *x_prim_mem_cmp(x_obj_t *p_base, x_obj_t *p_args)
+{
+	x_obj_t *p_a, *p_b, *p_n;
+	const unsigned char *a, *b;
+	size_t n, i;
+
+	x_eargs(p_base, p_args, 4, NULL, &p_a, &p_b, &p_n);
+	a = (const unsigned char *)x_ptrval(p_a);
+	b = (const unsigned char *)x_ptrval(p_b);
+	n = (size_t)x_intval(p_n);
+	for (i = 0; i < n; i++) {
+		if (a[i] != b[i])
+			return x_mkint(p_base, a[i] < b[i] ? -1 : 1);
+	}
+
+	return x_mkint(p_base, 0);
+}
+
+/**
+ * @brief Block fill: the machine's rep-stos instruction.
+ *
+ * x-lang form: @code (mem-set p byte n) @endcode
+ *
+ * Fills @p n bytes at p with @p byte (x_lib_memset).  UNCHECKED.
+ * Side-effect prim: returns NULL.
+ *
+ * @param p_base  Execution context.
+ * @param p_args  Unevaluated: (self p byte n).
+ * @return NULL.
+ */
+static x_obj_t *x_prim_mem_set(x_obj_t *p_base, x_obj_t *p_args)
+{
+	x_obj_t *p_p, *p_byte, *p_n;
+
+	x_eargs(p_base, p_args, 4, NULL, &p_p, &p_byte, &p_n);
+	x_lib_memset(x_ptrval(p_p), (int)x_intval(p_byte), (size_t)x_intval(p_n));
+
+	return NULL;
+}
+
+/**
  * @brief Release a region obtained from (mem alloc).
  *
  * x-lang form: @code (mem-free ptr) @endcode
@@ -715,7 +792,10 @@ x_obj_t *x_prim_ffi_register(x_obj_t *p_base, x_obj_t *p_args)
 		{ "int->ptr",        x_prim_int_to_ptr,         "int", "->ptr"         },
 		{ "ptr->int",        x_prim_ptr_to_int,         "ptr", "->int"         },
 		{ "mem-alloc",       x_prim_mem_alloc,          "mem", "alloc"         },
+		{ "mem-cmp",         x_prim_mem_cmp,            "mem", "cmp"           },
+		{ "mem-copy",        x_prim_mem_copy,           "mem", "copy"          },
 		{ "mem-free",        x_prim_mem_free,           "mem", "free"          },
+		{ "mem-set",         x_prim_mem_set,            "mem", "set"           },
 		{ "ptr-set!",        x_prim_ptr_set,            "ptr", "set!"          },
 		{ "ptr-ref",         x_prim_ptr_ref,            "ptr", "ref"           },
 		{ "ptr-ref-word",    x_prim_ptr_ref_word,       "ptr", "ref-word"      },
