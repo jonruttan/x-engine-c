@@ -190,7 +190,7 @@ test-x: $(EXECUTABLE) ## Run x-lang tests
 	sh tests/x/spec-runner.sh
 .PHONY: test-x
 
-test: check-isa check-obj-layout check-base-paths check-boot-order test-c test-x ## Run all tests
+test: check-isa check-obj-layout check-base-paths check-boot-order check-doc-vocab test-c test-x ## Run all tests
 .PHONY: test
 
 # The C-surface ratchet, source half: every binding site in the C source must
@@ -226,6 +226,17 @@ check-base-paths: ## Diff the base-field macro chains against tools/base-paths.x
 check-boot-order: $(EXECUTABLE) ## Lint the boot load order: class-call order + pre-seed drift
 	sh tools/boot-order.sh
 .PHONY: check-boot-order
+
+# Doc-type vocabulary ratchet: the adjudicated losers (INTEGER/BOOLEAN/
+# FUNCTION -- see contributing.md) must not reappear in (param ...)/
+# (returns ...) forms; INT/BOOL/CALLABLE are the one-name-per-concept picks.
+check-doc-vocab: ## Lint doc forms for banned type-token aliases
+	@if grep -rn 'INTEGER\|BOOLEAN\|FUNCTION' lib --include='*.x' \
+		| grep '(param \|(returns '; then \
+		echo "doc-vocab: FAIL (use INT/BOOL/CALLABLE; see contributing.md)" >&2; \
+		exit 1; \
+	else echo "doc-vocab: ok"; fi
+.PHONY: check-doc-vocab
 
 # Memory-safety gate: run BOTH suites against an AddressSanitizer build (reuses
 # the x-asan target). Catches the crash class we keep hitting -- e.g. an
