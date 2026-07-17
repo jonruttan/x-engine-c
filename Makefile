@@ -217,12 +217,13 @@ check-base-paths: ## Diff the base-field macro chains against tools/base-paths.x
 	sh tools/base-paths-scan.sh
 .PHONY: check-base-paths
 
-# The boot-order lint: derives the effective load order from lib/x-core.x
-# (include forms, the %include-list-cell pre-seed, import expansion) and
-# flags load-time-evaluated class-calls whose def-class comes later in the
-# order -- the silent class-call trap (a not-yet-callable head passes the
-# form through unevaluated; see tools/boot-order.x).
-check-boot-order: $(EXECUTABLE) ## Lint the boot load order for class-calls before their def-class
+# The boot-order lint: derives the effective load order from each boot entry
+# (lib/x-core.x + the three dialect entries; include forms, the
+# %include-list-cell pre-seed, import expansion) and flags (a) load-time
+# class-calls whose def-class comes later in the order -- the silent
+# class-call trap -- and (b) pre-seed drift: double loads and raw-included
+# lib paths never registered (see tools/boot-order.x).
+check-boot-order: $(EXECUTABLE) ## Lint the boot load order: class-call order + pre-seed drift
 	sh tools/boot-order.sh
 .PHONY: check-boot-order
 
