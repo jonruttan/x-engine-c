@@ -343,9 +343,12 @@ fmt-check-x: $(EXECUTABLE) ## Check x-lang formatting
 .PHONY: fmt-check-x
 
 doc-c: ## Generate C reference documentation (HTML + man pages)
-	/opt/homebrew/bin/doxygen Doxyfile
+	doxygen Doxyfile
 .PHONY: doc-c
 
+# No stderr masking and fail on error/empty output: a 2>/dev/null here once
+# hid a retired-constructor crash for weeks -- 77 of 79 ref files were 0
+# bytes while the target reported success.
 doc-x: $(EXECUTABLE) ## Generate x-lang documentation
 	@mkdir -p docs/ref/x/boot docs/ref/x/core docs/ref/x/type \
 		docs/ref/x/sys docs/ref/x/num docs/ref/x/doc docs/ref/x/tool \
@@ -354,11 +357,20 @@ doc-x: $(EXECUTABLE) ## Generate x-lang documentation
 		rel=$$(echo "$$f" | sed 's|^lib/x/||; s|^lib/||; s|\.x$$||'); \
 		out="docs/ref/x/$${rel}.md"; \
 		mkdir -p "$$(dirname $$out)"; \
-		sh tools/doc.sh "$$f" > "$$out" 2>/dev/null; \
+		sh tools/doc.sh "$$f" > "$$out" || { \
+			printf '  \033[1;31mFAIL\033[0m %s\n' "$$f"; exit 1; }; \
+		if [ ! -s "$$out" ]; then \
+			if grep -q '(doc (provide' "$$f"; then \
+				printf '  \033[1;31mEMPTY\033[0m %s\n' "$$out"; exit 1; \
+			else \
+				rm -f "$$out"; \
+				printf '  skip %s (no doc-provide)\n' "$$f"; continue; \
+			fi; \
+		fi; \
 		printf '  %s\n' "$$out"; \
 	done
-	@sh tools/doc-index.sh > docs/ref/x/index.md 2>/dev/null; \
-		printf '  %s\n' "docs/ref/x/index.md"
+	@sh tools/doc-index.sh > docs/ref/x/index.md
+	@printf '  %s\n' "docs/ref/x/index.md"
 .PHONY: doc-x
 
 doc: doc-c doc-x ## Generate all documentation
