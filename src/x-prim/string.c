@@ -76,10 +76,26 @@ static x_obj_t *x_prim_make_str(x_obj_t *p_base, x_obj_t *p_args)
  */
 static x_obj_t *x_prim_string_to_symbol(x_obj_t *p_base, x_obj_t *p_args)
 {
-	x_obj_t *p_str;
+	x_obj_t *p_str, *p_sym;
+	x_char_t *s;
 	x_eargs(p_base, p_args, 2, NULL, &p_str);
 
-	return x_mksymbol(p_base, x_strval(p_str));
+	/* The intern table stores a REFERENCE to the name buffer it is
+	 * given.  x_strval(p_str)'s buffer belongs to the string object;
+	 * handing it over uncopied leaves the interned symbol's name
+	 * dangling once the string is collected -- the freed bytes get
+	 * reused and eq?/BST lookups then match the wrong symbols (the
+	 * doc-registry scramble, 2026-07-17).  Intern a private copy the
+	 * symbol owns instead. */
+	s = x_lib_strndup(x_strval(p_str), x_lib_strlen(x_strval(p_str)));
+	p_sym = x_mksymbolown(p_base, s);
+
+	/* Intern HIT: the existing symbol is returned and the copy was not
+	 * consumed (x_type_symbol_make stores the buffer only on a miss). */
+	if (x_symbolval(p_sym) != s)
+		x_sys_free(s);
+
+	return p_sym;
 }
 
 /** Convert a symbol to a string.

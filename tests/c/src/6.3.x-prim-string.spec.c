@@ -156,6 +156,48 @@ static char *test_string_symbol_convert(void)
 	return NULL;
 }
 
+/* Regression (2026-07-17, the doc-registry scramble): the interned symbol
+ * must OWN a private copy of its name.  The old code stored a reference
+ * into the source string's buffer, so collecting the string left the
+ * symbol's name dangling -- freed bytes got reused and eq?/intern-BST
+ * lookups matched the wrong symbols. */
+static char *test_string_to_symbol_owns_name(void)
+{
+	x_obj_t *p_base, *p_args, *p_str, *p_sym, *p_sym2;
+	x_char_t *p_buf;
+
+	p_base = x_eval_make(NULL, NULL);
+	x_prim_register(p_base, NULL);
+
+	/* Heap-owned source buffer (a literal-backed x_mkstr is read-only,
+	 * and the clobber below must be a legal write). */
+	p_buf = x_lib_strndup((x_char_t *)"gc-probe", 8);
+	p_str = x_mkstrown(p_base, p_buf);
+	p_args = x_mkspair(p_base, X_OBJ_FLAG_NONE, NULL,
+		x_mkspair(p_base, X_OBJ_FLAG_NONE, p_str, NULL));
+	p_sym = x_prim_string_to_symbol(p_base, p_args);
+
+	_it_should("symbol name does not alias the source string's buffer",
+		x_symbolval(p_sym) != x_strval(p_str));
+
+	/* Clobber the source buffer (what buffer reuse after a sweep does);
+	 * the symbol's name must be unaffected. */
+	x_lib_memset(x_strval(p_str), 'Z', x_lib_strlen(x_strval(p_str)));
+	_it_should("symbol name survives the source buffer being reused",
+		x_lib_strcmp(x_symbolval(p_sym), "gc-probe") == 0);
+
+	/* Intern HIT from a second string: same symbol object comes back
+	 * (the unconsumed private copy is freed internally). */
+	p_args = x_mkspair(p_base, X_OBJ_FLAG_NONE, NULL,
+		x_mkspair(p_base, X_OBJ_FLAG_NONE, x_mkstr(p_base, "gc-probe"), NULL));
+	p_sym2 = x_prim_string_to_symbol(p_base, p_args);
+	_it_should("re-interning the same name returns the same symbol",
+		p_sym2 == p_sym);
+
+	test_cleanup(p_base);
+	return NULL;
+}
+
 static char *test_list_to_string(void)
 {
 	x_obj_t *p_base, *p_args, *p_result, *p_list;
@@ -214,6 +256,7 @@ static char *test_str_call_negative_index(void)
 static char *run_tests() {
 	_run_test(test_string_append);
 	_run_test(test_string_symbol_convert);
+	_run_test(test_string_to_symbol_owns_name);
 	_run_test(test_list_to_string);
 	_run_test(test_str_call_negative_index);
 
