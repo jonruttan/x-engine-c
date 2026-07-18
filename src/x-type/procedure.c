@@ -33,7 +33,7 @@
  * and corrupt the mark bitmap or segfault.  Only slot 1 (the state
  * pair list) contains GC-managed objects that need marking.
  *
- * @param p_base  x_obj_t* -- Execution context
+ * @param p_base  x_obj_t* -- Base (execution context)
  * @param p_args  x_obj_t* -- (object . (flags))
  * @return NULL always
  *
@@ -61,7 +61,7 @@ x_satom_t x_type_procedure_name = x_obj_set(x_type_atom_obj, X_OBJ_FLAG_NONE, { 
  * Builds the state list (params . (body . (env . bst))) and stores
  * it in slot 1 of the two-unit callable layout.
  *
- * @param p_base   x_obj_t*    -- Execution context
+ * @param p_base   x_obj_t*    -- Base (execution context)
  * @param flags    x_obj_flag_t -- Object flags (e.g. X_OBJ_FLAG_WRAP)
  * @param p_params x_obj_t*    -- Formal parameter tree
  * @param p_body   x_obj_t*    -- Body expression list
@@ -84,7 +84,7 @@ x_obj_t *x_make_procedure(x_obj_t *p_base, x_obj_flag_t flags,
 /**
  * Build the PROCEDURE type struct descriptor.
  *
- * @param p_base  x_obj_t* -- Execution context
+ * @param p_base  x_obj_t* -- Base (execution context)
  * @param p_args  x_obj_t* -- Unused
  * @return Type struct pair list
  */
@@ -104,7 +104,7 @@ x_obj_t *x_type_procedure_struct(x_obj_t *p_base, x_obj_t *p_args)
 /**
  * Register (or retrieve) the PROCEDURE type struct on p_base.
  *
- * @param p_base  x_obj_t* -- Execution context
+ * @param p_base  x_obj_t* -- Base (execution context)
  * @param p_args  x_obj_t* -- Unused
  * @return The registered type struct object
  */
@@ -123,7 +123,7 @@ x_obj_t *x_type_procedure_register(x_obj_t *p_base, x_obj_t *p_args)
  *
  * Expects args: (params body env bst [flags]).
  *
- * @param p_base  x_obj_t* -- Execution context
+ * @param p_base  x_obj_t* -- Base (execution context)
  * @param p_args  x_obj_t* -- Construction arguments
  * @return New procedure object
  */
@@ -172,7 +172,7 @@ x_obj_t *x_type_procedure_make(x_obj_t *p_base, x_obj_t *p_args)
  * optimization -- the trampoline loop in x_eval restores the save-stack
  * frame when the TCO chain completes.
  *
- * @param p_base  x_obj_t* -- Execution context
+ * @param p_base  x_obj_t* -- Base (execution context)
  * @param p_args  x_obj_t* -- (procedure . unevaluated-args)
  * @return Result of the procedure body
  * @see x_type_procedure_apply for the non-TCO path
@@ -249,7 +249,7 @@ x_obj_t *x_type_procedure_call(x_obj_t *p_base, x_obj_t *p_args)
  *       each symbol back to the saved head, ensuring BST lookups
  *       are not incorrectly bypassed after the apply returns.
  *
- * @param p_base  x_obj_t* -- Execution context
+ * @param p_base  x_obj_t* -- Base (execution context)
  * @param p_args  x_obj_t* -- (procedure . evaluated-args)
  * @return Result of the procedure body
  * @see x_type_procedure_call for the TCO path

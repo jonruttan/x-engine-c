@@ -25,7 +25,7 @@
  * the body of the first clause whose test is truthy, via tail-call
  * evaluation.  Returns nil if no clause matches.
  *
- * @param p_base  Execution context.
+ * @param p_base  Base (execution context).
  * @param p_args  Unevaluated argument list; expects (caller (test body) ...).
  * @return NULL; result delivered via TCO expr slot.
  *
@@ -74,7 +74,7 @@ static x_obj_t *x_prim_match(x_obj_t *p_base, x_obj_t *p_args)
  * the save stack and environment boundary to the guard point, binds the
  * error value to var, and evaluates handler-body.
  *
- * @param p_base  Execution context.
+ * @param p_base  Base (execution context).
  * @param p_args  Unevaluated argument list; expects (caller (var handler-body ...) body ...).
  * @return Result of body on success, or result of handler-body on error.
  *
@@ -198,7 +198,7 @@ static x_obj_t *x_prim_guard(x_obj_t *p_base, x_obj_t *p_args)
  * evaluated via x_eargs).  If a guard handler is installed, transfers
  * control to it via longjmp.  Otherwise falls through to a fatal error.
  *
- * @param p_base  Execution context.
+ * @param p_base  Base (execution context).
  * @param p_args  Unevaluated argument list; expects (caller message).
  * @return Does not return normally when a handler is installed.
  * @note Falls through to x_obj_error for fatal output when no handler exists.
@@ -239,7 +239,7 @@ static x_obj_t *x_prim_error(x_obj_t *p_base, x_obj_t *p_args)
  * internally).  Roots the argument list during evaluation of the first
  * expression to protect it from GC.
  *
- * @param p_base  Execution context.
+ * @param p_base  Base (execution context).
  * @param p_args  Unevaluated argument list; expects (caller a b).
  * @return NULL; result of b delivered via TCO expr slot.
  * @note Internal primitive; used by the compiler to sequence body forms.
@@ -277,7 +277,7 @@ static x_obj_t *x_prim_seq(x_obj_t *p_base, x_obj_t *p_args)
  *
  * Binds: match, guard, error, %seq.
  *
- * @param p_base  Execution context.
+ * @param p_base  Base (execution context).
  * @param p_args  Unused.
  * @return p_base.
  */

@@ -44,7 +44,7 @@ x_satom_t x_sexp_int_read_prim = x_obj_set(x_type_atom_obj, X_OBJ_FLAG_NONE, { .
  * the read pointer and scores the buffer length (or returns NULL if
  * no digits were consumed).
  *
- * @param p_base  Execution context.
+ * @param p_base  Base (execution context).
  * @param p_args  Pair of (self, read-args).
  * @return Self, score, or NULL.
  */
@@ -73,7 +73,7 @@ x_obj_t *x_sexp_int_analyse_digits(x_obj_t *p_base, x_obj_t *p_args)
  *
  * Identical logic to analyse_digits but accepts @c 0-9, @c a-f, @c A-F.
  *
- * @param p_base  Execution context.
+ * @param p_base  Base (execution context).
  * @param p_args  Pair of (self, read-args).
  * @return Self, score, or NULL.
  */
@@ -103,7 +103,7 @@ x_obj_t *x_sexp_int_analyse_xdigits(x_obj_t *p_base, x_obj_t *p_args)
  * If the current character is @c x or @c X, transitions to the
  * xdigits state.  Otherwise delegates to the digits analyser.
  *
- * @param p_base  Execution context.
+ * @param p_base  Base (execution context).
  * @param p_args  Pair of (self, read-args).
  * @return Next analyser state or score.
  */
@@ -126,7 +126,7 @@ x_obj_t *x_sexp_int_analyse_base(x_obj_t *p_base, x_obj_t *p_args)
  * A leading @c 0 transitions to the base state; other digits delegate
  * to the digits analyser; non-digits cause rejection.
  *
- * @param p_base  Execution context.
+ * @param p_base  Base (execution context).
  * @param p_args  Pair of (self, read-args).
  * @return Next analyser state, score, or NULL.
  */
@@ -154,7 +154,7 @@ x_obj_t *x_sexp_int_analyse_prefix(x_obj_t *p_base, x_obj_t *p_args)
  * If a sign character is found, transitions to the prefix state.
  * Otherwise delegates directly to the prefix analyser.
  *
- * @param p_base  Execution context.
+ * @param p_base  Base (execution context).
  * @param p_args  Pair of (self, read-args).
  * @return Next analyser state or score.
  */
@@ -177,7 +177,7 @@ x_obj_t *x_sexp_int_analyse_sign(x_obj_t *p_base, x_obj_t *p_args)
  * Parses the buffer contents with @c x_lib_strtoint using base 0
  * (auto-detecting decimal, octal, or hexadecimal).
  *
- * @param p_base  Execution context.
+ * @param p_base  Base (execution context).
  * @param p_args  Read-args whose first element is the token buffer.
  * @return A newly created integer object, or NULL on empty buffer.
  */

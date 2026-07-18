@@ -26,7 +26,7 @@ x_satom_t x_type_iter_name = x_obj_set(x_type_atom_obj, X_OBJ_FLAG_NONE, { .s = 
  * The iterator stores a step function (p1) and a current value (p2)
  * in the standard pair layout.
  *
- * @param p_base  x_obj_t*    -- Execution context
+ * @param p_base  x_obj_t*    -- Base (execution context)
  * @param flags   x_obj_flag_t -- Object flags
  * @param p1      void*        -- Step function (callable)
  * @param p2      void*        -- Initial value (nil when exhausted)
@@ -47,7 +47,7 @@ x_obj_t *x_make_iter(x_obj_t *p_base, x_obj_flag_t flags, void *p1, void *p2)
 /**
  * Build the ITER type struct descriptor.
  *
- * @param p_base  x_obj_t* -- Execution context
+ * @param p_base  x_obj_t* -- Base (execution context)
  * @param p_args  x_obj_t* -- Unused
  * @return Type struct pair list
  */
@@ -64,7 +64,7 @@ x_obj_t *x_type_iter_struct(x_obj_t *p_base, x_obj_t *p_args)
 /**
  * Register (or retrieve) the ITER type struct on p_base.
  *
- * @param p_base  x_obj_t* -- Execution context
+ * @param p_base  x_obj_t* -- Base (execution context)
  * @param p_args  x_obj_t* -- Unused
  * @return The registered type struct object
  */
@@ -83,7 +83,7 @@ x_obj_t *x_type_iter_register(x_obj_t *p_base, x_obj_t *p_args)
  *
  * Expects args: ((step-fn . value) [flags]).
  *
- * @param p_base  x_obj_t* -- Execution context
+ * @param p_base  x_obj_t* -- Base (execution context)
  * @param p_args  x_obj_t* -- Construction arguments
  * @return New iterator object
  */
@@ -99,7 +99,7 @@ x_obj_t *x_type_iter_make(x_obj_t *p_base, x_obj_t *p_args)
 /**
  * Test whether an iterator is exhausted.
  *
- * @param p_base  x_obj_t* -- Execution context
+ * @param p_base  x_obj_t* -- Base (execution context)
  * @param p_args  x_obj_t* -- (iterator)
  * @return p_base (truthy) if empty, p_args (non-nil/falsy) if not
  */
@@ -125,7 +125,7 @@ x_obj_t *x_type_iter_isempty(x_obj_t *p_base, x_obj_t *p_args)
  *    and must return (value . next-state), or nil when exhausted.  This is
  *    the Gen / Seq step contract.
  *
- * @param p_base  x_obj_t* -- Execution context
+ * @param p_base  x_obj_t* -- Base (execution context)
  * @param p_args  x_obj_t* -- (iterator)
  * @return The yielded element, or NULL when exhausted
  */
@@ -170,7 +170,7 @@ x_obj_t *x_type_iter_next(x_obj_t *p_base, x_obj_t *p_args)
  * the X-boundary door that lets Gen pipelines run on C steps; the two
  * allocations happen here, where allocation is legal.
  *
- * @param p_base  x_obj_t* -- Execution context
+ * @param p_base  x_obj_t* -- Base (execution context)
  * @param p_args  x_obj_t* -- (iterator)
  * @return (value . next-iterator) pair, or NULL when exhausted
  */

@@ -52,7 +52,7 @@ static int is_lower(x_char_t c)
 /**
  * Analyse state 1: match first character of the @c #\\ prefix.
  *
- * @param p_base  Execution context.
+ * @param p_base  Base (execution context).
  * @param p_args  Pair of (self, read-args).
  * @return Next analyser state, or NULL on mismatch.
  */
@@ -70,7 +70,7 @@ x_obj_t *x_sexp_char_analyse1(x_obj_t *p_base, x_obj_t *p_args)
 /**
  * Analyse state 2: match second character of the @c #\\ prefix.
  *
- * @param p_base  Execution context.
+ * @param p_base  Base (execution context).
  * @param p_args  Pair of (self, read-args).
  * @return Next analyser state, or NULL on mismatch.
  */
@@ -92,7 +92,7 @@ x_obj_t *x_sexp_char_analyse2(x_obj_t *p_base, x_obj_t *p_args)
  * A lowercase letter transitions to the named-character state (analyse4).
  * Any other character scores immediately as a single-char literal.
  *
- * @param p_base  Execution context.
+ * @param p_base  Base (execution context).
  * @param p_args  Pair of (self, read-args).
  * @return Score object on match, next state for named chars, or NULL.
  */
@@ -123,7 +123,7 @@ x_obj_t *x_sexp_char_analyse3(x_obj_t *p_base, x_obj_t *p_args)
  * Keeps consuming lowercase letters.  On a non-letter delimiter the
  * read pointer is backed up and the accumulated length is scored.
  *
- * @param p_base  Execution context.
+ * @param p_base  Base (execution context).
  * @param p_args  Pair of (self, read-args).
  * @return Self to keep reading, or score on delimiter.
  */
@@ -151,7 +151,7 @@ static x_obj_t *x_sexp_char_analyse4(x_obj_t *p_base, x_obj_t *p_args)
  * bytes (0x80-0xBF).  On the first non-continuation byte the read
  * pointer is backed up and the accumulated length is scored.
  *
- * @param p_base  Execution context.
+ * @param p_base  Base (execution context).
  * @param p_args  Pair of (self, read-args).
  * @return Self to keep reading, or score at the end of the sequence.
  */
@@ -180,7 +180,7 @@ static x_obj_t *x_sexp_char_analyse_utf8(x_obj_t *p_base, x_obj_t *p_args)
  * characters (e.g. @c #\\newline) by looking up the name in the
  * character type's data alist.
  *
- * @param p_base  Execution context.
+ * @param p_base  Base (execution context).
  * @param p_args  Read-args containing the token buffer.
  * @return A newly created character object, or NULL on error.
  * @note Signals an error for unknown character names.
@@ -237,7 +237,7 @@ x_obj_t *x_sexp_char_read(x_obj_t *p_base, x_obj_t *p_args)
  * encoder; that handler shadows this one before any non-ASCII char is shown.
  * Keeping UTF-8 out of C: this fallback never encodes.
  *
- * @param p_base  Execution context.
+ * @param p_base  Base (execution context).
  * @param p_args  Pair whose first element is the character to display.
  * @return The character object.
  */

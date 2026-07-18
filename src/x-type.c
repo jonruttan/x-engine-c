@@ -34,7 +34,7 @@
  * (from, to), IO group (analyse, delimit, read, write, display,
  * error), iter group, and ops group.
  *
- * @param p_base  x_obj_t* -- Execution context (for allocation)
+ * @param p_base  x_obj_t* -- Base (execution context) (for allocation)
  * @param type    struct x_type_t -- Type descriptor with all hook pointers
  * @return x_obj_t* -- Newly allocated type struct (pair tree)
  */
@@ -200,7 +200,7 @@ int x_type_op_try(x_obj_t *p_base, x_char_t *op, x_obj_t *p_a, x_obj_t *p_b,
  * rest of @p p_args to construct the type, then caches it in the
  * type alist for future lookups.
  *
- * @param p_base  x_obj_t* -- Execution context
+ * @param p_base  x_obj_t* -- Base (execution context)
  * @param p_args  x_obj_t* -- (type-name . constructor-callable)
  * @return x_obj_t* -- Type struct
  */
@@ -231,7 +231,7 @@ x_obj_t *x_type_struct_get(x_obj_t *p_base, x_obj_t *p_args)
  * pointer. For heap-typed objects, extracts the name from the type
  * struct.
  *
- * @param p_base  x_obj_t* -- Execution context
+ * @param p_base  x_obj_t* -- Base (execution context)
  * @param p_args  x_obj_t* -- (object)
  * @return x_obj_t* -- Type name object, or NULL
  */
@@ -268,7 +268,7 @@ x_obj_t *x_type_prim_type_name(x_obj_t *p_base, x_obj_t *p_args)
  * Dispatches to pair or atom unit primitives for built-in types.
  * For custom types, calls the type's units hook function.
  *
- * @param p_base  x_obj_t* -- Execution context
+ * @param p_base  x_obj_t* -- Base (execution context)
  * @param p_args  x_obj_t* -- (object)
  * @return x_obj_t* -- Integer unit count, or NULL
  */
@@ -306,7 +306,7 @@ x_obj_t *x_type_prim_units(x_obj_t *p_base, x_obj_t *p_args)
  * Dispatches to pair or atom length primitives for built-in types.
  * For custom types, calls the type's length hook function.
  *
- * @param p_base  x_obj_t* -- Execution context
+ * @param p_base  x_obj_t* -- Base (execution context)
  * @param p_args  x_obj_t* -- (object)
  * @return x_obj_t* -- Integer length, or NULL
  */
@@ -346,7 +346,7 @@ x_obj_t *x_type_prim_length(x_obj_t *p_base, x_obj_t *p_args)
  * calls the type's mark callback if present. Otherwise falls back to
  * a generic N-slot traversal using the units count.
  *
- * @param p_base  x_obj_t* -- Execution context
+ * @param p_base  x_obj_t* -- Base (execution context)
  * @param p_obj   x_obj_t* -- Object being marked
  * @param flags   x_obj_flag_t -- GC mark flags
  * @return x_obj_t* -- Data pointer for base objects, or NULL
@@ -413,7 +413,7 @@ x_obj_t *x_type_heap_mark(x_obj_t *p_base, x_obj_t *p_obj, x_obj_flag_t flags)
  * If the object's type has a free callback, invokes it to release
  * type-specific resources before the heap cell is reclaimed.
  *
- * @param p_base  x_obj_t* -- Execution context
+ * @param p_base  x_obj_t* -- Base (execution context)
  * @param p_obj   x_obj_t* -- Object being freed
  */
 void x_type_heap_free(x_obj_t *p_base, x_obj_t *p_obj)

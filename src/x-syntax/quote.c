@@ -17,7 +17,7 @@
  *
  * Returns the argument unevaluated (fexpr -- args are not evaluated).
  *
- * @param p_base  Execution context.
+ * @param p_base  Base (execution context).
  * @param p_args  Unevaluated argument list; expects (caller expr).
  * @return The unevaluated expression.
  */
@@ -34,7 +34,7 @@ static x_obj_t *x_prim_quote(x_obj_t *p_base, x_obj_t *p_args)
  *
  * Binds: lit.
  *
- * @param p_base  Execution context.
+ * @param p_base  Base (execution context).
  * @param p_args  Unused.
  * @return p_base.
  */

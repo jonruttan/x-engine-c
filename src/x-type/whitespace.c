@@ -23,7 +23,7 @@ x_satom_t x_type_whitespace_name = x_obj_set(x_type_atom_obj, X_OBJ_FLAG_NONE, {
  *
  * Registers the s-expression whitespace analyse and delimit callbacks.
  *
- * @param p_base  x_obj_t* -- Execution context
+ * @param p_base  x_obj_t* -- Base (execution context)
  * @param p_obj   x_obj_t* -- Unused
  * @return Type struct pair list
  */
@@ -41,7 +41,7 @@ x_obj_t *x_type_whitespace_struct(x_obj_t *p_base, x_obj_t *p_obj)
 /**
  * Register (or retrieve) the WHITESPACE type struct on p_base.
  *
- * @param p_base  x_obj_t* -- Execution context
+ * @param p_base  x_obj_t* -- Base (execution context)
  * @param p_args  x_obj_t* -- Unused
  * @return The registered type struct object
  */

@@ -28,7 +28,7 @@
  * Walks the entire shadow list, removing X_OBJ_FLAG_SHADOW from each
  * symbol, then resets the list to nil.
  *
- * @param p_base  x_obj_t* -- Execution context
+ * @param p_base  x_obj_t* -- Base (execution context)
  *
  * @see x_prim_clear_shadows_to
  */
@@ -49,7 +49,7 @@ void x_prim_clear_shadows(x_obj_t *p_base)
  * Unflags symbols added since @p p_old, then restores the shadow list
  * to that earlier state. Used by TCO and closure restore paths.
  *
- * @param p_base  x_obj_t* -- Execution context
+ * @param p_base  x_obj_t* -- Base (execution context)
  * @param p_old   x_obj_t* -- Previous shadow-list head to restore to
  *
  * @details Paired with x_env_extend: every time x_env_extend flags a
@@ -88,7 +88,7 @@ void x_prim_clear_shadows_to(x_obj_t *p_base, x_obj_t *p_old)
  * Wraps @p p_arg in a stack-allocated (atom . nil) pair and passes it
  * through x_eval, which unwraps and evaluates the inner expression.
  *
- * @param p_base  x_obj_t* -- Execution context
+ * @param p_base  x_obj_t* -- Base (execution context)
  * @param p_arg   x_obj_t* -- Expression to evaluate
  * @return x_obj_t* -- Evaluation result
  */
@@ -107,7 +107,7 @@ x_obj_t *x_eval_arg(x_obj_t *p_base, x_obj_t *p_arg)
  * eval-list GC root so the garbage collector does not free remaining
  * arguments while evaluating the current one.
  *
- * @param p_base  x_obj_t* -- Execution context
+ * @param p_base  x_obj_t* -- Base (execution context)
  * @param p_args  x_obj_t* -- List of unevaluated expressions
  * @return x_obj_t* -- New list of evaluated results, or NULL if empty
  *
@@ -167,7 +167,7 @@ x_obj_t *x_eval_list(x_obj_t *p_base, x_obj_t *p_args)
  * Symbols that shadow BST globals are flagged X_OBJ_FLAG_SHADOW and
  * tracked on the shadow list for later clearing.
  *
- * @param p_base   x_obj_t* -- Execution context
+ * @param p_base   x_obj_t* -- Base (execution context)
  * @param p_env    x_obj_t* -- Current environment alist
  * @param p_params x_obj_t* -- Parameter list (or single symbol for variadic)
  * @param p_vals   x_obj_t* -- Value list
@@ -281,7 +281,7 @@ x_obj_t *x_env_extend(x_obj_t *p_base, x_obj_t *p_env,
  * Each expression is rooted on the eval-list before evaluation so the
  * GC does not collect the remaining body. No tail-call optimization.
  *
- * @param p_base  x_obj_t* -- Execution context
+ * @param p_base  x_obj_t* -- Base (execution context)
  * @param p_body  x_obj_t* -- List of body expressions
  * @return x_obj_t* -- Result of the last expression, or NULL if empty
  *
@@ -326,7 +326,7 @@ x_obj_t *x_eval_body(x_obj_t *p_base, x_obj_t *p_body)
  * On early exit (nil tail) or empty body, pops and restores the
  * compound save-stack frame (env, boundary, BST, shadow list).
  *
- * @param p_base  x_obj_t* -- Execution context
+ * @param p_base  x_obj_t* -- Base (execution context)
  * @param p_body  x_obj_t* -- List of body expressions
  * @return x_obj_t* -- Result of non-tail expressions, or NULL when
  *                      tail expression is deferred to the trampoline
@@ -430,7 +430,7 @@ x_obj_t *x_eval_body_tco(x_obj_t *p_base, x_obj_t *p_body)
  * save/restore is performed. Used by forms that do not alter the
  * environment (e.g. @c if, @c do).
  *
- * @param p_base  x_obj_t* -- Execution context
+ * @param p_base  x_obj_t* -- Base (execution context)
  * @param p_body  x_obj_t* -- List of body expressions
  * @return x_obj_t* -- Result of non-tail expressions, or NULL when
  *                      tail expression is deferred
@@ -468,7 +468,7 @@ x_obj_t *x_eval_body_tco_simple(x_obj_t *p_base, x_obj_t *p_body)
  * On exit, restores the environment, local boundary, global BST, and
  * shadow list from the compound saved in tco-env.
  *
- * @param p_base   x_obj_t* -- Execution context
+ * @param p_base   x_obj_t* -- Base (execution context)
  * @param p_result x_obj_t* -- Initial result (from non-tail evaluation)
  * @return x_obj_t* -- Final evaluation result
  *
@@ -533,7 +533,7 @@ x_obj_t *x_eval_tco_trampoline(x_obj_t *p_base, x_obj_t *p_result)
  * them, extends the env alist, and inserts into the global BST.
  * Updates the local boundary to mark the new binding as global.
  *
- * @param p_base  x_obj_t* -- Execution context
+ * @param p_base  x_obj_t* -- Base (execution context)
  * @param name    x_char_t* -- Symbol name to bind
  * @param fn      x_fn_t -- C function pointer
  *
@@ -577,7 +577,7 @@ void x_callable_bind(x_obj_t *p_base, x_char_t *name, x_fn_t fn)
  * Creates a (symbol . value) pair, prepends it to the env alist,
  * inserts it into the global BST, and advances the local boundary.
  *
- * @param p_base  x_obj_t* -- Execution context
+ * @param p_base  x_obj_t* -- Base (execution context)
  * @param name    x_char_t* -- Symbol name to bind
  * @param p_val   x_obj_t* -- Value to bind
  *
@@ -614,7 +614,7 @@ void x_value_bind(x_obj_t *p_base, x_char_t *name, x_obj_t *p_val)
  *
  * Iterates @p table and calls x_callable_bind for each entry.
  *
- * @param p_base  x_obj_t* -- Execution context
+ * @param p_base  x_obj_t* -- Base (execution context)
  * @param table   const x_callable_entry_t* -- Array of (name, fn) entries
  * @param count   int -- Number of entries
  *
@@ -774,7 +774,7 @@ static int x_prims_ns_deregistered(const x_char_t *ns)
  * under @c (ns . ((method . prim) ...)).  De-registration removes the env
  * binding here, leaving the catalog as the single source.
  *
- * @param p_base  x_obj_t* -- Execution context
+ * @param p_base  x_obj_t* -- Base (execution context)
  * @param table   const x_prim_entry_t* -- Array of entries
  * @param count   int -- Number of entries
  */
@@ -807,7 +807,7 @@ void x_prims_bind_table(x_obj_t *p_base, const x_prim_entry_t *table, int count)
  * (core, quote, binding, closure, control, arith, pred, string, io,
  * type, ffi, callcc).
  *
- * @param p_base  x_obj_t* -- Execution context
+ * @param p_base  x_obj_t* -- Base (execution context)
  * @param p_args  x_obj_t* -- Unused
  * @return x_obj_t* -- p_base
  */

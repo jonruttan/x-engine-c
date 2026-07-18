@@ -37,7 +37,7 @@
  * calls each type's delimit hook. Returns the buffer if a delimiter
  * matched, NULL otherwise.
  *
- * @param p_base  x_obj_t* -- Execution context
+ * @param p_base  x_obj_t* -- Base (execution context)
  * @param p_args  x_obj_t* -- (buffer . type) where type is excluded from checks
  * @return x_obj_t* -- The buffer if a delimiter matched, or NULL
  */
@@ -79,7 +79,7 @@ x_satom_t x_type_alist_iter_prim = x_obj_set(x_type_atom_obj, X_OBJ_FLAG_NONE, {
  * cell, cell ABI), projecting the analyse field from each yielded
  * entry's type struct.
  *
- * @param p_base  x_obj_t* -- Execution context
+ * @param p_base  x_obj_t* -- Base (execution context)
  * @param p_args  x_obj_t* -- State cell (state . nil), caller-owned
  * @return x_obj_t* -- Analyse hook from the next type entry, or NULL at end
  */
@@ -107,7 +107,7 @@ x_obj_t *x_type_alist_iter(x_obj_t *p_base, x_obj_t *p_args)
  * After finding the winner, advances the buffer read pointer by the
  * winning score.
  *
- * @param p_base  x_obj_t* -- Execution context
+ * @param p_base  x_obj_t* -- Base (execution context)
  * @param p_args  x_obj_t* -- (buffer . base) pair
  * @return x_obj_t* -- Winning type alist entry (name . type-struct),
  *                      or NULL if no type matched
@@ -281,7 +281,7 @@ x_obj_t *x_token_analyse(x_obj_t *p_base, x_obj_t *p_args)
  * discarded and the loop retries. Stamps source line numbers on
  * created objects when meta tracking is enabled.
  *
- * @param p_base  x_obj_t* -- Execution context
+ * @param p_base  x_obj_t* -- Base (execution context)
  * @param p_args  x_obj_t* -- (buffer . base) pair
  * @return x_obj_t* -- Parsed object, or NULL on EOF / read failure
  */

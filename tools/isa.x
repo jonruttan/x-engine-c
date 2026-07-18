@@ -1,4 +1,4 @@
-; tools/isa.x — the C instruction set: every C function reachable from X.
+; tools/isa.x — the C instruction set: every C function reachable from x-lang.
 ;
 ; SINGLE SOURCE OF TRUTH for the C surface, the "ISA" of the interpreter.
 ; The C layer is a CPU: unchecked, minimal, fixed.  Checks, dispatch, and

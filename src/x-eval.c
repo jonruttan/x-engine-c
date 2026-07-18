@@ -40,7 +40,7 @@
  * environment before extending it; the trampoline (or x_eval_body_tco's
  * early-exit paths) restores from it via x_tco_restore().
  *
- * @param p_base  x_obj_t* -- Execution context
+ * @param p_base  x_obj_t* -- Base (execution context)
  * @return x_obj_t* -- The pushed compound
  * @see x_tco_restore
  */
@@ -69,7 +69,7 @@ x_obj_t *x_tco_compound_save(x_obj_t *p_base)
  * trampoline exit points (x_eval, x_eval_tco_trampoline), x_eval_body_tco's
  * early-exit paths, and eval-with-env.
  *
- * @param p_base      x_obj_t* -- Execution context
+ * @param p_base      x_obj_t* -- Base (execution context)
  * @param p_compound  x_obj_t* -- Compound built by x_tco_compound_save()
  * @see x_tco_compound_save
  */
@@ -99,7 +99,7 @@ x_satom_t x_tco_op_tag = x_obj_set(x_type_atom_obj, X_OBJ_FLAG_NONE, { NULL });
  * and shadow always restore; the global BST is never touched (procedures own
  * it, and the trampoline applies the proc compound around this call).
  *
- * @param p_base    x_obj_t* -- Execution context
+ * @param p_base    x_obj_t* -- Base (execution context)
  * @param p_record  x_obj_t* -- Operative record built by x_eval_op_body()
  * @see x_eval_op_body
  */
@@ -175,7 +175,7 @@ void x_op_restore(x_obj_t *p_base, x_obj_t *p_record, int force_caller)
  * keeps the first procedure compound and the first operative record separately,
  * applying x_tco_restore then x_op_restore at exit.
  *
- * @param p_base      x_obj_t* -- Execution context
+ * @param p_base      x_obj_t* -- Base (execution context)
  * @param p_body      x_obj_t* -- Operative body (sequence of forms)
  * @param p_caller    x_obj_t* -- env-alist head before the op extended it
  * @param p_op_head   x_obj_t* -- the op's installed formal-frame head
@@ -243,7 +243,7 @@ x_obj_t *x_eval_op_body(x_obj_t *p_base, x_obj_t *p_body,
  * without growing the C stack. On exit, restores the environment from
  * the saved TCO snapshot.
  *
- * @param p_base  x_obj_t* -- Execution context
+ * @param p_base  x_obj_t* -- Base (execution context)
  * @param p_args  x_obj_t* -- (expression . env) pair
  * @return x_obj_t* -- Evaluated result, or NULL for nil
  *
@@ -599,7 +599,7 @@ x_obj_t *x_eval_make(x_obj_t *p_base, x_obj_t *p_args)
  * longjmps to the handler. Otherwise, writes the error to stderr via
  * the low-level x_error function.
  *
- * @param p_base   x_obj_t* -- Execution context
+ * @param p_base   x_obj_t* -- Base (execution context)
  * @param message  x_char_t* -- Error message string
  * @param p_obj    x_obj_t* -- Object associated with the error (may be NULL)
  *
@@ -712,7 +712,7 @@ void x_eval_error(x_obj_t *p_base, x_char_t *message, x_obj_t *p_obj)
  * Wraps the type struct as a (name . type_struct) pair for alist
  * keying and prepends it to the type alist.
  *
- * @param p_base  x_obj_t* -- Execution context
+ * @param p_base  x_obj_t* -- Base (execution context)
  * @param p_args  x_obj_t* -- Type struct to register
  * @return x_obj_t* -- The new type alist head, or NULL if base is unset
  */
@@ -742,7 +742,7 @@ x_obj_t *x_eval_type_alist_extend(x_obj_t *p_base, x_obj_t *p_args)
  * of @p p_args. Returns the bare type struct (unwrapped from the
  * alist entry), or NULL if not found.
  *
- * @param p_base  x_obj_t* -- Execution context
+ * @param p_base  x_obj_t* -- Base (execution context)
  * @param p_args  x_obj_t* -- Pair whose first is the type name to look up
  * @return x_obj_t* -- Type struct, or NULL
  */
@@ -769,7 +769,7 @@ x_obj_t *x_eval_type_alist_assoc(x_obj_t *p_base, x_obj_t *p_args)
 /**
  * Prepend a binding pair to the base's environment alist.
  *
- * @param p_base  x_obj_t* -- Execution context
+ * @param p_base  x_obj_t* -- Base (execution context)
  * @param p_args  x_obj_t* -- (symbol . value) pair to prepend
  * @return x_obj_t* -- The new env alist head, or NULL if base is unset
  */
@@ -789,7 +789,7 @@ x_obj_t *x_eval_env_alist_extend(x_obj_t *p_base, x_obj_t *p_args)
 /**
  * Push a file descriptor onto the input file stack.
  *
- * @param p_base  x_obj_t* -- Execution context
+ * @param p_base  x_obj_t* -- Base (execution context)
  * @param fd      x_int_t -- File descriptor to push
  * @return x_obj_t* -- The new top-of-stack atom
  */
@@ -803,7 +803,7 @@ x_obj_t *x_eval_filein_push(x_obj_t *p_base, x_int_t fd)
 /**
  * Pop the top file descriptor from the input file stack.
  *
- * @param p_base  x_obj_t* -- Execution context
+ * @param p_base  x_obj_t* -- Base (execution context)
  * @return x_obj_t* -- The popped top-of-stack atom
  */
 x_obj_t *x_eval_filein_pop(x_obj_t *p_base)
@@ -817,7 +817,7 @@ x_obj_t *x_eval_filein_pop(x_obj_t *p_base)
 /**
  * Push a buffer onto the buffer stack.
  *
- * @param p_base   x_obj_t* -- Execution context
+ * @param p_base   x_obj_t* -- Base (execution context)
  * @param p_buffer x_obj_t* -- Buffer object to push
  * @return x_obj_t* -- The pushed buffer
  */
@@ -831,7 +831,7 @@ x_obj_t *x_eval_buffer_push(x_obj_t *p_base, x_obj_t *p_buffer)
 /**
  * Pop the top buffer from the buffer stack.
  *
- * @param p_base  x_obj_t* -- Execution context
+ * @param p_base  x_obj_t* -- Base (execution context)
  * @return x_obj_t* -- The popped buffer object
  */
 x_obj_t *x_eval_buffer_pop(x_obj_t *p_base)
@@ -848,7 +848,7 @@ x_obj_t *x_eval_buffer_pop(x_obj_t *p_base)
  * Loops calling x_token_read until EOF, evaluating each expression
  * via x_eval. Returns the result of the last expression.
  *
- * @param p_base  x_obj_t* -- Execution context
+ * @param p_base  x_obj_t* -- Base (execution context)
  * @param p_args  x_obj_t* -- Unused
  * @return x_obj_t* -- Result of the last evaluated expression, or NULL
  *
@@ -922,7 +922,7 @@ x_obj_t *x_eval_load(x_obj_t *p_base, x_obj_t *p_args)
  * then delegates to x_base_write. If no length is provided, uses
  * strlen.
  *
- * @param p_base  x_obj_t* -- Execution context
+ * @param p_base  x_obj_t* -- Base (execution context)
  * @param p_args  x_obj_t* -- (string-atom . optional-length)
  * @return x_obj_t* -- Result of x_base_write
  */

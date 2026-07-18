@@ -24,7 +24,7 @@
  * advanced.  Inside a closure, if the name shadows a BST global the symbol
  * is flagged with X_OBJ_FLAG_SHADOW and added to the shadow list.
  *
- * @param p_base  Execution context.
+ * @param p_base  Base (execution context).
  * @param p_args  Unevaluated argument list; expects (caller name value).
  * @return The evaluated value.
  *
@@ -100,7 +100,7 @@ static x_obj_t *x_prim_define(x_obj_t *p_base, x_obj_t *p_args)
  * (2) BST lookup skipping shadowed symbols, (3) continue alist walk from
  * the boundary.  Signals an error if the symbol is unbound.
  *
- * @param p_base  Execution context.
+ * @param p_base  Base (execution context).
  * @param p_args  Unevaluated argument list; expects (caller name value).
  * @return The evaluated value.
  * @note Raises "Unbound symbol" error if name has no existing binding.
@@ -165,7 +165,7 @@ static x_obj_t *x_prim_set(x_obj_t *p_base, x_obj_t *p_args)
  *
  * Binds: def, set!.
  *
- * @param p_base  Execution context.
+ * @param p_base  Base (execution context).
  * @param p_args  Unused.
  * @return p_base.
  */

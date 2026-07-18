@@ -23,7 +23,7 @@
 
 /** Construct a pair from two values.
  *  x-lang: (pair a b)
- *  @param p_base  Execution context.
+ *  @param p_base  Base (execution context).
  *  @param p_args  Unevaluated argument list (a b).
  *  @return New pair (a . b).
  *  @note Fexpr: args unevaluated; x_eargs evaluates them.
@@ -38,7 +38,7 @@ static x_obj_t *x_prim_pair(x_obj_t *p_base, x_obj_t *p_args)
 
 /** Return the first element of a pair.
  *  x-lang: (first x)
- *  @param p_base  Execution context.
+ *  @param p_base  Base (execution context).
  *  @param p_args  Unevaluated argument list (x).
  *  @return First element of pair x.
  *  @note Fexpr: args unevaluated; x_eargs evaluates them.
@@ -53,7 +53,7 @@ static x_obj_t *x_prim_first(x_obj_t *p_base, x_obj_t *p_args)
 
 /** Return the rest (tail) of a pair.
  *  x-lang: (rest x)
- *  @param p_base  Execution context.
+ *  @param p_base  Base (execution context).
  *  @param p_args  Unevaluated argument list (x).
  *  @return Rest element of pair x.
  *  @note Fexpr: args unevaluated; x_eargs evaluates them.
@@ -68,7 +68,7 @@ static x_obj_t *x_prim_rest(x_obj_t *p_base, x_obj_t *p_args)
 
 /** Apply a callable to arguments with a trailing argument list.
  *  x-lang: (apply f arg1 ... args)
- *  @param p_base  Execution context.
+ *  @param p_base  Base (execution context).
  *  @param p_args  Unevaluated argument list (f arg1 ... args).
  *  @return Result of applying f to the combined argument list.
  *  @note Fexpr: args unevaluated; evaluates args via x_eval_list.
@@ -160,7 +160,7 @@ static x_obj_t *x_prim_apply(x_obj_t *p_base, x_obj_t *p_args)
 
 /** Evaluate an expression, optionally in a given environment.
  *  x-lang: (eval expr [env])
- *  @param p_base  Execution context.
+ *  @param p_base  Base (execution context).
  *  @param p_args  Unevaluated argument list (expr [env]).
  *  @return Result of evaluation (with env), or NULL (without env, uses TCO).
  *  @note Fexpr: args unevaluated; x_eargs evaluates expr.
@@ -204,7 +204,7 @@ static x_obj_t *x_prim_eval(x_obj_t *p_base, x_obj_t *p_args)
 
 /** Evaluate expression immediately in the current environment.
  *  x-lang: (eval! expr)
- *  @param p_base  Execution context.
+ *  @param p_base  Base (execution context).
  *  @param p_args  Unevaluated argument list (expr).
  *  @return Result of evaluating expr.
  *  @note Fexpr: args unevaluated; x_eargs evaluates expr.
@@ -221,7 +221,7 @@ static x_obj_t *x_prim_eval_immediate(x_obj_t *p_base, x_obj_t *p_args)
 
 /** TCO-compatible eval: set expression and environment for tail-call trampoline.
  *  x-lang: (tail-eval expr env)
- *  @param p_base  Execution context.
+ *  @param p_base  Base (execution context).
  *  @param p_args  Unevaluated argument list (expr env).
  *  @return NULL (result delivered via tco_expr trampoline).
  *  @note Fexpr: args unevaluated; x_eargs evaluates both args.
@@ -241,7 +241,7 @@ static x_obj_t *x_prim_tail_eval(x_obj_t *p_base, x_obj_t *p_args)
 
 /** Wrap a combiner to create an applicative (args evaluated before call).
  *  x-lang: (wrap combiner)
- *  @param p_base  Execution context.
+ *  @param p_base  Base (execution context).
  *  @param p_args  Unevaluated argument list (combiner).
  *  @return New applicative wrapping the given combiner.
  *  @note Fexpr: args unevaluated; x_eargs evaluates combiner.
@@ -257,7 +257,7 @@ static x_obj_t *x_prim_wrap(x_obj_t *p_base, x_obj_t *p_args)
 
 /** Extract the underlying combiner from an applicative.
  *  x-lang: (unwrap applicative)
- *  @param p_base  Execution context.
+ *  @param p_base  Base (execution context).
  *  @param p_args  Unevaluated argument list (applicative).
  *  @return The underlying combiner.
  *  @note Fexpr: args unevaluated; x_eargs evaluates applicative.
@@ -273,7 +273,7 @@ static x_obj_t *x_prim_unwrap(x_obj_t *p_base, x_obj_t *p_args)
 
 /** Evaluate each expression sequentially, blocking between evaluations.
  *  x-lang: (atomic expr ...)
- *  @param p_base  Execution context.
+ *  @param p_base  Base (execution context).
  *  @param p_args  Unevaluated argument list of expressions.
  *  @return Result of the last expression evaluated.
  *  @note Fexpr: args unevaluated; evaluates each expression individually.
@@ -305,7 +305,7 @@ static x_obj_t *x_prim_atomic(x_obj_t *p_base, x_obj_t *p_args)
 
 /** Return the current base (execution context) object.
  *  x-lang: (%base)
- *  @param p_base  Execution context.
+ *  @param p_base  Base (execution context).
  *  @param p_args  Unused.
  *  @return The base object itself.
  */
@@ -320,7 +320,7 @@ static x_obj_t *x_prim_base(x_obj_t *p_base, x_obj_t *p_args)
  *  Binds: pair, first, rest, apply, eval, eval!, tail-eval, wrap, unwrap,
  *  atomic, %base.
  *
- *  @param p_base  Execution context.
+ *  @param p_base  Base (execution context).
  *  @param p_args  Unused.
  *  @return The base object.
  */

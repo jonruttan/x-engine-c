@@ -33,7 +33,7 @@ x_satom_t x_type_str_name = x_obj_set(x_type_atom_obj, X_OBJ_FLAG_NONE, { .s = (
  *
  * Builds a stack-based argument list and delegates to x_type_str_make.
  *
- * @param p_base  x_obj_t* -- Execution context
+ * @param p_base  x_obj_t* -- Base (execution context)
  * @param flags   x_obj_flag_t -- Object flags (e.g. X_OBJ_FLAG_OWN)
  * @param s       x_char_t* -- C string pointer to wrap
  * @return x_obj_t* -- New heap-allocated string object
@@ -56,7 +56,7 @@ x_obj_t *x_make_str(x_obj_t *p_base, x_obj_flag_t flags, x_char_t *s)
  * Populates name, length, make, call, analyse, read, write,
  * and display callbacks.
  *
- * @param p_base  x_obj_t* -- Execution context
+ * @param p_base  x_obj_t* -- Base (execution context)
  * @param p_obj   x_obj_t* -- Unused
  * @return x_obj_t* -- Type descriptor pair list
  */
@@ -77,7 +77,7 @@ x_obj_t *x_type_str_struct(x_obj_t *p_base, x_obj_t *p_obj)
 /**
  * Register or retrieve the string type on the base context.
  *
- * @param p_base  x_obj_t* -- Execution context
+ * @param p_base  x_obj_t* -- Base (execution context)
  * @param p_args  x_obj_t* -- Unused
  * @return x_obj_t* -- Registered type object
  */
@@ -97,7 +97,7 @@ x_obj_t *x_type_str_register(x_obj_t *p_base, x_obj_t *p_args)
  * Extracts the string pointer and optional flags from p_args,
  * then allocates a heap object via x_obj_make.
  *
- * @param p_base  x_obj_t* -- Execution context
+ * @param p_base  x_obj_t* -- Base (execution context)
  * @param p_args  x_obj_t* -- (str-value . (flags | nil))
  * @return x_obj_t* -- New heap-allocated string object
  */
@@ -114,7 +114,7 @@ x_obj_t *x_type_str_make(x_obj_t *p_base, x_obj_t *p_args)
 /**
  * Type-system length callback -- returns string length as an integer.
  *
- * @param p_base  x_obj_t* -- Execution context
+ * @param p_base  x_obj_t* -- Base (execution context)
  * @param p_args  x_obj_t* -- (string-object . ...)
  * @return x_obj_t* -- Integer object with string length
  */
@@ -132,7 +132,7 @@ x_obj_t *x_type_str_length(x_obj_t *p_base, x_obj_t *p_args)
  *   Negative indices count from the end.
  * - Two args (start, len): returns a substring.
  *
- * @param p_base  x_obj_t* -- Execution context
+ * @param p_base  x_obj_t* -- Base (execution context)
  * @param p_args  x_obj_t* -- (string-object . evaluated-args)
  * @return x_obj_t* -- Integer (length), character, or substring
  * @see x_type_str_length

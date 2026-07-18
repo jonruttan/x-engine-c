@@ -22,7 +22,7 @@
  * BST index (fexpr -- params and body are not evaluated).  The resulting
  * closure does NOT have X_OBJ_FLAG_WRAP; only wrap applicatives do.
  *
- * @param p_base  Execution context.
+ * @param p_base  Base (execution context).
  * @param p_args  Unevaluated argument list; expects (caller params body ...).
  * @return A new procedure object.
  * @see x_prim_operative
@@ -46,7 +46,7 @@ static x_obj_t *x_prim_closure(x_obj_t *p_base, x_obj_t *p_args)
  * arguments and an explicit environment parameter (fexpr -- formals,
  * env-param, and body are not evaluated).
  *
- * @param p_base  Execution context.
+ * @param p_base  Base (execution context).
  * @param p_args  Unevaluated argument list; expects (caller formals env-param body ...).
  * @return A new operative object.
  * @see x_prim_closure
@@ -67,7 +67,7 @@ static x_obj_t *x_prim_operative(x_obj_t *p_base, x_obj_t *p_args)
  *
  * Binds: fn, op.
  *
- * @param p_base  Execution context.
+ * @param p_base  Base (execution context).
  * @param p_args  Unused.
  * @return p_base.
  */

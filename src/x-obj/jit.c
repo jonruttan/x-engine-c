@@ -16,7 +16,7 @@
 /**
  * Allocate an integer atom for JIT code.
  *
- * @param p_base  x_obj_t* -- Execution context
+ * @param p_base  x_obj_t* -- Base (execution context)
  * @param value   long     -- Integer value
  * @return New integer object
  */
@@ -28,7 +28,7 @@ x_obj_t *jit_mkint(x_obj_t *p_base, long value)
 /**
  * Allocate a pair for JIT code.
  *
- * @param p_base  x_obj_t* -- Execution context
+ * @param p_base  x_obj_t* -- Base (execution context)
  * @param a       x_obj_t* -- First element
  * @param b       x_obj_t* -- Rest element
  * @return New pair object
@@ -74,7 +74,7 @@ long jit_atomint(x_obj_t *p)
 /**
  * Evaluate an expression for JIT code.
  *
- * @param p_base  x_obj_t* -- Execution context
+ * @param p_base  x_obj_t* -- Base (execution context)
  * @param p_expr  x_obj_t* -- Expression to evaluate
  * @return Evaluation result
  */
@@ -89,7 +89,7 @@ x_obj_t *jit_eval_arg(x_obj_t *p_base, x_obj_t *p_expr)
  * Constructs a proper list with nil as self placeholder followed by
  * boxed integer atoms for each argument.
  *
- * @param p_base  x_obj_t* -- Execution context
+ * @param p_base  x_obj_t* -- Base (execution context)
  * @param nargs   long     -- Number of arguments (0..4)
  * @param a0      long     -- First raw argument
  * @param a1      long     -- Second raw argument
@@ -164,7 +164,7 @@ long jit_buffer_len(x_obj_t *buffer)
  * Registered as an x-lang primitive so the return value flows through
  * dispatch and is usable as a normal x-lang value.
  *
- * @param p_base  x_obj_t* -- Execution context
+ * @param p_base  x_obj_t* -- Base (execution context)
  * @param p_args  x_obj_t* -- (self fn-addr-ptr)
  * @return New prim object wrapping the JIT function
  */

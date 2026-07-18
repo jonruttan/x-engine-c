@@ -27,7 +27,7 @@ x_satom_t x_type_int_name = x_obj_set(x_type_atom_obj, X_OBJ_FLAG_NONE, { .s = (
  *
  * Builds a stack-based argument list and delegates to x_type_int_make.
  *
- * @param p_base  x_obj_t* -- Execution context
+ * @param p_base  x_obj_t* -- Base (execution context)
  * @param flags   x_obj_flag_t -- Object flags
  * @param i       x_int_t -- Integer value
  * @return x_obj_t* -- New heap-allocated integer object
@@ -49,7 +49,7 @@ x_obj_t *x_make_int(x_obj_t *p_base, x_obj_flag_t flags, x_int_t i)
  *
  * Populates name, make, analyse, read, and write callbacks.
  *
- * @param p_base  x_obj_t* -- Execution context
+ * @param p_base  x_obj_t* -- Base (execution context)
  * @param p_obj   x_obj_t* -- Unused
  * @return x_obj_t* -- Type descriptor pair list
  */
@@ -68,7 +68,7 @@ x_obj_t *x_type_int_struct(x_obj_t *p_base, x_obj_t *p_obj)
 /**
  * Register or retrieve the integer type on the base context.
  *
- * @param p_base  x_obj_t* -- Execution context
+ * @param p_base  x_obj_t* -- Base (execution context)
  * @param p_args  x_obj_t* -- Unused
  * @return x_obj_t* -- Registered type object
  */
@@ -88,7 +88,7 @@ x_obj_t *x_type_int_register(x_obj_t *p_base, x_obj_t *p_args)
  * Extracts the integer value and optional flags from p_args,
  * then allocates a heap object via x_obj_make.
  *
- * @param p_base  x_obj_t* -- Execution context
+ * @param p_base  x_obj_t* -- Base (execution context)
  * @param p_args  x_obj_t* -- (int-value . (flags | nil))
  * @return x_obj_t* -- New heap-allocated integer object
  */

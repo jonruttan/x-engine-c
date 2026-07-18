@@ -28,7 +28,7 @@ x_satom_t x_type_atom_name = x_obj_set(x_type_atom_obj, X_OBJ_FLAG_NONE, { .s = 
  *
  * Builds a stack-based argument list and delegates to x_type_atom_make.
  *
- * @param p_base  x_obj_t* -- Execution context
+ * @param p_base  x_obj_t* -- Base (execution context)
  * @param flags   x_obj_flag_t -- Object flags (e.g. X_OBJ_FLAG_NONE)
  * @param p       void* -- Raw pointer to wrap
  * @return x_obj_t* -- New heap-allocated atom object
@@ -50,7 +50,7 @@ x_obj_t *x_make_atom(x_obj_t *p_base, x_obj_flag_t flags, void *p)
  *
  * Populates name and make callbacks for the atom type.
  *
- * @param p_base  x_obj_t* -- Execution context
+ * @param p_base  x_obj_t* -- Base (execution context)
  * @param p_args  x_obj_t* -- Unused
  * @return x_obj_t* -- Type descriptor pair list
  */
@@ -69,7 +69,7 @@ x_obj_t *x_type_atom_struct(x_obj_t *p_base, x_obj_t *p_args)
  *
  * Calls x_type_struct_get with the atom name and struct builder.
  *
- * @param p_base  x_obj_t* -- Execution context
+ * @param p_base  x_obj_t* -- Base (execution context)
  * @param p_args  x_obj_t* -- Unused
  * @return x_obj_t* -- Registered type object
  */
@@ -89,7 +89,7 @@ x_obj_t *x_type_atom_register(x_obj_t *p_base, x_obj_t *p_args)
  * Extracts the pointer value and optional flags from p_args,
  * then allocates a heap object via x_obj_make.
  *
- * @param p_base  x_obj_t* -- Execution context
+ * @param p_base  x_obj_t* -- Base (execution context)
  * @param p_args  x_obj_t* -- (atom-value . (flags | nil))
  * @return x_obj_t* -- New heap-allocated atom object
  */

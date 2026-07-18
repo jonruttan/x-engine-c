@@ -22,7 +22,7 @@
  *
  * Conses p_assoc onto the front of p_alist, returning the new list.
  *
- * @param p_base  x_obj_t* -- Execution context
+ * @param p_base  x_obj_t* -- Base (execution context)
  * @param p_args  x_obj_t* -- (assoc . alist)
  * @return x_obj_t* -- New alist with assoc prepended
  */
@@ -39,7 +39,7 @@ x_obj_t *x_alist_extend(x_obj_t *p_base, x_obj_t *p_args)
  * Walks the alist front-to-back, comparing (first (first (first entry)))
  * against (first obj). Returns the first matching entry, or NULL.
  *
- * @param p_base  x_obj_t* -- Execution context
+ * @param p_base  x_obj_t* -- Base (execution context)
  * @param p_args  x_obj_t* -- (key . (alist))
  * @return x_obj_t* -- Matching alist entry, or NULL if not found
  */
@@ -75,7 +75,7 @@ x_obj_t *x_alist_assoc(x_obj_t *p_base, x_obj_t *p_args)
  * pointer equality first (fast path), then falls back to strcmp
  * for traversal direction. Node structure: (entry . (left . right)).
  *
- * @param p_base  x_obj_t* -- Execution context
+ * @param p_base  x_obj_t* -- Base (execution context)
  * @param p_tree  x_obj_t* -- BST root node, or NULL
  * @param p_sym   x_obj_t* -- Symbol to look up
  * @return x_obj_t* -- Matching alist entry, or NULL if not found
@@ -125,7 +125,7 @@ x_obj_t *x_alist_bst_lookup(x_obj_t *p_base, x_obj_t *p_tree,
  * BST nodes are structural and shared between persistent tree versions,
  * so they must not be collected.
  *
- * @param p_base  x_obj_t* -- Execution context
+ * @param p_base  x_obj_t* -- Base (execution context)
  * @param a       x_obj_t* -- First element
  * @param b       x_obj_t* -- Rest element
  * @return x_obj_t* -- New pair with X_OBJ_FLAG_SHARED set
@@ -170,7 +170,7 @@ static x_obj_t *bst_pair(x_obj_t *p_base, x_obj_t *a, x_obj_t *b)
  *       ancestor nodes along the insertion path are freshly allocated.
  *       This makes insert O(log n) in both time and allocation.
  *
- * @param p_base   x_obj_t* -- Execution context
+ * @param p_base   x_obj_t* -- Base (execution context)
  * @param p_tree   x_obj_t* -- Existing BST root, or NULL for empty
  * @param p_entry  x_obj_t* -- (symbol . value) entry to insert
  * @return x_obj_t* -- New BST root

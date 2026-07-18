@@ -28,7 +28,7 @@ x_satom_t x_sexp_whitespace_analyse1_prim = x_obj_set(x_type_atom_obj, X_OBJ_FLA
  * Checks the last character in the buffer against
  * @ref X_SEXP_WHITESPACE_CHARS_STR.
  *
- * @param p_base  Execution context.
+ * @param p_base  Base (execution context).
  * @param p_args  Read-args containing the token buffer.
  * @return The analyse2 primitive on match, or NULL.
  */
@@ -51,7 +51,7 @@ x_obj_t *x_sexp_whitespace_analyse1(x_obj_t *p_base, x_obj_t *p_args)
  * accounts for the extra non-whitespace character that was read to
  * terminate the run).
  *
- * @param p_base  Execution context.
+ * @param p_base  Base (execution context).
  * @param p_args  Read-args containing the token buffer and score.
  * @return Self to keep reading, or score on non-whitespace.
  */
@@ -75,7 +75,7 @@ x_obj_t *x_sexp_whitespace_analyse2(x_obj_t *p_base, x_obj_t *p_args)
  * If the current character is whitespace, backs up the read pointer
  * so the whitespace is not consumed by the current token.
  *
- * @param p_base  Execution context.
+ * @param p_base  Base (execution context).
  * @param p_args  Read-args containing the token buffer.
  * @return The buffer on whitespace match, or NULL.
  */

@@ -33,7 +33,7 @@ x_satom_t x_sexp_list_analyse_prim = x_obj_set(x_type_atom_obj, X_OBJ_FLAG_NONE,
  * Matches @c (, @c ), and @c . characters.  Scores the buffer length
  * immediately since list delimiters are always single-character tokens.
  *
- * @param p_base  Execution context.
+ * @param p_base  Base (execution context).
  * @param p_args  Read-args containing the token buffer and score.
  * @return Score on match, or NULL.
  */
@@ -56,7 +56,7 @@ x_obj_t *x_sexp_list_analyse(x_obj_t *p_base, x_obj_t *p_args)
  * Backs up the read pointer when a list delimiter is encountered so
  * the current token is terminated before the delimiter.
  *
- * @param p_base  Execution context.
+ * @param p_base  Base (execution context).
  * @param p_args  Read-args containing the token buffer.
  * @return The buffer on delimiter match, or NULL.
  */
@@ -81,7 +81,7 @@ x_obj_t *x_sexp_list_delimit(x_obj_t *p_base, x_obj_t *p_args)
  * - @c ( -- recursively reads elements via @c x_token_read until
  *   a close-paren or dot sentinel is encountered.
  *
- * @param p_base  Execution context.
+ * @param p_base  Base (execution context).
  * @param p_args  Read-args containing the token buffer.
  * @return The constructed list, or a sentinel primitive.
  */

@@ -63,7 +63,7 @@ static void x_ffi_to_double(x_obj_t *p_base, x_obj_t *p_bits, double *out)
 /**
  * @brief Convert a C double to an integer bit-pattern (64-bit path).
  *
- * @param p_base  Execution context for allocation.
+ * @param p_base  Base (execution context) for allocation.
  * @param[in] in  Pointer to the source double.
  * @return Integer object holding the raw IEEE 754 bits.
  */
@@ -95,7 +95,7 @@ static void x_ffi_to_double(x_obj_t *p_base, x_obj_t *p_bits, double *out)
 /**
  * @brief Convert a C double to a pair of integers (32-bit path).
  *
- * @param p_base  Execution context for allocation.
+ * @param p_base  Base (execution context) for allocation.
  * @param[in] in  Pointer to the source double.
  * @return Pair of two integers (low . high) holding the raw bits.
  */
@@ -118,7 +118,7 @@ static x_obj_t *x_ffi_from_double(x_obj_t *p_base, double *in)
  *
  * Wraps POSIX dlopen(3). If @p path is nil, opens the main program handle.
  *
- * @param p_base  Execution context.
+ * @param p_base  Base (execution context).
  * @param p_args  Unevaluated: (self path-string flags-int).
  * @return Pointer object wrapping the library handle, or NULL on failure.
  * @note FFI: calls dlopen(3) directly.
@@ -142,7 +142,7 @@ static x_obj_t *x_prim_dlopen(x_obj_t *p_base, x_obj_t *p_args)
  *
  * Wraps POSIX dlsym(3).
  *
- * @param p_base  Execution context.
+ * @param p_base  Base (execution context).
  * @param p_args  Unevaluated: (self handle-ptr name-string).
  * @return Pointer object wrapping the symbol address, or NULL if not found.
  * @note FFI: calls dlsym(3) directly.
@@ -173,7 +173,7 @@ static x_obj_t *x_prim_dlsym(x_obj_t *p_base, x_obj_t *p_args)
  *
  * Doubles are represented as raw IEEE 754 bit patterns in integers.
  *
- * @param p_base  Execution context.
+ * @param p_base  Base (execution context).
  * @param p_args  Unevaluated: (self convention-string fptr args...).
  * @return Result of the foreign call, or NULL for unknown convention.
  * @note FFI: double bit-patterns are platform-dependent (64-bit vs 32-bit pair).
@@ -340,7 +340,7 @@ static x_obj_t *x_prim_ffi_call(x_obj_t *p_base, x_obj_t *p_args)
  * pointers pass their raw C pointer. The function is called with the
  * C calling convention (long, long, ...) -> long.
  *
- * @param p_base  Execution context.
+ * @param p_base  Base (execution context).
  * @param p_args  Unevaluated: (self fptr arg0 ... arg6).
  * @return Integer wrapping the long return value.
  * @note FFI: maximum 7 arguments; excess arguments are silently ignored.
@@ -378,7 +378,7 @@ static x_obj_t *x_prim_ptr_call(x_obj_t *p_base, x_obj_t *p_args)
  *
  * x-lang form: @code (int->ptr n) @endcode
  *
- * @param p_base  Execution context.
+ * @param p_base  Base (execution context).
  * @param p_args  Unevaluated: (self n).
  * @return Pointer object wrapping (void *)n.
  */
@@ -396,7 +396,7 @@ static x_obj_t *x_prim_int_to_ptr(x_obj_t *p_base, x_obj_t *p_args)
  *
  * x-lang form: @code (ptr->int p) @endcode
  *
- * @param p_base  Execution context.
+ * @param p_base  Base (execution context).
  * @param p_args  Unevaluated: (self ptr).
  * @return Integer wrapping the pointer's numeric address.
  */
@@ -421,7 +421,7 @@ static x_obj_t *x_prim_ptr_to_int(x_obj_t *p_base, x_obj_t *p_args)
  * alignment-sensitive out-params).  UNCHECKED like first/rest: n is
  * trusted.
  *
- * @param p_base  Execution context.
+ * @param p_base  Base (execution context).
  * @param p_args  Unevaluated: (self n).
  * @return Pointer object addressing the fresh region.
  */
@@ -448,7 +448,7 @@ static x_obj_t *x_prim_mem_alloc(x_obj_t *p_base, x_obj_t *p_args)
  * overlap).  UNCHECKED like first/rest: pointers and n are trusted.
  * Side-effect prim: returns NULL.
  *
- * @param p_base  Execution context.
+ * @param p_base  Base (execution context).
  * @param p_args  Unevaluated: (self dst src n).
  * @return NULL.
  */
@@ -472,7 +472,7 @@ static x_obj_t *x_prim_mem_copy(x_obj_t *p_base, x_obj_t *p_args)
  * needs no new entry.  Returns 0 on equality, else the sign of the
  * first differing byte pair (-1/1).  UNCHECKED.
  *
- * @param p_base  Execution context.
+ * @param p_base  Base (execution context).
  * @param p_args  Unevaluated: (self a b n).
  * @return Integer 0, -1, or 1.
  */
@@ -502,7 +502,7 @@ static x_obj_t *x_prim_mem_cmp(x_obj_t *p_base, x_obj_t *p_args)
  * Fills @p n bytes at p with @p byte (x_lib_memset).  UNCHECKED.
  * Side-effect prim: returns NULL.
  *
- * @param p_base  Execution context.
+ * @param p_base  Base (execution context).
  * @param p_args  Unevaluated: (self p byte n).
  * @return NULL.
  */
@@ -524,7 +524,7 @@ static x_obj_t *x_prim_mem_set(x_obj_t *p_base, x_obj_t *p_args)
  * UNCHECKED: freeing anything not returned by (mem alloc), or freeing
  * twice, is UB exactly as in C.  Side-effect prim: returns NULL.
  *
- * @param p_base  Execution context.
+ * @param p_base  Base (execution context).
  * @param p_args  Unevaluated: (self ptr).
  * @return NULL.
  */
@@ -546,7 +546,7 @@ static x_obj_t *x_prim_mem_free(x_obj_t *p_base, x_obj_t *p_args)
  * Copies the low @p nbytes of @p value via memcpy into the memory at
  * the given pointer plus byte offset.
  *
- * @param p_base  Execution context.
+ * @param p_base  Base (execution context).
  * @param p_args  Unevaluated: (self ptr offset value nbytes).
  * @return The original pointer object.
  * @note FFI: no bounds checking; caller must ensure valid memory region.
@@ -574,7 +574,7 @@ static x_obj_t *x_prim_ptr_set(x_obj_t *p_base, x_obj_t *p_args)
  * Copies @p nbytes from the memory at the pointer plus byte offset into
  * a zero-initialized integer value via memcpy.
  *
- * @param p_base  Execution context.
+ * @param p_base  Base (execution context).
  * @param p_args  Unevaluated: (self ptr offset nbytes).
  * @return Integer holding the read value.
  * @note FFI: no bounds checking; caller must ensure valid memory region.
@@ -600,7 +600,7 @@ static x_obj_t *x_prim_ptr_ref(x_obj_t *p_base, x_obj_t *p_args)
  *
  * Writes sizeof(long) bytes of @p value into memory at ptr+offset.
  *
- * @param p_base  Execution context.
+ * @param p_base  Base (execution context).
  * @param p_args  Unevaluated: (self ptr offset value).
  * @return The original pointer object.
  * @note FFI: word size is sizeof(long); no bounds checking.
@@ -628,7 +628,7 @@ static x_obj_t *x_prim_ptr_set_word(x_obj_t *p_base, x_obj_t *p_args)
  * Returns a pointer to the string's internal character buffer. The pointer
  * is only valid while the string is not garbage collected.
  *
- * @param p_base  Execution context.
+ * @param p_base  Base (execution context).
  * @param p_args  Unevaluated: (self str).
  * @return Pointer object wrapping the string's char buffer.
  */
@@ -649,7 +649,7 @@ static x_obj_t *x_prim_string_to_ptr(x_obj_t *p_base, x_obj_t *p_args)
  * Reads a NUL-terminated string from the pointer address and duplicates
  * it into a new owned string object.
  *
- * @param p_base  Execution context.
+ * @param p_base  Base (execution context).
  * @param p_args  Unevaluated: (self ptr).
  * @return New string object containing a copy of the C string.
  */
@@ -672,7 +672,7 @@ static x_obj_t *x_prim_ptr_to_string(x_obj_t *p_base, x_obj_t *p_args)
  * Returns the object's address as a pointer. The pointer is invalidated
  * if GC relocates the object.
  *
- * @param p_base  Execution context.
+ * @param p_base  Base (execution context).
  * @param p_args  Unevaluated: (self obj).
  * @return Pointer object wrapping the object's address.
  * @note The returned pointer may be invalidated by garbage collection.
@@ -701,7 +701,7 @@ static x_obj_t *x_prim_obj_to_ptr(x_obj_t *p_base, x_obj_t *p_args)
  * undefined behavior.  Safe under the explicit-only GC (allocation never
  * relocates), same argument as holding obj->ptr across an expression.
  *
- * @param p_base  Execution context.
+ * @param p_base  Base (execution context).
  * @param p_args  Unevaluated: (self ptr).
  * @return The object at the pointer's address (nil for a NULL pointer).
  */
@@ -721,7 +721,7 @@ static x_obj_t *x_prim_ptr_to_obj(x_obj_t *p_base, x_obj_t *p_args)
  *
  * Reads sizeof(long) bytes from memory at ptr+offset via memcpy.
  *
- * @param p_base  Execution context.
+ * @param p_base  Base (execution context).
  * @param p_args  Unevaluated: (self ptr offset).
  * @return Integer holding the machine-word value.
  * @note FFI: word size is sizeof(long); no bounds checking.
@@ -748,7 +748,7 @@ static x_obj_t *x_prim_ptr_ref_word(x_obj_t *p_base, x_obj_t *p_args)
  * Wraps a PTR object's address as an x_fn_t in a new prim object,
  * making it callable from x-lang as an operative.
  *
- * @param p_base  Execution context.
+ * @param p_base  Base (execution context).
  * @param p_args  Unevaluated: (self fn-ptr).
  * @return New callable prim object.
  * @note FFI: the function pointer must follow the x_fn_t signature
@@ -778,7 +778,7 @@ static x_obj_t *x_prim_make_callable(x_obj_t *p_base, x_obj_t *p_args)
  * boot/data.x, and the O_* open flags come from the per-OS tables in
  * x/platform/syscall.x.
  *
- * @param p_base  Execution context to bind primitives into.
+ * @param p_base  Base (execution context) to bind primitives into.
  * @param p_args  Unused.
  * @return @p p_base.
  */

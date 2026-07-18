@@ -47,7 +47,7 @@ static int hex_digit(x_char_t c)
 /**
  * Analyse state 1: match the opening double-quote.
  *
- * @param p_base  Execution context.
+ * @param p_base  Base (execution context).
  * @param p_args  Pair of (self, read-args).
  * @return Next analyser state on match, or NULL.
  */
@@ -69,7 +69,7 @@ x_obj_t *x_sexp_str_analyse1(x_obj_t *p_base, x_obj_t *p_args)
  * Detects backslash (transitions to escape state) and closing quote
  * (scores the full token length).  All other characters loop.
  *
- * @param p_base  Execution context.
+ * @param p_base  Base (execution context).
  * @param p_args  Pair of (self, read-args).
  * @return Self, score, or next state.
  */
@@ -101,7 +101,7 @@ x_obj_t *x_sexp_str_analyse2(x_obj_t *p_base, x_obj_t *p_args)
  * Unconditionally consumes one character after a backslash and returns
  * to the normal body-reading state (analyse2).
  *
- * @param p_base  Execution context.
+ * @param p_base  Base (execution context).
  * @param p_args  Pair of (self, read-args).
  * @return The analyse2 state primitive.
  */
@@ -119,7 +119,7 @@ x_obj_t *x_sexp_str_analyse3(x_obj_t *p_base, x_obj_t *p_args)
  * Supported escapes: @c \\", @c \\\\, @c \\n, @c \\t, @c \\r, @c \\0,
  * and @c \\xHH (two hex digits).  Unknown escapes are preserved literally.
  *
- * @param p_base  Execution context.
+ * @param p_base  Base (execution context).
  * @param p_args  Read-args containing the token buffer.
  * @return A newly created owned-string object.
  */

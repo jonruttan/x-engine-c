@@ -29,7 +29,7 @@ x_satom_t x_type_list_name = x_obj_set(x_type_atom_obj, X_OBJ_FLAG_NONE, { .s = 
 /**
  * Allocate a LIST pair with first = @p p1 and rest = @p p2.
  *
- * @param p_base  Execution context.
+ * @param p_base  Base (execution context).
  * @param flags   Object flags.
  * @param p1      First element (head).
  * @param p2      Rest element (tail).
@@ -53,7 +53,7 @@ x_obj_t *x_make_list(x_obj_t *p_base, x_obj_flag_t flags, void *p1, void *p2)
  * Populates name, units (pair), make, length, call, eval, analyse,
  * delimit, read, write, and display hooks.
  *
- * @param p_base  Execution context.
+ * @param p_base  Base (execution context).
  * @param p_args  Unused.
  * @return Type struct pair-tree for LIST.
  */
@@ -77,7 +77,7 @@ x_obj_t *x_type_list_struct(x_obj_t *p_base, x_obj_t *p_args)
 /**
  * Register (or retrieve) the LIST type in the type alist.
  *
- * @param p_base  Execution context.
+ * @param p_base  Base (execution context).
  * @param p_args  Unused.
  * @return The registered LIST type object.
  */
@@ -97,7 +97,7 @@ x_obj_t *x_type_list_register(x_obj_t *p_base, x_obj_t *p_args)
  * Extracts first/rest from the pair in @c p_args[0] and optional flags
  * from @c p_args[1].
  *
- * @param p_base  Execution context.
+ * @param p_base  Base (execution context).
  * @param p_args  Argument list: (pair-atom [flags-atom]).
  * @return Newly allocated LIST object.
  */
@@ -114,7 +114,7 @@ x_obj_t *x_type_list_make(x_obj_t *p_base, x_obj_t *p_args)
 /**
  * Compute the length of a list by walking to its end.
  *
- * @param p_base  Execution context.
+ * @param p_base  Base (execution context).
  * @param p_args  Argument list whose first element is the list.
  * @return An satom containing the integer length.
  */
@@ -139,7 +139,7 @@ x_obj_t *x_type_list_length(x_obj_t *p_base, x_obj_t *p_args)
  * @c (list start len) returns a sublist of @p len elements starting
  * at position @p start.
  *
- * @param p_base  Execution context.
+ * @param p_base  Base (execution context).
  * @param p_args  Argument list: (list index) or (list start len).
  * @return The indexed element, the sliced sublist, or NULL.
  */
@@ -222,7 +222,7 @@ x_obj_t *x_type_list_call(x_obj_t *p_base, x_obj_t *p_args)
  * arguments through x_callable_call().  The expression is rooted on the
  * eval list to protect it from GC during evaluation.
  *
- * @param p_base  Execution context.
+ * @param p_base  Base (execution context).
  * @param p_args  Eval argument frame containing the list expression.
  * @return Result of the operator application, or the original expression
  *         if the operator resolves to nil.
@@ -281,7 +281,7 @@ x_obj_t *x_type_list_eval(x_obj_t *p_base, x_obj_t *p_args)
  * box mutation; callers like the tokenizer reuse one stack cell so the
  * walk allocates nothing.
  *
- * @param p_base  Execution context.
+ * @param p_base  Base (execution context).
  * @param p_args  State cell (state . nil), caller-owned.
  * @return Yielded element, or NULL when the state is exhausted.
  */

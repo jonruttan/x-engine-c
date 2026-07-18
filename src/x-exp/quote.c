@@ -19,7 +19,7 @@ x_satom_t x_exp_quote_prim = x_obj_set(x_type_atom_obj, X_OBJ_FLAG_NONE, { (x_ob
 /**
  * Return the first argument unevaluated. x-lang: (quote datum)
  *
- * @param p_base  x_obj_t* -- Execution context
+ * @param p_base  x_obj_t* -- Base (execution context)
  * @param p_args  x_obj_t* -- (self datum)
  * @return The datum unchanged
  */

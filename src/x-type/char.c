@@ -30,7 +30,7 @@ x_satom_t x_type_char_name = x_obj_set(x_type_atom_obj, X_OBJ_FLAG_NONE, { .s = 
  *
  * Builds a stack-based argument list and delegates to x_type_char_make.
  *
- * @param p_base  x_obj_t* -- Execution context
+ * @param p_base  x_obj_t* -- Base (execution context)
  * @param flags   x_obj_flag_t -- Object flags
  * @param cp      x_int_t -- Unicode code point
  * @return x_obj_t* -- New heap-allocated character object
@@ -140,7 +140,7 @@ x_int_t x_char_utf8_decode(const x_char_t *bytes, x_int_t nbytes)
  * Also builds an alist of named character constants (alarm, backspace,
  * delete, escape, newline, null, return, space, tab) as type data.
  *
- * @param p_base  x_obj_t* -- Execution context
+ * @param p_base  x_obj_t* -- Base (execution context)
  * @param p_obj   x_obj_t* -- Unused
  * @return x_obj_t* -- Type descriptor pair list
  */
@@ -176,7 +176,7 @@ x_obj_t *x_type_char_struct(x_obj_t *p_base, x_obj_t *p_obj)
 /**
  * Register or retrieve the character type on the base context.
  *
- * @param p_base  x_obj_t* -- Execution context
+ * @param p_base  x_obj_t* -- Base (execution context)
  * @param p_args  x_obj_t* -- Unused
  * @return x_obj_t* -- Registered type object
  */
@@ -196,7 +196,7 @@ x_obj_t *x_type_char_register(x_obj_t *p_base, x_obj_t *p_args)
  * Extracts the character value and optional flags from p_args,
  * then allocates a heap object via x_obj_make.
  *
- * @param p_base  x_obj_t* -- Execution context
+ * @param p_base  x_obj_t* -- Base (execution context)
  * @param p_args  x_obj_t* -- (char-value . (flags | nil))
  * @return x_obj_t* -- New heap-allocated character object
  */

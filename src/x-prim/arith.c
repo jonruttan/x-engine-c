@@ -26,7 +26,7 @@
  * A typed operand (float, bignum, ...) dispatches through its type's ops
  * alist (x_type_op_try); int/int keeps the pure-C path.
  *
- * @param p_base  x_obj_t* -- Execution context
+ * @param p_base  x_obj_t* -- Base (execution context)
  * @param p_args  x_obj_t* -- Unevaluated args, evaluated via x_eargs
  * @return x_obj_t* -- New integer object, or the handler's result
  */
@@ -48,7 +48,7 @@ static x_obj_t *x_prim_sum(x_obj_t *p_base, x_obj_t *p_args)
  * the difference. The second argument is evaluated lazily
  * (only if present).
  *
- * @param p_base  x_obj_t* -- Execution context
+ * @param p_base  x_obj_t* -- Base (execution context)
  * @param p_args  x_obj_t* -- Unevaluated args (1 or 2)
  * @return x_obj_t* -- New integer object
  */
@@ -72,7 +72,7 @@ static x_obj_t *x_prim_sub(x_obj_t *p_base, x_obj_t *p_args)
 /**
  * Binary integer multiplication. x-lang: (* a b)
  *
- * @param p_base  x_obj_t* -- Execution context
+ * @param p_base  x_obj_t* -- Base (execution context)
  * @param p_args  x_obj_t* -- Unevaluated args, evaluated via x_eargs
  * @return x_obj_t* -- New integer object
  */
@@ -90,7 +90,7 @@ static x_obj_t *x_prim_prod(x_obj_t *p_base, x_obj_t *p_args)
 /**
  * Binary integer division (truncates toward zero). x-lang: (/ a b)
  *
- * @param p_base  x_obj_t* -- Execution context
+ * @param p_base  x_obj_t* -- Base (execution context)
  * @param p_args  x_obj_t* -- Unevaluated args, evaluated via x_eargs
  * @return x_obj_t* -- New integer object
  */
@@ -108,7 +108,7 @@ static x_obj_t *x_prim_div(x_obj_t *p_base, x_obj_t *p_args)
 /**
  * Binary integer modulo. x-lang: (% a b)
  *
- * @param p_base  x_obj_t* -- Execution context
+ * @param p_base  x_obj_t* -- Base (execution context)
  * @param p_args  x_obj_t* -- Unevaluated args, evaluated via x_eargs
  * @return x_obj_t* -- New integer object
  */
@@ -126,7 +126,7 @@ static x_obj_t *x_prim_mod(x_obj_t *p_base, x_obj_t *p_args)
 /**
  * Bitwise NOT. x-lang: (~ n)
  *
- * @param p_base  x_obj_t* -- Execution context
+ * @param p_base  x_obj_t* -- Base (execution context)
  * @param p_args  x_obj_t* -- Unevaluated args, evaluated via x_eargs
  * @return x_obj_t* -- New integer object
  */
@@ -141,7 +141,7 @@ static x_obj_t *x_prim_bitnot(x_obj_t *p_base, x_obj_t *p_args)
 /**
  * Bitwise AND. x-lang: (& a b)
  *
- * @param p_base  x_obj_t* -- Execution context
+ * @param p_base  x_obj_t* -- Base (execution context)
  * @param p_args  x_obj_t* -- Unevaluated args, evaluated via x_eargs
  * @return x_obj_t* -- New integer object
  */
@@ -156,7 +156,7 @@ static x_obj_t *x_prim_bitand(x_obj_t *p_base, x_obj_t *p_args)
 /**
  * Bitwise OR. x-lang: (| a b)
  *
- * @param p_base  x_obj_t* -- Execution context
+ * @param p_base  x_obj_t* -- Base (execution context)
  * @param p_args  x_obj_t* -- Unevaluated args, evaluated via x_eargs
  * @return x_obj_t* -- New integer object
  */
@@ -171,7 +171,7 @@ static x_obj_t *x_prim_bitor(x_obj_t *p_base, x_obj_t *p_args)
 /**
  * Bitwise XOR. x-lang: (^ a b)
  *
- * @param p_base  x_obj_t* -- Execution context
+ * @param p_base  x_obj_t* -- Base (execution context)
  * @param p_args  x_obj_t* -- Unevaluated args, evaluated via x_eargs
  * @return x_obj_t* -- New integer object
  */
@@ -186,7 +186,7 @@ static x_obj_t *x_prim_bitxor(x_obj_t *p_base, x_obj_t *p_args)
 /**
  * Left shift. x-lang: (<< a b)
  *
- * @param p_base  x_obj_t* -- Execution context
+ * @param p_base  x_obj_t* -- Base (execution context)
  * @param p_args  x_obj_t* -- Unevaluated args, evaluated via x_eargs
  * @return x_obj_t* -- New integer object
  *
@@ -203,7 +203,7 @@ static x_obj_t *x_prim_shl(x_obj_t *p_base, x_obj_t *p_args)
 /**
  * Right shift. x-lang: (>> a b)
  *
- * @param p_base  x_obj_t* -- Execution context
+ * @param p_base  x_obj_t* -- Base (execution context)
  * @param p_args  x_obj_t* -- Unevaluated args, evaluated via x_eargs
  * @return x_obj_t* -- New integer object
  *
@@ -222,7 +222,7 @@ static x_obj_t *x_prim_shr(x_obj_t *p_base, x_obj_t *p_args)
  *
  * Binds: +, -, *, /, %, ~, &, |, ^, <<, >>
  *
- * @param p_base  x_obj_t* -- Execution context
+ * @param p_base  x_obj_t* -- Base (execution context)
  * @param p_args  x_obj_t* -- Unused
  * @return x_obj_t* -- p_base
  */

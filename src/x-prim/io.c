@@ -30,7 +30,7 @@
 
 /** Write a string's bytes to the current output: the OUT port instruction.
  *  x-lang: (write-str s)
- *  @param p_base  Execution context.
+ *  @param p_base  Base (execution context).
  *  @param p_args  Unevaluated argument list (s).
  *  @return NULL.
  *  @note The byte door the pure-X printer (lib/x/boot/printer.x) bottoms
@@ -58,7 +58,7 @@ static x_obj_t *x_prim_write_str(x_obj_t *p_base, x_obj_t *p_args)
 
 /** Read one s-expression from stdin.
  *  x-lang: (read)
- *  @param p_base  Execution context.
+ *  @param p_base  Base (execution context).
  *  @param p_args  Unused.
  *  @return Parsed s-expression, or NULL on EOF.
  *  @see x_prim_read_char
@@ -78,7 +78,7 @@ static x_obj_t *x_prim_read_expr(x_obj_t *p_base, x_obj_t *p_args)
 
 /** Read one character from stdin.
  *  x-lang: (read-char)
- *  @param p_base  Execution context.
+ *  @param p_base  Base (execution context).
  *  @param p_args  Unused.
  *  @return Character object, or NULL on EOF.
  *  @see x_prim_read_expr
@@ -106,7 +106,7 @@ static x_obj_t *x_prim_read_char(x_obj_t *p_base, x_obj_t *p_args)
 #ifdef X_SYS_CLOCK
 /** Return CPU microseconds since process start.
  *  x-lang: (clock)
- *  @param p_base  Execution context.
+ *  @param p_base  Base (execution context).
  *  @param p_args  Unused.
  *  @return Integer with microseconds elapsed.
  *  @note Only available when X_SYS_CLOCK is defined.
@@ -214,7 +214,7 @@ static void x_heap_sweep_phase(x_obj_t *p_base)
  *  is exposed only for instrumentation that controls the phases manually
  *  with no intervening allocation.
  *
- *  @param p_base  Execution context.
+ *  @param p_base  Base (execution context).
  *  @param p_args  Unused.
  *  @return NULL.
  *  @see x_prim_heap_collect, x_prim_heap_mark, x_prim_heap_count
@@ -234,7 +234,7 @@ static x_obj_t *x_prim_heap_sweep(x_obj_t *p_base, x_obj_t *p_args)
 
 /** Count the number of objects currently on the heap.
  *  x-lang: (heap-count)
- *  @param p_base  Execution context.
+ *  @param p_base  Base (execution context).
  *  @param p_args  Unused.
  *  @return Integer with the heap object count.
  *  @see x_prim_heap_collect, x_prim_heap_mark, x_prim_heap_sweep
@@ -267,7 +267,7 @@ static x_obj_t *x_prim_heap_count(x_obj_t *p_base, x_obj_t *p_args)
  *  itself instead of exhausting system memory.  A development guard against
  *  runaway allocation, not a sandbox -- code can re-set or disable it.
  *
- *  @param p_base  Execution context.
+ *  @param p_base  Base (execution context).
  *  @param p_args  Unevaluated (n); x_eargs evaluates it.
  *  @return NULL.
  *  @note Fexpr: args unevaluated; x_eargs evaluates n.
@@ -296,7 +296,7 @@ static x_obj_t *x_prim_alloc_limit(x_obj_t *p_base, x_obj_t *p_args)
  *  is only useful paired with a sweep that runs with no allocation in
  *  between.  Use (heap-collect) for a safe, atomic mark+sweep.
  *
- *  @param p_base  Execution context.
+ *  @param p_base  Base (execution context).
  *  @param p_args  Unused.
  *  @return NULL.
  *  @see x_prim_heap_collect, x_prim_heap_sweep, x_prim_heap_count
@@ -324,7 +324,7 @@ static x_obj_t *x_prim_heap_mark(x_obj_t *p_base, x_obj_t *p_args)
  *  them and frees the in-flight frame -- hence (heap-collect), not the
  *  raw phases, is the supported API.
  *
- *  @param p_base  Execution context.
+ *  @param p_base  Base (execution context).
  *  @param p_args  Unused.
  *  @return NULL.
  *  @note Increments the GC run counter when X_PROFILE is defined.
@@ -346,7 +346,7 @@ static x_obj_t *x_prim_heap_collect(x_obj_t *p_base, x_obj_t *p_args)
 
 /** Recursively mark an object and all reachable objects as SYSTEM (GC-immune).
  *  x-lang: (gc-pin! obj)
- *  @param p_base  Execution context.
+ *  @param p_base  Base (execution context).
  *  @param p_args  Unevaluated argument list (obj).
  *  @return The marked object.
  *  @note Fexpr: args unevaluated; x_eargs evaluates obj.
@@ -366,7 +366,7 @@ static x_obj_t *x_prim_system_mark(x_obj_t *p_base, x_obj_t *p_args)
 
 /** Register a callable to run during the GC mark phase.
  *  x-lang: (heap-mark-hook! hook)
- *  @param p_base  Execution context.
+ *  @param p_base  Base (execution context).
  *  @param p_args  Unevaluated (hook).
  *  @return NULL.
  *  @note Storage in x-expr's heap-group (one canonical location).
@@ -382,7 +382,7 @@ static x_obj_t *x_prim_heap_mark_hook(x_obj_t *p_base, x_obj_t *p_args)
 
 /** Register a callable to run during the GC sweep phase.
  *  x-lang: (heap-free-hook! hook)
- *  @param p_base  Execution context.
+ *  @param p_base  Base (execution context).
  *  @param p_args  Unevaluated (hook).
  *  @return NULL.
  *  @see x_heap_free_hook_add
@@ -397,7 +397,7 @@ static x_obj_t *x_prim_heap_free_hook(x_obj_t *p_base, x_obj_t *p_args)
 
 /** Register an object to mark on every collection (extra GC root).
  *  x-lang: (heap-mark-root! obj)
- *  @param p_base  Execution context.
+ *  @param p_base  Base (execution context).
  *  @param p_args  Unevaluated (obj).
  *  @return NULL.
  *  @see x_heap_mark_root_add
@@ -411,7 +411,7 @@ static x_obj_t *x_prim_heap_mark_root(x_obj_t *p_base, x_obj_t *p_args)
 }
 
 /** Minimal read-eval loop: reads and evaluates expressions until EOF.
- *  @param p_base  Execution context.
+ *  @param p_base  Base (execution context).
  *  @param p_args  Unused.
  *  @return NULL on EOF.
  *  @note No output, no prompt, no hooks. Used for C-level bootstrapping;
@@ -460,7 +460,7 @@ x_obj_t *x_prim_repl(x_obj_t *p_base, x_obj_t *p_args)
  *
  * x-lang form: @code (repl-read) @endcode
  *
- * @param p_base  Execution context.
+ * @param p_base  Base (execution context).
  * @param p_args  Passed through to read.
  * @return The expression read, or nil at end of input.
  */
@@ -487,7 +487,7 @@ static x_obj_t *x_prim_repl_read(x_obj_t *p_base, x_obj_t *p_args)
  *  error-line are pure x-lang now: boot/printer.x renders over the
  *  (io write-str) OUT door; boot/reflect.x walks the error handler.)
  *
- *  @param p_base  Execution context.
+ *  @param p_base  Base (execution context).
  *  @param p_args  Unused.
  *  @return The base object.
  */

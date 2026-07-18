@@ -29,7 +29,7 @@ x_satom_t x_type_symbol_name = x_obj_set(x_type_atom_obj, X_OBJ_FLAG_NONE, { .s 
  * Packs the string and flags into stack-allocated args and delegates
  * to x_type_symbol_make(), which handles interning.
  *
- * @param p_base  Execution context.
+ * @param p_base  Base (execution context).
  * @param flags   Object flags (e.g. @c X_OBJ_FLAG_OWN).
  * @param s       Null-terminated symbol name.
  * @return Interned SYMBOL object.
@@ -51,7 +51,7 @@ x_obj_t *x_make_symbol(x_obj_t *p_base, x_obj_flag_t flags, x_char_t *s)
  *
  * Populates name, make, eval, analyse, read, write, and display hooks.
  *
- * @param p_base  Execution context.
+ * @param p_base  Base (execution context).
  * @param p_obj   Unused.
  * @return Type struct pair-tree for SYMBOL.
  */
@@ -81,7 +81,7 @@ x_obj_t *x_type_symbol_struct(x_obj_t *p_base, x_obj_t *p_obj)
 /**
  * Search the BST for a node whose symbol matches @p name.
  *
- * @param p_base  Execution context.
+ * @param p_base  Base (execution context).
  * @param p_tree  BST root node (or NULL).
  * @param name    Symbol name to find.
  * @return BST node containing the symbol, or NULL if not found.
@@ -112,7 +112,7 @@ static x_obj_t *sym_bst_lookup(x_obj_t *p_base, x_obj_t *p_tree,
  *
  * If the symbol already exists, the tree is returned unmodified.
  *
- * @param p_base  Execution context (for allocation).
+ * @param p_base  Base (execution context) (for allocation).
  * @param p_tree  Current BST root (or NULL for empty tree).
  * @param p_sym   Symbol object to insert.
  * @return BST root after insertion.
@@ -162,7 +162,7 @@ static x_obj_t *sym_bst_insert(x_obj_t *p_base, x_obj_t *p_tree,
  * On first call, allocates the intern list and BST root in the type's
  * data slot.
  *
- * @param p_base  Execution context.
+ * @param p_base  Base (execution context).
  * @param p_args  Unused.
  * @return The registered SYMBOL type object.
  */
@@ -201,7 +201,7 @@ x_obj_t *x_type_symbol_register(x_obj_t *p_base, x_obj_t *p_args)
  *    is transferred to the new symbol and cleared on the source, ensuring
  *    exactly one owner for the malloc'd string.
  *
- * @param p_base  Execution context.
+ * @param p_base  Base (execution context).
  * @param p_args  Argument list: (name-atom [flags-atom]).
  * @return Interned SYMBOL object.
  *
@@ -239,7 +239,7 @@ x_obj_t *x_type_symbol_make(x_obj_t *p_base, x_obj_t *p_args)
 /**
  * Look up an interned symbol by name using the BST index.
  *
- * @param p_base  Execution context.
+ * @param p_base  Base (execution context).
  * @param p_args  Argument list whose first element wraps the name string.
  * @return BST node containing the symbol, or NULL if not interned.
  */
@@ -304,7 +304,7 @@ x_obj_t *x_type_symbol_find(x_obj_t *p_base, x_obj_t *p_args)
  * This catches bindings from enclosing closures in nested scope chains.
  * Only reached when steps 1 and 2 both miss.
  *
- * @param p_base  Execution context.
+ * @param p_base  Base (execution context).
  * @param p_args  Eval argument frame containing the symbol expression.
  * @return The bound value, or NULL on error.
  *

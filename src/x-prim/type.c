@@ -53,7 +53,7 @@
  * iter), looks each up in @p p_handlers via alist association,
  * and populates the corresponding x_type_t slot.
  *
- * @param p_base  Execution context used for symbol lookup and allocation.
+ * @param p_base  Base (execution context) used for symbol lookup and allocation.
  * @param p_name_atom  Atom for the type name.
  * @param p_handlers   Alist mapping handler name symbols to closures.
  * @return Heap-allocated type struct object.
@@ -110,7 +110,7 @@ static x_obj_t *x_prim_type_build_struct(x_obj_t *p_base,
  * Duplicates the name string into an owned atom, builds the type struct
  * from the handlers alist, and prepends it to the base's type alist.
  *
- * @param p_base  Execution context.
+ * @param p_base  Base (execution context).
  * @param p_args  Unevaluated: (self name-string handlers-alist).
  * @return The type name atom (handle for type? / make-instance lookups).
  * @see x_prim_type_build_struct
@@ -180,7 +180,7 @@ static x_obj_t *x_prim_base_make_type(x_obj_t *p_base, x_obj_t *p_args)
  * Looks up the type by its handle atom in the base's type alist and
  * allocates a pair-sized object of that type with @p p_data as its first slot.
  *
- * @param p_base  Execution context.
+ * @param p_base  Base (execution context).
  * @param p_args  Unevaluated: (self type-handle data).
  * @return New typed instance, or NULL if the type handle is not found.
  */
@@ -210,7 +210,7 @@ static x_obj_t *x_prim_make_instance(x_obj_t *p_base, x_obj_t *p_args)
  *
  * Compares the name atom pointer of the object's type against @p p_handle.
  *
- * @param p_base  Execution context.
+ * @param p_base  Base (execution context).
  * @param p_args  Unevaluated: (self obj type-handle).
  * @return The @c t symbol if the type matches, @c f otherwise.
  */
@@ -242,7 +242,7 @@ static x_obj_t *x_prim_typep(x_obj_t *p_base, x_obj_t *p_args)
  * Delegates to the C-level x_type_prim_type_name to retrieve the type's
  * name atom, which serves as the canonical handle for type operations.
  *
- * @param p_base  Execution context.
+ * @param p_base  Base (execution context).
  * @param p_args  Unevaluated: (self obj).
  * @return Type name atom, or NULL for nil/untyped objects.
  */
@@ -274,7 +274,7 @@ static x_obj_t *x_prim_type_of(x_obj_t *p_base, x_obj_t *p_args)
  * inheriting only the boolean singletons (t/f) from the calling base.
  * Used for custom tokenizer type registration on an isolated base.
  *
- * @param p_base  Execution context (boolean singletons are inherited).
+ * @param p_base  Base (execution context) (boolean singletons are inherited).
  * @param p_args  Unused.
  * @return New bare base object.
  * @see x_prim_make_base
@@ -301,7 +301,7 @@ static x_obj_t *x_prim_make_token_base(x_obj_t *p_base, x_obj_t *p_args)
  * a read buffer, and registers all C primitives. The result is a complete
  * interpreter context that can be evaluated into via base-eval.
  *
- * @param p_base  Execution context (unused beyond allocation).
+ * @param p_base  Base (execution context) (unused beyond allocation).
  * @param p_args  Unused.
  * @return Fully bootstrapped base object.
  * @see x_prim_base_eval
@@ -440,7 +440,7 @@ static x_obj_t *x_prim_base_bind(x_obj_t *p_base, x_obj_t *p_args)
  * Reads the buffer's current length (bytes consumed by the tokenizer)
  * and duplicates that prefix into a new owned string.
  *
- * @param p_base  Execution context.
+ * @param p_base  Base (execution context).
  * @param p_args  Unevaluated: (self buffer).
  * @return New string containing the consumed buffer content.
  */
@@ -462,7 +462,7 @@ static x_obj_t *x_prim_buffer_token(x_obj_t *p_base, x_obj_t *p_args)
  *
  * x-lang form: @code (buffer-last-char buffer) @endcode
  *
- * @param p_base  Execution context.
+ * @param p_base  Base (execution context).
  * @param p_args  Unevaluated: (self buffer).
  * @return Integer character code, or NULL if buffer is empty.
  */
@@ -557,7 +557,7 @@ static x_obj_t *x_prim_token_read_string(x_obj_t *p_base, x_obj_t *p_args)
  * Looks up the type by handle, allocates an object with @p n pointer-sized
  * slots, and zero-fills all slots. Used for vector-like custom types.
  *
- * @param p_base  Execution context.
+ * @param p_base  Base (execution context).
  * @param p_args  Unevaluated: (self type-handle n).
  * @return New object with @p n NULL slots, or NULL if type not found.
  * @see x_prim_make_type
@@ -598,7 +598,7 @@ static x_obj_t *x_prim_make_obj(x_obj_t *p_base, x_obj_t *p_args)
  *
  * x-lang form: @code (token-read buffer) @endcode
  *
- * @param p_base  Execution context.
+ * @param p_base  Base (execution context).
  * @param p_args  Unevaluated: (self buffer).
  * @return Parsed expression, or NULL on EOF.
  */
@@ -626,7 +626,7 @@ static x_obj_t *x_prim_token_read(x_obj_t *p_base, x_obj_t *p_args)
  * wrappers stay safe inside reader/tokenizer callbacks.  C primitives receive
  * unevaluated args, hence the explicit x_eargs before delegating.
  *
- * @param p_base  Execution context.
+ * @param p_base  Base (execution context).
  * @param p_args  Unevaluated: (self obj).
  * @param op      The type operation to drive with the evaluated object.
  * @return Whatever the operation returns.
@@ -765,7 +765,7 @@ static x_obj_t *x_prim_buffer_read_text(x_obj_t *p_base, x_obj_t *p_args)
  * (obj-ref / obj-set! / type-name are pure x-lang now: boot/data.x +
  * boot/reflect.x implement them reflectively over the layout contracts.)
  *
- * @param p_base  Execution context to bind primitives into.
+ * @param p_base  Base (execution context) to bind primitives into.
  * @param p_args  Unused.
  * @return @p p_base.
  */

@@ -53,7 +53,7 @@
  * C pointer. Evaluates arguments and dispatches via the platform
  * syscall() function.
  *
- * @param p_base  x_obj_t* -- Execution context
+ * @param p_base  x_obj_t* -- Base (execution context)
  * @param p_args  x_obj_t* -- Unevaluated variadic args
  * @return x_obj_t* -- Integer syscall return value
  */
@@ -93,7 +93,7 @@ static x_obj_t *x_prim_syscall(x_obj_t *p_base, x_obj_t *p_args)
  * read buffer) onto the base stacks, evaluates all expressions via
  * x_eval_load, then pops and restores the previous input state.
  *
- * @param p_base  x_obj_t* -- Execution context
+ * @param p_base  x_obj_t* -- Base (execution context)
  * @param p_args  x_obj_t* -- Unevaluated args; path is a string
  * @return x_obj_t* -- Result of the last expression in the file
  *

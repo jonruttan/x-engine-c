@@ -30,7 +30,7 @@ x_satom_t x_sexp_symbol_analyse_prim = x_obj_set(x_type_atom_obj, X_OBJ_FLAG_NON
  * the buffer length is scored as a negative value so that more
  * specific types (which score positively) always win ties.
  *
- * @param p_base  Execution context.
+ * @param p_base  Base (execution context).
  * @param p_args  Read-args containing the token buffer and score.
  * @return The args (keep reading), score (on delimiter), or NULL (empty).
  */
@@ -58,7 +58,7 @@ x_obj_t *x_sexp_symbol_analyse(x_obj_t *p_base, x_obj_t *p_args)
  * Copies the buffer contents into a new string, then interns it as a
  * symbol through @c x_type_symbol_make.
  *
- * @param p_base  Execution context.
+ * @param p_base  Base (execution context).
  * @param p_args  Read-args containing the token buffer.
  * @return An interned symbol object.
  */

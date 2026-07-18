@@ -26,7 +26,7 @@ x_satom_t x_type_buffer_name = x_obj_set(x_type_atom_obj, X_OBJ_FLAG_NONE, { .s 
  *
  * Both read and write cursors are initialized to point at @p p.
  *
- * @param p_base  Execution context.
+ * @param p_base  Base (execution context).
  * @param flags   Object flags (e.g. @c X_OBJ_FLAG_OWN, @c X_OBJ_FLAG_RO).
  * @param p       Pointer to the underlying character array.
  * @return Newly allocated BUFFER object.
@@ -49,7 +49,7 @@ x_obj_t *x_make_buffer(x_obj_t *p_base, x_obj_flag_t flags, void *p)
  * Flags the inner bookkeeping pair directly without traversing its
  * slots, since those contain raw @c char* pointers rather than objects.
  *
- * @param p_base  Execution context.
+ * @param p_base  Base (execution context).
  * @param p_args  Argument list: (buffer-object flags).
  * @return NULL (mark handlers have no meaningful return).
  */
@@ -73,7 +73,7 @@ x_obj_t *x_type_buffer_mark(x_obj_t *p_base, x_obj_t *p_args)
  *
  * Populates name, mark, and make hooks.
  *
- * @param p_base  Execution context.
+ * @param p_base  Base (execution context).
  * @param p_args  Unused.
  * @return Type struct pair-tree for BUFFER.
  */
@@ -91,7 +91,7 @@ x_obj_t *x_type_buffer_struct(x_obj_t *p_base, x_obj_t *p_args)
 /**
  * Register (or retrieve) the BUFFER type in the type alist.
  *
- * @param p_base  Execution context.
+ * @param p_base  Base (execution context).
  * @param p_args  Unused.
  * @return The registered BUFFER type object.
  */
@@ -113,7 +113,7 @@ x_obj_t *x_type_buffer_register(x_obj_t *p_base, x_obj_t *p_args)
  * to the base pointer).  The @c X_OBJ_FLAG_OWN flag is set only on the
  * outer object.
  *
- * @param p_base  Execution context.
+ * @param p_base  Base (execution context).
  * @param p_args  Argument list: (buffer-atom [flags-atom]).
  * @return Newly allocated BUFFER object.
  */
@@ -136,7 +136,7 @@ x_obj_t *x_type_buffer_make(x_obj_t *p_base, x_obj_t *p_args)
  *
  * Effectively empties the buffer without deallocating the array.
  *
- * @param p_base  Execution context.
+ * @param p_base  Base (execution context).
  * @param p_args  Argument list whose first element is the buffer.
  * @return The buffer object.
  */
@@ -155,7 +155,7 @@ x_obj_t *x_type_buffer_reset(x_obj_t *p_base, x_obj_t *p_args)
  * Copies the remaining unread bytes to position 0 and adjusts both
  * cursors accordingly, freeing space at the end of the buffer.
  *
- * @param p_base  Execution context.
+ * @param p_base  Base (execution context).
  * @param p_args  Argument list whose first element is the buffer.
  * @return The buffer object.
  */
@@ -177,7 +177,7 @@ x_obj_t *x_type_buffer_retain(x_obj_t *p_base, x_obj_t *p_args)
  * Writes the character from the second argument and advances the
  * write cursor by one.
  *
- * @param p_base  Execution context.
+ * @param p_base  Base (execution context).
  * @param p_args  Argument list: (buffer char-object).
  * @return The buffer object.
  */
@@ -198,7 +198,7 @@ x_obj_t *x_type_buffer_append(x_obj_t *p_base, x_obj_t *p_args)
  * from the base input channel and appends it.  Advances the read
  * cursor by one and tracks newlines for error reporting.
  *
- * @param p_base  Execution context.
+ * @param p_base  Base (execution context).
  * @param p_args  Argument list whose first element is the buffer.
  * @return The buffer object after advancing, or NULL on EOF.
  *
@@ -250,7 +250,7 @@ x_obj_t *x_type_buffer_read(x_obj_t *p_base, x_obj_t *p_args)
  * Delegates to x_type_buffer_read() and returns NULL if the result
  * is NULL or the last character read was @c '\\0'.
  *
- * @param p_base  Execution context.
+ * @param p_base  Base (execution context).
  * @param p_args  Argument list whose first element is the buffer.
  * @return The buffer object after advancing, or NULL on EOF/NUL.
  *

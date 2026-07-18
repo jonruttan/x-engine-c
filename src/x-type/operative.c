@@ -21,7 +21,7 @@
  *
  * Only marks slot 1 (state list), not slot 0 (fn ptr).
  *
- * @param p_base  x_obj_t* -- Execution context
+ * @param p_base  x_obj_t* -- Base (execution context)
  * @param p_args  x_obj_t* -- (object . (flags))
  * @return NULL always
  */
@@ -47,7 +47,7 @@ x_satom_t x_type_operative_name = x_obj_set(x_type_atom_obj, X_OBJ_FLAG_NONE, { 
  * Builds the state list (params . (envparam . (body . env))) and stores
  * it in slot 1 of the two-unit callable layout.
  *
- * @param p_base     x_obj_t*    -- Execution context
+ * @param p_base     x_obj_t*    -- Base (execution context)
  * @param flags      x_obj_flag_t -- Object flags
  * @param p_params   x_obj_t*    -- Formal parameter tree
  * @param p_envparam x_obj_t*    -- Environment parameter name (or nil)
@@ -70,7 +70,7 @@ x_obj_t *x_make_operative(x_obj_t *p_base, x_obj_flag_t flags,
 /**
  * Build the OPERATIVE type struct descriptor.
  *
- * @param p_base  x_obj_t* -- Execution context
+ * @param p_base  x_obj_t* -- Base (execution context)
  * @param p_args  x_obj_t* -- Unused
  * @return Type struct pair list
  */
@@ -90,7 +90,7 @@ x_obj_t *x_type_operative_struct(x_obj_t *p_base, x_obj_t *p_args)
 /**
  * Register (or retrieve) the OPERATIVE type struct on p_base.
  *
- * @param p_base  x_obj_t* -- Execution context
+ * @param p_base  x_obj_t* -- Base (execution context)
  * @param p_args  x_obj_t* -- Unused
  * @return The registered type struct object
  */
@@ -109,7 +109,7 @@ x_obj_t *x_type_operative_register(x_obj_t *p_base, x_obj_t *p_args)
  *
  * Expects args: (params envparam body env [flags]).
  *
- * @param p_base  x_obj_t* -- Execution context
+ * @param p_base  x_obj_t* -- Base (execution context)
  * @param p_args  x_obj_t* -- Construction arguments
  * @return New operative object
  */
@@ -164,7 +164,7 @@ x_obj_t *x_type_operative_make(x_obj_t *p_base, x_obj_t *p_args)
  * saved head isn't on the current chain, the body branched off (op's
  * own formals frame); restore to saved.
  *
- * @param p_base  x_obj_t* -- Execution context
+ * @param p_base  x_obj_t* -- Base (execution context)
  * @param p_args  x_obj_t* -- (operative . unevaluated-args)
  * @return Result of the operative body
  */

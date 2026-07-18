@@ -22,7 +22,7 @@
  * Dispatches to the appropriate constructor based on the object's
  * type (static atom, static pair, or registered type with make handler).
  *
- * @param p_base  x_obj_t* -- Execution context
+ * @param p_base  x_obj_t* -- Base (execution context)
  * @param p_args  x_obj_t* -- (prototype-obj flags data...)
  * @return Newly allocated object, or NULL on failure
  */
@@ -63,7 +63,7 @@ x_obj_t *x_obj_prim_make(x_obj_t *p_base, x_obj_t *p_args)
  * For procedure-typed call handlers, invokes via x_type_procedure_call
  * to support closures as type callbacks.
  *
- * @param p_base  x_obj_t* -- Execution context
+ * @param p_base  x_obj_t* -- Base (execution context)
  * @param p_args  x_obj_t* -- (callable . args)
  * @return Result of the call, or NULL if no call handler
  */

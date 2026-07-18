@@ -25,7 +25,7 @@ x_satom_t x_type_prim_name = x_obj_set(x_type_atom_obj, X_OBJ_FLAG_NONE, { .s = 
 /**
  * Allocate a PRIMITIVE object wrapping a C function pointer.
  *
- * @param p_base  Execution context.
+ * @param p_base  Base (execution context).
  * @param flags   Object flags.
  * @param fn      C function pointer to wrap.
  * @return Newly allocated PRIMITIVE object.
@@ -47,7 +47,7 @@ x_obj_t *x_make_prim(x_obj_t *p_base, x_obj_flag_t flags, x_fn_t fn)
  *
  * Populates name, make, and call hooks.
  *
- * @param p_base  Execution context.
+ * @param p_base  Base (execution context).
  * @param p_args  Unused.
  * @return Type struct pair-tree for PRIMITIVE.
  */
@@ -65,7 +65,7 @@ x_obj_t *x_type_prim_struct(x_obj_t *p_base, x_obj_t *p_args)
 /**
  * Register (or retrieve) the PRIMITIVE type in the type alist.
  *
- * @param p_base  Execution context.
+ * @param p_base  Base (execution context).
  * @param p_args  Unused.
  * @return The registered PRIMITIVE type object.
  */
@@ -85,7 +85,7 @@ x_obj_t *x_type_prim_register(x_obj_t *p_base, x_obj_t *p_args)
  * Extracts the function pointer from @c p_args[0] and optional flags
  * from @c p_args[1], then allocates a pair-length object via x_obj_make().
  *
- * @param p_base  Execution context.
+ * @param p_base  Base (execution context).
  * @param p_args  Argument list: (fn-atom [flags-atom]).
  * @return Newly allocated PRIMITIVE object.
  */
@@ -108,7 +108,7 @@ x_obj_t *x_type_prim_make(x_obj_t *p_base, x_obj_t *p_args)
  * - C primitives (spair): fn-ptr is the C function itself.
  * - Type handlers (satom): fn-ptr is a type-internal handler (no self-passing).
  *
- * @param p_base  Execution context.
+ * @param p_base  Base (execution context).
  * @param p_args  Argument list: (callable . args).
  * @return Result of the called function.
  */
@@ -131,7 +131,7 @@ x_obj_t *x_callable_call(x_obj_t *p_base, x_obj_t *p_args)
  * Like x_callable_call() but uses the non-TCO apply path for procedures
  * (args already evaluated) and a trampoline for operatives.
  *
- * @param p_base  Execution context.
+ * @param p_base  Base (execution context).
  * @param p_args  Argument list: (callable . args).
  * @return Result of the applied function.
  *

@@ -28,7 +28,7 @@ x_satom_t x_type_pair_name = x_obj_set(x_type_atom_obj, X_OBJ_FLAG_NONE, { .s = 
  * Wraps p1 and p2 in stack-allocated objects, builds a stack arg list,
  * and delegates to x_type_pair_make.
  *
- * @param p_base  x_obj_t* -- Execution context
+ * @param p_base  x_obj_t* -- Base (execution context)
  * @param flags   x_obj_flag_t -- Object flags
  * @param p1      void* -- First element
  * @param p2      void* -- Rest element
@@ -49,7 +49,7 @@ x_obj_t *x_make_pair(x_obj_t *p_base, x_obj_flag_t flags, void *p1, void *p2)
 /**
  * Compute the length of a pair list by walking rest pointers.
  *
- * @param p_base  x_obj_t* -- Execution context
+ * @param p_base  x_obj_t* -- Base (execution context)
  * @param p_args  x_obj_t* -- (pair-object . ...)
  * @return x_obj_t* -- Integer object with list length
  */
@@ -71,7 +71,7 @@ x_obj_t *x_type_pair_length(x_obj_t *p_base, x_obj_t *p_args)
  *
  * Populates name, units, make, length, and write callbacks.
  *
- * @param p_base  x_obj_t* -- Execution context
+ * @param p_base  x_obj_t* -- Base (execution context)
  * @param p_args  x_obj_t* -- Unused
  * @return x_obj_t* -- Type descriptor pair list
  */
@@ -90,7 +90,7 @@ x_obj_t *x_type_pair_struct(x_obj_t *p_base, x_obj_t *p_args)
 /**
  * Register or retrieve the pair type on the base context.
  *
- * @param p_base  x_obj_t* -- Execution context
+ * @param p_base  x_obj_t* -- Base (execution context)
  * @param p_args  x_obj_t* -- Unused
  * @return x_obj_t* -- Registered type object
  */
@@ -110,7 +110,7 @@ x_obj_t *x_type_pair_register(x_obj_t *p_base, x_obj_t *p_args)
  * Extracts first/rest from the pair arg and optional flags,
  * then allocates a heap pair via x_obj_make.
  *
- * @param p_base  x_obj_t* -- Execution context
+ * @param p_base  x_obj_t* -- Base (execution context)
  * @param p_args  x_obj_t* -- (pair-value . (flags | nil))
  * @return x_obj_t* -- New heap-allocated pair object
  */

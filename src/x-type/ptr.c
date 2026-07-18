@@ -24,7 +24,7 @@ x_satom_t x_type_ptr_name = x_obj_set(x_type_atom_obj, X_OBJ_FLAG_NONE, { .s = (
  * Packs @p p and @p flags into stack-allocated args and delegates to
  * x_type_ptr_make() for type-system allocation.
  *
- * @param p_base  Execution context.
+ * @param p_base  Base (execution context).
  * @param flags   Object flags (e.g. @c X_OBJ_FLAG_OWN).
  * @param p       Raw pointer to wrap.
  * @return Newly allocated POINTER object.
@@ -46,7 +46,7 @@ x_obj_t *x_make_ptr(x_obj_t *p_base, x_obj_flag_t flags, void *p)
  *
  * Populates name and make hooks for the type system.
  *
- * @param p_base  Execution context.
+ * @param p_base  Base (execution context).
  * @param p_args  Unused.
  * @return Type struct pair-tree for POINTER.
  */
@@ -65,7 +65,7 @@ x_obj_t *x_type_ptr_struct(x_obj_t *p_base, x_obj_t *p_args)
  *
  * Calls x_type_struct_get() with the POINTER name and struct constructor.
  *
- * @param p_base  Execution context.
+ * @param p_base  Base (execution context).
  * @param p_args  Unused.
  * @return The registered POINTER type object.
  */
@@ -85,7 +85,7 @@ x_obj_t *x_type_ptr_register(x_obj_t *p_base, x_obj_t *p_args)
  * Extracts the raw pointer from @c p_args[0] and optional flags from
  * @c p_args[1], then allocates via x_obj_make().
  *
- * @param p_base  Execution context.
+ * @param p_base  Base (execution context).
  * @param p_args  Argument list: (pointer-atom [flags-atom]).
  * @return Newly allocated POINTER object.
  */
