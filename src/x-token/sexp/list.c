@@ -117,6 +117,16 @@ x_obj_t *x_sexp_list_read(x_obj_t *p_base, x_obj_t *p_args)
 		}
 
 		if (elem == (x_obj_t *)x_sexp_list_delimit_prim) {
+			if (tail == NULL) {
+				/* ( . x) -- a list that is only a tail IS the
+				 * tail: the bare-variadic parameter form
+				 * (fn ( . rest) ...) reads as `rest`.  Without
+				 * this branch the write below derefs NULL. */
+				head = x_token_read(p_base, (x_obj_t *)read_args);
+				x_firstobj((x_obj_t *)root) = head;
+				x_token_read(p_base, (x_obj_t *)read_args);
+				break;
+			}
 			x_restobj(tail) = x_token_read(p_base, (x_obj_t *)read_args);
 			x_token_read(p_base, (x_obj_t *)read_args);
 			break;
