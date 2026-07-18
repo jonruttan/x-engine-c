@@ -184,6 +184,8 @@ x_obj_t *x_sexp_int_analyse_sign(x_obj_t *p_base, x_obj_t *p_args)
 x_obj_t *x_sexp_int_read(x_obj_t *p_base, x_obj_t *p_args)
 {
 	x_obj_t *p_buffer = x_firstobj(p_args), *p_int;
+	x_char_t *p_val;
+	int base;
 
 	if (x_bufferlen(p_buffer) < 1) {
 		return NULL;
@@ -192,7 +194,16 @@ x_obj_t *x_sexp_int_read(x_obj_t *p_base, x_obj_t *p_args)
 	/* Not required, final non-numeric char will act as delimiter. */
 	/* *x_bufferead(p_buffer) = '\0'; */
 
-	p_int = x_mkint(p_base, x_lib_strtoint(x_bufferval(p_buffer), NULL, 0));
+	/* Leading zero reads DECIMAL (019 = 19); only an explicit 0x/0X
+	 * prefix is hex.  Base auto-detection read 019 as octal-then-stop
+	 * (= 1) -- the classic silent surprise (x-lang#45 R5b). */
+	p_val = x_bufferval(p_buffer);
+	if (*p_val == '+' || *p_val == '-') {
+		p_val++;
+	}
+	base = (p_val[0] == '0' && (p_val[1] == 'x' || p_val[1] == 'X')) ? 0 : 10;
+
+	p_int = x_mkint(p_base, x_lib_strtoint(x_bufferval(p_buffer), NULL, base));
 
 	return p_int;
 }
