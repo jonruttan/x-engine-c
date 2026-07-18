@@ -111,17 +111,101 @@ x_obj_t *x_type_iter_isempty(x_obj_t *p_base, x_obj_t *p_args)
 /**
  * Advance an iterator by one step.
  *
- * Calls the iterator's step function with the iterator itself
- * as argument.
+ * The iterator is a boxed GENERATOR: (step . state).  Steps are pure --
+ * they never mutate the box; this driver owns the single write-back.
+ * Two step ABIs, discriminated exactly as x_callable_call does:
+ *
+ *  - SATOM step (raw C fn): pure cell ABI.  Called with a caller-owned
+ *    stack cell (state . nil); the step returns the value and writes the
+ *    successor state into the cell's first slot.  Zero heap allocation,
+ *    so the tokenizer's stack iterators stay GC-silent.
+ *
+ *  - Any other callable (x-lang fn, heap prim): functional ABI.  Called
+ *    as (step state) via the apply path (state is data, never re-evaluated)
+ *    and must return (value . next-state), or nil when exhausted.  This is
+ *    the Gen / Seq step contract.
  *
  * @param p_base  x_obj_t* -- Execution context
  * @param p_args  x_obj_t* -- (iterator)
- * @return Result of the step function (next element or updated iter)
+ * @return The yielded element, or NULL when exhausted
  */
 x_obj_t *x_type_iter_next(x_obj_t *p_base, x_obj_t *p_args)
 {
-	x_obj_t *p_iter = x_firstobj(p_args);
-	x_spair_t args = x_obj_set(NULL, X_OBJ_FLAG_NONE, { x_iterprim(p_iter) }, { p_args });
+	x_obj_t *p_iter = x_firstobj(p_args), *p_obj;
+	x_spair_t cell[2];
 
-	return x_callable_call(p_base, (x_obj_t *)args);
+	cell[0][X_OBJ_META_TYPE].p = NULL;
+	cell[0][X_OBJ_META_FLAGS].i = X_OBJ_FLAG_NONE;
+
+	if (x_obj_type_issatom(x_iterprim(p_iter))) {
+		x_firstobj((x_obj_t *)cell) = x_iterval(p_iter);
+		x_restobj((x_obj_t *)cell) = NULL;
+		p_obj = (*x_primval(x_iterprim(p_iter)))(p_base, (x_obj_t *)cell);
+		x_iterval(p_iter) = x_firstobj((x_obj_t *)cell);
+		return p_obj;
+	}
+
+	x_firstobj((x_obj_t *)cell) = x_iterprim(p_iter);
+	x_restobj((x_obj_t *)cell) = (x_obj_t *)(cell + 1);
+	cell[1][X_OBJ_META_TYPE].p = NULL;
+	cell[1][X_OBJ_META_FLAGS].i = X_OBJ_FLAG_NONE;
+	x_firstobj((x_obj_t *)(cell + 1)) = x_iterval(p_iter);
+	x_restobj((x_obj_t *)(cell + 1)) = NULL;
+
+	p_obj = x_callable_apply(p_base, (x_obj_t *)cell);
+	if (x_obj_isnil(p_base, p_obj)) {
+		x_iterval(p_iter) = NULL;
+		return NULL;
+	}
+	x_iterval(p_iter) = x_restobj(p_obj);
+	return x_firstobj(p_obj);
+}
+
+/**
+ * Step an iterator FUNCTIONALLY -- no mutation, generator view.
+ *
+ * The persistent complement of x_type_iter_next: yields
+ * (value . next-iterator) as a fresh pair (the Seq step shape), leaving
+ * the given iterator untouched, or nil when it is exhausted.  This is
+ * the X-boundary door that lets Gen pipelines run on C steps; the two
+ * allocations happen here, where allocation is legal.
+ *
+ * @param p_base  x_obj_t* -- Execution context
+ * @param p_args  x_obj_t* -- (iterator)
+ * @return (value . next-iterator) pair, or NULL when exhausted
+ */
+x_obj_t *x_type_iter_step(x_obj_t *p_base, x_obj_t *p_args)
+{
+	x_obj_t *p_iter = x_firstobj(p_args), *p_obj, *p_next;
+	x_spair_t cell[2];
+
+	if (x_iterempty(p_base, p_iter)) {
+		return NULL;
+	}
+
+	cell[0][X_OBJ_META_TYPE].p = NULL;
+	cell[0][X_OBJ_META_FLAGS].i = X_OBJ_FLAG_NONE;
+
+	if (x_obj_type_issatom(x_iterprim(p_iter))) {
+		x_firstobj((x_obj_t *)cell) = x_iterval(p_iter);
+		x_restobj((x_obj_t *)cell) = NULL;
+		p_obj = (*x_primval(x_iterprim(p_iter)))(p_base, (x_obj_t *)cell);
+		p_next = x_firstobj((x_obj_t *)cell);
+	} else {
+		x_firstobj((x_obj_t *)cell) = x_iterprim(p_iter);
+		x_restobj((x_obj_t *)cell) = (x_obj_t *)(cell + 1);
+		cell[1][X_OBJ_META_TYPE].p = NULL;
+		cell[1][X_OBJ_META_FLAGS].i = X_OBJ_FLAG_NONE;
+		x_firstobj((x_obj_t *)(cell + 1)) = x_iterval(p_iter);
+		x_restobj((x_obj_t *)(cell + 1)) = NULL;
+		p_obj = x_callable_apply(p_base, (x_obj_t *)cell);
+		if (x_obj_isnil(p_base, p_obj)) {
+			return NULL;
+		}
+		p_next = x_restobj(p_obj);
+		p_obj = x_firstobj(p_obj);
+	}
+
+	return x_mkspair(p_base, X_OBJ_FLAG_NONE, p_obj,
+		x_mkiter(p_base, x_iterprim(p_iter), p_next));
 }

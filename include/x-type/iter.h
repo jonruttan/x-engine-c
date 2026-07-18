@@ -27,7 +27,11 @@
 /** @} */
 
 /** @name Field accessors
- *  Iterator layout: (step-fn . current-value).
+ *  Iterator layout: (step-fn . current-value) -- a boxed GENERATOR.
+ *  Steps are PURE (they never touch the box); x_type_iter_next owns the
+ *  write-back.  Step ABIs: a SATOM step is a raw C fn over a caller-owned
+ *  state cell (zero-alloc); any other callable is functional,
+ *  (step state) -> (value . next-state) | nil -- the Gen/Seq contract.
  */
 /** @{ */
 #define x_iterprim(X)				x_firstobj((X))                /**< Step function (callable). */
@@ -53,5 +57,7 @@ x_obj_t *x_type_iter_make(x_obj_t *p_base, x_obj_t *p_args);
 x_obj_t *x_type_iter_isempty(x_obj_t *p_base, x_obj_t *p_args);
 /** Advance an iterator by one step, returning the current element. */
 x_obj_t *x_type_iter_next(x_obj_t *p_base, x_obj_t *p_args);
+/** Step an iterator functionally: (value . next-iterator) pair, or NULL. */
+x_obj_t *x_type_iter_step(x_obj_t *p_base, x_obj_t *p_args);
 
 #endif /* X_TYPE_ITER_H */

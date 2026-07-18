@@ -272,25 +272,29 @@ x_obj_t *x_type_list_eval(x_obj_t *p_base, x_obj_t *p_args)
 }
 
 /**
- * Iterator step -- advance a list iterator by one element.
+ * Generator step over a list -- PURE, cell ABI.
  *
- * Returns the current element and advances the iterator's internal
- * cursor to the next cell.  Returns NULL when exhausted.
+ * The step never sees an iterator box: @p p_args is a caller-owned
+ * state cell (state . nil).  It reads the state (the remaining list),
+ * writes the successor state back into the cell's first slot, and
+ * returns the yielded element.  The driver (x_type_iter_next) owns any
+ * box mutation; callers like the tokenizer reuse one stack cell so the
+ * walk allocates nothing.
  *
  * @param p_base  Execution context.
- * @param p_args  Argument list whose first element is the iterator.
- * @return Current element, or NULL at end of list.
+ * @param p_args  State cell (state . nil), caller-owned.
+ * @return Yielded element, or NULL when the state is exhausted.
  */
 x_obj_t *x_type_list_iter(x_obj_t *p_base, x_obj_t *p_args)
 {
-	x_obj_t *p_iter = x_firstobj(p_args), *p_obj;
+	x_obj_t *p_state = x_firstobj(p_args), *p_obj;
 
-	if (x_obj_isnil(p_base, x_iterval(p_iter))) {
+	if (x_obj_isnil(p_base, p_state)) {
 		return NULL;
 	}
 
-	p_obj = x_firstobj(x_iterval(p_iter));
-	x_iterval(p_iter) = x_restobj(x_iterval(p_iter));
+	p_obj = x_firstobj(p_state);
+	x_firstobj(p_args) = x_restobj(p_state);
 
 	return p_obj;
 }

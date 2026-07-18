@@ -75,15 +75,37 @@ void test_cleanup(x_obj_t *p_base)
 
 x_obj_t *list_iter_prim(x_obj_t *p_base, x_obj_t *p_args)
 {
-	/* Spair callable: p_args = (self . actual_args).
-	 * Skip self to get the iterator. */
-	x_obj_t *p_iter = x_firstobj(x_restobj(p_args)),
-		*p_obj = x_firstobj(x_iterval(p_iter));
+	/* FUNCTIONAL step (heap-prim spair): called with (self . (state)).
+	 * Returns (value . next-state), or NULL when the state is exhausted;
+	 * the driver owns the box write-back. */
+	x_obj_t *p_state = x_firstobj(x_restobj(p_args));
 
-	x_iterval(p_iter) = x_restobj(x_iterval(p_iter));
+	if (x_obj_isnil(p_base, p_state)) {
+		return NULL;
+	}
+
+	return x_mkspair(p_base, X_OBJ_FLAG_NONE,
+		x_firstobj(p_state), x_restobj(p_state));
+}
+
+x_obj_t *cell_iter_step(x_obj_t *p_base, x_obj_t *p_args)
+{
+	/* PURE C step (satom): cell ABI.  p_args = caller-owned (state . nil);
+	 * reads the state, writes the successor into the cell, returns the
+	 * value.  Zero allocation. */
+	x_obj_t *p_state = x_firstobj(p_args), *p_obj;
+
+	if (x_obj_isnil(p_base, p_state)) {
+		return NULL;
+	}
+
+	p_obj = x_firstobj(p_state);
+	x_firstobj(p_args) = x_restobj(p_state);
 
 	return p_obj;
 }
+
+x_satom_t cell_iter_step_prim = x_obj_set(x_type_atom_obj, X_OBJ_FLAG_NONE, { .fn = cell_iter_step });
 
 
 /*
@@ -456,6 +478,8 @@ static char *test_type_iter_next(void)
 
 	helper_alloc_reset();
 
+	/* Functional-ABI step (heap prim): driver unpacks (value . next-state)
+	 * and owns the box write-back. */
 	p_base = x_eval_make(NULL, NULL);
 	p_list = pair(atom(1), pair(nil, pair(atom(3), nil)));
 	p_iter = x_mkiter(p_base, x_mkprim(p_base, list_iter_prim), p_list);
@@ -472,6 +496,65 @@ static char *test_type_iter_next(void)
 	p_obj = x_type_iter_next(p_base, p_args);
 	_it_should("return the last item in the list", x_011(p_list) == p_obj);
 	_it_should("be empty", x_iterempty(p_base, p_iter));
+
+	return NULL;
+}
+
+static char *test_type_iter_next_cell_abi(void)
+{
+	x_obj_t *p_base, *p_list, *p_iter, *p_args, *p_obj;
+
+	helper_alloc_reset();
+
+	/* Cell-ABI step (satom): the driver hands the step a caller-owned
+	 * state cell and writes the successor back to the box itself. */
+	p_base = x_eval_make(NULL, NULL);
+	p_list = pair(atom(1), pair(atom(2), nil));
+	p_iter = x_mkiter(p_base, &cell_iter_step_prim, p_list);
+	p_args = x_mkspair(p_base, X_OBJ_FLAG_NONE, p_iter, NULL);
+
+	p_obj = x_type_iter_next(p_base, p_args);
+	_it_should("yield the first element through the cell ABI", x_0(p_list) == p_obj);
+	_it_should("advance the box to the rest", x_iterval(p_iter) == x_1(p_list));
+
+	p_obj = x_type_iter_next(p_base, p_args);
+	_it_should("yield the second element", x_01(p_list) == p_obj);
+	_it_should("be empty after the last element", x_iterempty(p_base, p_iter));
+
+	return NULL;
+}
+
+static char *test_type_iter_step_fn(void)
+{
+	x_obj_t *p_base, *p_list, *p_iter, *p_args, *p_pair;
+
+	helper_alloc_reset();
+
+	/* Functional stepping: (value . next-iter), source iterator untouched. */
+	p_base = x_eval_make(NULL, NULL);
+	p_list = pair(atom(1), pair(atom(2), nil));
+	p_iter = x_mkiter(p_base, &cell_iter_step_prim, p_list);
+	p_args = x_mkspair(p_base, X_OBJ_FLAG_NONE, p_iter, NULL);
+
+	p_pair = x_type_iter_step(p_base, p_args);
+	_it_should("yield (value . next-iter)",
+		p_pair != NULL
+		&& x_0(p_list) == x_firstobj(p_pair)
+		&& x_obj_type_isiter(p_base, x_restobj(p_pair))
+	);
+	_it_should("leave the source iterator untouched",
+		x_iterval(p_iter) == p_list
+	);
+	_it_should("hand the successor state to the next iterator",
+		x_iterval(x_restobj(p_pair)) == x_1(p_list)
+	);
+
+	/* Exhausted iterator: nil, no allocation. */
+	p_iter = x_mkiter(p_base, &cell_iter_step_prim, NULL);
+	x_firstobj(p_args) = p_iter;
+	_it_should("return nil when exhausted",
+		NULL == x_type_iter_step(p_base, p_args)
+	);
 
 	return NULL;
 }
@@ -510,6 +593,8 @@ static char *run_tests() {
 	_run_test(test_base_alist_assoc);
 	_run_test(test_type_iter_make);
 	_run_test(test_type_iter_next);
+	_run_test(test_type_iter_next_cell_abi);
+	_run_test(test_type_iter_step_fn);
 	_run_test(test_type_iter_isempty_fn);
 
 	return NULL;

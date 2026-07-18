@@ -507,7 +507,7 @@ static char *test_type_list_eval_no_call(void)
 
 static char *test_type_list_iter(void)
 {
-	x_obj_t *p_base, *p_list, *p_iter, *p_args, *p_ret;
+	x_obj_t *p_base, *p_list, *p_args, *p_ret;
 
 	helper_alloc_reset();
 
@@ -517,11 +517,15 @@ static char *test_type_list_iter(void)
 		x_mkspair(p_base, X_OBJ_FLAG_NONE, x_mksatom(p_base, X_OBJ_FLAG_NONE, 1),
 		x_mkspair(p_base, X_OBJ_FLAG_NONE, x_mksatom(p_base, X_OBJ_FLAG_NONE, 2),
 		NULL)));
-	p_iter = x_mkiter(p_base, x_type_list_iter_prim, p_list);
-	p_args = x_mkspair(p_base, X_OBJ_FLAG_NONE, p_iter, NULL);
+	/* Pure step, cell ABI: p_args is the caller-owned state cell
+	 * (state . nil); the step writes the successor into the cell. */
+	p_args = x_mkspair(p_base, X_OBJ_FLAG_NONE, p_list, NULL);
 	p_ret = x_type_list_iter(p_base, p_args);
 	_it_should("return the first item in the list",
 		x_0(p_list) == p_ret
+	);
+	_it_should("write the successor state into the cell",
+		x_firstobj(p_args) == x_1(p_list)
 	);
 	p_ret = x_type_list_iter(p_base, p_args);
 	_it_should("return the next item in the list",

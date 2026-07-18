@@ -525,13 +525,13 @@ static char *test_token_read_ro_eof(void)
 
 static char *test_alist_iter_nil(void)
 {
-	x_obj_t *p_base, *p_iter, *p_args, *p_obj;
+	x_obj_t *p_base, *p_args, *p_obj;
 
 	p_base = x_eval_make(NULL, NULL);
 
-	/* Iterator over empty list — x_type_alist_iter returns nil */
-	p_iter = x_mkiter(p_base, (x_obj_t *)&x_type_alist_iter_prim, NULL);
-	p_args = x_mkspair(p_base, X_OBJ_FLAG_NONE, p_iter, NULL);
+	/* Pure step, cell ABI: p_args is the caller-owned state cell
+	 * (state . nil) — a nil state yields nil. */
+	p_args = x_mkspair(p_base, X_OBJ_FLAG_NONE, NULL, NULL);
 	p_obj = x_type_alist_iter(p_base, p_args);
 	_it_should("alist_iter returns nil for empty list",
 		x_obj_isnil(p_base, p_obj));

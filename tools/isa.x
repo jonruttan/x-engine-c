@@ -106,6 +106,9 @@
   (iter empty? hot)           ; derived dispatch, but per-ELEMENT hot (cached as %-vars in hot paths)
   (iter make types)
   (iter next hot)             ; derived dispatch, but per-ELEMENT hot
+  (iter step hot)             ; functional step: (value . next-iter) | (), no mutation -- the
+                              ;   generator view of an iterator; Gen runs on C steps through this.
+                              ;   Added 2026-07-17 (iter recontract: pure steps + one driver)
   (mem alloc alloc)           ; raw UNMANAGED region as a ptr, zeroed; caller must (mem free) it.
                               ;   Prefer (str make) (GC-owned). UNCHECKED like first/rest.
                               ;   Added 2026-07-15 (user-approved: the missing malloc door)

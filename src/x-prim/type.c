@@ -647,10 +647,10 @@ static x_obj_t *x_prim_op1(x_obj_t *p_base, x_obj_t *p_args,
 	return op(p_base, (x_obj_t *)args);
 }
 
-/** x-lang (make-iter step-fn value): build an iterator.  Driven by iter-next,
- *  which calls (step-fn iter); the step-fn reads the current item from the
- *  iterator's value cell, advances it (e.g. via set-rest!), and returns the
- *  item -- value going nil marks exhaustion (iter-empty?). */
+/** x-lang (make-iter step-fn value): build an iterator -- a boxed generator.
+ *  Steps are PURE: an x-lang step-fn is (step state) -> (value . next-state)
+ *  or () when exhausted; iter-next owns the box write-back -- value going
+ *  nil marks exhaustion (iter-empty?). */
 static x_obj_t *x_prim_make_iter(x_obj_t *p_base, x_obj_t *p_args)
 {
 	x_obj_t *p_fn, *p_val;
@@ -664,6 +664,15 @@ static x_obj_t *x_prim_make_iter(x_obj_t *p_base, x_obj_t *p_args)
 static x_obj_t *x_prim_iter_next(x_obj_t *p_base, x_obj_t *p_args)
 {
 	return x_prim_op1(p_base, p_args, x_type_iter_next);
+}
+
+/** x-lang (iter-step it): step an iterator FUNCTIONALLY -- returns
+ *  (value . next-iterator) with the given iterator untouched, or () when
+ *  exhausted.  The generator view of an iterator: Gen pipelines drive C
+ *  steps through this door. */
+static x_obj_t *x_prim_iter_step(x_obj_t *p_base, x_obj_t *p_args)
+{
+	return x_prim_op1(p_base, p_args, x_type_iter_step);
 }
 
 /** x-lang (iter-empty? iter): #t when the iterator is exhausted, else #f.
@@ -779,6 +788,7 @@ x_obj_t *x_prim_type_register(x_obj_t *p_base, x_obj_t *p_args)
 		{ "token-read-string", x_prim_token_read_string, "tok",  "read-str"      },
 		{ "make-iter",         x_prim_make_iter,         "iter",   "make"          },
 		{ "iter-next",         x_prim_iter_next,         "iter",   "next"          },
+		{ "iter-step",         x_prim_iter_step,         "iter",   "step"          },
 		{ "iter-empty?",       x_prim_iter_empty,        "iter",   "empty?"        },
 		{ "buffer-make",       x_prim_buffer_make,       "buf", "make"          },
 		{ "buffer-reset",      x_prim_buffer_reset,      "buf", "reset"         },

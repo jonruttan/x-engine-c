@@ -73,13 +73,14 @@ x_obj_t *x_type_alist_iter(x_obj_t *p_base, x_obj_t *p_args);
 x_satom_t x_type_alist_iter_prim = x_obj_set(x_type_atom_obj, X_OBJ_FLAG_NONE, { .fn = x_type_alist_iter });
 
 /**
- * Iterator that yields analyse hooks from type alist entries.
+ * Generator step that yields analyse hooks from type alist entries.
  *
- * Wraps x_type_list_iter to advance through the type alist, then
- * extracts the analyse field from each entry's type struct.
+ * Composes over the pure x_type_list_iter step (same caller-owned state
+ * cell, cell ABI), projecting the analyse field from each yielded
+ * entry's type struct.
  *
  * @param p_base  x_obj_t* -- Execution context
- * @param p_args  x_obj_t* -- Iterator state pair
+ * @param p_args  x_obj_t* -- State cell (state . nil), caller-owned
  * @return x_obj_t* -- Analyse hook from the next type entry, or NULL at end
  */
 x_obj_t *x_type_alist_iter(x_obj_t *p_base, x_obj_t *p_args)
