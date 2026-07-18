@@ -139,15 +139,15 @@ static void x_heap_mark_phase(x_obj_t *p_base)
 	x_obj_t *p_hooks;
 	x_spair_t hook_args[1];
 
-	x_heap_tree_mark(p_base, x_atomobj(p_base), X_OBJ_FLAG_HEAP);
-	x_heap_root_chain_mark(p_base, X_OBJ_FLAG_HEAP);
+	x_heap_tree_mark(p_base, x_atomobj(p_base), X_OBJ_FLAG_MARK);
+	x_heap_root_chain_mark(p_base, X_OBJ_FLAG_MARK);
 
 	if (x_base_isset(p_base)) {
 		p_roots = x_firstobj(x_base_field_heap_mark_roots(p_base));
 
 		while ( ! x_obj_isnil(p_base, p_roots)) {
 			x_heap_tree_mark(p_base, x_firstobj(p_roots),
-				X_OBJ_FLAG_HEAP);
+				X_OBJ_FLAG_MARK);
 			p_roots = x_restobj(p_roots);
 		}
 	}
@@ -200,7 +200,7 @@ static void x_heap_sweep_phase(x_obj_t *p_base)
 		}
 	}
 
-	x_heap_sweep(p_base, x_obj_heap(p_base), X_OBJ_FLAG_HEAP);
+	x_heap_sweep(p_base, x_obj_heap(p_base), X_OBJ_FLAG_MARK);
 }
 
 /** Sweep unmarked objects from the heap (GC phase 2, low-level).
@@ -421,7 +421,7 @@ static x_obj_t *x_prim_heap_mark_root(x_obj_t *p_base, x_obj_t *p_args)
 x_obj_t *x_prim_repl(x_obj_t *p_base, x_obj_t *p_args)
 {
 	x_obj_t *p_exp;
-	x_obj_t **p_cell = x_heap_root_cell(p_base);
+	x_obj_t **p_cell = x_heap_root_slot(p_base);
 	x_spair_t read_state[1];
 	x_spair_t root = x_obj_set((x_obj_t *)x_type_pair_obj, X_OBJ_FLAG_NONE,
 		{ NULL }, { NULL });

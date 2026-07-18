@@ -80,7 +80,7 @@ static void __attribute__((unused)) x_eargs(x_obj_t *p_base, x_obj_t *p_args, in
 	va_list ap;
 	int i;
 	int held = 0;
-	x_obj_t **p_cell = x_heap_root_cell(p_base);
+	x_obj_t **p_cell = x_heap_root_slot(p_base);
 	/* Earlier results may be fresh objects whose only other homes are the
 	 * caller's out-slots -- bare C stack the collector does not scan under
 	 * precise rooting -- so each result is parked in a registered slot

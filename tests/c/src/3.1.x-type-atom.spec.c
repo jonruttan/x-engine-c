@@ -187,7 +187,7 @@ static char *test_type_atom_register(void)
 
 	p_type = x_type_atom_register(p_base, p_base);
 	_it_should("return the Atom type object",
-		0 == x_lib_strcmp(X_TYPE_ATOM_SYMBOL, x_atomstr(x_type_field_name(p_type)))
+		0 == x_lib_strcmp(X_TYPE_ATOM_NAME, x_atomstr(x_type_field_name(p_type)))
 	);
 	_it_should("add the Atom type to the Type alist",
 		NULL != x_eval_type_alist_assoc(p_base,
@@ -209,7 +209,7 @@ static char *test_type_atom_struct(void)
 	p_type = x_type_atom_struct(p_base, p_base);
 	_it_should("return Atom Type list",
 		! x_obj_isnil(p_base, p_type)
-		&& 0 == strcmp(X_TYPE_ATOM_SYMBOL, x_atomstr(x_type_field_name(p_type)))
+		&& 0 == strcmp(X_TYPE_ATOM_NAME, x_atomstr(x_type_field_name(p_type)))
 	);
 
 	_it_should("contain the Name object",

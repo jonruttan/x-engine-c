@@ -66,4 +66,4 @@
 (def %obj-flag-meta 128)        ; 0x80  extended meta units prepended
 ; X_HEAP-only bits
 (def %obj-flag-shared 256)      ; 0x100
-(def %obj-flag-heap 512)        ; 0x200
+(def %obj-flag-mark 512)        ; 0x200  the GC mark bit (was %obj-flag-heap pre-B1)

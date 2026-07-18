@@ -19,15 +19,15 @@
  */
 #include "x-type.h"
 
-#ifndef X_TYPE_ATOM_SYMBOL
-#define X_TYPE_ATOM_SYMBOL		"ATOM"		/**< Type-system symbol name */
-#endif /* X_TYPE_ATOM_SYMBOL */
+#ifndef X_TYPE_ATOM_NAME
+#define X_TYPE_ATOM_NAME		"ATOM"		/**< Type-system name string */
+#endif /* X_TYPE_ATOM_NAME */
 
 /*
  * # Macros
  */
 /** Test whether object X is an atom on base B. */
-#define x_obj_type_isatom(B,X)		x_obj_is_type((B), (X), X_TYPE_ATOM_SYMBOL)
+#define x_obj_type_isatom(B,X)		x_obj_is_type((B), (X), X_TYPE_ATOM_NAME)
 
 /** Extract the raw pointer from an atom object. */
 #define x_atomval(X)				x_atomptr(X)

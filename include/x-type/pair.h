@@ -19,15 +19,15 @@
  */
 #include "x-type.h"
 
-#ifndef X_TYPE_PAIR_SYMBOL
-#define X_TYPE_PAIR_SYMBOL		"PAIR"		/**< Type-system symbol name */
-#endif /* X_TYPE_PAIR_SYMBOL */
+#ifndef X_TYPE_PAIR_NAME
+#define X_TYPE_PAIR_NAME		"PAIR"		/**< Type-system name string */
+#endif /* X_TYPE_PAIR_NAME */
 
 /*
  * # Macros
  */
 /** Test whether object X is a pair on base B. */
-#define x_obj_type_ispair(B,X)		x_obj_is_type((B), (X), X_TYPE_PAIR_SYMBOL)
+#define x_obj_type_ispair(B,X)		x_obj_is_type((B), (X), X_TYPE_PAIR_NAME)
 
 /** Make a pair with default flags. */
 #define x_mkpair(B,P1,P2)			x_make_pair((B), X_OBJ_FLAG_NONE, (P1), (P2))

@@ -131,7 +131,7 @@ x_obj_t *x_eval_arg(x_obj_t *p_base, x_obj_t *p_arg)
 x_obj_t *x_eval_list(x_obj_t *p_base, x_obj_t *p_args)
 {
 	x_obj_t *p_val, *p_rest;
-	x_obj_t **p_cell = x_heap_root_cell(p_base);
+	x_obj_t **p_cell = x_heap_root_slot(p_base);
 	x_spair_t root = x_obj_set((x_obj_t *)x_type_pair_obj, X_OBJ_FLAG_NONE,
 		{ NULL }, { NULL });
 
@@ -290,7 +290,7 @@ x_obj_t *x_env_extend(x_obj_t *p_base, x_obj_t *p_env,
 x_obj_t *x_eval_body(x_obj_t *p_base, x_obj_t *p_body)
 {
 	x_obj_t *p_result = NULL;
-	x_obj_t **p_cell = x_heap_root_cell(p_base);
+	x_obj_t **p_cell = x_heap_root_slot(p_base);
 	x_spair_t root = x_obj_set((x_obj_t *)x_type_pair_obj, X_OBJ_FLAG_NONE,
 		{ NULL }, { NULL });
 
@@ -364,7 +364,7 @@ x_obj_t *x_eval_body(x_obj_t *p_base, x_obj_t *p_body)
 x_obj_t *x_eval_body_tco(x_obj_t *p_base, x_obj_t *p_body)
 {
 	x_obj_t *p_result = NULL;
-	x_obj_t **p_cell = x_heap_root_cell(p_base);
+	x_obj_t **p_cell = x_heap_root_slot(p_base);
 	x_spair_t root = x_obj_set((x_obj_t *)x_type_pair_obj, X_OBJ_FLAG_NONE,
 		{ NULL }, { NULL });
 
@@ -586,7 +586,7 @@ void x_callable_bind(x_obj_t *p_base, x_char_t *name, x_fn_t fn)
 void x_value_bind(x_obj_t *p_base, x_char_t *name, x_obj_t *p_val)
 {
 	x_obj_t *p_sym, *p_pair;
-	x_obj_t **p_cell = x_heap_root_cell(p_base);
+	x_obj_t **p_cell = x_heap_root_slot(p_base);
 	x_spair_t root = x_obj_set((x_obj_t *)x_type_pair_obj, X_OBJ_FLAG_NONE,
 		{ NULL }, { NULL });
 
@@ -671,7 +671,7 @@ static x_obj_t *x_prims_domain_pair(x_obj_t *p_base, x_obj_t *p_ns)
 static void x_prims_file(x_obj_t *p_base, x_obj_t *p_ns, x_obj_t *p_entry)
 {
 	x_obj_t *p_dom, *p_methods, *p_newdom;
-	x_obj_t **p_cell = x_heap_root_cell(p_base);
+	x_obj_t **p_cell = x_heap_root_slot(p_base);
 	x_spair_t root = x_obj_set((x_obj_t *)x_type_pair_obj, X_OBJ_FLAG_NONE,
 		{ NULL }, { NULL });
 
@@ -703,7 +703,7 @@ static void x_prims_file(x_obj_t *p_base, x_obj_t *p_ns, x_obj_t *p_entry)
 static void x_prims_add(x_obj_t *p_base, x_char_t *ns, x_char_t *method, x_fn_t fn)
 {
 	x_obj_t *p_ns, *p_entry;
-	x_obj_t **p_cell = x_heap_root_cell(p_base);
+	x_obj_t **p_cell = x_heap_root_slot(p_base);
 	x_spair_t root = x_obj_set((x_obj_t *)x_type_pair_obj, X_OBJ_FLAG_NONE,
 		{ NULL }, { NULL });
 

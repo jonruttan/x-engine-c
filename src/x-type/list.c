@@ -232,7 +232,7 @@ x_obj_t *x_type_list_call(x_obj_t *p_base, x_obj_t *p_args)
 x_obj_t *x_type_list_eval(x_obj_t *p_base, x_obj_t *p_args)
 {
 	x_obj_t *p_exp = x_firstobj(x_eval_arg_exp(p_args)), *p_proc, *p_result;
-	x_obj_t **p_cell = x_heap_root_cell(p_base);
+	x_obj_t **p_cell = x_heap_root_slot(p_base);
 	x_satom_t first_atom = x_obj_set(NULL, X_OBJ_FLAG_NONE, { x_firstobj(p_exp) });
 	x_spair_t eval_args[1] = {
 		x_obj_set(NULL, X_OBJ_FLAG_NONE, { first_atom }, { NULL })

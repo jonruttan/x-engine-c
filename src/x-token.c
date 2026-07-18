@@ -152,7 +152,7 @@ x_obj_t *x_token_analyse(x_obj_t *p_base, x_obj_t *p_args)
 		analyse_root = x_obj_set((x_obj_t *)x_type_pair_obj, X_OBJ_FLAG_NONE,
 			{ NULL }, { NULL });
 	x_obj_t *p_score = (x_obj_t *)score;
-	x_obj_t **p_cell = x_heap_root_cell(p_base);
+	x_obj_t **p_cell = x_heap_root_slot(p_base);
 	x_char_t *p_bw;
 
 	/* Root the active analyse handler: the replace-analyser protocol

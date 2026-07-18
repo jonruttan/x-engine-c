@@ -193,7 +193,7 @@ x_obj_t *x_eval_op_body(x_obj_t *p_base, x_obj_t *p_body,
 		x_mkspair(p_base, X_OBJ_FLAG_NONE,
 			x_mkspair(p_base, X_OBJ_FLAG_NONE, p_caller, p_op_head),
 			x_mkspair(p_base, X_OBJ_FLAG_NONE, p_boundary, p_shadow)));
-	x_obj_t **p_cell = x_heap_root_cell(p_base);
+	x_obj_t **p_cell = x_heap_root_slot(p_base);
 	x_spair_t root = x_obj_set((x_obj_t *)x_type_pair_obj, X_OBJ_FLAG_NONE,
 		{ NULL }, { NULL });
 
@@ -302,7 +302,7 @@ x_obj_t *x_eval(x_obj_t *p_base, x_obj_t *p_args)
 	 * save-stack, the tco-env field is cleared, and the records live only
 	 * in the two locals above across every trampoline iteration --
 	 * arbitrary evaluation -- until the exit restores apply them. */
-	x_obj_t **p_cell = x_heap_root_cell(p_base);
+	x_obj_t **p_cell = x_heap_root_slot(p_base);
 	x_spair_t tco_root = x_obj_set((x_obj_t *)x_type_pair_obj,
 		X_OBJ_FLAG_NONE, { NULL }, { NULL });
 	int trampolining = 0;

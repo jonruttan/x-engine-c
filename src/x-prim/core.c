@@ -81,7 +81,7 @@ static x_obj_t *x_prim_apply(x_obj_t *p_base, x_obj_t *p_args)
 {
 	x_obj_t *p_fn, *p_evaled, *p_vals, *p_walk;
 	x_obj_t *p_result;
-	x_obj_t **p_cell = x_heap_root_cell(p_base);
+	x_obj_t **p_cell = x_heap_root_slot(p_base);
 	x_spair_t apply_args[1];
 	x_spair_t root = x_obj_set((x_obj_t *)x_type_pair_obj, X_OBJ_FLAG_NONE,
 		{ NULL }, { NULL });
@@ -282,7 +282,7 @@ static x_obj_t *x_prim_unwrap(x_obj_t *p_base, x_obj_t *p_args)
 static x_obj_t *x_prim_atomic(x_obj_t *p_base, x_obj_t *p_args)
 {
 	x_obj_t *p_result = NULL;
-	x_obj_t **p_cell = x_heap_root_cell(p_base);
+	x_obj_t **p_cell = x_heap_root_slot(p_base);
 	x_spair_t root = x_obj_set((x_obj_t *)x_type_pair_obj, X_OBJ_FLAG_NONE,
 		{ NULL }, { NULL });
 

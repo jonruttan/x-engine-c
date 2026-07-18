@@ -215,7 +215,7 @@ static char *test_type_pair_register(void)
 
 	p_type = x_type_pair_register(p_base, p_base);
 	_it_should("return the Pair type object",
-		0 == x_lib_strcmp(X_TYPE_PAIR_SYMBOL, x_atomstr(x_type_field_name(p_type)))
+		0 == x_lib_strcmp(X_TYPE_PAIR_NAME, x_atomstr(x_type_field_name(p_type)))
 	);
 	_it_should("add the Pair type to the Type alist",
 		p_type == x_restobj(x_firstobj(x_firstobj(x_eval_field_type_alist(p_base))))
@@ -236,7 +236,7 @@ static char *test_type_pair_struct(void)
 	p_type = x_type_pair_struct(p_base, p_base);
 	_it_should("return Pair Type list",
 		! x_obj_isnil(p_base, p_type)
-		&& 0 == strcmp(X_TYPE_PAIR_SYMBOL, x_atomstr(x_type_field_name(p_type)))
+		&& 0 == strcmp(X_TYPE_PAIR_NAME, x_atomstr(x_type_field_name(p_type)))
 	);
 
 	_it_should("contain the Name object",
