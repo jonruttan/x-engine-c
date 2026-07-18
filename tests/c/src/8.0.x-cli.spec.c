@@ -62,7 +62,6 @@
 #include "src/x-prim/type.c"
 #include "src/x-prim/ffi.c"
 x_obj_t *x_prim_callcc_register(x_obj_t *p_base, x_obj_t *p_args) { return p_base; }
-#include "src/x-exp/quote.c"
 
 x_obj_t *x_prim_syscall(x_obj_t *p_base, x_obj_t *p_args) { return NULL; }
 x_obj_t *x_prim_include(x_obj_t *p_base, x_obj_t *p_args) { return NULL; }

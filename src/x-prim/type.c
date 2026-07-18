@@ -346,7 +346,7 @@ static x_obj_t *x_prim_make_base(x_obj_t *p_base, x_obj_t *p_args)
  * Pushes a setjmp-based error handler onto the target base's error handler
  * stack, evaluates @p p_expr in the target, then pops the handler. If an
  * error occurs in the target, it is caught, the handler is popped, the
- * environment is restored, and the error is re-signaled to the calling
+ * environment is restored, and the error is propagated to the calling
  * base's error handler (or printed if none exists).
  *
  * @param p_base  Calling execution context.
@@ -379,7 +379,7 @@ static x_obj_t *x_prim_base_eval(x_obj_t *p_base, x_obj_t *p_args)
 	} else {
 		p_err = x_error_handler_error(p_handler);
 
-		/* Error caught from target: pop handler, restore env, re-signal. */
+		/* Error caught from target: pop handler, restore env, propagate. */
 		x_eval_field_error_handler(p_target)
 			= x_restobj(x_eval_field_error_handler(p_target));
 		x_firstobj(x_eval_field_env_alist(p_target))

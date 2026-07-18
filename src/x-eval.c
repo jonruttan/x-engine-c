@@ -34,7 +34,7 @@
 /**
  * Push the current environment state as a TCO restore compound.
  *
- * Snapshots env-alist, local-boundary, global-bst, and shadow-head into a
+ * Snapshots env-alist, local-boundary, global tree (a BST), and shadow-head into a
  * compound @c ((env . boundary) . (bst . shadow)) and pushes it onto the
  * save-stack.  Procedure calls and eval-with-env use this to capture the
  * environment before extending it; the trampoline (or x_eval_body_tco's
@@ -61,7 +61,7 @@ x_obj_t *x_tco_compound_save(x_obj_t *p_base)
 }
 
 /**
- * Restore env-alist, local-boundary, global-bst, and shadow list from a TCO
+ * Restore env-alist, local-boundary, global tree (a BST), and shadow list from a TCO
  * compound @c ((env . boundary) . (bst . shadow)).
  *
  * Does NOT touch the save-stack -- callers that took the compound from the

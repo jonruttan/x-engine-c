@@ -335,7 +335,7 @@ x_obj_t *x_eval_body(x_obj_t *p_base, x_obj_t *p_body)
  *          pushes a compound pair onto save_stack BEFORE calling this
  *          function.  The compound has the shape:
  *          @code
- *          ((env-alist . local-boundary) . (global-bst . shadow-head))
+ *          ((env-alist . local-boundary) . (global tree (a BST) . shadow-head))
  *          @endcode
  *          This captures the full env state prior to extension so it
  *          can be restored after the tail call completes.

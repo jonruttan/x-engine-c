@@ -230,12 +230,19 @@ check-boot-order: $(EXECUTABLE) ## Lint the boot load order: class-call order + 
 # Doc-type vocabulary ratchet: the adjudicated losers (INTEGER/BOOLEAN/
 # FUNCTION -- see contributing.md) must not reappear in (param ...)/
 # (returns ...) forms; INT/BOOL/CALLABLE are the one-name-per-concept picks.
-check-doc-vocab: ## Lint doc forms for banned type-token aliases
+check-doc-vocab: ## Lint doc forms for banned type-token aliases + retired names
 	@if grep -rn 'INTEGER\|BOOLEAN\|FUNCTION' lib --include='*.x' \
 		| grep '(param \|(returns '; then \
 		echo "doc-vocab: FAIL (use INT/BOOL/CALLABLE; see contributing.md)" >&2; \
 		exit 1; \
 	else echo "doc-vocab: ok"; fi
+	@# Retired/banned names from the #42/#44 adjudications (see contributing.md's
+	@# adjudication block): shapes ride the name, synonyms stay dead.
+	@if grep -rnw 'from-pairs\|->pairs' lib --include='*.x' \
+		|| grep -rn '(method nth \|(method member? \|(method every? \|(method size ' lib --include='*.x'; then \
+		echo "doc-vocab: FAIL (retired name; see contributing.md adjudications)" >&2; \
+		exit 1; \
+	else echo "retired-names: ok"; fi
 .PHONY: check-doc-vocab
 
 # Memory-safety gate: run BOTH suites against an AddressSanitizer build (reuses
