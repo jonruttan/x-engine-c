@@ -389,11 +389,25 @@ x_obj_t *x_type_heap_mark(x_obj_t *p_base, x_obj_t *p_obj, x_obj_flag_t flags)
 
 		/* Fall back to p_units generic N-slot traversal.
 		 * Mark ALL slots via tree_mark (handles non-heap
-		 * values safely — they won't be on the heap chain). */
+		 * values safely — they won't be on the heap chain).
+		 *
+		 * A NEGATIVE units count is the dynamic-size sentinel:
+		 * slot 0 holds an INT atom with the payload count (the
+		 * vector convention -- (Vector make n) allocates n+1
+		 * slots with slot 0 = n).  Without this, per-instance
+		 * sized objects had no units to walk and their payloads
+		 * were never marked: a Dict held across a REPL turn
+		 * (the REPL collects each turn) lost its bucket alists
+		 * and the next access segfaulted. */
 		p_units = x_type_field_units(p_type);
 
 		if (p_units != NULL) {
 			n = x_atomint(p_units);
+
+			if (n < 0) {
+				n = x_atomint(x_obj(x_obj_data_i(p_obj, 0)))
+					+ 1;
+			}
 
 			for (i = 0; i < n; i++) {
 				x_heap_tree_mark(p_base,
