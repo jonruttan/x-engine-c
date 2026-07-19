@@ -51,12 +51,28 @@
  *  execution context.  Serves as the type tag for base/interp objects. */
 extern x_satom_t x_eval_obj;
 
-/** Symbol/expression flags.
- *  SHADOW -- a symbol shadows a global BST binding (set/cleared as
- *            environments extend and unwind).
- *  COV    -- an expression has been evaluated (coverage tracking). */
+/** Symbol/expression/env flags.
+ *  SHADOW -- retired (GH #47): the bit lived on the INTERNED symbol, so one
+ *            activation's local binding blinded every other lexical chain's
+ *            BST lookup for that name.  The define remains only for the
+ *            dormant clear machinery; nothing sets it anymore.
+ *  COV    -- an expression has been evaluated (coverage tracking).
+ *  FRAME  -- an env-alist SPINE cons belonging to a local frame (params,
+ *            let/closure defs, op formals and env-param, guard binds).
+ *            Symbol lookup walks the frame region of the chain BEFORE the
+ *            global BST, so enclosing-frame locals shadow globals with the
+ *            correct lexical semantics; unmarked spine cells are the global
+ *            region, answered by the BST.  See x_type_symbol_eval. */
+/** FNFRAME -- set IN ADDITION to FRAME on spine cells of PROCEDURE (fn)
+ *  activations.  Operative frames are transparent to top-levelness by
+ *  design (the REPL op, def-class's tail-eval'd defs), so a def with an
+ *  empty save-stack is top-level UNLESS the env head carries FNFRAME --
+ *  the save-stack alone lies at TCO tails, where a fn-body def used to
+ *  classify top-level and leak into the BST (GH #47). */
 #define X_OBJ_FLAG_SHADOW	X_OBJ_FLAG_1
 #define X_OBJ_FLAG_COV		X_OBJ_FLAG_2
+#define X_OBJ_FLAG_FRAME	X_OBJ_FLAG_3
+#define X_OBJ_FLAG_FNFRAME	X_OBJ_FLAG_4
 
 /**
  * @defgroup error_handler Error Handler Macros

@@ -52,22 +52,19 @@ void x_prim_clear_shadows(x_obj_t *p_base)
  * @param p_base  x_obj_t* -- Base (execution context)
  * @param p_old   x_obj_t* -- Previous shadow-list head to restore to
  *
- * @details Paired with x_env_extend: every time x_env_extend flags a
- *          symbol with X_OBJ_FLAG_SHADOW and pushes it onto the shadow
- *          list, a corresponding call to this function (or
- *          x_prim_clear_shadows) must eventually unflag it.  Callers
- *          save the shadow-list head before extending the env, then pass
- *          that saved head here when unwinding (TCO restore, closure
- *          exit, guard catch).  Failure to call this leaves stale shadow
- *          flags on interned symbols, causing BST lookups to skip them
- *          permanently.
+ * @details DORMANT since GH #47: nothing pushes to the shadow list
+ *          anymore -- lookup honors X_OBJ_FLAG_FRAME on env spine cells
+ *          instead of shadow bits on interned symbols (which were
+ *          process-global and blinded other chains' BST lookups).  The
+ *          restore paths still call this so the plumbing (save compounds,
+ *          op records) keeps its shape; the list is always nil, so the
+ *          walk is a no-op.
  *
  * @note The walk stops when it reaches @p p_old by pointer identity.
  *       If @p p_old is NULL, all shadow entries are cleared (equivalent
  *       to x_prim_clear_shadows).
  *
  * @see x_prim_clear_shadows
- * @see x_env_extend          -- sets X_OBJ_FLAG_SHADOW on symbols
  * @see x_eval                -- calls this during outermost env restore
  * @see x_eval_body_tco       -- calls this on early-exit restore
  */
@@ -164,8 +161,11 @@ x_obj_t *x_eval_list(x_obj_t *p_base, x_obj_t *p_args)
  * the environment unchanged, (3) recursive -- binds first param to
  * first value, then recurses on the rest.
  *
- * Symbols that shadow BST globals are flagged X_OBJ_FLAG_SHADOW and
- * tracked on the shadow list for later clearing.
+ * The new spine cells carry X_OBJ_FLAG_FRAME, marking them as local
+ * frame bindings: symbol lookup walks the frame region of the chain
+ * before consulting the global BST, so locals -- including enclosing-
+ * frame captures -- shadow globals with correct lexical semantics
+ * (GH #47).
  *
  * @param p_base   x_obj_t* -- Base (execution context)
  * @param p_env    x_obj_t* -- Current environment alist
@@ -179,21 +179,13 @@ x_obj_t *x_eval_list(x_obj_t *p_base, x_obj_t *p_args)
  *          which is essential for the TCO env-restore protocol: the
  *          saved env snapshot remains valid even after extension.
  *
- * @details **Shadow flagging.**  When a parameter name already exists
- *          in the global BST (checked via x_alist_bst_lookup), the
- *          symbol object itself is flagged X_OBJ_FLAG_SHADOW and pushed
- *          onto the shadow list.  This causes x_alist_lookup to skip
- *          BST fast-path for that symbol, forcing a linear alist walk
- *          that finds the local binding first.  The flag is cleared
- *          later by x_prim_clear_shadows_to when the scope unwinds.
- *
  * @note The variadic case (bare symbol for p_params) binds the ENTIRE
  *       remaining value list, not just one value.  This implements
  *       rest-parameter semantics: @c (fn (a . rest) ...).
  *
- * @see x_prim_clear_shadows_to -- unwinds shadow flags on scope exit
- * @see x_prim_define           -- uses the same shadow flagging for def inside closures
- * @see x_eval_body_tco         -- saves/restores env around extended scopes
+ * @see x_type_symbol_eval -- the 3-step lookup that honors FRAME cells
+ * @see x_prim_define      -- marks closure-scope def cells the same way
+ * @see x_eval_body_tco    -- saves/restores env around extended scopes
  */
 x_obj_t *x_env_extend(x_obj_t *p_base, x_obj_t *p_env,
 	x_obj_t *p_params, x_obj_t *p_vals)
@@ -223,19 +215,7 @@ x_obj_t *x_env_extend(x_obj_t *p_base, x_obj_t *p_env,
 
 		p_pair = x_mkspair(p_base, X_OBJ_FLAG_NONE, p_params, p_vals);
 
-		/* Flag if param shadows a BST global; track for clearing */
-		if (x_base_isset(p_base)
-			&& x_alist_bst_lookup(p_base,
-				x_eval_field_env_global_tree(p_base),
-				p_params) != NULL) {
-			if ( ! (x_obj_flags(p_params) & X_OBJ_FLAG_SHADOW)) {
-				x_obj_flags(p_params) |= X_OBJ_FLAG_SHADOW;
-				x_eval_field_shadow_list(p_base) = x_mkspair(p_base, X_OBJ_FLAG_NONE,
-					p_params, x_eval_field_shadow_list(p_base));
-			}
-		}
-
-		return x_mkspair(p_base, X_OBJ_FLAG_NONE, p_pair, p_env);
+		return x_mkspair(p_base, X_OBJ_FLAG_FRAME, p_pair, p_env);
 	}
 
 	/* Base case: no more params. */
@@ -255,22 +235,8 @@ x_obj_t *x_env_extend(x_obj_t *p_base, x_obj_t *p_env,
 	p_pair = x_mkspair(p_base, X_OBJ_FLAG_NONE,
 		x_firstobj(p_params), p_val);
 
-	/* Flag if param shadows a BST global; track for clearing */
-	if (x_base_isset(p_base)
-		&& x_obj_type_issymbol(p_base, x_firstobj(p_params))
-		&& x_alist_bst_lookup(p_base,
-			x_eval_field_env_global_tree(p_base),
-			x_firstobj(p_params)) != NULL) {
-		if ( ! (x_obj_flags(x_firstobj(p_params)) & X_OBJ_FLAG_SHADOW)) {
-			x_obj_flags(x_firstobj(p_params)) |= X_OBJ_FLAG_SHADOW;
-			x_eval_field_shadow_list(p_base) = x_mkspair(p_base, X_OBJ_FLAG_NONE,
-				x_firstobj(p_params),
-				x_eval_field_shadow_list(p_base));
-		}
-	}
-
 	return x_env_extend(p_base,
-		x_mkspair(p_base, X_OBJ_FLAG_NONE, p_pair, p_env),
+		x_mkspair(p_base, X_OBJ_FLAG_FRAME, p_pair, p_env),
 		x_restobj(p_params),
 		p_rest);
 }

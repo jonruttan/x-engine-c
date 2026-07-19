@@ -178,6 +178,9 @@ static x_obj_t *x_prim_guard(x_obj_t *p_base, x_obj_t *p_args)
 		 * setjmp and re-run the body forever, allocating every pass. */
 		x_firstobj(x_eval_field_error_handler(p_base)) = p_prev_handler;
 		x_eval_env_alist_extend(p_base, p_pair);
+		/* The error-var binding is a local frame cell (GH #47). */
+		x_obj_flags(x_firstobj(x_eval_field_env_alist(p_base)))
+			|= X_OBJ_FLAG_FRAME;
 		p_result = x_eval_body(p_base, p_handler_body);
 		x_firstobj(x_eval_field_env_alist(p_base))
 			= x_error_handler_saved_env(p_handler);

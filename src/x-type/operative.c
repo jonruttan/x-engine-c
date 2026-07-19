@@ -139,14 +139,16 @@ x_obj_t *x_type_operative_make(x_obj_t *p_base, x_obj_t *p_args)
  * silently shadow the globals the body relies on.  Operatives do NOT
  * get self-passing.
  *
- * Implementation: the "boundary-only" design.
+ * Implementation:
  *
  * - env_alist is set to extend(captured_env, formals).  The new chain
  *   branches off the captured-env head; caller's locals are not on
- *   this chain.
- * - local_boundary is set to captured_env so symbol-lookup Step 1
- *   stops at the captured-env head (caller's locals invisible) and
- *   Step 3 walks past into older top-level entries.
+ *   this chain, so they are invisible to the body by construction.
+ * - The formal and env-param spine cells carry X_OBJ_FLAG_FRAME, so
+ *   symbol lookup resolves them (and the captured chain's frame cells)
+ *   ahead of same-named globals (GH #47).
+ * - local_boundary is still set to captured_env for the restore
+ *   protocol; lookup no longer consults it.
  *
  * Body is run via x_eval_body (NOT a TCO body evaluator).  Each body
  * form is evaluated synchronously to completion -- tail-eval inside a
@@ -193,7 +195,11 @@ x_obj_t *x_type_operative_call(x_obj_t *p_base, x_obj_t *p_args)
 	/* Bind the env-param to the caller's env.  Only route from body
 	 * back into caller's scope (via eval/tail-eval). */
 	if ( ! x_obj_isnil(p_base, p_envparam)) {
-		p_env = x_mkspair(p_base, X_OBJ_FLAG_NONE,
+		/* FRAME on the spine cons: the env-param is a local frame binding,
+		 * so symbol lookup finds it ahead of any global of the same name
+		 * (GH #47 -- a top-level (def e ...) used to hijack every op's
+		 * (eval expr e) and install the global's VALUE as the env). */
+		p_env = x_mkspair(p_base, X_OBJ_FLAG_FRAME,
 			x_mkspair(p_base, X_OBJ_FLAG_NONE, p_envparam, p_caller_env), p_env);
 	}
 

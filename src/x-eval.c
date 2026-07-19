@@ -776,14 +776,31 @@ x_obj_t *x_eval_type_alist_assoc(x_obj_t *p_base, x_obj_t *p_args)
 x_obj_t *x_eval_env_alist_extend(x_obj_t *p_base, x_obj_t *p_args)
 {
 	x_spair_t args = x_obj_set(NULL, X_OBJ_FLAG_NONE, { p_args }, { NULL });
+	x_obj_t *p_old, *p_new;
 
 	if ( ! x_base_isset(p_base)) {
 		return NULL;
 	}
 
-	x_restobj((x_obj_t *)args) = x_firstobj(x_eval_field_env_alist(p_base));
+	p_old = x_firstobj(x_eval_field_env_alist(p_base));
+	x_restobj((x_obj_t *)args) = p_old;
 
-	return x_firstobj(x_eval_field_env_alist(p_base)) = x_alist_extend(p_base, (x_obj_t *)args);
+	p_new = x_firstobj(x_eval_field_env_alist(p_base))
+		= x_alist_extend(p_base, (x_obj_t *)args);
+
+	/* Frame-region invariant (GH #47): symbol lookup's step 1 walks the
+	 * LEADING run of FRAME-marked cells, so an unmarked cell must never
+	 * be consed onto a frame head -- it would hide the frame cells below
+	 * it.  A top-level-classified def CAN run with a frame head current
+	 * (the TCO tail-def leak keeps op/printer frames on the caller's
+	 * chain); it still binds globally through the BST, but its chain
+	 * cell inherits the FRAME mark so the region stays contiguous. */
+	if ( ! x_obj_isnil(p_base, p_old)
+		&& (x_obj_flags(p_old) & X_OBJ_FLAG_FRAME)) {
+		x_obj_flags(p_new) |= X_OBJ_FLAG_FRAME;
+	}
+
+	return p_new;
 }
 
 /**
