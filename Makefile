@@ -190,7 +190,17 @@ test-x: $(EXECUTABLE) ## Run x-lang tests
 	sh tests/x/spec-runner.sh
 .PHONY: test-x
 
-test: check-isa check-obj-layout check-base-paths check-boot-order check-doc-vocab test-c test-x ## Run all tests
+# The doctest ratchet (#16): every (example "in" "out") in the doc registry
+# is an executable contract -- "out" must be the true echo.  tools/doctest.sh
+# extracts them into a generated spec; the personality runner executes it.
+# Illustrations that must not run are (sample ...) forms (see doc.x).
+doctest: $(EXECUTABLE) ## Extract (example ...) forms and run them as doctests
+	mkdir -p build/doctest-specs
+	sh tools/doctest.sh > build/doctest-specs/doctests.spec.md
+	sh tests/x/doctest-runner.sh
+.PHONY: doctest
+
+test: check-isa check-obj-layout check-base-paths check-boot-order check-doc-vocab test-c test-x doctest ## Run all tests
 .PHONY: test
 
 # The C-surface ratchet, source half: every binding site in the C source must
