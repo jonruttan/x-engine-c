@@ -200,7 +200,7 @@ doctest: $(EXECUTABLE) ## Extract (example ...) forms and run them as doctests
 	sh tests/x/doctest-runner.sh
 .PHONY: doctest
 
-test: check-isa check-obj-layout check-base-paths check-boot-order check-doc-vocab test-c test-x doctest ## Run all tests
+test: check-isa check-obj-layout check-base-paths check-boot-order check-doc-vocab check-dup-defs test-c test-x doctest ## Run all tests
 .PHONY: test
 
 # The C-surface ratchet, source half: every binding site in the C source must
@@ -240,6 +240,14 @@ check-boot-order: $(EXECUTABLE) ## Lint the boot load order: class-call order + 
 # Doc-type vocabulary ratchet: the adjudicated losers (INTEGER/BOOLEAN/
 # FUNCTION -- see contributing.md) must not reappear in (param ...)/
 # (returns ...) forms; INT/BOOL/CALLABLE are the one-name-per-concept picks.
+# The duplicate-global-def ratchet (#47): top-level redefinition updates the
+# shared binding in place, so two modules defining one name with different
+# meanings is a real collision (the %alist-find segfault).  tools/dup-defs.sh
+# holds the rule + the adjudicated allowlist.
+check-dup-defs: ## Lint lib+apps for cross-module duplicate global defs
+	sh tools/dup-defs.sh
+.PHONY: check-dup-defs
+
 check-doc-vocab: ## Lint doc forms for banned type-token aliases + retired names
 	@if grep -rn 'INTEGER\|BOOLEAN\|FUNCTION' lib --include='*.x' \
 		| grep '(param \|(returns '; then \
