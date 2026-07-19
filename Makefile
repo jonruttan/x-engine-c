@@ -200,7 +200,7 @@ doctest: $(EXECUTABLE) ## Extract (example ...) forms and run them as doctests
 	sh tests/x/doctest-runner.sh
 .PHONY: doctest
 
-test: check-isa check-obj-layout check-base-paths check-boot-order check-doc-vocab check-dup-defs test-c test-x doctest ## Run all tests
+test: check-isa check-obj-layout check-base-paths check-boot-order check-doc-vocab check-dup-defs check-dialect-cover test-c test-x doctest ## Run all tests
 .PHONY: test
 
 # The C-surface ratchet, source half: every binding site in the C source must
@@ -247,6 +247,14 @@ check-boot-order: $(EXECUTABLE) ## Lint the boot load order: class-call order + 
 check-dup-defs: ## Lint lib+apps for cross-module duplicate global defs
 	sh tools/dup-defs.sh
 .PHONY: check-dup-defs
+
+# The dialect coverage ratchet (#70): every lib/*.x entry point needs an
+# end-to-end smoke group, so a new dialect cannot ship untested the way the
+# tower launchers did (#49 -- both crashed at the exact invocation the README
+# documents, while every numeric spec passed against a bespoke harness).
+check-dialect-cover: ## Assert every lib/*.x dialect has an end-to-end smoke group
+	sh tools/dialect-cover.sh
+.PHONY: check-dialect-cover
 
 check-doc-vocab: ## Lint doc forms for banned type-token aliases + retired names
 	@if grep -rn 'INTEGER\|BOOLEAN\|FUNCTION' lib --include='*.x' \
