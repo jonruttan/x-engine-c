@@ -440,7 +440,11 @@ install: $(EXECUTABLE) lib/$(EXECUTABLE).x $(EXECUTABLE).sh ## Install to PREFIX
 	install $C -m 0755 $(EXECUTABLE) $(BINDIR)
 	install $C -m 0755 $(EXECUTABLE).sh $(BINDIR)
 	strip $(BINDIR)/$(EXECUTABLE)
-	install $C -m 0644 lib/* $(LIBDIR)/lib
+	install $C -m 0644 lib/*.x $(LIBDIR)/lib
+	find lib/x -type d | sed 's|^lib/||' | while read d; do \
+		install -d -m 0755 "$(LIBDIR)/lib/$$d"; done
+	find lib/x -type f -name '*.x' | sed 's|^lib/||' | while read f; do \
+		install $C -m 0644 "lib/$$f" "$(LIBDIR)/lib/$$f"; done
 .PHONY: install
 
 uninstall: ## Uninstall from PREFIX
