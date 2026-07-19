@@ -84,3 +84,4 @@ docs/ref/x/
 
 # ctags output (regenerate locally with `ctags -R --exclude=docs/ref`)
 tags
+build/
