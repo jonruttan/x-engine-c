@@ -253,6 +253,17 @@ check-doc-vocab: ## Lint doc forms for banned type-token aliases + retired names
 		echo "doc-vocab: FAIL (retired name; see contributing.md adjudications)" >&2; \
 		exit 1; \
 	else echo "retired-names: ok"; fi
+	@# The quote-idiom ratchet (#45 R2/R8, added at the 2026-07-18 reopen):
+	@# user-facing doc STRINGS -- (example ...), (sample ...), (note ...) --
+	@# speak 'x, never the longhand (lit x), even inside boot-constrained
+	@# files (strings never hit the boot reader).  Allowlist: doc-prims.x's
+	@# definitional docs for lit itself.
+	@if grep -rn '(example "\|(sample "\|(note "' lib --include='*.x' \
+		| grep -v 'lib/x/doc/doc-prims\.x' \
+		| grep '(lit '; then \
+		echo "doc-vocab: FAIL (doc strings speak 'x, not (lit x); #45 R2/R8)" >&2; \
+		exit 1; \
+	else echo "doc-string-quotes: ok"; fi
 .PHONY: check-doc-vocab
 
 # Memory-safety gate: run BOTH suites against an AddressSanitizer build (reuses
