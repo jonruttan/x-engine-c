@@ -55,7 +55,14 @@ x_obj_t *x_type_iter_struct(x_obj_t *p_base, x_obj_t *p_args)
 {
 	struct x_type_t type = {
 		.p_name = x_type_iter_name,
-		.p_make = x_type_iter_make_prim
+		.p_make = x_type_iter_make_prim,
+		/* Two payload slots (step-fn . value), a pair layout. Without
+		 * units the GC mark hook never traced them: an iterator held
+		 * across a collect lost its step function or state and the
+		 * next step segfaulted -- the same untraced-payload class as
+		 * the vector-payload fix (a Gen driving a C iterator kept one
+		 * alive across a REPL turn). */
+		.p_units = (x_obj_t *)&x_type_units_pair_obj
 	};
 
 	return x_type_struct_make(p_base, type);

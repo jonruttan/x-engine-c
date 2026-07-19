@@ -336,8 +336,11 @@ static char *test_type_iter_struct(void)
 		NULL == x_type_field_clone(p_type)
 	);
 
-	_it_should("not set the Units primitive",
-		NULL == x_type_field_units(p_type)
+	/* Units = pair (2 payload slots: step-fn . value) so the GC mark
+	 * hook traces them; the old NULL pin codified the untraced-payload
+	 * bug (an iterator held across a collect lost its step function). */
+	_it_should("set the Units primitive to the pair count",
+		(x_obj_t *)&x_type_units_pair_obj == x_type_field_units(p_type)
 	);
 
 	_it_should("not set the Length primitive",
