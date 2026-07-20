@@ -200,8 +200,16 @@ doctest: $(EXECUTABLE) ## Extract (example ...) forms and run them as doctests
 	sh tests/x/doctest-runner.sh
 .PHONY: doctest
 
-test: check-isa check-obj-layout check-base-paths check-boot-order check-doc-vocab check-dup-defs check-dialect-cover test-c test-x doctest ## Run all tests
+test: check-isa check-obj-layout check-base-paths check-boot-order check-doc-vocab check-dup-defs check-dialect-cover test-c test-x doctest check-examples ## Run all tests
 .PHONY: test
+
+# The examples ratchet: every file under examples/*/ runs under its documented
+# dialect in batch mode; output-pinned where portable (sidecars in
+# tests/examples/).  The examples are the first code a newcomer runs and were
+# previously the only code with no gate.  UPDATE=1 regenerates sidecars.
+check-examples: $(EXECUTABLE) ## Run every example under its documented dialect
+	sh tools/check-examples.sh
+.PHONY: check-examples
 
 # The C-surface ratchet, source half: every binding site in the C source must
 # appear in the committed manifest tools/isa.x, so growing the C layer requires
