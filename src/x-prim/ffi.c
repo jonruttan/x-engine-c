@@ -33,7 +33,6 @@
 
 #include <string.h>  /* memcpy */
 #include <stdio.h>   /* sprintf */
-#include <math.h>    /* fmod (the d%d convention; -lm on Linux) */
 #include <dlfcn.h>   /* dlopen, dlsym */
 
 /**
@@ -165,8 +164,10 @@ static x_obj_t *x_prim_dlsym(x_obj_t *p_base, x_obj_t *p_args)
  *
  * The convention string selects the calling convention and type coercions:
  * - Function calls: "d->d" (double->double), "dd->d" (double,double->double)
- * - Arithmetic: "d+d", "d-d", "d*d", "d/d", "d%d" (inline double ops -- d%d
- *   is fmod, matching the truncated-division %; no fptr needed)
+ * - Arithmetic: "d+d", "d-d", "d*d", "d/d" (inline double ops; no fptr
+ *   needed).  Float %% is NOT here: fmod goes through "dd->d" with a
+ *   dlsym'd pointer (float.x's %%libm handle), keeping this binary free
+ *   of any link-time libm reference.
  * - Comparisons: "d<d", "d>d", "d=d", "d<=d", "d>=d" (return t/f)
  * - Casts: "i->d" (int to double bits), "d->i" (double bits to int)
  * - String: "s0->d" (string,NULL->double via fptr), "d->s" (double to string)
@@ -246,15 +247,6 @@ static x_obj_t *x_prim_ffi_call(x_obj_t *p_base, x_obj_t *p_args)
 		x_ffi_to_double(p_base, p_a, &a);
 		x_ffi_to_double(p_base, p_b, &b);
 		r = a / b;
-		return x_ffi_from_double(p_base, &r);
-	}
-
-	if (x_lib_strcmp(conv, "d%d") == 0) {
-		p_a = x_eval_arg(p_base, x_firstobj(p_rest));
-		p_b = x_eval_arg(p_base, x_firstobj(x_restobj(p_rest)));
-		x_ffi_to_double(p_base, p_a, &a);
-		x_ffi_to_double(p_base, p_b, &b);
-		r = fmod(a, b);
 		return x_ffi_from_double(p_base, &r);
 	}
 
