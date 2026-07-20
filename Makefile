@@ -110,7 +110,13 @@ DEFS+=$(X_SIGNAL)
 SOURCES+=$(OPTDIR)/x-prim/signal.c
 endif
 
-EXTRA_LIBS+=-ldl -lm
+# -ldl is the FFI/JIT layer's (dlopen/dlsym in src/x-prim/ffi.c and
+# src/x-obj/jit.c) -- the expression engine ext/x-expr needs no libraries
+# beyond libc.  Darwin and glibc >= 2.34 fold dl into libc, so the flag is
+# a compat no-op there.  There is deliberately NO -lm: the one C fmod call
+# was retired (float % goes through float.x's dlsym'd %libm handle, which
+# dlopens libm at runtime like every other math function).
+EXTRA_LIBS+=-ldl
 
 # Where to install the stuff
 BINDIR?=$(PREFIX)/bin
