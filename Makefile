@@ -200,7 +200,7 @@ doctest: $(EXECUTABLE) ## Extract (example ...) forms and run them as doctests
 	sh tests/x/doctest-runner.sh
 .PHONY: doctest
 
-test: check-isa check-obj-layout check-base-paths check-boot-order check-doc-vocab check-dup-defs test-c test-x doctest ## Run all tests
+test: check-isa check-obj-layout check-base-paths check-boot-order check-doc-vocab check-dup-defs check-dialect-cover test-c test-x doctest ## Run all tests
 .PHONY: test
 
 # The C-surface ratchet, source half: every binding site in the C source must
@@ -247,6 +247,25 @@ check-boot-order: $(EXECUTABLE) ## Lint the boot load order: class-call order + 
 check-dup-defs: ## Lint lib+apps for cross-module duplicate global defs
 	sh tools/dup-defs.sh
 .PHONY: check-dup-defs
+
+# The dialect coverage ratchet (#70): every lib/*.x entry point needs an
+# end-to-end smoke group, so a new dialect cannot ship untested the way the
+# tower launchers did (#49 -- both crashed at the exact invocation the README
+# documents, while every numeric spec passed against a bespoke harness).
+check-dialect-cover: ## Assert every lib/*.x dialect has an end-to-end smoke group
+	sh tools/dialect-cover.sh
+.PHONY: check-dialect-cover
+
+# spec.md's worked examples, extracted and executed (#70 seam 2).  REPORT ONLY
+# -- deliberately NOT in `test` yet, because it is currently RED: 86 of 352
+# examples do not reproduce (#55).  Wiring a red target into the gate is how
+# lint-x/fmt-check-x rotted (#60), so this stays a triage tool with a stated
+# promotion criterion: once #55's drift is fixed, move it into `test` and it
+# becomes the ratchet that keeps spec.md honest.
+spec-examples: $(EXECUTABLE) ## Extract docs/spec.md examples and run them (report; see #55)
+	sh tools/spec-examples.sh
+	sh tests/x/spec-example-runner.sh
+.PHONY: spec-examples
 
 check-doc-vocab: ## Lint doc forms for banned type-token aliases + retired names
 	@if grep -rn 'INTEGER\|BOOLEAN\|FUNCTION' lib --include='*.x' \
@@ -440,7 +459,11 @@ install: $(EXECUTABLE) lib/$(EXECUTABLE).x $(EXECUTABLE).sh ## Install to PREFIX
 	install $C -m 0755 $(EXECUTABLE) $(BINDIR)
 	install $C -m 0755 $(EXECUTABLE).sh $(BINDIR)
 	strip $(BINDIR)/$(EXECUTABLE)
-	install $C -m 0644 lib/* $(LIBDIR)/lib
+	install $C -m 0644 lib/*.x $(LIBDIR)/lib
+	find lib/x -type d | sed 's|^lib/||' | while read d; do \
+		install -d -m 0755 "$(LIBDIR)/lib/$$d"; done
+	find lib/x -type f -name '*.x' | sed 's|^lib/||' | while read f; do \
+		install $C -m 0644 "lib/$$f" "$(LIBDIR)/lib/$$f"; done
 .PHONY: install
 
 uninstall: ## Uninstall from PREFIX
