@@ -256,6 +256,17 @@ check-dialect-cover: ## Assert every lib/*.x dialect has an end-to-end smoke gro
 	sh tools/dialect-cover.sh
 .PHONY: check-dialect-cover
 
+# spec.md's worked examples, extracted and executed (#70 seam 2).  REPORT ONLY
+# -- deliberately NOT in `test` yet, because it is currently RED: 86 of 352
+# examples do not reproduce (#55).  Wiring a red target into the gate is how
+# lint-x/fmt-check-x rotted (#60), so this stays a triage tool with a stated
+# promotion criterion: once #55's drift is fixed, move it into `test` and it
+# becomes the ratchet that keeps spec.md honest.
+spec-examples: $(EXECUTABLE) ## Extract docs/spec.md examples and run them (report; see #55)
+	sh tools/spec-examples.sh
+	sh tests/x/spec-example-runner.sh
+.PHONY: spec-examples
+
 check-doc-vocab: ## Lint doc forms for banned type-token aliases + retired names
 	@if grep -rn 'INTEGER\|BOOLEAN\|FUNCTION' lib --include='*.x' \
 		| grep '(param \|(returns '; then \
