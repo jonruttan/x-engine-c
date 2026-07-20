@@ -85,3 +85,7 @@ docs/ref/x/
 # ctags output (regenerate locally with `ctags -R --exclude=docs/ref`)
 tags
 build/
+
+# macOS finder metadata -- must be repo-local, not left to a contributor's
+# global gitignore, or the first macOS clone commits one
+.DS_Store
