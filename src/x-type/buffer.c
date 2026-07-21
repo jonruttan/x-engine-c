@@ -225,9 +225,32 @@ x_obj_t *x_type_buffer_read(x_obj_t *p_base, x_obj_t *p_args)
 			return NULL;
 		}
 
+		/* Latched EOF (#90): the current stream already ended, so
+		 * report EOF without another syscall.  See the latch below. */
+		if (x_base_isset(p_base)
+				&& x_atomint(x_firstobj(x_base_field_filein(p_base))) < 0) {
+			return NULL;
+		}
+
 		p_char = x_base_read(p_base, (x_obj_t *)read_args);
 
 		if (x_obj_isnil(p_base, p_char)) {
+			/* EOF latch (#90).  Terminal EOF is ONE-SHOT: ctrl-d
+			 * yields a single zero-length read and the next read
+			 * blocks -- but the tokenizer scores every type x
+			 * analyser, each re-observing EOF, so it needs EOF to
+			 * be STICKY (as it is on pipes and files).  Poison the
+			 * CURRENT filein cell to -1: every later read fails
+			 * instantly through the existing path, no new state.
+			 * Scoping is the filein chain itself -- include pushes
+			 * a cell per file and pops it, so an included file's
+			 * latch dies with its cell and the outer stream's cell
+			 * is never touched.  This is the sole x_base_read call
+			 * site in the tree. */
+			if (x_base_isset(p_base)) {
+				x_atomint(x_firstobj(x_base_field_filein(p_base))) = -1;
+			}
+
 			return NULL;
 		}
 
