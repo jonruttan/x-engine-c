@@ -295,6 +295,12 @@ check-doc-vocab: ## Lint doc forms for banned type-token aliases + retired names
 		echo "doc-vocab: FAIL (retired name; see contributing.md adjudications)" >&2; \
 		exit 1; \
 	else echo "retired-names: ok"; fi
+	@# Retired dialect spellings (#95): the noble-gas names (he/xe/rn,
+	@# modules x/xe, x/rn) replaced x-and/x-or; the compat shims are gone.
+	@if grep -rnw 'x-and\|x-or\|x/and\|x/or' lib --include='*.x'; then \
+		echo "doc-vocab: FAIL (retired dialect spelling; use he/xe/rn -- #95)" >&2; \
+		exit 1; \
+	else echo "retired-dialects: ok"; fi
 	@# The quote-idiom ratchet (#45 R2/R8, added at the 2026-07-18 reopen):
 	@# user-facing doc STRINGS -- (example ...), (sample ...), (note ...) --
 	@# speak 'x, never the longhand (lit x), even inside boot-constrained
