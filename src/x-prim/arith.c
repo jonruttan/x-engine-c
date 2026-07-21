@@ -38,6 +38,14 @@ static x_obj_t *x_prim_sum(x_obj_t *p_base, x_obj_t *p_args)
 	if (x_type_op_try(p_base, (x_char_t *)"+", a, b, &p_result))
 		return p_result;
 
+	/* Nil operands raise instead of reading x_intval(NULL) -- the same
+	 * nil-safety convention x_prim_eq already follows (#52 ruled: an
+	 * x-level wrapper test measured +9% on every method dispatch, so the
+	 * check lives here, where it is two pointer tests). Runs AFTER
+	 * op_try, so typed operands never reach it. */
+	if (x_obj_isnil(p_base, a) || x_obj_isnil(p_base, b))
+		x_eval_error(p_base, (x_char_t *)"+: operand is nil", NULL);
+
 	return x_mkint(p_base, x_intval(a) + x_intval(b));
 }
 
@@ -59,12 +67,20 @@ static x_obj_t *x_prim_sub(x_obj_t *p_base, x_obj_t *p_args)
 
 	/* Unary negation keeps the int path (typed negation is the tower
 	 * layer's concern, not binary op dispatch). */
-	if (x_obj_isnil(p_base, x_11(p_args)))
+	if (x_obj_isnil(p_base, x_11(p_args))) {
+		if (x_obj_isnil(p_base, a))
+			x_eval_error(p_base, (x_char_t *)"-: operand is nil", NULL);
 		return x_mkint(p_base, -x_intval(a));
+	}
 
 	b = x_eval_arg(p_base, x_011(p_args));
 	if (x_type_op_try(p_base, (x_char_t *)"-", a, b, &p_result))
 		return p_result;
+
+	/* Nil operands raise instead of reading x_intval(NULL) -- the same
+	 * nil-safety convention x_prim_eq already follows (#52 ruled). */
+	if (x_obj_isnil(p_base, a) || x_obj_isnil(p_base, b))
+		x_eval_error(p_base, (x_char_t *)"-: operand is nil", NULL);
 
 	return x_mkint(p_base, x_intval(a) - x_intval(b));
 }
@@ -84,6 +100,14 @@ static x_obj_t *x_prim_prod(x_obj_t *p_base, x_obj_t *p_args)
 	if (x_type_op_try(p_base, (x_char_t *)"*", a, b, &p_result))
 		return p_result;
 
+	/* Nil operands raise instead of reading x_intval(NULL) -- the same
+	 * nil-safety convention x_prim_eq already follows (#52 ruled: an
+	 * x-level wrapper test measured +9% on every method dispatch, so the
+	 * check lives here, where it is two pointer tests). Runs AFTER
+	 * op_try, so typed operands never reach it. */
+	if (x_obj_isnil(p_base, a) || x_obj_isnil(p_base, b))
+		x_eval_error(p_base, (x_char_t *)"*: operand is nil", NULL);
+
 	return x_mkint(p_base, x_intval(a) * x_intval(b));
 }
 
@@ -102,6 +126,14 @@ static x_obj_t *x_prim_div(x_obj_t *p_base, x_obj_t *p_args)
 	if (x_type_op_try(p_base, (x_char_t *)"/", a, b, &p_result))
 		return p_result;
 
+	/* Nil operands raise instead of reading x_intval(NULL) -- the same
+	 * nil-safety convention x_prim_eq already follows (#52 ruled: an
+	 * x-level wrapper test measured +9% on every method dispatch, so the
+	 * check lives here, where it is two pointer tests). Runs AFTER
+	 * op_try, so typed operands never reach it. */
+	if (x_obj_isnil(p_base, a) || x_obj_isnil(p_base, b))
+		x_eval_error(p_base, (x_char_t *)"/: operand is nil", NULL);
+
 	return x_mkint(p_base, x_intval(a) / x_intval(b));
 }
 
@@ -119,6 +151,14 @@ static x_obj_t *x_prim_mod(x_obj_t *p_base, x_obj_t *p_args)
 
 	if (x_type_op_try(p_base, (x_char_t *)"%", a, b, &p_result))
 		return p_result;
+
+	/* Nil operands raise instead of reading x_intval(NULL) -- the same
+	 * nil-safety convention x_prim_eq already follows (#52 ruled: an
+	 * x-level wrapper test measured +9% on every method dispatch, so the
+	 * check lives here, where it is two pointer tests). Runs AFTER
+	 * op_try, so typed operands never reach it. */
+	if (x_obj_isnil(p_base, a) || x_obj_isnil(p_base, b))
+		x_eval_error(p_base, (x_char_t *)"%: operand is nil", NULL);
 
 	return x_mkint(p_base, x_intval(a) % x_intval(b));
 }
