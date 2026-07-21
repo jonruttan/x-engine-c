@@ -740,6 +740,86 @@ static char *test_type_buffer_read_readonly(void)
 	return NULL;
 }
 
+static char *test_type_buffer_read_eof_latch(void)
+{
+	/* The EOF latch (#90).  Terminal EOF is ONE-SHOT: ctrl-d yields a
+	 * single zero-length read, then later reads block on new input --
+	 * but the tokenizer re-observes EOF once per analyser, so buffer
+	 * read must make EOF STICKY: latch the current filein cell to -1
+	 * and report EOF thereafter WITHOUT another syscall. */
+	x_obj_t *p_args, *p_base, *p_buffer, *p_ret;
+	x_char_t *s, buffer[4];
+
+	/* One byte of input, then EOF (finite input via remaining). */
+	s = (x_char_t *)"A";
+	helper_file_buffer_ptr[TEST_HELPER_FILE_STDIN] = (char *)s;
+	helper_file_reset();
+	helper_file_buffer_remaining[TEST_HELPER_FILE_STDIN] = 1;
+
+	p_base = x_eval_make(NULL, NULL);
+	p_buffer = x_mkbuffer(p_base, buffer);
+	p_args = x_mkspair(p_base, X_OBJ_FLAG_NONE, p_buffer, NULL);
+
+	p_ret = x_type_buffer_read(p_base, p_args);
+	_it_should("read the byte before EOF",
+		p_buffer == p_ret
+		&& 'A' == buffer[0]
+	);
+
+	p_ret = x_type_buffer_read(p_base, p_args);
+	_it_should("latch filein negative at EOF",
+		NULL == p_ret
+		&& x_atomint(x_firstobj(x_base_field_filein(p_base))) < 0
+	);
+
+	/* ONE-SHOT simulation: input "arrives" after the EOF, as at a
+	 * terminal after ctrl-d.  The latch must keep reporting EOF
+	 * without reading it -- without the latch this read returns 'Z'. */
+	helper_file_buffer_ptr[TEST_HELPER_FILE_STDIN] = (char *)"Z";
+	helper_file_reset();
+	helper_file_buffer_remaining[TEST_HELPER_FILE_STDIN] = 1;
+
+	p_ret = x_type_buffer_read(p_base, p_args);
+	_it_should("stay at EOF when later input arrives",
+		NULL == p_ret
+	);
+
+	/* Include-style scoping: include pushes a fresh input cell and pops
+	 * it after the file (x-cli.c).  A push must un-shadow the latch, the
+	 * pushed stream's own EOF must latch only ITS cell, and the pop must
+	 * find the outer latch intact. */
+	x_base_field_filein(p_base) = x_mkspair(p_base, X_OBJ_FLAG_NONE,
+		x_mksatom(p_base, X_OBJ_FLAG_NONE, TEST_HELPER_FILE_STDIN),
+		x_base_field_filein(p_base));
+
+	p_ret = x_type_buffer_read(p_base, p_args);
+	_it_should("read again through a pushed input cell",
+		p_buffer == p_ret
+		&& 'Z' == x_bufferread(p_buffer)[-1]
+	);
+
+	p_ret = x_type_buffer_read(p_base, p_args);
+	_it_should("latch the pushed cell at its own EOF",
+		NULL == p_ret
+		&& x_atomint(x_firstobj(x_base_field_filein(p_base))) < 0
+	);
+
+	x_base_field_filein(p_base) = x_restobj(x_base_field_filein(p_base));
+
+	p_ret = x_type_buffer_read(p_base, p_args);
+	_it_should("keep the outer latch across push and pop",
+		NULL == p_ret
+		&& x_atomint(x_firstobj(x_base_field_filein(p_base))) < 0
+	);
+
+	/* remaining is helper-global: restore the unlimited default so no
+	 * later test inherits a finite stdin. */
+	helper_file_buffer_remaining[TEST_HELPER_FILE_STDIN] =
+		TEST_HELPER_FILE_UNDEFINED;
+
+	return NULL;
+}
+
 static char *run_tests() {
 	_run_test(test_obj_type_isbuffer);
 	_run_test(test_bufferval);
@@ -764,6 +844,7 @@ static char *run_tests() {
 	_run_test(test_type_buffer_read_text);
 	_run_test(test_type_buffer_mark);
 	_run_test(test_type_buffer_read_readonly);
+	_run_test(test_type_buffer_read_eof_latch);
 
 	return NULL;
 }
