@@ -123,6 +123,11 @@
   (obj ->ptr ffi)
   (obj eq? raw-op)
   (obj make alloc)
+  (obj retag! raw-op)         ; write an object's type header slot -- the missing
+                              ;   door for x-defined types over C-created values
+                              ;   (#101, user-approved: BOOL claims the #t/#f
+                              ;   statics at boot). RAW like the mem ops:
+                              ;   layout-mismatched retags are UB, caller owns it.
   (obj make-callable alloc)
   (obj same? raw-op)
   (ptr ->int ffi)

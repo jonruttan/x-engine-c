@@ -591,6 +591,45 @@ static x_obj_t *x_prim_make_obj(x_obj_t *p_base, x_obj_t *p_args)
 }
 
 /**
+ * @brief Retag an existing object with another type -- the "missing door"
+ *        for x-defined types over C-created values (#101, user-approved).
+ *
+ * x-lang form: @code (retag! obj type-handle) @endcode
+ *
+ * Writes the object's type header slot to the type resolved from
+ * @p type-handle. The one intended consumer is boot code claiming the
+ * C-static singletons for x-defined types (BOOL over #t/#f): C prims
+ * return those objects by identity, so rebinding the NAME in x touches
+ * nothing -- the object itself must change type. RAW instruction, same
+ * contract as the mem ops: retagging an object whose payload does not
+ * match the new type's layout is UB, and the caller owns that.
+ *
+ * @param p_base  Base (execution context).
+ * @param p_args  Unevaluated: (self obj type-handle).
+ * @return NULL (side-effect primitive).
+ */
+static x_obj_t *x_prim_retag(x_obj_t *p_base, x_obj_t *p_args)
+{
+	x_obj_t *p_obj, *p_handle;
+	x_spair_t lookup_args[1] = {
+		x_obj_set(NULL, X_OBJ_FLAG_NONE, { NULL }, { NULL })
+	};
+	x_obj_t *p_type;
+
+	x_eargs(p_base, p_args, 3, NULL, &p_obj, &p_handle);
+	x_firstobj((x_obj_t *)lookup_args) = p_handle;
+	p_type = x_eval_type_alist_assoc(p_base, (x_obj_t *)lookup_args);
+
+	if (x_obj_isnil(p_base, p_type)) {
+		x_eval_error(p_base,
+			(x_char_t *)"retag!: unknown type handle", NULL);
+	}
+
+	x_obj_type(p_obj) = p_type;
+	return NULL;
+}
+
+/**
  * Read the next expression from a tokenizer buffer.
  *
  * Exposes x_token_read to x-lang so that custom reader hooks (defined
@@ -776,6 +815,7 @@ x_obj_t *x_prim_type_register(x_obj_t *p_base, x_obj_t *p_args)
 		{ "base-make-type",    x_prim_base_make_type,    "base",   "make-type"     },
 		{ "make-instance",     x_prim_make_instance,     "type",   "make-instance" },
 		{ "make-obj",          x_prim_make_obj,          "obj",    "make"          },
+		{ "retag!",            x_prim_retag,             "obj",    "retag!"        },
 		{ "type?",             x_prim_typep,             "type",   "?"             },
 		{ "type-of",           x_prim_type_of,           "type",   "of"            },
 		{ "buffer-token",      x_prim_buffer_token,      "buf", "tok"         },
