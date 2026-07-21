@@ -17,7 +17,7 @@
 #include "x-syntax.h"
 #include "x-alist.h"
 #include "x-eval.h"
-#include "x-eval.h"
+#include "x-type.h"
 #include "x-type/list.h"
 #include "x-type/prim.h"
 #include "x-type/symbol.h"
@@ -127,13 +127,45 @@ x_obj_t *x_eval_arg(x_obj_t *p_base, x_obj_t *p_arg)
  */
 x_obj_t *x_eval_list(x_obj_t *p_base, x_obj_t *p_args)
 {
-	x_obj_t *p_val, *p_rest;
+	x_obj_t *p_val, *p_rest, *p_t, *p_units;
+	int is_cell;
 	x_obj_t **p_cell = x_heap_root_slot(p_base);
 	x_spair_t root = x_obj_set((x_obj_t *)x_type_pair_obj, X_OBJ_FLAG_NONE,
 		{ NULL }, { NULL });
 
 	if (x_obj_isnil(p_base, p_args)) {
 		return NULL;
+	}
+
+	/* Improper-spine guard (#69, ruled).  The walk below navigates
+	 * first/rest, which is only meaningful for an object whose TYPE
+	 * DECLARES pair units -- the same shape contract the collector's
+	 * payload walk trusts (x_type_prim_heap_mark).  The test is
+	 * STRUCTURAL, not a type-identity list: any reader personality's
+	 * spine type participates by declaring pair units (the reader and
+	 * the evaluator need not be symmetric), and raw stack cells (NULL
+	 * type slot) are cells by construction.  A dotted tail lands here
+	 * as a non-cell and raises a catchable error in place of the
+	 * segfault it replaces -- (list 1 . 5), and bare-x-core (f 1.5)
+	 * where the float module is absent and 1.5 reads as a dotted pair.
+	 * This walker is the single point that ACCEPTS every applicative's
+	 * argument spine, so per the do-guard doctrine the check lives
+	 * here; ops receive their spines raw and bind dotted tails
+	 * legitimately, so they are untouched. */
+	p_t = x_obj_type(p_args);
+	is_cell = p_t == NULL;
+
+	if ( ! is_cell && ! x_obj_type_issatom(p_args)
+		&& ! x_obj_isnil(p_base, p_t) && x_obj_type_isspair(p_t)) {
+		p_units = x_type_field_units(p_t);
+		is_cell = p_units != NULL
+			&& x_atomint(p_units) == X_OBJ_UNITS_PAIR;
+	}
+
+	if ( ! is_cell) {
+		x_eval_error(p_base,
+			(x_char_t *)"call: improper argument list (dotted tail)",
+			NULL);
 	}
 
 	/* Root p_args so GC doesn't free rest while evaluating first; the
