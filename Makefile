@@ -206,7 +206,7 @@ doctest: $(EXECUTABLE) ## Extract (example ...) forms and run them as doctests
 	sh tests/x/doctest-runner.sh
 .PHONY: doctest
 
-test: check-isa check-obj-layout check-base-paths check-boot-order check-doc-vocab check-dup-defs check-dialect-cover test-c test-x doctest check-examples ## Run all tests
+test: check-isa check-obj-layout check-base-paths check-boot-order check-doc-vocab check-dup-defs check-dialect-cover test-c test-x doctest spec-examples check-examples ## Run all tests
 .PHONY: test
 
 # The examples ratchet: every file under examples/*/ runs under its documented
@@ -270,13 +270,14 @@ check-dialect-cover: ## Assert every lib/*.x dialect has an end-to-end smoke gro
 	sh tools/dialect-cover.sh
 .PHONY: check-dialect-cover
 
-# spec.md's worked examples, extracted and executed (#70 seam 2).  REPORT ONLY
-# -- deliberately NOT in `test` yet, because it is currently RED: 86 of 352
-# examples do not reproduce (#55).  Wiring a red target into the gate is how
-# lint-x/fmt-check-x rotted (#60), so this stays a triage tool with a stated
-# promotion criterion: once #55's drift is fixed, move it into `test` and it
-# becomes the ratchet that keeps spec.md honest.
-spec-examples: $(EXECUTABLE) ## Extract docs/spec.md examples and run them (report; see #55)
+# spec.md's worked examples, extracted and executed -- the ratchet that keeps
+# the normative spec honest (#70 seam 2, PROMOTED at 356/356 green).  It began
+# report-only at 86 failures; the drift burned down through #72 #73 #76 the
+# #31 order sweep, the regex-escaping fix, the reader-section repairs and
+# depth-tracked quasi (#55), and on the stated criterion -- red would rot it
+# like lint-x (#60) -- it joined `test` only once fully green.  A spec.md
+# example that stops reproducing now fails the build with a file:line name.
+spec-examples: $(EXECUTABLE) ## Run docs/spec.md's examples (gate: spec.md cannot drift silently)
 	sh tools/spec-examples.sh
 	sh tests/x/spec-example-runner.sh
 .PHONY: spec-examples
