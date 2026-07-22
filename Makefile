@@ -118,13 +118,14 @@ endif
 # dlopens libm at runtime like every other math function).
 EXTRA_LIBS+=-ldl
 
-# Where to install the stuff
+# Where to install the stuff.  The user-facing command is the WRAPPER,
+# installed as bin/x; the engine binary hides in libexec (without the
+# library on its stdin pipe it cannot even print, so it is not a user
+# command).  MANDIR is reserved for a future man page.
 BINDIR?=$(PREFIX)/bin
 LIBDIR?=$(PREFIX)/share/$(EXECUTABLE)
+LIBEXECDIR?=$(PREFIX)/libexec/$(EXECUTABLE)
 MANDIR?=$(PREFIX)/man/man1
-
-# Set up environment to be used during the build process
-BUILD_ENV=env X_LIBRARY_PATH=.:lib:ext:contrib
 
 # C test config
 ifndef PATH_TESTS_C
@@ -206,7 +207,7 @@ doctest: $(EXECUTABLE) ## Extract (example ...) forms and run them as doctests
 	sh tests/x/doctest-runner.sh
 .PHONY: doctest
 
-test: check-isa check-obj-layout check-base-paths check-boot-order check-doc-vocab check-dup-defs check-bare-globals check-dialect-cover test-c test-x doctest spec-examples check-examples ## Run all tests
+test: check-isa check-obj-layout check-base-paths check-boot-order check-path-literals check-boot-amalgam check-doc-vocab check-dup-defs check-bare-globals check-dialect-cover test-c test-x doctest spec-examples check-examples ## Run all tests
 .PHONY: test
 
 # The examples ratchet: every file under examples/*/ runs under its documented
@@ -261,6 +262,28 @@ check-boot-order: $(EXECUTABLE) ## Lint the boot load order: class-call order + 
 check-dup-defs: ## Lint lib+apps for cross-module duplicate global defs
 	sh tools/dup-defs.sh
 .PHONY: check-dup-defs
+
+check-path-literals: ## Lint for root-relative load literals outside the boot closure
+	sh tools/path-literals.sh
+.PHONY: check-path-literals
+
+# Amalgamated boot entries (docs/boot-amalgam.md): each dialect's raw-include
+# chain flattened into one self-ordered stream, plus one per app entry.
+# Build products only -- never committed; regenerated on every call, so the
+# amalgams cannot drift from the sources they are made of.
+boot: ## Generate amalgamated boot entries into build/boot
+	@mkdir -p build/boot
+	@for e in x he xe rn x-base; do \
+		sh tools/amalgamate.sh "lib/$$e.x" > "build/boot/$$e.x" || exit 1; done
+	@for a in apps/*/run.x; do \
+		n=$$(basename "$$(dirname "$$a")"); \
+		sh tools/amalgamate.sh "$$a" > "build/boot/$$n.x" || exit 1; done
+	@echo "boot: generated $$(ls build/boot | wc -l | tr -d ' ') entries"
+.PHONY: boot
+
+check-boot-amalgam: $(EXECUTABLE) boot ## Boot every amalgam in batch mode and pin a smoke expression
+	sh tools/amalgam-smoke.sh
+.PHONY: check-boot-amalgam
 
 # THE TOP LEVEL IS SACRED (#108): the runtime library may bind only the names
 # tools/bare-globals.x sanctions; the manifest can only shrink.
@@ -480,23 +503,30 @@ watch: ## Watch for changes
 	done
 .PHONY: watch
 
-install: $(EXECUTABLE) lib/$(EXECUTABLE).x $(EXECUTABLE).sh ## Install to PREFIX
-	install -d -m 0755 $(BINDIR)
-	install -d -m 0755 $(LIBDIR)/lib
-	install $C -m 0755 $(EXECUTABLE) $(BINDIR)
-	install $C -m 0755 $(EXECUTABLE).sh $(BINDIR)
-	strip $(BINDIR)/$(EXECUTABLE)
-	install $C -m 0644 lib/*.x $(LIBDIR)/lib
-	find lib/x -type d | sed 's|^lib/||' | while read d; do \
-		install -d -m 0755 "$(LIBDIR)/lib/$$d"; done
-	find lib/x -type f -name '*.x' | sed 's|^lib/||' | while read f; do \
-		install $C -m 0644 "lib/$$f" "$(LIBDIR)/lib/$$f"; done
+# The installed library is BYTE-IDENTICAL to the repo's (docs/boot-amalgam.md):
+# lib/ and apps/ copy verbatim -- diff -r inside the recipe is the proof, and
+# it fails the install if anything diverges.  Only the boot/ entries are
+# generated (the amalgams; build products, like the binary itself).  The
+# import root reaches the installed tree as data: the wrapper emits one
+# (def %install-root ...) form at the top of the pipe (see x.sh + module.x).
+install: $(EXECUTABLE) $(EXECUTABLE).sh boot ## Install to PREFIX (DESTDIR honoured)
+	install -d -m 0755 $(DESTDIR)$(BINDIR) $(DESTDIR)$(LIBEXECDIR) $(DESTDIR)$(LIBDIR)
+	install $C -m 0755 $(EXECUTABLE) $(DESTDIR)$(LIBEXECDIR)/$(EXECUTABLE)
+	strip $(DESTDIR)$(LIBEXECDIR)/$(EXECUTABLE)
+	install $C -m 0755 $(EXECUTABLE).sh $(DESTDIR)$(BINDIR)/$(EXECUTABLE)
+	rm -rf $(DESTDIR)$(LIBDIR)/lib $(DESTDIR)$(LIBDIR)/apps $(DESTDIR)$(LIBDIR)/boot
+	cp -R lib $(DESTDIR)$(LIBDIR)/lib
+	cp -R apps $(DESTDIR)$(LIBDIR)/apps
+	cp -R build/boot $(DESTDIR)$(LIBDIR)/boot
+	diff -r lib $(DESTDIR)$(LIBDIR)/lib
+	diff -r apps $(DESTDIR)$(LIBDIR)/apps
+	diff -r build/boot $(DESTDIR)$(LIBDIR)/boot
 .PHONY: install
 
 uninstall: ## Uninstall from PREFIX
-	rm -f $(LIBDIR)/* && rmdir $(LIBDIR)
-	rm -f $(BINDIR)/$(EXECUTABLE)
-	rm -f $(BINDIR)/$(EXECUTABLE).sh
+	rm -rf $(DESTDIR)$(LIBDIR)
+	rm -rf $(DESTDIR)$(LIBEXECDIR)
+	rm -f $(DESTDIR)$(BINDIR)/$(EXECUTABLE)
 .PHONY: uninstall
 
 clean: cov-clean ## Clean build artifacts
