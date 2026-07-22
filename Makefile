@@ -262,9 +262,9 @@ check-dup-defs: ## Lint lib+apps for cross-module duplicate global defs
 	sh tools/dup-defs.sh
 .PHONY: check-dup-defs
 
-# THE TOP LEVEL IS SACRED (#108): boot/core may bind only the bare names
+# THE TOP LEVEL IS SACRED (#108): the runtime library may bind only the names
 # tools/bare-globals.x sanctions; the manifest can only shrink.
-check-bare-globals: ## Diff boot/core's bare top-level defs against tools/bare-globals.x
+check-bare-globals: ## Diff the runtime library's bare top-level defs against tools/bare-globals.x
 	sh tools/bare-globals-scan.sh
 .PHONY: check-bare-globals
 
