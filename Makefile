@@ -267,7 +267,7 @@ check-path-literals: ## Lint for root-relative load literals outside the boot cl
 	sh tools/path-literals.sh
 .PHONY: check-path-literals
 
-# Amalgamated boot entries (docs/boot-amalgam.md): each dialect's raw-include
+# Amalgamated boot entries: each dialect's raw-include
 # chain flattened into one self-ordered stream, plus one per app entry.
 # Build products only -- never committed; regenerated on every call, so the
 # amalgams cannot drift from the sources they are made of.
@@ -503,7 +503,7 @@ watch: ## Watch for changes
 	done
 .PHONY: watch
 
-# The installed library is BYTE-IDENTICAL to the repo's (docs/boot-amalgam.md):
+# The installed library is BYTE-IDENTICAL to the repo's:
 # lib/ and apps/ copy verbatim -- diff -r inside the recipe is the proof, and
 # it fails the install if anything diverges.  Only the boot/ entries are
 # generated (the amalgams; build products, like the binary itself).  The
