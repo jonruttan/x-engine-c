@@ -206,7 +206,7 @@ doctest: $(EXECUTABLE) ## Extract (example ...) forms and run them as doctests
 	sh tests/x/doctest-runner.sh
 .PHONY: doctest
 
-test: check-isa check-obj-layout check-base-paths check-boot-order check-doc-vocab check-dup-defs check-dialect-cover test-c test-x doctest spec-examples check-examples ## Run all tests
+test: check-isa check-obj-layout check-base-paths check-boot-order check-doc-vocab check-dup-defs check-bare-globals check-dialect-cover test-c test-x doctest spec-examples check-examples ## Run all tests
 .PHONY: test
 
 # The examples ratchet: every file under examples/*/ runs under its documented
@@ -261,6 +261,12 @@ check-boot-order: $(EXECUTABLE) ## Lint the boot load order: class-call order + 
 check-dup-defs: ## Lint lib+apps for cross-module duplicate global defs
 	sh tools/dup-defs.sh
 .PHONY: check-dup-defs
+
+# THE TOP LEVEL IS SACRED (#108): boot/core may bind only the bare names
+# tools/bare-globals.x sanctions; the manifest can only shrink.
+check-bare-globals: ## Diff boot/core's bare top-level defs against tools/bare-globals.x
+	sh tools/bare-globals-scan.sh
+.PHONY: check-bare-globals
 
 # The dialect coverage ratchet (#70): every lib/*.x entry point needs an
 # end-to-end smoke group, so a new dialect cannot ship untested the way the
