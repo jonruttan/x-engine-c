@@ -120,12 +120,25 @@ static x_obj_t *x_prim_clock(x_obj_t *p_base, x_obj_t *p_args)
 
 /** Mark phase: trace live objects from every root (GC phase 1).
  *
- *  Four passes: (1) tree-mark from the base data tree, (2) root-chain
- *  walk -- the off-chain stack objects frames registered via
- *  x_heap_root_push, (3) tree-mark each registered GC root, (4) fire
- *  mark hooks.  The hook/root lists live in x-expr's heap-group; x-expr
+ *  Four passes: (1) fire mark hooks, (2) tree-mark from the base data
+ *  tree, (3) root-chain walk -- the off-chain stack objects frames
+ *  registered via x_heap_root_push, (4) tree-mark each registered GC
+ *  root.  The hook/root lists live in x-expr's heap-group; x-expr
  *  stores but cannot dispatch (no callable mechanism at that layer), so
  *  the walk + invoke happens here.
+ *
+ *  Hooks MUST fire before the marking passes: everything a hook
+ *  allocates is born unmarked, and the sweep that follows this phase
+ *  frees every unmarked object.  Firing hooks first means a hook
+ *  allocation that escaped into reachable state -- a (heap-mark-root!)
+ *  spine cell, a set! into a global -- is marked by the later passes
+ *  and survives, while the hook's transient garbage is correctly
+ *  swept.  It also makes a root registered mid-collect count in the
+ *  same cycle (pass 4 runs after the hooks push it).  With hooks last,
+ *  the sweep freed the escaped cells and left reachable dangling
+ *  pointers -- a use-after-free on the next collect (usually silent:
+ *  the chunk is recycled and the mark walk traverses a reinterpreted
+ *  object; ASan catches it only when the chunk stays unreused).
  *
  *  @note A sweep must run with no allocation between it and this mark:
  *        a transient cell allocated *after* the mark is unmarked, so an
@@ -138,19 +151,6 @@ static void x_heap_mark_phase(x_obj_t *p_base)
 	x_obj_t *p_roots;
 	x_obj_t *p_hooks;
 	x_spair_t hook_args[1];
-
-	x_heap_tree_mark(p_base, x_atomobj(p_base), X_OBJ_FLAG_MARK);
-	x_heap_root_chain_mark(p_base, X_OBJ_FLAG_MARK);
-
-	if (x_base_isset(p_base)) {
-		p_roots = x_firstobj(x_base_field_heap_mark_roots(p_base));
-
-		while ( ! x_obj_isnil(p_base, p_roots)) {
-			x_heap_tree_mark(p_base, x_firstobj(p_roots),
-				X_OBJ_FLAG_MARK);
-			p_roots = x_restobj(p_roots);
-		}
-	}
 
 	if (x_base_isset(p_base)) {
 		p_hooks = x_firstobj(x_base_field_heap_mark_hooks(p_base));
@@ -170,6 +170,19 @@ static void x_heap_mark_phase(x_obj_t *p_base)
 			x_eval_tco_trampoline(p_base,
 				x_obj_prim_call(p_base, (x_obj_t *)hook_args));
 			p_hooks = x_restobj(p_hooks);
+		}
+	}
+
+	x_heap_tree_mark(p_base, x_atomobj(p_base), X_OBJ_FLAG_MARK);
+	x_heap_root_chain_mark(p_base, X_OBJ_FLAG_MARK);
+
+	if (x_base_isset(p_base)) {
+		p_roots = x_firstobj(x_base_field_heap_mark_roots(p_base));
+
+		while ( ! x_obj_isnil(p_base, p_roots)) {
+			x_heap_tree_mark(p_base, x_firstobj(p_roots),
+				X_OBJ_FLAG_MARK);
+			p_roots = x_restobj(p_roots);
 		}
 	}
 }
