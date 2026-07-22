@@ -207,8 +207,15 @@ doctest: $(EXECUTABLE) ## Extract (example ...) forms and run them as doctests
 	sh tests/x/doctest-runner.sh
 .PHONY: doctest
 
-test: check-isa check-obj-layout check-base-paths check-boot-order check-path-literals check-boot-amalgam check-doc-vocab check-dup-defs check-bare-globals check-dialect-cover test-c test-x doctest spec-examples check-examples ## Run all tests
+test: check-isa check-obj-layout check-base-paths check-boot-order check-path-literals check-boot-amalgam check-pin check-doc-vocab check-dup-defs check-bare-globals check-dialect-cover test-c test-x doctest spec-examples check-examples ## Run all tests
 .PHONY: test
+
+# Project pinning (docs/modules.md "Pinning"): the wrapper's pin.xon probe
+# and lib/x/tool/pin.x, end to end -- overlay resolution, root precedence,
+# the unpinnable boot core, the closed manifest vocabulary, --no-pin.
+check-pin: $(EXECUTABLE) ## Smoke the pin.xon probe + loader end to end
+	sh tools/pin-smoke.sh
+.PHONY: check-pin
 
 # The examples ratchet: every file under examples/*/ runs under its documented
 # dialect in batch mode; output-pinned where portable (sidecars in
