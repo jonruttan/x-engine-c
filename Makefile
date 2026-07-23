@@ -207,7 +207,14 @@ doctest: $(EXECUTABLE) ## Extract (example ...) forms and run them as doctests
 	sh tests/x/doctest-runner.sh
 .PHONY: doctest
 
-test: check-isa check-obj-layout check-base-paths check-boot-order check-path-literals check-boot-amalgam check-pin check-release-manifest check-doc-vocab check-dup-defs check-bare-globals check-dialect-cover test-c test-x doctest spec-examples check-examples ## Run all tests
+# The contract gates, ONE definition: `make test` runs them first and
+# CI's "Contract gates" step runs exactly this target.  They must not
+# drift -- ci.yml once hand-listed a subset, and check-pin's first run
+# on Linux happened in the RELEASE job (where it promptly died).
+gates: check-isa check-obj-layout check-base-paths check-boot-order check-path-literals check-boot-amalgam check-pin check-release-manifest check-doc-vocab check-dup-defs check-bare-globals check-dialect-cover ## Run the contract gates
+.PHONY: gates
+
+test: gates test-c test-x doctest spec-examples check-examples ## Run all tests
 .PHONY: test
 
 # The release manifest (SHASUMS + pin.release.xon over the amalgams;
