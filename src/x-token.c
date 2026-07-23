@@ -289,7 +289,7 @@ x_obj_t *x_token_read(x_obj_t *p_base, x_obj_t *p_args)
 {
 	x_obj_t *p_buffer = x_firstobj(p_args), *p_entry, *p_read, *p_obj;
 	x_char_t *p_scan;
-	x_int_t line;
+	x_int_t line, file;
 	x_spair_t buffer_args[3] = {
 			x_obj_set(NULL, X_OBJ_FLAG_NONE, { p_buffer }, { (x_obj_t *)(buffer_args + 1) }),
 			x_obj_set(NULL, X_OBJ_FLAG_NONE, { NULL }, { NULL }),
@@ -335,12 +335,18 @@ x_obj_t *x_token_read(x_obj_t *p_base, x_obj_t *p_args)
 			continue;
 		}
 
-		/* Save line before read (read may advance buffer via
-		 * recursive x_token_read calls for nested lists). */
+		/* Save line/file before read (read may advance buffer via
+		 * recursive x_token_read calls for nested lists).  Slot 0 is the
+		 * line counter; slot 1 is the file id `include` stamped on the
+		 * buffer (0 for stdin/REPL). */
 		line = 0;
+		file = 0;
 		if (x_atomint(x_firstobj(x_base_field_obj_meta_extra(p_base))) > 0
 				&& (x_obj_flags(p_buffer) & X_OBJ_FLAG_META)) {
 			line = x_obj_meta_i(p_buffer, 0).i;
+			if (x_atomint(x_firstobj(x_base_field_obj_meta_extra(p_base))) > 1) {
+				file = x_obj_meta_i(p_buffer, 1).i;
+			}
 		}
 
 		/* Walk the read slot's reader(s) and take the first non-nil
@@ -366,11 +372,14 @@ x_obj_t *x_token_read(x_obj_t *p_base, x_obj_t *p_args)
 			return NULL;
 		}
 
-		/* Stamp line number on created object. */
+		/* Stamp line (slot 0) and file id (slot 1) on the created object. */
 		if (x_atomint(x_firstobj(x_base_field_obj_meta_extra(p_base))) > 0
 				&& !x_obj_isnil(p_base, p_obj)
 				&& (x_obj_flags(p_obj) & X_OBJ_FLAG_META)) {
 			x_obj_meta_i(p_obj, 0).i = line;
+			if (x_atomint(x_firstobj(x_base_field_obj_meta_extra(p_base))) > 1) {
+				x_obj_meta_i(p_obj, 1).i = file;
+			}
 		}
 
 		x_type_buffer_retain(p_base, (x_obj_t *)buffer_args);

@@ -76,4 +76,15 @@
           (pair (cell token-cache)
             (pair (cell sigint)
               (pair (cell error-str)
-                    (cell prims)))))))))
+                (pair (cell prims)
+                  ; Source-location tracking (error reporting).  `file` is the
+                  ; live current-file id (parallel to io-state's `line`), set by
+                  ; eval from each form's meta slot 1.  err-line/err-file are the
+                  ; raise-time SNAPSHOT read back by (io error-line)/(io error-file)
+                  ; -- they survive the handler pop that clears the caught guard
+                  ; (control.c) before its body (and thus the reflect read) runs.
+                  ; file-registry is the id->path alist grown by `include`.
+                  (pair (cell file)
+                    (pair (cell err-line)
+                      (pair (cell err-file)
+                            (cell file-registry)))))))))))))

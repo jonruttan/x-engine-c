@@ -217,6 +217,13 @@ static x_obj_t *x_prim_error(x_obj_t *p_base, x_obj_t *p_args)
 		x_error_handler_error(p_handler) = p_msg;
 		x_error_handler_line(p_handler)
 			= (x_obj_t *)(x_int_t)x_atomint(x_firstobj(x_eval_field_line(p_base)));
+		/* Freeze the raise-site location for (io error-line)/(io error-file):
+		 * the handler is popped before its body runs, so the snapshot -- not
+		 * the handler slot or the live counter -- is what reflect reads. */
+		x_atomint(x_firstobj(x_eval_field_err_line(p_base)))
+			= x_atomint(x_firstobj(x_eval_field_line(p_base)));
+		x_atomint(x_firstobj(x_eval_field_err_file(p_base)))
+			= x_atomint(x_firstobj(x_eval_field_file(p_base)));
 		x_firstobj(x_eval_field_env_alist(p_base))
 			= x_error_handler_saved_env(p_handler);
 		x_eval_field_env_local_boundary(p_base)

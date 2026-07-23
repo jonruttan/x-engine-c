@@ -101,8 +101,9 @@ static x_obj_t *x_prim_syscall(x_obj_t *p_base, x_obj_t *p_args)
  */
 static x_obj_t *x_prim_include(x_obj_t *p_base, x_obj_t *p_args)
 {
-	x_obj_t *p_path, *p_buffer, *p_result;
+	x_obj_t *p_path, *p_buffer, *p_result, *p_reg;
 	int fd;
+	x_int_t file_id;
 	x_char_t *buf;
 #ifdef X_PROFILE
 	x_int_t t0, t1;
@@ -132,11 +133,30 @@ static x_obj_t *x_prim_include(x_obj_t *p_base, x_obj_t *p_args)
 	x_base_field_buffer(p_base) = x_mkspair(p_base, X_OBJ_FLAG_NONE,
 		p_buffer, x_base_field_buffer(p_base));
 
+	/* Assign a source-file id and register (id . path).  A form's file id
+	 * rides its meta slot 1, read when an error fires -- possibly long after
+	 * this include returns and the line/buffer stacks pop (an unbound symbol
+	 * in a method body runs at call time, not load time).  So the registry
+	 * must PERSIST: it is never popped, and ids grow monotonically (the head
+	 * entry carries the highest id).  Allocation never triggers GC here, so
+	 * the half-built alist entry needs no rooting. */
+	p_reg = x_firstobj(x_eval_field_file_registry(p_base));
+	file_id = x_obj_isnil(p_base, p_reg)
+		? 1 : x_atomint(x_firstobj(x_firstobj(p_reg))) + 1;
+	x_firstobj(x_eval_field_file_registry(p_base)) = x_mkspair(p_base, X_OBJ_FLAG_NONE,
+		x_mkspair(p_base, X_OBJ_FLAG_NONE,
+			x_mksatom(p_base, X_OBJ_FLAG_NONE, file_id), p_path),
+		p_reg);
+
 	/* Number the file's source lines from 1 so error lines match the file.
 	 * The buffer's line metadata otherwise starts at 0, leaving file errors
-	 * off by one (the REPL is 1-based via repl-read + the leftover newline). */
+	 * off by one (the REPL is 1-based via repl-read + the leftover newline).
+	 * Slot 1 carries the file id so the tokenizer can stamp every form. */
 	if (x_obj_flags(p_buffer) & X_OBJ_FLAG_META) {
 		x_obj_meta_i(p_buffer, 0).i = 1;
+		if (x_atomint(x_firstobj(x_base_field_obj_meta_extra(p_base))) > 1) {
+			x_obj_meta_i(p_buffer, 1).i = file_id;
+		}
 	}
 
 	/* Load all expressions. */
@@ -185,10 +205,11 @@ x_obj_t * init(x_obj_t *p_base, x_char_t *buffer)
 	/* Create base object. */
 	p_base = x_eval_make(NULL, NULL);
 
-	/* Enable 1 metadata slot per object for source line tracking.
+	/* Enable 2 metadata slots per object for source-location tracking:
+	 * slot 0 = source line, slot 1 = source file id (see x-token.c).
 	 * Must be set before the first buffer is created so the buffer
 	 * itself gets X_OBJ_FLAG_META (needed for newline counting). */
-	x_atomint(x_firstobj(x_base_field_obj_meta_extra(p_base))) = 1;
+	x_atomint(x_firstobj(x_base_field_obj_meta_extra(p_base))) = 2;
 
 	/* Register types for parsing. */
 	x_type_prim_register(p_base, p_base);
