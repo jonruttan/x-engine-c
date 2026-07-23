@@ -207,8 +207,16 @@ doctest: $(EXECUTABLE) ## Extract (example ...) forms and run them as doctests
 	sh tests/x/doctest-runner.sh
 .PHONY: doctest
 
-test: check-isa check-obj-layout check-base-paths check-boot-order check-path-literals check-boot-amalgam check-pin check-doc-vocab check-dup-defs check-bare-globals check-dialect-cover test-c test-x doctest spec-examples check-examples ## Run all tests
+test: check-isa check-obj-layout check-base-paths check-boot-order check-path-literals check-boot-amalgam check-pin check-release-manifest check-doc-vocab check-dup-defs check-bare-globals check-dialect-cover test-c test-x doctest spec-examples check-examples ## Run all tests
 .PHONY: test
+
+# The release manifest (SHASUMS + pin.release.xon over the amalgams;
+# .github/workflows/release.yml publishes it on a version tag) -- gated
+# here with a throwaway tag so the self-checking script cannot rot
+# between releases.
+check-release-manifest: boot ## Generate + self-check the release manifest
+	sh tools/release-manifest.sh local
+.PHONY: check-release-manifest
 
 # Project pinning (docs/modules.md "Pinning"): the wrapper's pin.xon probe
 # and lib/x/tool/pin.x, end to end -- overlay resolution, root precedence,
