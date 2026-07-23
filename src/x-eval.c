@@ -338,10 +338,14 @@ eval_start:
 
 	p_exp = x_firstobj(x_eval_arg_exp(p_args));
 
-	/* Update base line counter from expression's source line metadata.
-	 * After this, current-line reflects the eval site (useful for errors). */
+	/* Update base line/file counters from the expression's source metadata
+	 * (slot 0 = line, slot 1 = file id).  After this, current-line/current-file
+	 * reflect the eval site, so an error here snapshots the right location. */
 	if (p_exp != NULL && (x_obj_flags(p_exp) & X_OBJ_FLAG_META)) {
 		x_atomint(x_firstobj(x_eval_field_line(p_base))) = x_obj_meta_i(p_exp, 0).i;
+		if (x_atomint(x_firstobj(x_base_field_obj_meta_extra(p_base))) > 1) {
+			x_atomint(x_firstobj(x_eval_field_file(p_base))) = x_obj_meta_i(p_exp, 1).i;
+		}
 	}
 
 #ifdef X_COV
@@ -570,6 +574,16 @@ x_obj_t *x_eval_make(x_obj_t *p_base, x_obj_t *p_args)
 	x_firstobj(x_eval_field_profile_bst_misses(p_base)) = atom(0);
 	x_firstobj(x_eval_field_error_str(p_base)) = atom(nil);
 
+	/* Source-location tracking.  `file` mirrors `line` (the live id of the
+	 * form being evaluated, 0 = no file / REPL input); err-line/err-file hold
+	 * the raise-time snapshot -- all three are int atoms.  file-registry is the
+	 * id->path alist; the skeleton already leaves its car nil (empty list), so
+	 * it is NOT re-initialized here (an int atom there would be walked as a
+	 * pair by `include` and the lookup, and segfault). */
+	x_firstobj(x_eval_field_file(p_base)) = atom(0);
+	x_firstobj(x_eval_field_err_line(p_base)) = atom(0);
+	x_firstobj(x_eval_field_err_file(p_base)) = atom(0);
+
 	/* #t/#f and the sigint flag are inherited from a parent base so every
 	 * base in a tree shares the singletons; the root base sets its own
 	 * booleans during primitive registration. */
@@ -644,6 +658,18 @@ void x_eval_error(x_obj_t *p_base, x_char_t *message, x_obj_t *p_obj)
 	/* Extract symbol string from object if possible. */
 	if (p_obj != NULL && x_obj_type_issatom(p_obj)) {
 		symbol = x_atomstr(p_obj);
+	}
+
+	/* Snapshot the raise-site source location into the stable err-line/err-file
+	 * cells.  The live line/file counters are overwritten as the handler body
+	 * evaluates, and the caught handler is popped before its body runs, so
+	 * (io error-line)/(io error-file) must read this frozen copy, not the
+	 * handler or the live counter. */
+	if (x_base_isset(p_base)) {
+		x_atomint(x_firstobj(x_eval_field_err_line(p_base)))
+			= x_atomint(x_firstobj(x_eval_field_line(p_base)));
+		x_atomint(x_firstobj(x_eval_field_err_file(p_base)))
+			= x_atomint(x_firstobj(x_eval_field_file(p_base)));
 	}
 
 	/* If an error handler is installed, store message and longjmp. */

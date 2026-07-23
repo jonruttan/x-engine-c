@@ -37,7 +37,11 @@
 #define x_eval_field_token_cache(X)	x_01(x_eval_state(X))	/* cell */
 #define x_eval_field_sigint(X)	x_011(x_eval_state(X))	/* cell */
 #define x_eval_field_error_str(X)	x_0111(x_eval_state(X))	/* cell */
-#define x_eval_field_prims(X)	x_1111(x_eval_state(X))	/* cell */
+#define x_eval_field_prims(X)	x_0111(x_1(x_eval_state(X)))	/* cell */
+#define x_eval_field_file(X)	x_0111(x_11(x_eval_state(X)))	/* cell */
+#define x_eval_field_err_line(X)	x_0111(x_111(x_eval_state(X)))	/* cell */
+#define x_eval_field_err_file(X)	x_0111(x_1111(x_eval_state(X)))	/* cell */
+#define x_eval_field_file_registry(X)	x_1111(x_1111(x_eval_state(X)))	/* cell */
 #endif /* X_EVAL_LAYOUT_H */
 
 #ifdef X_EVAL_BUILD_TREE
@@ -45,5 +49,5 @@
 	x_00(x_base_field_io_group(p_base)) = pair(nil, nil);
 	x_1(x_base_field_io_group(p_base)) = pair(pair(nil, nil), pair(pair(nil, nil), pair(nil, nil)));
 	x_1(x_base_field_profile(p_base)) = pair(pair(nil, nil), pair(pair(nil, nil), pair(pair(nil, nil), pair(pair(nil, nil), pair(pair(nil, nil), pair(pair(nil, nil), pair(pair(nil, nil), pair(pair(nil, nil), pair(pair(nil, nil), nil)))))))));
-	x_111(x_base_field_meta_group(p_base)) = pair(pair(nil, nil), pair(pair(nil, nil), pair(pair(nil, nil), pair(pair(nil, nil), pair(nil, nil)))));
+	x_111(x_base_field_meta_group(p_base)) = pair(pair(nil, nil), pair(pair(nil, nil), pair(pair(nil, nil), pair(pair(nil, nil), pair(pair(nil, nil), pair(pair(nil, nil), pair(pair(nil, nil), pair(pair(nil, nil), pair(nil, nil)))))))));
 #endif /* X_EVAL_BUILD_TREE */
