@@ -535,6 +535,7 @@ install: $(EXECUTABLE) $(EXECUTABLE).sh boot ## Install to PREFIX (DESTDIR honou
 	install -d -m 0755 $(DESTDIR)$(BINDIR) $(DESTDIR)$(LIBEXECDIR) $(DESTDIR)$(LIBDIR)
 	install $C -m 0755 $(EXECUTABLE) $(DESTDIR)$(LIBEXECDIR)/$(EXECUTABLE)
 	strip $(DESTDIR)$(LIBEXECDIR)/$(EXECUTABLE)
+	@if [ -f entitlements.plist ]; then codesign -s - --entitlements entitlements.plist -f $(DESTDIR)$(LIBEXECDIR)/$(EXECUTABLE) 2>/dev/null || true; fi
 	install $C -m 0755 $(EXECUTABLE).sh $(DESTDIR)$(BINDIR)/$(EXECUTABLE)
 	rm -rf $(DESTDIR)$(LIBDIR)/lib $(DESTDIR)$(LIBDIR)/apps $(DESTDIR)$(LIBDIR)/boot
 	cp -R lib $(DESTDIR)$(LIBDIR)/lib
