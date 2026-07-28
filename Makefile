@@ -211,8 +211,14 @@ doctest: $(EXECUTABLE) ## Extract (example ...) forms and run them as doctests
 # CI's "Contract gates" step runs exactly this target.  They must not
 # drift -- ci.yml once hand-listed a subset, and check-pin's first run
 # on Linux happened in the RELEASE job (where it promptly died).
-gates: check-isa check-obj-layout check-base-paths check-boot-order check-path-literals check-boot-amalgam check-pin check-release-manifest check-package check-doc-vocab check-dup-defs check-bare-globals check-dialect-cover ## Run the contract gates
+gates: check-isa check-obj-layout check-base-paths check-boot-order check-path-literals check-boot-amalgam check-pin check-release-manifest check-bootstrap check-package check-doc-vocab check-dup-defs check-bare-globals check-dialect-cover ## Run the contract gates
 .PHONY: gates
+
+# bootstrap.sh's build+install path (its coupling to the install layout);
+# the clone path is exercised by the release workflow on a clean checkout.
+check-bootstrap: $(EXECUTABLE) ## Smoke the one-command bootstrap install
+	sh tools/bootstrap-smoke.sh
+.PHONY: check-bootstrap
 
 test: gates test-c test-x doctest spec-examples check-examples ## Run all tests
 .PHONY: test
