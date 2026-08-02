@@ -921,6 +921,7 @@ x_obj_t *x_eval_load(x_obj_t *p_base, x_obj_t *p_args)
 	x_obj_t *p_buffer = x_firstobj(x_base_field_buffer(p_base));
 	x_obj_t *p_exp, *p_result = NULL;
 	x_obj_t *p_saved_stack;
+	x_obj_t *p_saved_env, *p_saved_boundary, *p_env;
 	x_satom_t exp_wrap = x_obj_set(NULL, X_OBJ_FLAG_NONE, { NULL });
 	x_spair_t eval_args[1] = {
 		x_obj_set(NULL, X_OBJ_FLAG_NONE, { exp_wrap }, { NULL })
@@ -945,6 +946,28 @@ x_obj_t *x_eval_load(x_obj_t *p_base, x_obj_t *p_args)
 	p_saved_stack = x_eval_field_save_stack(p_base);
 	x_eval_field_save_stack(p_base) = NULL;
 
+	/* The same top-level contract, for CLOSURES: a closure a loaded file
+	 * defines captures the env-alist head, so with the includer's lexical
+	 * frames still on the chain it captures them permanently -- the x-level
+	 * loader wrappers' formals (`path`, `name`, ...) then shadow the global
+	 * env inside every loaded fn/op forever (the Logo server read its own
+	 * module path where its request path should have been).  Strip the
+	 * leading FRAME run -- exactly the frame region symbol lookup's step 1
+	 * walks -- so each form evaluates against, and each closure captures,
+	 * the true top-level chain (base-bind and global cells stay).  The
+	 * boundary is cleared with it; both restore after the loop, and on
+	 * error the longjmp target's own snapshot supersedes these saves, the
+	 * same argument as the save-stack above. */
+	p_saved_env = x_firstobj(x_eval_field_env_alist(p_base));
+	p_saved_boundary = x_eval_field_env_local_boundary(p_base);
+	p_env = p_saved_env;
+	while ( ! x_obj_isnil(p_base, p_env)
+		&& (x_obj_flags(p_env) & X_OBJ_FLAG_FRAME)) {
+		p_env = x_restobj(p_env);
+	}
+	x_firstobj(x_eval_field_env_alist(p_base)) = p_env;
+	x_eval_field_env_local_boundary(p_base) = NULL;
+
 	for (;;) {
 		p_exp = x_token_read(p_base, (x_obj_t *)read_args);
 		if (x_obj_isnil(p_base, p_exp)) break;
@@ -954,6 +977,8 @@ x_obj_t *x_eval_load(x_obj_t *p_base, x_obj_t *p_args)
 	}
 
 	x_eval_field_save_stack(p_base) = p_saved_stack;
+	x_firstobj(x_eval_field_env_alist(p_base)) = p_saved_env;
+	x_eval_field_env_local_boundary(p_base) = p_saved_boundary;
 
 	return p_result;
 }
