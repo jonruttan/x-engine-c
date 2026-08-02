@@ -93,7 +93,13 @@ CFLAGS+=-I$(X_EXPR_DIR)/include -I$(INCDIR)
 HEADERS=$(wildcard $(INCDIR)/*.h $(INCDIR)/**/*.h $(INCDIR)/**/**/*.h $(X_EXPR_DIR)/include/*.h)
 SOURCES=$(wildcard $(SRCDIR)/*.c $(SRCDIR)/**/*.c $(SRCDIR)/**/**/*.c)
 OBJECTS=$(SOURCES:.c=.o)
-EXECUTABLE=x
+# NAME is the PROJECT name: the wrapper's installed command (bin/x) and the
+# install-tree dirs (share/x, libexec/x) -- x.sh's X_SHARE/X_ENGINE and the
+# bootstrap tarball layout depend on it.  EXECUTABLE is the ENGINE BINARY's
+# filename (x-bin), deliberately distinct from the repo root, the wrapper,
+# and the .x extension so tooling can match it precisely.
+NAME=x
+EXECUTABLE=x-bin
 OUTPUT=$(EXECUTABLE)
 
 # Options to be added to $(DEFS)
@@ -123,8 +129,8 @@ EXTRA_LIBS+=-ldl
 # library on its stdin pipe it cannot even print, so it is not a user
 # command).  MANDIR is reserved for a future man page.
 BINDIR?=$(PREFIX)/bin
-LIBDIR?=$(PREFIX)/share/$(EXECUTABLE)
-LIBEXECDIR?=$(PREFIX)/libexec/$(EXECUTABLE)
+LIBDIR?=$(PREFIX)/share/$(NAME)
+LIBEXECDIR?=$(PREFIX)/libexec/$(NAME)
 MANDIR?=$(PREFIX)/man/man1
 
 # C test config
@@ -160,12 +166,12 @@ $(EXECUTABLE): $(OBJECTS) $(X_EXPR_OBJECTS) $(EXTRA_OBJS)
 # under the variant's flags; the trailing one removes those objects so a later
 # plain `make` doesn't relink them -- silently picking up -DDEBUG, or hard-
 # failing on the ASan runtime ("_asan.module_ctor ... symbol(s) not found").
-x-debug: ## Build debug target
+x-bin-debug: ## Build debug target
 	$(MAKE) clean-obj
 	$(MAKE) OUTPUT=$@ CFLAGS="$(CFLAGS) -g -Og -DDEBUG" $(EXECUTABLE)
 	$(MAKE) clean-obj
 
-x-profile: ## Build profiling binary (includes coverage)
+x-bin-profile: ## Build profiling binary (includes coverage)
 	$(MAKE) clean-obj
 	$(MAKE) OUTPUT=$@ CFLAGS="$(CFLAGS) -DX_PROFILE -DX_COV" $(EXECUTABLE)
 	$(MAKE) clean-obj
@@ -173,11 +179,11 @@ x-profile: ## Build profiling binary (includes coverage)
 # ASan flags go in CFLAGS only: 'LDFLAGS?=$(CFLAGS)' (above) carries them into
 # the link too, so the runtime links while KEEPING the project's -dead_strip /
 # exports.sym LDFLAGS (passing LDFLAGS on the command line would lose those).
-x-asan: ## Build with AddressSanitizer for memory-safety testing
+x-bin-asan: ## Build with AddressSanitizer for memory-safety testing
 	$(MAKE) clean-obj
 	$(MAKE) OUTPUT=$@ CFLAGS="$(CFLAGS) -fsanitize=address -fno-omit-frame-pointer -g" $(EXECUTABLE)
 	$(MAKE) clean-obj
-.PHONY: x-asan
+.PHONY: x-bin-asan
 
 clean-obj:
 	rm -f $(SRCDIR)/*.o $(SRCDIR)/**/*.o $(SRCDIR)/**/**/*.o $(OPTDIR)/**/*.o $(X_EXPR_DIR)/src/*.o
@@ -396,8 +402,8 @@ check-doc-vocab: ## Lint doc forms for banned type-token aliases + retired names
 #   - WRAPPER= disables the C runner's valgrind auto-wrap (ASan != valgrind).
 #   - TIMEOUT_UNIT_SECS raised: instrumentation slows each spec ~2-3x.
 ASAN_RUN_OPTIONS=detect_leaks=0:detect_stack_use_after_return=0
-test-asan: x-asan ## Run both suites under AddressSanitizer (memory-safety gate)
-	ASAN_OPTIONS=$(ASAN_RUN_OPTIONS) TIMEOUT_UNIT_SECS=180 X_BIN=./x-asan sh tests/x/spec-runner.sh
+test-asan: x-bin-asan ## Run both suites under AddressSanitizer (memory-safety gate)
+	ASAN_OPTIONS=$(ASAN_RUN_OPTIONS) TIMEOUT_UNIT_SECS=180 X_BIN=./x-bin-asan sh tests/x/spec-runner.sh
 	ASAN_OPTIONS=$(ASAN_RUN_OPTIONS) WRAPPER= CFLAGS="$(TEST_CFLAGS) -fsanitize=address -fno-omit-frame-pointer" sh $(PATH_TESTS_C)/test-runner/test-runner.sh $(TESTS)
 .PHONY: test-asan
 
@@ -445,10 +451,10 @@ cov-clean: ## Clean coverage artifacts
 # Performance
 # ============================================================================
 
-bench: x-profile ## Run benchmarks
+bench: x-bin-profile ## Run benchmarks
 	sh tools/bench.sh --no-build
 
-cov-x: x-profile ## x-lang library coverage report
+cov-x: x-bin-profile ## x-lang library coverage report
 	sh tools/cov-lib.sh
 .PHONY: bench
 
@@ -545,12 +551,12 @@ watch: ## Watch for changes
 # generated (the amalgams; build products, like the binary itself).  The
 # import root reaches the installed tree as data: the wrapper emits one
 # (def %install-root ...) form at the top of the pipe (see x.sh + module.x).
-install: $(EXECUTABLE) $(EXECUTABLE).sh boot ## Install to PREFIX (DESTDIR honoured)
+install: $(EXECUTABLE) $(NAME).sh boot ## Install to PREFIX (DESTDIR honoured)
 	install -d -m 0755 $(DESTDIR)$(BINDIR) $(DESTDIR)$(LIBEXECDIR) $(DESTDIR)$(LIBDIR)
 	install $C -m 0755 $(EXECUTABLE) $(DESTDIR)$(LIBEXECDIR)/$(EXECUTABLE)
 	strip $(DESTDIR)$(LIBEXECDIR)/$(EXECUTABLE)
 	@if [ -f entitlements.plist ]; then codesign -s - --entitlements entitlements.plist -f $(DESTDIR)$(LIBEXECDIR)/$(EXECUTABLE) 2>/dev/null || true; fi
-	install $C -m 0755 $(EXECUTABLE).sh $(DESTDIR)$(BINDIR)/$(EXECUTABLE)
+	install $C -m 0755 $(NAME).sh $(DESTDIR)$(BINDIR)/$(NAME)
 	rm -rf $(DESTDIR)$(LIBDIR)/lib $(DESTDIR)$(LIBDIR)/apps $(DESTDIR)$(LIBDIR)/boot
 	cp -R lib $(DESTDIR)$(LIBDIR)/lib
 	cp -R apps $(DESTDIR)$(LIBDIR)/apps
@@ -563,11 +569,14 @@ install: $(EXECUTABLE) $(EXECUTABLE).sh boot ## Install to PREFIX (DESTDIR honou
 uninstall: ## Uninstall from PREFIX
 	rm -rf $(DESTDIR)$(LIBDIR)
 	rm -rf $(DESTDIR)$(LIBEXECDIR)
-	rm -f $(DESTDIR)$(BINDIR)/$(EXECUTABLE)
+	rm -f $(DESTDIR)$(BINDIR)/$(NAME)
 .PHONY: uninstall
 
 clean: cov-clean ## Clean build artifacts
-	rm -f $(EXECUTABLE) x-debug x-profile x-asan *.out $(SRCDIR)/*.o $(SRCDIR)/**/*.o $(SRCDIR)/**/**/*.o $(OPTDIR)/**/*.o $(X_EXPR_DIR)/src/*.o *.core core
+	rm -f $(EXECUTABLE) x-bin-debug x-bin-profile x-bin-asan x-bin-cov *.out $(SRCDIR)/*.o $(SRCDIR)/**/*.o $(SRCDIR)/**/**/*.o $(OPTDIR)/**/*.o $(X_EXPR_DIR)/src/*.o *.core core
+	@# Pre-rename binary names (engine was `x` until the x-bin rename): a
+	@# checkout that built before the rename has stale copies at the root.
+	rm -f x x-debug x-profile x-asan x-cov
 .PHONY: clean
 
 help: ## Show targets
