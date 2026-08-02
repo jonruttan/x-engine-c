@@ -69,6 +69,12 @@ dkms.conf
 # Scratchpad
 tmp/
 \#*
+/x-bin
+/x-bin-debug
+/x-bin-profile
+/x-bin-asan
+/x-bin-cov
+# Pre-rename engine names (stale builds in checkouts that predate x-bin)
 /x
 /x-debug
 /x-profile
