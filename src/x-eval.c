@@ -983,34 +983,3 @@ x_obj_t *x_eval_load(x_obj_t *p_base, x_obj_t *p_args)
 	return p_result;
 }
 
-/**
- * Write a string atom to the base's output file descriptor.
- *
- * Extracts the string pointer and optional length from @p p_args,
- * then delegates to x_base_write. If no length is provided, uses
- * strlen.
- *
- * @param p_base  x_obj_t* -- Base (execution context)
- * @param p_args  x_obj_t* -- (string-atom . optional-length)
- * @return x_obj_t* -- Result of x_base_write
- */
-x_obj_t *x_eval_write_str(x_obj_t *p_base, x_obj_t *p_args)
-{
-	x_obj_t *p_atom = x_firstobj(p_args);
-	x_char_t *str = x_atomstr(p_atom);
-	x_int_t len = x_obj_isnil(p_base, x_restobj(p_args))
-		? (x_int_t)x_lib_strlen(str)
-		: x_atomint(x_firstobj(x_restobj(p_args)));
-	x_satom_t data = x_obj_set(x_type_atom_obj, X_OBJ_FLAG_NONE,
-		{ .s = str }),
-		sz = x_obj_set(x_type_atom_obj, X_OBJ_FLAG_NONE,
-		{ .i = len });
-	x_spair_t args[2] = {
-		x_obj_set(NULL, X_OBJ_FLAG_NONE,
-			{ data }, { (x_obj_t *)(args + 1) }),
-		x_obj_set(NULL, X_OBJ_FLAG_NONE, { sz }, { NULL })
-	};
-
-	return x_base_write(p_base, (x_obj_t *)args);
-}
-

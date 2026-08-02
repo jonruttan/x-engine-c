@@ -34,7 +34,7 @@
  *  @param p_args  Unevaluated argument list (s).
  *  @return NULL.
  *  @note The byte door the pure-X printer (lib/x/boot/printer.x) bottoms
- *        out at.  Emits through x_eval_write_str, so it respects the
+ *        out at.  Emits through x_base_write, so it respects the
  *        write-buffer capture stack exactly as the C renderers did.
  */
 static x_obj_t *x_prim_write_str(x_obj_t *p_base, x_obj_t *p_args)
@@ -51,7 +51,7 @@ static x_obj_t *x_prim_write_str(x_obj_t *p_base, x_obj_t *p_args)
 	x_eargs(p_base, p_args, 2, NULL, &p_s);
 	x_atomstr(data) = x_strval(p_s);
 	x_atomint(sz) = (x_int_t)x_lib_strlen(x_strval(p_s));
-	x_eval_write_str(p_base, (x_obj_t *)args);
+	x_base_write(p_base, (x_obj_t *)args);
 
 	return NULL;
 }

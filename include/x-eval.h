@@ -134,9 +134,6 @@ x_obj_t *x_eval_env_alist_extend(x_obj_t *p_base, x_obj_t *p_args);
 /** Load and evaluate a source file. */
 x_obj_t *x_eval_load(x_obj_t *p_base, x_obj_t *p_args);
 
-/** Write a string to the output. */
-x_obj_t *x_eval_write_str(x_obj_t *p_base, x_obj_t *p_args);
-
 /** Signal an error with the given message and irritant object. */
 void x_eval_error(x_obj_t *p_base, x_char_t *message, x_obj_t *p_obj);
 
