@@ -14,6 +14,8 @@
 *.ilk
 *.map
 *.exp
+# ...but expect(1) scripts in the tty harness are SOURCE, not linker exports
+!tests/logo-tty/*.exp
 
 # Precompiled Headers
 *.gch

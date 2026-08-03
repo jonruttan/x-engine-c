@@ -260,6 +260,16 @@ check-examples: $(EXECUTABLE) ## Run every example under its documented dialect
 	sh tools/check-examples.sh
 .PHONY: check-examples
 
+# The logo tty contract (#152/#157): expect-driven pty sessions pinning the
+# interactive behaviors (ctrl-c cancel, exit paths, hooks, execute-once)
+# that isatty guards hide from every batch suite.  Not part of `make test`
+# (tty environments flake); CI runs it explicitly on both OSes.  Skips
+# with a note when expect(1) is absent.  known-fail.txt entries pin the
+# post-#157 ruling; a listed test PASSING is red (delete its line).
+check-logo-tty: $(EXECUTABLE) ## Run the logo interactive-contract pty tests
+	sh tools/check-logo-tty.sh
+.PHONY: check-logo-tty
+
 # The C-surface ratchet, source half: every binding site in the C source must
 # appear in the committed manifest tools/isa.x, so growing the C layer requires
 # a deliberate manifest edit in the same commit.  The runtime half lives in
