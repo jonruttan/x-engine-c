@@ -355,8 +355,8 @@ check-bare-globals: ## Diff the runtime library's bare top-level defs against to
 # end-to-end smoke group, so a new dialect cannot ship untested the way the
 # tower launchers did (#49 -- both crashed at the exact invocation the README
 # documents, while every numeric spec passed against a bespoke harness).
-check-dialect-cover: ## Assert every lib/*.x dialect has an end-to-end smoke group
-	sh tools/check/dialect-cover.sh
+check-dialect-cover: $(EXECUTABLE) ## Assert every lib/*.x dialect has an end-to-end smoke group
+	sh x.sh --no-pin -q -f tools/check/dialect-cover.x
 .PHONY: check-dialect-cover
 
 # spec.md's worked examples, extracted and executed -- the ratchet that keeps
