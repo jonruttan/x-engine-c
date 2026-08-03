@@ -203,13 +203,21 @@ test-x: $(EXECUTABLE) ## Run x-lang tests
 	sh tests/x/spec-runner.sh
 .PHONY: test-x
 
+# The tools' own spec suite (tools/tests).  NOT in `make test`: the suite
+# rotted while orphaned (API drift: make-base retired, includes? homed on
+# List, printer output changes) and joins the gate only once it is green
+# again -- see the tracking issue filed with the tools/ taxonomy overhaul.
+test-tools: $(EXECUTABLE) ## Run the tool suite's specs (tools/tests; currently red, ungated)
+	sh tools/tests/spec-runner.sh
+.PHONY: test-tools
+
 # The doctest ratchet (#16): every (example "in" "out") in the doc registry
-# is an executable contract -- "out" must be the true echo.  tools/doctest.sh
+# is an executable contract -- "out" must be the true echo.  tools/check/doctest.sh
 # extracts them into a generated spec; the personality runner executes it.
 # Illustrations that must not run are (sample ...) forms (see doc.x).
 doctest: $(EXECUTABLE) ## Extract (example ...) forms and run them as doctests
 	mkdir -p build/doctest-specs
-	sh tools/doctest.sh > build/doctest-specs/doctests.spec.md
+	sh tools/check/doctest.sh > build/doctest-specs/doctests.spec.md
 	sh tests/x/doctest-runner.sh
 .PHONY: doctest
 
@@ -223,7 +231,7 @@ gates: check-isa check-obj-layout check-base-paths check-boot-order check-path-l
 # bootstrap.sh's build+install path (its coupling to the install layout);
 # the clone path is exercised by the release workflow on a clean checkout.
 check-bootstrap: $(EXECUTABLE) ## Smoke the one-command bootstrap install
-	sh tools/bootstrap-smoke.sh
+	sh tools/check/bootstrap-smoke.sh
 .PHONY: check-bootstrap
 
 test: gates test-c test-x doctest spec-examples check-examples lint-x ## Run all tests
@@ -234,7 +242,7 @@ test: gates test-c test-x doctest spec-examples check-examples lint-x ## Run all
 # here with a throwaway tag so the self-checking script cannot rot
 # between releases.
 check-release-manifest: boot ## Generate + self-check the release manifest
-	sh tools/release-manifest.sh local
+	sh tools/release/release-manifest.sh local
 .PHONY: check-release-manifest
 
 # The relocatable binary tarball (release.yml ships one per platform on a
@@ -242,14 +250,14 @@ check-release-manifest: boot ## Generate + self-check the release manifest
 # tars it, and self-proves relocation (unpack elsewhere, run) so the
 # packaging cannot rot between releases.  Output lands under build/.
 check-package: $(EXECUTABLE) ## Build + self-check a relocatable binary tarball
-	sh tools/package.sh check build/dist-check
+	sh tools/release/package.sh check build/dist-check
 .PHONY: check-package
 
 # Project pinning (docs/modules.md "Pinning"): the wrapper's pin.xon probe
 # and lib/x/tool/pin.x, end to end -- overlay resolution, root precedence,
 # the unpinnable boot core, the closed manifest vocabulary, --no-pin.
 check-pin: $(EXECUTABLE) ## Smoke the pin.xon probe + loader end to end
-	sh tools/pin-smoke.sh
+	sh tools/check/pin-smoke.sh
 .PHONY: check-pin
 
 # The examples ratchet: every file under examples/*/ runs under its documented
@@ -257,7 +265,7 @@ check-pin: $(EXECUTABLE) ## Smoke the pin.xon probe + loader end to end
 # tests/examples/).  The examples are the first code a newcomer runs and were
 # previously the only code with no gate.  UPDATE=1 regenerates sidecars.
 check-examples: $(EXECUTABLE) ## Run every example under its documented dialect
-	sh tools/check-examples.sh
+	sh tools/check/examples.sh
 .PHONY: check-examples
 
 # The logo tty contract (#152/#157): expect-driven pty sessions pinning the
@@ -267,31 +275,31 @@ check-examples: $(EXECUTABLE) ## Run every example under its documented dialect
 # with a note when expect(1) is absent.  known-fail.txt entries pin the
 # post-#157 ruling; a listed test PASSING is red (delete its line).
 check-logo-tty: $(EXECUTABLE) ## Run the logo interactive-contract pty tests
-	sh tools/check-logo-tty.sh
+	sh tools/check/logo-tty.sh
 .PHONY: check-logo-tty
 
 # The C-surface ratchet, source half: every binding site in the C source must
-# appear in the committed manifest tools/isa.x, so growing the C layer requires
+# appear in the committed manifest tools/contract/isa.x, so growing the C layer requires
 # a deliberate manifest edit in the same commit.  The runtime half lives in
 # tests/x/specs/meta/isa.spec.md (runs under test-x).
-check-isa: ## Diff the C source's binding surface against tools/isa.x
-	sh tools/isa-scan.sh
+check-isa: ## Diff the C source's binding surface against tools/contract/isa.x
+	sh tools/check/isa.sh
 .PHONY: check-isa
 
 # The object-layout contract, source half: the header-word layout parsed out
 # of ext/x-expr/include/x-obj.h must match the committed descriptor
-# tools/obj-layout.x, which reflective X code reads its offsets from.  The
+# tools/contract/obj-layout.x, which reflective X code reads its offsets from.  The
 # runtime half is tests/x/specs/meta/obj-layout.spec.md (runs under test-x).
-check-obj-layout: ## Diff x-obj.h's object layout against tools/obj-layout.x
-	sh tools/obj-layout-scan.sh
+check-obj-layout: ## Diff x-obj.h's object layout against tools/contract/obj-layout.x
+	sh tools/check/obj-layout.sh
 .PHONY: check-obj-layout
 
 # The base-paths contract, source half: every base-field accessor macro
 # (x-eval-layout.h, x-base.h, the error-handler in x-eval.h) flattened to a
-# first/rest path must match tools/base-paths.x, which reflect.x walks.
+# first/rest path must match tools/contract/base-paths.x, which reflect.x walks.
 # The runtime half is tests/x/specs/meta/base-paths.spec.md.
-check-base-paths: ## Diff the base-field macro chains against tools/base-paths.x
-	sh tools/base-paths-scan.sh
+check-base-paths: ## Diff the base-field macro chains against tools/contract/base-paths.x
+	sh tools/check/base-paths.sh
 .PHONY: check-base-paths
 
 # The boot-order lint: derives the effective load order from each boot entry
@@ -299,9 +307,9 @@ check-base-paths: ## Diff the base-field macro chains against tools/base-paths.x
 # %include-list-cell pre-seed, import expansion) and flags (a) load-time
 # class-calls whose def-class comes later in the order -- the silent
 # class-call trap -- and (b) pre-seed drift: double loads and raw-included
-# lib paths never registered (see tools/boot-order.x).
+# lib paths never registered (see tools/check/boot-order.x).
 check-boot-order: $(EXECUTABLE) ## Lint the boot load order: class-call order + pre-seed drift
-	sh tools/boot-order.sh
+	sh tools/check/boot-order.sh
 .PHONY: check-boot-order
 
 # Doc-type vocabulary ratchet: the adjudicated losers (INTEGER/BOOLEAN/
@@ -309,14 +317,14 @@ check-boot-order: $(EXECUTABLE) ## Lint the boot load order: class-call order + 
 # (returns ...) forms; INT/BOOL/CALLABLE are the one-name-per-concept picks.
 # The duplicate-global-def ratchet (#47): top-level redefinition updates the
 # shared binding in place, so two modules defining one name with different
-# meanings is a real collision (the %alist-find segfault).  tools/dup-defs.sh
+# meanings is a real collision (the %alist-find segfault).  tools/check/dup-defs.sh
 # holds the rule + the adjudicated allowlist.
 check-dup-defs: ## Lint lib+apps for cross-module duplicate global defs
-	sh tools/dup-defs.sh
+	sh tools/check/dup-defs.sh
 .PHONY: check-dup-defs
 
 check-path-literals: ## Lint for root-relative load literals outside the boot closure
-	sh tools/path-literals.sh
+	sh tools/check/path-literals.sh
 .PHONY: check-path-literals
 
 # Amalgamated boot entries: each dialect's raw-include
@@ -326,29 +334,29 @@ check-path-literals: ## Lint for root-relative load literals outside the boot cl
 boot: ## Generate amalgamated boot entries into build/boot
 	@mkdir -p build/boot
 	@for e in x he xe rn x-base; do \
-		sh tools/amalgamate.sh "lib/$$e.x" > "build/boot/$$e.x" || exit 1; done
+		sh tools/release/amalgamate.sh "lib/$$e.x" > "build/boot/$$e.x" || exit 1; done
 	@for a in apps/*/run.x; do \
 		n=$$(basename "$$(dirname "$$a")"); \
-		sh tools/amalgamate.sh "$$a" > "build/boot/$$n.x" || exit 1; done
+		sh tools/release/amalgamate.sh "$$a" > "build/boot/$$n.x" || exit 1; done
 	@echo "boot: generated $$(ls build/boot | wc -l | tr -d ' ') entries"
 .PHONY: boot
 
 check-boot-amalgam: $(EXECUTABLE) boot ## Boot every amalgam in batch mode and pin a smoke expression
-	sh tools/amalgam-smoke.sh
+	sh tools/check/amalgam-smoke.sh
 .PHONY: check-boot-amalgam
 
 # THE TOP LEVEL IS SACRED (#108): the runtime library may bind only the names
-# tools/bare-globals.x sanctions; the manifest can only shrink.
-check-bare-globals: ## Diff the runtime library's bare top-level defs against tools/bare-globals.x
-	sh tools/bare-globals-scan.sh
+# tools/contract/bare-globals.x sanctions; the manifest can only shrink.
+check-bare-globals: ## Diff the runtime library's bare top-level defs against tools/contract/bare-globals.x
+	sh tools/check/bare-globals.sh
 .PHONY: check-bare-globals
 
 # The dialect coverage ratchet (#70): every lib/*.x entry point needs an
 # end-to-end smoke group, so a new dialect cannot ship untested the way the
 # tower launchers did (#49 -- both crashed at the exact invocation the README
 # documents, while every numeric spec passed against a bespoke harness).
-check-dialect-cover: ## Assert every lib/*.x dialect has an end-to-end smoke group
-	sh tools/dialect-cover.sh
+check-dialect-cover: $(EXECUTABLE) ## Assert every lib/*.x dialect has an end-to-end smoke group
+	sh x.sh --no-pin -q -f tools/check/dialect-cover.x
 .PHONY: check-dialect-cover
 
 # spec.md's worked examples, extracted and executed -- the ratchet that keeps
@@ -359,7 +367,7 @@ check-dialect-cover: ## Assert every lib/*.x dialect has an end-to-end smoke gro
 # like lint-x (#60) -- it joined `test` only once fully green.  A spec.md
 # example that stops reproducing now fails the build with a file:line name.
 spec-examples: $(EXECUTABLE) ## Run docs/spec.md's examples (gate: spec.md cannot drift silently)
-	sh tools/spec-examples.sh
+	sh tools/check/spec-examples.sh
 	sh tests/x/spec-example-runner.sh
 .PHONY: spec-examples
 
@@ -462,10 +470,10 @@ cov-clean: ## Clean coverage artifacts
 # ============================================================================
 
 bench: x-bin-profile ## Run benchmarks
-	sh tools/bench.sh --no-build
+	sh tools/dev/bench.sh --no-build
 
 cov-x: x-bin-profile ## x-lang library coverage report
-	sh tools/cov-lib.sh
+	sh tools/dev/cov-lib.sh
 .PHONY: bench
 
 # ============================================================================
@@ -476,12 +484,12 @@ defs: ## Generate ctags definitions
 	ctags -f - src/**/*.c | awk 'BEGIN {FS = "\t"} /\/.*\$\/;"/ { printf("%s;\n", substr($$3,3,length($$3)-6)) }' | sort -u > defs
 
 # The base-object layout -- the x_eval_field_* accessors and x_eval_make's
-# construction skeleton -- is generated from the descriptor tools/base-layout.x.
+# construction skeleton -- is generated from the descriptor tools/contract/base-layout.x.
 # include/x-eval-layout.h is committed so a plain checkout builds without awk;
 # after editing the descriptor run `make gen-layout`, then `make clean && make`
 # (header changes don't trigger object rebuilds on their own here).
-$(INCDIR)/x-eval-layout.h: tools/base-layout.x tools/gen-base-layout.awk
-	awk -f tools/gen-base-layout.awk $< > $@
+$(INCDIR)/x-eval-layout.h: tools/contract/base-layout.x tools/contract/gen-base-layout.awk
+	awk -f tools/contract/gen-base-layout.awk $< > $@
 
 gen-layout: $(INCDIR)/x-eval-layout.h ## Regenerate the base-object layout header from the descriptor
 .PHONY: gen-layout
@@ -494,18 +502,20 @@ lint: ## Lint C sources
 # so it joined only once fully green): lib AND apps both sweep clean since
 # the sibling-preload / value-call linter round (#176).
 lint-x: $(EXECUTABLE) ## Lint x-lang files
-	sh tools/lint.sh
+	sh tools/dev/lint.sh
 .PHONY: lint-x
 
 fmt-x: $(EXECUTABLE) ## Format x-lang files
 	@for f in lib/x-core.x lib/x/*.x; do \
-		sh tools/fmt.sh -i "$$f" && printf '  \033[1;32m.\033[0m %s\n' "$$f"; \
+		sh x.sh --no-pin -q -f tools/dev/fmt.x -- "$$f" > "$$f.fmt.tmp" \
+			&& mv "$$f.fmt.tmp" "$$f" && printf '  \033[1;32m.\033[0m %s\n' "$$f" \
+			|| { rm -f "$$f.fmt.tmp"; exit 1; }; \
 	done
 .PHONY: fmt-x
 
 fmt-check-x: $(EXECUTABLE) ## Check x-lang formatting
 	@FAIL=0; for f in lib/x-core.x lib/x/*.x; do \
-		if sh tools/fmt.sh --check "$$f" 2>/dev/null; then \
+		if [ "$$(sh x.sh --no-pin -q -f tools/dev/fmt.x -- "$$f" 2>/dev/null)" = "$$(cat "$$f")" ]; then \
 			printf '  \033[1;32m.\033[0m %s\n' "$$f"; \
 		else \
 			FAIL=1; printf '  \033[1;31mF\033[0m %s\n' "$$f"; \
@@ -528,7 +538,7 @@ doc-x: $(EXECUTABLE) ## Generate x-lang documentation
 		rel=$$(echo "$$f" | sed 's|^lib/x/||; s|^lib/||; s|\.x$$||'); \
 		out="docs/ref/x/$${rel}.md"; \
 		mkdir -p "$$(dirname $$out)"; \
-		sh tools/doc.sh "$$f" > "$$out" || { \
+		sh x.sh --no-pin -q -f tools/dev/doc.x -- "$$f" > "$$out" || { \
 			printf '  \033[1;31mFAIL\033[0m %s\n' "$$f"; exit 1; }; \
 		if [ ! -s "$$out" ]; then \
 			if grep -q '(doc (provide' "$$f"; then \
@@ -540,7 +550,7 @@ doc-x: $(EXECUTABLE) ## Generate x-lang documentation
 		fi; \
 		printf '  %s\n' "$$out"; \
 	done
-	@sh tools/doc-index.sh > docs/ref/x/index.md
+	@sh x.sh --no-pin -q -f tools/dev/doc-index.x > docs/ref/x/index.md
 	@printf '  %s\n' "docs/ref/x/index.md"
 .PHONY: doc-x
 
