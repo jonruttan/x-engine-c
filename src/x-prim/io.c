@@ -56,8 +56,30 @@ static x_obj_t *x_prim_write_str(x_obj_t *p_base, x_obj_t *p_args)
 	return NULL;
 }
 
+/** Read one s-expression from stdin, RAW: the EOF sentinel passes
+ *  through, so loop callers can tell end of input from a nil VALUE
+ *  (a top-level `()` reads as NULL by design).
+ *  @param p_base  Base (execution context).
+ *  @return Parsed s-expression, NULL for a nil value, or
+ *          x_token_eof_prim at end of input.
+ */
+static x_obj_t *x_prim_read_expr_raw(x_obj_t *p_base)
+{
+	x_obj_t *p_buffer = x_firstobj(x_base_field_buffer(p_base));
+	x_spair_t read_args[1];
+	read_args[0][X_OBJ_META_TYPE].p = NULL;
+	read_args[0][X_OBJ_META_FLAGS].i = X_OBJ_FLAG_NONE;
+	x_firstobj((x_obj_t *)read_args) = p_buffer;
+	x_restobj((x_obj_t *)read_args) = p_base;
+
+	return x_token_read(p_base, (x_obj_t *)read_args);
+}
+
 /** Read one s-expression from stdin.
  *  x-lang: (read)
+ *  The EOF sentinel is mapped to nil at this boundary: `(Io read)`
+ *  consumers loop on (null? ...) as the EOF test, and for them `()`
+ *  and end-of-input may stay conflated as before.
  *  @param p_base  Base (execution context).
  *  @param p_args  Unused.
  *  @return Parsed s-expression, or NULL on EOF.
@@ -65,15 +87,12 @@ static x_obj_t *x_prim_write_str(x_obj_t *p_base, x_obj_t *p_args)
  */
 static x_obj_t *x_prim_read_expr(x_obj_t *p_base, x_obj_t *p_args)
 {
-	x_obj_t *p_buffer = x_firstobj(x_base_field_buffer(p_base));
-	x_spair_t read_args[1];
+	x_obj_t *p_obj;
 	(void)p_args;
-	read_args[0][X_OBJ_META_TYPE].p = NULL;
-	read_args[0][X_OBJ_META_FLAGS].i = X_OBJ_FLAG_NONE;
-	x_firstobj((x_obj_t *)read_args) = p_buffer;
-	x_restobj((x_obj_t *)read_args) = p_base;
 
-	return x_token_read(p_base, (x_obj_t *)read_args);
+	p_obj = x_prim_read_expr_raw(p_base);
+
+	return p_obj == (x_obj_t *)x_token_eof_prim ? NULL : p_obj;
 }
 
 /** Read one character from stdin.
@@ -435,20 +454,19 @@ x_obj_t *x_prim_repl(x_obj_t *p_base, x_obj_t *p_args)
 {
 	x_obj_t *p_exp;
 	x_obj_t **p_cell = x_heap_root_slot(p_base);
-	x_spair_t read_state[1];
 	x_spair_t root = x_obj_set((x_obj_t *)x_type_pair_obj, X_OBJ_FLAG_NONE,
 		{ NULL }, { NULL });
-	read_state[0][X_OBJ_META_TYPE].p = NULL;
-	read_state[0][X_OBJ_META_FLAGS].i = X_OBJ_FLAG_NONE;
-	x_firstobj((x_obj_t *)read_state) = NULL;
-	x_restobj((x_obj_t *)read_state) = NULL;
 
 	x_heap_root_push(p_cell, root);
 
 	for (;;) {
-		p_exp = x_prim_read_expr(p_base, (x_obj_t *)read_state);
-		if (x_obj_isnil(p_base, p_exp))
+		p_exp = x_prim_read_expr_raw(p_base);
+		if (p_exp == (x_obj_t *)x_token_eof_prim)
 			break;
+		/* nil is a VALUE (a top-level `()`), not end of input --
+		 * breaking on it used to end the boot/batch stream there. */
+		if (x_obj_isnil(p_base, p_exp))
+			continue;
 		/* The freshly read form is this frame's only reference. */
 		x_firstobj((x_obj_t *)root) = p_exp;
 		x_eval_arg(p_base, p_exp);
@@ -474,8 +492,9 @@ x_obj_t *x_prim_repl(x_obj_t *p_base, x_obj_t *p_args)
  * x-lang form: @code (repl-read) @endcode
  *
  * @param p_base  Base (execution context).
- * @param p_args  Passed through to read.
- * @return The expression read, or nil at end of input.
+ * @param p_args  Unused.
+ * @return The expression read, nil for a nil value, or the EOF
+ *         sentinel (%token-eof) at clean end of input.
  */
 static x_obj_t *x_prim_repl_read(x_obj_t *p_base, x_obj_t *p_args)
 {
@@ -489,7 +508,10 @@ static x_obj_t *x_prim_repl_read(x_obj_t *p_base, x_obj_t *p_args)
 		x_obj_meta_i(p_buffer, 0).i = 0;
 	}
 
-	return x_prim_read_expr(p_base, p_args);
+	/* RAW read: the EOF sentinel reaches x-lang (bound as %token-eof),
+	 * giving the REPL loop its three outcomes -- value, clean EOF, and
+	 * (via the raised Unterminated-input error) truncation. */
+	return x_prim_read_expr_raw(p_base);
 }
 
 /** Register I/O primitives into the environment.
@@ -533,6 +555,11 @@ x_obj_t *x_prim_io_register(x_obj_t *p_base, x_obj_t *p_args)
 	x_prims_bind_table(p_base, clock_entry,
 		sizeof(clock_entry) / sizeof(clock_entry[0]));
 #endif /* X_SYS_CLOCK */
+
+	/* The clean-EOF sentinel, bound for x-lang: the REPL loop compares
+	 * repl-read's result against it with (obj same?) -- identity, never
+	 * eq? (which compares value words). */
+	x_value_bind(p_base, "%token-eof", (x_obj_t *)x_token_eof_prim);
 
 	return p_base;
 }

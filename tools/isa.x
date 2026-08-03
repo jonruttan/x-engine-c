@@ -223,6 +223,7 @@
   (#t)
   (#f)
   (%sigint-flag)
+  (%token-eof)
   (args)
   (x-machine)
   (x-version)

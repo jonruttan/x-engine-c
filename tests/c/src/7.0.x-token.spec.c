@@ -419,7 +419,8 @@ static char *test_token_read_eof(void)
 	p_type = x_type_struct_make(p_base, type_catchall);
 	x_eval_type_alist_extend(p_base2, p_type);
 
-	/* Empty input — analyse returns NULL → read returns NULL */
+	/* Empty input — analyse returns NULL → read returns the clean-EOF
+	 * SENTINEL (#156): NULL is a nil VALUE (`()`), not end of input. */
 	helper_file_buffer_ptr[TEST_HELPER_FILE_STDIN] = "";
 	helper_file_buffer_remaining[TEST_HELPER_FILE_STDIN] = 0;
 	helper_file_reset();
@@ -428,8 +429,8 @@ static char *test_token_read_eof(void)
 	p_args = x_mkpair(p_base, p_buffer, p_base);
 
 	p_obj = x_token_read(p_base2, p_args);
-	_it_should("return NULL on empty input",
-		x_obj_isnil(p_base, p_obj));
+	_it_should("return the EOF sentinel on empty input",
+		(x_obj_t *)x_token_eof_prim == p_obj);
 
 	/* RO buffer with data — exercises the RO EOF branch in analyse */
 	{

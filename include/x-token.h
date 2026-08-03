@@ -46,6 +46,13 @@ x_obj_t *x_token_analyse(x_obj_t *p_base, x_obj_t *p_obj);
 /** Read a single token from the input stream. */
 x_obj_t *x_token_read(x_obj_t *p_base, x_obj_t *p_obj);
 
+/** Clean end-of-input sentinel, returned by x_token_read when analysis
+ *  finds no token with zero consumption.  Distinguishes true EOF from a
+ *  read NIL VALUE (`()` reads as NULL by design).  Compared by ADDRESS
+ *  in C; bound as %token-eof for x-lang, where identity is (obj same?)
+ *  -- never eq?, which compares value words. */
+extern x_satom_t x_token_eof_prim;
+
 /** @} */
 
 #endif /* X_TOKEN_H */

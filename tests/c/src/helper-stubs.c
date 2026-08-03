@@ -44,6 +44,8 @@ void x_eval_error(x_obj_t *p_base, x_char_t *message, x_obj_t *p_obj) {}
 #ifdef STUB_X_TOKEN
 x_obj_t *x_token_read(x_obj_t *p_base, x_obj_t *p_args) { return NULL; }
 x_obj_t *x_token_write(x_obj_t *p_base, x_obj_t *p_args) { return NULL; }
+/* The clean-EOF sentinel x_eval_load compares against (x-token.c). */
+x_satom_t x_token_eof_prim = x_obj_set(x_type_atom_obj, X_OBJ_FLAG_NONE, { .i = 0 });
 #endif
 
 #ifdef STUB_X_HEAP
