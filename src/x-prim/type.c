@@ -531,6 +531,14 @@ static x_obj_t *x_prim_token_read_string(x_obj_t *p_base, x_obj_t *p_args)
 	for (;;) {
 		p_token = x_token_read(p_token_base, (x_obj_t *)read_args);
 
+		/* Clean exhaustion of the string.  Checked BEFORE the nil
+		 * break so the two stay distinct; the nil break itself is
+		 * kept -- read-str has always stopped at a nil token, and
+		 * its drop-unterminated-tail contract is relied upon. */
+		if (p_token == (x_obj_t *)x_token_eof_prim) {
+			break;
+		}
+
 		if (x_obj_isnil(p_token_base, p_token)) {
 			break;
 		}
@@ -604,7 +612,7 @@ static x_obj_t *x_prim_make_obj(x_obj_t *p_base, x_obj_t *p_args)
  */
 static x_obj_t *x_prim_token_read(x_obj_t *p_base, x_obj_t *p_args)
 {
-	x_obj_t *p_buffer;
+	x_obj_t *p_buffer, *p_obj;
 	x_spair_t read_args[1];
 
 	x_eargs(p_base, p_args, 2, NULL, &p_buffer);
@@ -616,7 +624,12 @@ static x_obj_t *x_prim_token_read(x_obj_t *p_base, x_obj_t *p_args)
 
 	x_type_buffer_retain(p_base, (x_obj_t *)read_args);
 
-	return x_token_read(p_base, (x_obj_t *)read_args);
+	p_obj = x_token_read(p_base, (x_obj_t *)read_args);
+
+	/* Map the EOF sentinel to nil at this boundary: x-lang reader
+	 * handlers (quasi/lit, logo's block loop) test (null? ...) for
+	 * end of input and must never see the raw sentinel. */
+	return p_obj == (x_obj_t *)x_token_eof_prim ? NULL : p_obj;
 }
 
 /**

@@ -7,6 +7,9 @@
 #include "x-type/buffer.h"
 #include "x-token/sexp/list.h"
 
+/* The truncation tests install a guard-shaped jmp error handler. */
+#include <setjmp.h>
+
 /* We need the GC structures for cleanup. */
 #ifndef X_GC
 #define X_GC
@@ -264,8 +267,90 @@ static char *test_sexp_list_read(void)
 		x_obj_isnil(p_base, p_obj)
 	);
 
+	/* Read past the end — clean EOF is the SENTINEL, not nil (#156):
+	 * nil is a VALUE (the () just read); conflating the two made the
+	 * list loop spin and () terminate loads. */
+	p_obj = x_token_read(p_base, p_args);
+	_it_should("return the EOF sentinel at end of input",
+		(x_obj_t *)x_token_eof_prim == p_obj
+	);
+
 	helper_file_buffer_remaining[TEST_HELPER_FILE_STDIN] = TEST_HELPER_FILE_UNDEFINED;
 	test_cleanup(p_base);
+
+	return NULL;
+}
+
+/* End-of-input INSIDE an open list is truncation: the reader must raise
+ * ("Unterminated input"), never return a partial list and never spin
+ * (#156).  The raise needs a live error handler or x_eval_error exits;
+ * install the guard-shaped jmp handler by hand (x-syntax/control.c). */
+static char *test_sexp_list_read_truncated_one(const char *s)
+{
+	x_obj_t *p_base, *p_args, *p_buffer, *p_handler;
+	x_char_t buffer[64];
+	jmp_buf jmp;
+	int caught;
+
+	helper_file_buffer_ptr[TEST_HELPER_FILE_STDIN] = (x_char_t *)s;
+	helper_file_buffer_remaining[TEST_HELPER_FILE_STDIN] = x_lib_strlen((x_char_t *)s);
+	helper_file_reset();
+
+	p_base = x_eval_make(NULL, NULL);
+	x_prim_register(p_base, NULL);
+
+	x_type_whitespace_register(p_base, p_base);
+	x_type_comment_register(p_base, p_base);
+	x_type_char_register(p_base, p_base);
+	x_type_int_register(p_base, p_base);
+	x_type_symbol_register(p_base, p_base);
+	x_type_str_register(p_base, p_base);
+	x_type_list_register(p_base, p_base);
+
+	p_buffer = x_mkbufferown(p_base, buffer);
+	p_args = x_mkpair(p_base, p_buffer, p_base);
+
+	/* Handler: (jmp-ptr (saved-env . saved-boundary) (error . line)) */
+	p_handler = x_mkspair(p_base, X_OBJ_FLAG_NONE,
+		x_mkptr(p_base, &jmp),
+		x_mkspair(p_base, X_OBJ_FLAG_NONE,
+			x_mkspair(p_base, X_OBJ_FLAG_NONE,
+				x_firstobj(x_eval_field_env_alist(p_base)),
+				x_eval_field_env_local_boundary(p_base)),
+			x_mkspair(p_base, X_OBJ_FLAG_NONE, NULL, NULL)));
+	x_firstobj(x_eval_field_error_handler(p_base)) = p_handler;
+
+	caught = 0;
+	if (setjmp(jmp) == 0) {
+		x_token_read(p_base, p_args);
+	} else {
+		caught = 1;
+	}
+
+	_it_should("raise on end of input inside an open list", 1 == caught);
+	_it_should("report Unterminated input",
+		caught && 0 == x_lib_strncmp(
+			x_atomstr(x_error_handler_error(p_handler)),
+			(x_char_t *)"Unterminated input", 18)
+	);
+
+	helper_file_buffer_remaining[TEST_HELPER_FILE_STDIN] = TEST_HELPER_FILE_UNDEFINED;
+	test_cleanup(p_base);
+
+	return NULL;
+}
+
+static char *test_sexp_list_read_truncated(void)
+{
+	char *p_result;
+
+	/* Element loop, dotted-tail read, and dotted close-paren read. */
+	p_result = test_sexp_list_read_truncated_one("(a b");
+	if (p_result != NULL) return p_result;
+	p_result = test_sexp_list_read_truncated_one("(1 . ");
+	if (p_result != NULL) return p_result;
+	p_result = test_sexp_list_read_truncated_one("(1 . 2");
+	if (p_result != NULL) return p_result;
 
 	return NULL;
 }
@@ -274,6 +359,7 @@ static char *run_tests() {
 	_run_test(test_sexp_list_analyse);
 	_run_test(test_sexp_list_delimit);
 	_run_test(test_sexp_list_read);
+	_run_test(test_sexp_list_read_truncated);
 
 	return NULL;
 }

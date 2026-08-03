@@ -73,6 +73,30 @@ x_obj_t *x_sexp_list_delimit(x_obj_t *p_base, x_obj_t *p_args)
 }
 
 /**
+ * x_token_read, but end-of-input inside an OPEN list is truncation:
+ * raise instead of returning the EOF sentinel.  Control never returns,
+ * so a partial list can never reach evaluation, and the callers that
+ * used to spin appending the ambiguous NULL (#156) terminate loudly.
+ * No root-pop before the raise: guard restores the root chain
+ * (x-syntax/control.c) and the no-handler path exits -- the same
+ * protocol as every mid-eval raise.
+ *
+ * @param p_base  Base (execution context).
+ * @param p_args  Read-args containing the token buffer.
+ * @return The token object; never the EOF sentinel.
+ */
+static x_obj_t *x_sexp_list_read_next(x_obj_t *p_base, x_obj_t *p_args)
+{
+	x_obj_t *p_obj = x_token_read(p_base, p_args);
+
+	if (p_obj == (x_obj_t *)x_token_eof_prim) {
+		x_eval_error(p_base, (x_char_t *)"Unterminated input", NULL);
+	}
+
+	return p_obj;
+}
+
+/**
  * Read a list (or dotted pair) from the token stream.
  *
  * Handles three cases based on the delimiter character:
@@ -110,7 +134,7 @@ x_obj_t *x_sexp_list_read(x_obj_t *p_base, x_obj_t *p_args)
 	x_type_buffer_retain(p_base, (x_obj_t *)read_args);
 
 	for (;;) {
-		elem = x_token_read(p_base, (x_obj_t *)read_args);
+		elem = x_sexp_list_read_next(p_base, (x_obj_t *)read_args);
 
 		if (elem == (x_obj_t *)x_sexp_list_read_prim) {
 			break;
@@ -122,13 +146,13 @@ x_obj_t *x_sexp_list_read(x_obj_t *p_base, x_obj_t *p_args)
 				 * tail: the bare-variadic parameter form
 				 * (fn ( . rest) ...) reads as `rest`.  Without
 				 * this branch the write below derefs NULL. */
-				head = x_token_read(p_base, (x_obj_t *)read_args);
+				head = x_sexp_list_read_next(p_base, (x_obj_t *)read_args);
 				x_firstobj((x_obj_t *)root) = head;
-				x_token_read(p_base, (x_obj_t *)read_args);
+				x_sexp_list_read_next(p_base, (x_obj_t *)read_args);
 				break;
 			}
-			x_restobj(tail) = x_token_read(p_base, (x_obj_t *)read_args);
-			x_token_read(p_base, (x_obj_t *)read_args);
+			x_restobj(tail) = x_sexp_list_read_next(p_base, (x_obj_t *)read_args);
+			x_sexp_list_read_next(p_base, (x_obj_t *)read_args);
 			break;
 		}
 

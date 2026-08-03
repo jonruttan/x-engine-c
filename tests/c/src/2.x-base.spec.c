@@ -41,13 +41,17 @@ void x_type_heap_free(x_obj_t *p_base, x_obj_t *p_obj) {}
 static x_obj_t **_token_read_returns;
 static int _token_read_index;
 
+/* Clean-EOF sentinel: x_eval_load terminates on it, not on NULL (which
+ * is a nil VALUE) -- mirror the real definition in src/x-token.c. */
+x_satom_t x_token_eof_prim = x_obj_set(x_type_atom_obj, X_OBJ_FLAG_NONE, { .i = 0 });
+
 x_obj_t *x_token_read(x_obj_t *p_base, x_obj_t *p_args)
 {
 	if (_token_read_returns != NULL
 		&& _token_read_returns[_token_read_index] != NULL) {
 		return _token_read_returns[_token_read_index++];
 	}
-	return NULL;
+	return (x_obj_t *)x_token_eof_prim;
 }
 
 x_obj_t *x_token_write(x_obj_t *p_base, x_obj_t *p_args) { return NULL; }

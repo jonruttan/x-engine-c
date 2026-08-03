@@ -970,7 +970,10 @@ x_obj_t *x_eval_load(x_obj_t *p_base, x_obj_t *p_args)
 
 	for (;;) {
 		p_exp = x_token_read(p_base, (x_obj_t *)read_args);
-		if (x_obj_isnil(p_base, p_exp)) break;
+		/* Break on the EOF SENTINEL, not on nil: nil is the value a
+		 * top-level `()` reads as, and breaking on it used to end the
+		 * load there, silently skipping the rest of the file. */
+		if (p_exp == (x_obj_t *)x_token_eof_prim) break;
 
 		x_firstobj((x_obj_t *)exp_wrap) = p_exp;
 		p_result = x_eval(p_base, (x_obj_t *)eval_args);

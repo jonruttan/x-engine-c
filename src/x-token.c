@@ -72,6 +72,11 @@ extern x_satom_t x_type_list_iter_prim;
 x_obj_t *x_type_alist_iter(x_obj_t *p_base, x_obj_t *p_args);
 x_satom_t x_type_alist_iter_prim = x_obj_set(x_type_atom_obj, X_OBJ_FLAG_NONE, { .fn = x_type_alist_iter });
 
+/** Clean-EOF sentinel (see x-token.h).  The value word is its own
+ *  address so eq?'s value-word compare cannot conflate it with a small
+ *  integer; identity tests use the ADDRESS (C ==, x-lang (obj same?)). */
+x_satom_t x_token_eof_prim = x_obj_set(x_type_atom_obj, X_OBJ_FLAG_NONE, { .v = (void *)x_token_eof_prim });
+
 /**
  * Generator step that yields analyse hooks from type alist entries.
  *
@@ -283,7 +288,9 @@ x_obj_t *x_token_analyse(x_obj_t *p_base, x_obj_t *p_args)
  *
  * @param p_base  x_obj_t* -- Base (execution context)
  * @param p_args  x_obj_t* -- (buffer . base) pair
- * @return x_obj_t* -- Parsed object, or NULL on EOF / read failure
+ * @return x_obj_t* -- Parsed object; NULL when the token read a nil
+ *         VALUE (`()`) or every reader declined; x_token_eof_prim at
+ *         clean end of input (zero consumption).
  */
 x_obj_t *x_token_read(x_obj_t *p_base, x_obj_t *p_args)
 {
@@ -310,8 +317,13 @@ x_obj_t *x_token_read(x_obj_t *p_base, x_obj_t *p_args)
 	for (;;) {
 		p_entry = x_token_analyse(p_base, p_args);
 
+		/* No token and NOTHING consumed: end of input (or input no
+		 * analyser recognizes -- indistinguishable here).  Return the
+		 * EOF sentinel, NOT NULL: NULL is a VALUE (`()` reads as nil
+		 * by design), and conflating the two made every list-reading
+		 * loop treat () as EOF -- and the truncation case spin. */
 		if (x_obj_isnil(p_base, p_entry)) {
-			return NULL;
+			return (x_obj_t *)x_token_eof_prim;
 		}
 
 		/* Count newlines in consumed region for line tracking.
