@@ -226,7 +226,7 @@ check-bootstrap: $(EXECUTABLE) ## Smoke the one-command bootstrap install
 	sh tools/bootstrap-smoke.sh
 .PHONY: check-bootstrap
 
-test: gates test-c test-x doctest spec-examples check-examples ## Run all tests
+test: gates test-c test-x doctest spec-examples check-examples lint-x ## Run all tests
 .PHONY: test
 
 # The release manifest (SHASUMS + pin.release.xon over the amalgams;
@@ -490,6 +490,9 @@ lint: ## Lint C sources
 	$(CC) -fsyntax-only $(CFLAGS) -g -Wall -pedantic $(SOURCES)
 .PHONY: lint
 
+# Promoted into `test` 2026-08-02 on the #60 criterion (red would rot it,
+# so it joined only once fully green): lib AND apps both sweep clean since
+# the sibling-preload / value-call linter round (#176).
 lint-x: $(EXECUTABLE) ## Lint x-lang files
 	sh tools/lint.sh
 .PHONY: lint-x
