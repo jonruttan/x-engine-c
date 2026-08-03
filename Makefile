@@ -507,13 +507,15 @@ lint-x: $(EXECUTABLE) ## Lint x-lang files
 
 fmt-x: $(EXECUTABLE) ## Format x-lang files
 	@for f in lib/x-core.x lib/x/*.x; do \
-		sh tools/dev/fmt.sh -i "$$f" && printf '  \033[1;32m.\033[0m %s\n' "$$f"; \
+		sh x.sh --no-pin -q -f tools/dev/fmt.x -- "$$f" > "$$f.fmt.tmp" \
+			&& mv "$$f.fmt.tmp" "$$f" && printf '  \033[1;32m.\033[0m %s\n' "$$f" \
+			|| { rm -f "$$f.fmt.tmp"; exit 1; }; \
 	done
 .PHONY: fmt-x
 
 fmt-check-x: $(EXECUTABLE) ## Check x-lang formatting
 	@FAIL=0; for f in lib/x-core.x lib/x/*.x; do \
-		if sh tools/dev/fmt.sh --check "$$f" 2>/dev/null; then \
+		if [ "$$(sh x.sh --no-pin -q -f tools/dev/fmt.x -- "$$f" 2>/dev/null)" = "$$(cat "$$f")" ]; then \
 			printf '  \033[1;32m.\033[0m %s\n' "$$f"; \
 		else \
 			FAIL=1; printf '  \033[1;31mF\033[0m %s\n' "$$f"; \
@@ -536,7 +538,7 @@ doc-x: $(EXECUTABLE) ## Generate x-lang documentation
 		rel=$$(echo "$$f" | sed 's|^lib/x/||; s|^lib/||; s|\.x$$||'); \
 		out="docs/ref/x/$${rel}.md"; \
 		mkdir -p "$$(dirname $$out)"; \
-		sh tools/dev/doc.sh "$$f" > "$$out" || { \
+		sh x.sh --no-pin -q -f tools/dev/doc.x -- "$$f" > "$$out" || { \
 			printf '  \033[1;31mFAIL\033[0m %s\n' "$$f"; exit 1; }; \
 		if [ ! -s "$$out" ]; then \
 			if grep -q '(doc (provide' "$$f"; then \
@@ -548,7 +550,7 @@ doc-x: $(EXECUTABLE) ## Generate x-lang documentation
 		fi; \
 		printf '  %s\n' "$$out"; \
 	done
-	@sh tools/dev/doc-index.sh > docs/ref/x/index.md
+	@sh x.sh --no-pin -q -f tools/dev/doc-index.x > docs/ref/x/index.md
 	@printf '  %s\n' "docs/ref/x/index.md"
 .PHONY: doc-x
 
