@@ -555,7 +555,7 @@ x_obj_t *x_eval_make(x_obj_t *p_base, x_obj_t *p_args)
 
 	/* Build the empty pair-tree skeleton -- env+ctrl, the type-alist cell,
 	 * io-state, the profile counters, and the state group -- from the
-	 * descriptor (tools/base-layout.x) via the generated x-eval-layout.h.
+	 * descriptor (tools/contract/base-layout.x) via the generated x-eval-layout.h.
 	 * Every leaf cell's car comes out nil; initial values are set just below. */
 #define X_EVAL_BUILD_TREE
 #include "x-eval-layout.h"

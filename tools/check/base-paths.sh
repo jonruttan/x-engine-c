@@ -1,13 +1,13 @@
 #!/bin/sh
-# tools/base-paths-scan.sh -- source half of the base-paths contract.
+# tools/check/base-paths.sh -- source half of the base-paths contract.
 #
 # The interpreter-state field accessors are pure first/rest macro chains
 # spread across four headers: include/x-eval-layout.h (generated from
-# tools/base-layout.x), ext/x-expr/include/x-base.h (the x-expr spine),
+# tools/contract/base-layout.x), ext/x-expr/include/x-base.h (the x-expr spine),
 # include/x-eval.h (the error-handler object), and include/x-type.h (the
 # type-object tree).  This scan expands every chain-shaped macro into a
 # flat f/r step path and diffs the result against the committed descriptor
-# tools/base-paths.x, which reflective X code walks (lib/x/boot/reflect.x).
+# tools/contract/base-paths.x, which reflective X code walks (lib/x/boot/reflect.x).
 # Non-chain macros (value casts, predicates) are not paths, but they must
 # be listed in SKIP_MACROS below with a reason -- any macro the parser
 # cannot flatten that is NOT listed fails the scan, so a new accessor
@@ -16,10 +16,11 @@
 # Roots: x_type_field_* macros are rooted at a TYPE object; other (X)
 # macros at the base object (%base); (H) macros at an error-handler.
 #
-# Usage:  sh tools/base-paths-scan.sh          # check (diff, exit 1 on drift)
-#         sh tools/base-paths-scan.sh --gen    # print descriptor entries
+# Usage:  sh tools/check/base-paths.sh          # check (diff, exit 1 on drift)
+#         sh tools/check/base-paths.sh --gen    # print descriptor entries
 
-. "$(dirname "$0")/lib/contract-diff.sh"
+ROOT="$(cd "$(dirname "$0")/../.." && pwd)"
+. "$ROOT/tools/lib/contract-diff.sh"
 contract_diff_setup base-paths
 
 # Macros the parser cannot flatten into an f/r path but which are KNOWN not
@@ -109,7 +110,7 @@ END {
 			if (name in skipset) continue
 			printf "FAIL: unparseable accessor macro %s (body %s) -- not a" \
 				" flattenable f/r chain; fix the macro or add it to" \
-				" SKIP_MACROS in tools/base-paths-scan.sh with a reason.\n", \
+				" SKIP_MACROS in tools/check/base-paths.sh with a reason.\n", \
 				name, defs[name] > "/dev/stderr"
 			bad = 1
 			continue
@@ -135,9 +136,9 @@ fi
 
 extract > "$SRC_LIST" || exit 1
 awk '/^  \(/ { s = $0; sub(/^  /, "", s); print s }' \
-	"$ROOT/tools/base-paths.x" > "$MAN_LIST"
+	"$ROOT/tools/contract/base-paths.x" > "$MAN_LIST"
 
 contract_diff_check "$MAN_LIST" "$SRC_LIST" \
-	"Base paths and tools/base-paths.x disagree (-descriptor +headers):" \
+	"Base paths and tools/contract/base-paths.x disagree (-descriptor +headers):" \
 	"FAIL: a base field path moved without a descriptor edit (or vice versa)." \
-	"Base-paths check: headers and tools/base-paths.x agree."
+	"Base-paths check: headers and tools/contract/base-paths.x agree."

@@ -1,7 +1,7 @@
-; tools/base-layout.x — canonical slot layout of the x-eval base object.
+; tools/contract/base-layout.x — canonical slot layout of the x-eval base object.
 ;
 ; SINGLE SOURCE OF TRUTH for the base/evaluator pair-tree.  Consumed two ways:
-;   1. tools/gen-base-layout.awk  ->  C (accessors + construction skeleton)
+;   1. tools/contract/gen-base-layout.awk  ->  C (accessors + construction skeleton)
 ;   2. read as data by the X layer at runtime  ->  the slot descriptor
 ; Valid X (plain s-expressions); the awk parses the same bytes.  Both layers
 ; derive from this one file, so their views cannot drift.

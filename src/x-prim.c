@@ -795,7 +795,7 @@ void x_prims_bind_table(x_obj_t *p_base, const x_prim_entry_t *table, int count)
 /* The x-lang-facing catalog protocol (prims / prim-domain / prim-ref /
  * prim-reg! / use) used to live here as C prims; it is pure x-lang now
  * (boot/registry.x reads, boot/reflect.x writes), walking the same prims
- * cell via the committed path contract tools/base-paths.x. */
+ * cell via the committed path contract tools/contract/base-paths.x. */
 
 /**
  * Register all built-in primitives into the environment.
@@ -820,7 +820,7 @@ x_obj_t *x_prim_register(x_obj_t *p_base, x_obj_t *p_args)
 
 	/* The catalog access protocol (prims / prim-domain / prim-ref /
 	 * prim-reg!) is pure x-lang: boot/registry.x walks the prims cell via
-	 * tools/base-paths.x before any other X code loads, and boot/reflect.x
+	 * tools/contract/base-paths.x before any other X code loads, and boot/reflect.x
 	 * supplies the mutating half.  C only FILES the catalog, right here. */
 	x_prim_core_register(p_base, p_args);
 	x_syntax_quote_register(p_base, p_args);

@@ -1,15 +1,15 @@
-; tools/obj-layout.x — canonical layout of every object's header words.
+; tools/contract/obj-layout.x — canonical layout of every object's header words.
 ;
 ; SINGLE SOURCE OF TRUTH for the object memory contract (the counterpart of
-; tools/base-layout.x, which covers the base pair-tree).  The interpreter is
+; tools/contract/base-layout.x, which covers the base pair-tree).  The interpreter is
 ; fully reflective -- %obj->ptr + %ptr-ref-word reach every word of every
 ; object -- and reflective X code (the ISA-audit migrations) must read its
 ; offsets from THIS committed contract, not folklore constants.  Consumed:
 ;   1. by X at runtime: plain boot-level defs (only `def` and integers), so
-;      any module or spec may (include "tools/obj-layout.x")
+;      any module or spec may (include "tools/contract/obj-layout.x")
 ;   2. tests/x/specs/meta/obj-layout.spec.md -- probes the LIVE build's
 ;      objects word by word and fails if reality disagrees with these values
-;   3. tools/obj-layout-scan.sh (make check-obj-layout) -- parses the same
+;   3. tools/check/obj-layout.sh (make check-obj-layout) -- parses the same
 ;      values out of ext/x-expr/include/x-obj.h and diffs, so an x-expr bump
 ;      that moves the layout fails the build even before anything runs
 ;
