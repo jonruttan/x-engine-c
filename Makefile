@@ -228,6 +228,20 @@ doctest: $(EXECUTABLE) ## Extract (example ...) forms and run them as doctests
 gates: check-isa check-obj-layout check-base-paths check-boot-order check-path-literals check-boot-amalgam check-pin check-release-manifest check-bootstrap check-package check-doc-vocab check-dup-defs check-bare-globals check-dialect-cover ## Run the contract gates
 .PHONY: gates
 
+# The local-latency split (2026-08-03 audit): `make test` grew past ten
+# minutes (build/install/package smokes, amalgam boots, doctest walk,
+# example programs) and the pre-push hook ran ALL of it inside the open
+# push connection -- long enough for GitHub to hang up the idle SSH
+# channel mid-hook.  gates-fast is the sub-minute subset: every scan
+# ratchet, none of the targets that build or boot artifacts.  The hook
+# runs test-fast; CI still runs the FULL `make test` on every push/PR
+# (ci.yml unchanged -- it stays the enforcing gate for the heavy surface).
+gates-fast: check-isa check-obj-layout check-base-paths check-boot-order check-path-literals check-doc-vocab check-dup-defs check-bare-globals check-dialect-cover ## The fast contract gates (pre-push subset)
+.PHONY: gates-fast
+
+test-fast: gates-fast test-c test-x ## Pre-push gate: fast gates + both spec suites (CI runs full `make test`)
+.PHONY: test-fast
+
 # bootstrap.sh's build+install path (its coupling to the install layout);
 # the clone path is exercised by the release workflow on a clean checkout.
 check-bootstrap: $(EXECUTABLE) ## Smoke the one-command bootstrap install
