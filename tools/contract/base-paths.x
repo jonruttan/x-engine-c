@@ -1,15 +1,15 @@
-; tools/base-paths.x — every base-object field as a first/rest path.
+; tools/contract/base-paths.x — every base-object field as a first/rest path.
 ;
 ; SINGLE SOURCE OF TRUTH for reflective navigation of the interpreter state
-; (the third layout contract, after tools/base-layout.x -- the x-eval spine
-; shape -- and tools/obj-layout.x -- the per-object header).  The base
+; (the third layout contract, after tools/contract/base-layout.x -- the x-eval spine
+; shape -- and tools/contract/obj-layout.x -- the per-object header).  The base
 ; object's C accessors are pure first/rest macro chains across three
 ; headers (include/x-eval-layout.h, ext/x-expr/include/x-base.h, and the
 ; error-handler object in include/x-eval.h); this file is those chains
 ; flattened into walkable step lists.  Consumed:
 ;   1. by X at runtime: lib/x/boot/reflect.x walks these paths from (%base)
 ;      to reach any interpreter cell (the pure-X accessors read them)
-;   2. tools/base-paths-scan.sh (make check-base-paths) -- re-derives every
+;   2. tools/check/base-paths.sh (make check-base-paths) -- re-derives every
 ;      path from the headers and diffs, so a spine change that moves a cell
 ;      fails the build before anything runs
 ;
@@ -19,7 +19,7 @@
 ; error-handler object), or `type` (walk from a type-tree object).  Steps are
 ; f (first) / r (rest), applied left to right.  A `cell`-kind field's value
 ; sits in the cell's first slot; see the C headers for per-field kind notes.
-; Regenerate with: sh tools/base-paths-scan.sh --gen
+; Regenerate with: sh tools/check/base-paths.sh --gen
 
 (def %base-paths (lit (
   (env base f f f)

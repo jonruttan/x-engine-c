@@ -763,8 +763,8 @@ static x_obj_t *x_prim_make_callable(x_obj_t *p_base, x_obj_t *p_args)
  * ptr-set!, ptr-ref, ptr-ref-word, ptr-set-word!, obj->ptr, str->ptr,
  * ptr->str, make-callable.
  * (The obj-meta-* accessors are pure x-lang now: boot/reflect.x files
- * reflective implementations into the catalog over tools/obj-layout.x
- * and tools/base-paths.x.)
+ * reflective implementations into the catalog over tools/contract/obj-layout.x
+ * and tools/contract/base-paths.x.)
  *
  * Platform constants live in X, not here: word size is probed by
  * boot/data.x, and the O_* open flags come from the per-OS tables in

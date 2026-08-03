@@ -1,10 +1,12 @@
 # tools/lib/contract-diff.sh -- shared scaffold for the contract scans
-# (isa-scan.sh, obj-layout-scan.sh, base-paths-scan.sh).  Sourced, not run:
-#   . "$(dirname "$0")/lib/contract-diff.sh"
+# (check/isa.sh, check/obj-layout.sh, check/base-paths.sh).  Sourced, not
+# run; the caller sets ROOT first:
+#   ROOT="$(cd "$(dirname "$0")/../.." && pwd)"
+#   . "$ROOT/tools/lib/contract-diff.sh"
 #
 # contract_diff_setup NAME
-#   Sets ROOT (the repo root, resolved from the sourcing script's $0),
-#   SCRATCH, and the tempfiles SRC_LIST / MAN_LIST / DIFF_OUT (all
+#   Requires ROOT (set by the caller; a sourced file cannot self-locate in
+#   POSIX sh); sets SCRATCH and the tempfiles SRC_LIST / MAN_LIST / DIFF_OUT (all
 #   $SCRATCH/NAME-*.$$), and installs ONE EXIT trap covering all three --
 #   including the diff output, which an interrupt between diff and an
 #   inline rm used to leak.
@@ -15,7 +17,7 @@
 #   1 on drift, or prints OK_MSG and exits 0 on agreement.
 
 contract_diff_setup() {
-	ROOT="$(cd "$(dirname "$0")/.." && pwd)"
+	[ -n "${ROOT:-}" ] || { echo "contract-diff: caller must set ROOT" >&2; exit 2; }
 	SCRATCH="${TMPDIR:-/tmp}"
 	SRC_LIST="$SCRATCH/$1-src.$$"
 	MAN_LIST="$SCRATCH/$1-man.$$"

@@ -1,11 +1,11 @@
-; tools/isa.x — the C instruction set: every C function reachable from x-lang.
+; tools/contract/isa.x — the C instruction set: every C function reachable from x-lang.
 ;
 ; SINGLE SOURCE OF TRUTH for the C surface, the "ISA" of the interpreter.
 ; The C layer is a CPU: unchecked, minimal, fixed.  Checks, dispatch, and
 ; policy live in X.  Consumed two ways, so the surface cannot drift silently:
 ;   1. tests/x/specs/meta/isa.spec.md -- walks the LIVE catalog at runtime
 ;      and fails on any C prim not listed here (and any stale entry)
-;   2. tools/isa-scan.sh (make check-isa) -- extracts every binding site from
+;   2. tools/check/isa.sh (make check-isa) -- extracts every binding site from
 ;      the C SOURCE and diffs it against this file, catching bare bindings
 ;      the runtime walk cannot see
 ; Growing the C layer therefore requires editing this manifest in the same
@@ -43,7 +43,7 @@
 ; (or `hot` when reader/heat-pinned).  Object-header layout (heap link word 0,
 ; type word 1, flags word 2, data at word 3) is informal knowledge today
 ; (boot/data.x %data-offset); migrations below want it formalized first as a
-; committed descriptor (tools/obj-layout.x, gen-checked like base-layout).
+; committed descriptor (tools/contract/obj-layout.x, gen-checked like base-layout).
 ;
 ; Flag-gated entries (present in the default build): (sys clock) needs
 ; X_SYS_CLOCK; sigint-install/sigint-restore/%sigint-flag need X_SIGNAL.

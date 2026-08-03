@@ -205,7 +205,7 @@ void x_callable_bind_table(x_obj_t *p_base, const x_callable_entry_t *table, int
  */
 
 /** The primitives catalog (the prims-slot value); nil before registration.
- *  Catalog LOOKUP is pure x-lang (boot/registry.x over tools/base-paths.x);
+ *  Catalog LOOKUP is pure x-lang (boot/registry.x over tools/contract/base-paths.x);
  *  C only files entries, via x_prims_bind_table below. */
 x_obj_t *x_prims(x_obj_t *p_base);
 

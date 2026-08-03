@@ -1,9 +1,9 @@
 #!/bin/sh
-# tools/isa-scan.sh -- source-level half of the C ISA ratchet.
+# tools/check/isa.sh -- source-level half of the C ISA ratchet.
 #
 # Extracts every env-binding site from the C source (primitive tables,
 # direct x_callable_bind/x_value_bind calls) and diffs the result against
-# the committed manifest tools/isa.x.  Complements the runtime half
+# the committed manifest tools/contract/isa.x.  Complements the runtime half
 # (tests/x/specs/meta/isa.spec.md): the runtime walk sees the live catalog
 # but cannot enumerate bare env bindings; this scan sees every binding in
 # the source, including ones behind non-default compile flags.
@@ -11,9 +11,10 @@
 # Exit 0 when the source and the manifest agree; exit 1 with a diff when
 # the C surface grew (or the manifest went stale).
 #
-# Usage: sh tools/isa-scan.sh
+# Usage: sh tools/check/isa.sh
 
-. "$(dirname "$0")/lib/contract-diff.sh"
+ROOT="$(cd "$(dirname "$0")/../.." && pwd)"
+. "$ROOT/tools/lib/contract-diff.sh"
 contract_diff_setup isa-scan
 
 # --- 1. the C source's view -------------------------------------------------
@@ -101,10 +102,10 @@ awk '
 	split(line, f, " ")
 	if (sect == "catalog") print "catalog " f[1] " " f[2]
 	else if (sect != "")   print sect " " f[1]
-}' "$ROOT"/tools/isa.x > "$MAN_LIST"
+}' "$ROOT"/tools/contract/isa.x > "$MAN_LIST"
 
 # --- 3. diff ------------------------------------------------------------------
 contract_diff_check "$MAN_LIST" "$SRC_LIST" \
-	"C surface and tools/isa.x disagree (-manifest +source):" \
+	"C surface and tools/contract/isa.x disagree (-manifest +source):" \
 	"FAIL: the C ISA changed without a manifest edit (or the manifest is stale)." \
-	"ISA check: C source and tools/isa.x agree."
+	"ISA check: C source and tools/contract/isa.x agree."

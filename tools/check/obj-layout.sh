@@ -1,9 +1,9 @@
 #!/bin/sh
-# tools/obj-layout-scan.sh -- source half of the object-layout contract.
+# tools/check/obj-layout.sh -- source half of the object-layout contract.
 #
 # Parses the layout constants out of ext/x-expr/include/x-obj.h (units per
 # header slot, the flags-word bits) and diffs them against the committed
-# descriptor tools/obj-layout.x, so an x-expr bump that moves the object
+# descriptor tools/contract/obj-layout.x, so an x-expr bump that moves the object
 # layout fails `make check-obj-layout` before anything runs.  The runtime
 # half is tests/x/specs/meta/obj-layout.spec.md, which probes live objects
 # word by word.
@@ -16,7 +16,8 @@
 #
 # Exit 0 when header and descriptor agree; exit 1 with a diff otherwise.
 
-. "$(dirname "$0")/lib/contract-diff.sh"
+ROOT="$(cd "$(dirname "$0")/../.." && pwd)"
+. "$ROOT/tools/lib/contract-diff.sh"
 contract_diff_setup obj-layout
 HDR="$ROOT/ext/x-expr/include/x-obj.h"
 
@@ -53,7 +54,7 @@ function xname(c) {
 # conditional nested in another, #if/#elif expressions naming X_HEAP) fails
 # loudly rather than guessing.
 function ppfail(msg) {
-	printf "FAIL: %s at %s:%d: %s -- teach tools/obj-layout-scan.sh the shape.\n", \
+	printf "FAIL: %s at %s:%d: %s -- teach tools/check/obj-layout.sh the shape.\n", \
 		msg, FILENAME, FNR, $0 > "/dev/stderr"
 	bad = 1
 	exit 1
@@ -120,7 +121,7 @@ END {
 	if (bad) exit 1
 	if (depth != 0) {
 		printf "FAIL: unbalanced preprocessor conditionals in %s" \
-			" (%d left open) -- teach tools/obj-layout-scan.sh" \
+			" (%d left open) -- teach tools/check/obj-layout.sh" \
 			" the shape.\n", FILENAME, depth > "/dev/stderr"
 		exit 1
 	}
@@ -137,10 +138,10 @@ END {
 
 # --- 2. the descriptor's view ------------------------------------------------
 awk '/^\(def %obj-/ { gsub(/[()]/, ""); print $2 " " $3 }' \
-	"$ROOT/tools/obj-layout.x" > "$MAN_LIST"
+	"$ROOT/tools/contract/obj-layout.x" > "$MAN_LIST"
 
 # --- 3. diff -------------------------------------------------------------------
 contract_diff_check "$MAN_LIST" "$SRC_LIST" \
-	"Object layout and tools/obj-layout.x disagree (-descriptor +header):" \
+	"Object layout and tools/contract/obj-layout.x disagree (-descriptor +header):" \
 	"FAIL: x-obj.h layout changed without a descriptor edit (or vice versa)." \
-	"Object-layout check: x-obj.h and tools/obj-layout.x agree."
+	"Object-layout check: x-obj.h and tools/contract/obj-layout.x agree."

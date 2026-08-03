@@ -8,7 +8,7 @@
  * (base-eval, base-bind), tokenization helpers (make-token-base,
  * token-read-string, buffer-token), and iteration (iter).  Slot access
  * (obj ref / obj set!) is pure x-lang now: boot/data.x + boot/reflect.x
- * implement it reflectively over tools/obj-layout.x.
+ * implement it reflectively over tools/contract/obj-layout.x.
  *
  * @author Jon Ruttan (jonruttan@gmail.com)
  * @copyright 2026 Jon Ruttan
@@ -262,7 +262,7 @@ static x_obj_t *x_prim_type_of(x_obj_t *p_base, x_obj_t *p_args)
 
 /* (type name obj-or-handle) is pure x-lang now: boot/reflect.x mirrors the
  * handle/object/nil branches over the layout contracts (the sentinel tags
- * come from live probes at boot, the name walk from tools/base-paths.x's
+ * come from live probes at boot, the name walk from tools/contract/base-paths.x's
  * type-rooted entries). */
 
 /**
