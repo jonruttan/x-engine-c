@@ -207,7 +207,7 @@ x_obj_t *x_type_buffer_append(x_obj_t *p_base, x_obj_t *p_args)
  */
 x_obj_t *x_type_buffer_read(x_obj_t *p_base, x_obj_t *p_args)
 {
-	x_obj_t *p_buffer = x_firstobj(p_args), *p_char;
+	x_obj_t *p_buffer = x_firstobj(p_args), *p_char, *p_sigint;
 	x_satom_t char_obj = x_obj_set(NULL, X_OBJ_FLAG_NONE, { .c = '\0' }),
 		int_obj = x_obj_set(NULL, X_OBJ_FLAG_NONE, { .i = 1 });
 	x_spair_t read_args[2] = {
@@ -249,6 +249,30 @@ x_obj_t *x_type_buffer_read(x_obj_t *p_base, x_obj_t *p_args)
 			 * site in the tree. */
 			if (x_base_isset(p_base)) {
 				x_atomint(x_firstobj(x_base_field_filein(p_base))) = -1;
+			}
+
+			/* Read ERROR vs end-of-stream (#170): x_base_read wrote
+			 * the raw read result into the count atom; negative
+			 * means the stream did NOT end -- the read failed.
+			 * Treating that as EOF silently truncated batch input
+			 * at top-level form boundaries.  ONE negative case is
+			 * legitimate: ctrl-c aborting a blocked read (EINTR
+			 * with the sigint flag set) IS the cancel protocol --
+			 * the REPL loop consumes the resulting latched EOF
+			 * (lib/x/repl/loop.x), so it stays silent.  Any other
+			 * failure (EAGAIN, EIO, ...) raises so it is loud.
+			 * The latch above stays deliberate in both cases: a
+			 * PERSISTENT error (e.g. tty EIO after hangup) must
+			 * not re-raise from every retry under a guard loop --
+			 * after the raise, later reads report plain EOF and
+			 * the stream ends. */
+			if (x_atomint((x_obj_t *)int_obj) < 0) {
+				p_sigint = x_base_isset(p_base)
+					? x_firstobj(x_eval_field_sigint(p_base)) : NULL;
+				if (p_sigint == NULL
+						|| *(volatile x_int_t *)&x_atomint(p_sigint) == 0) {
+					x_eval_error(p_base, (x_char_t *)"Input read failed", NULL);
+				}
 			}
 
 			return NULL;

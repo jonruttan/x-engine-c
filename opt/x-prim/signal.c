@@ -54,6 +54,11 @@ static x_obj_t *x_prim_sigint_install(x_obj_t *p_base, x_obj_t *p_args)
 	(void)p_args;
 
 	sa.sa_handler = x_sigint_handler;
+	/* NO SA_RESTART, deliberately: ctrl-c at a blocked REPL read works
+	 * BY interrupting the read (EINTR -> EOF latch -> clean exit or
+	 * cancel, see lib/x/repl/loop.x).  Restarting the read would leave
+	 * the flag unseen until the next eval poll, deadening ctrl-c at an
+	 * idle prompt (x-lang#170). */
 	sa.sa_flags = 0;
 	sigemptyset(&sa.sa_mask);
 	sigaction(SIGINT, &sa, NULL);
