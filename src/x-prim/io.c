@@ -311,12 +311,16 @@ static x_obj_t *x_prim_alloc_limit(x_obj_t *p_base, x_obj_t *p_args)
 
 	x_eargs(p_base, p_args, 2, NULL, &p_val);
 	n = x_intval(p_val);
-	/* Negative cell values are reserved for the allocator's tripped latch. */
-	x_atomint(x_firstobj(x_base_field_alloc_limit(p_base))) = n < 0 ? 0 : n;
 	/* The trip message lives with the policy, not the mechanism: x-expr
-	 * holds no prose, so arming supplies what the allocator reports. */
+	 * holds no prose, so arming supplies what the allocator reports.
+	 * Stored BEFORE the limit arms: the message string is itself an
+	 * allocation, and when the session's count is already past the new
+	 * ceiling, storing it after would trip on it -- reporting whatever
+	 * message was in the cell beforehand. */
 	x_firstobj(x_base_field_alloc_error(p_base)) =
 		x_mkstr(p_base, (x_char_t *)"allocation limit exceeded");
+	/* Negative cell values are reserved for the allocator's tripped latch. */
+	x_atomint(x_firstobj(x_base_field_alloc_limit(p_base))) = n < 0 ? 0 : n;
 
 	return NULL;
 }

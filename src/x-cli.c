@@ -231,6 +231,15 @@ x_obj_t * init(x_obj_t *p_base, x_char_t *buffer)
 	/* Register primitives. */
 	x_prim_register(p_base, p_base);
 
+	/* Seed the allocator's failure report: x-expr holds no prose, so
+	 * without this a real malloc failure stops the process silently
+	 * (exit 2, no message).  (alloc-limit! n) overwrites this with its
+	 * ceiling message when armed -- after which a true malloc failure
+	 * reports the ceiling's text, an acceptable blur since both are
+	 * allocation stops. */
+	x_firstobj(x_base_field_alloc_error(p_base)) =
+		x_mkstr(p_base, (x_char_t *)"allocation failed");
+
 #ifdef X_SYSCALL
 	/* Register syscall primitive. */
 	x_callable_bind(p_base, "syscall", x_prim_syscall);
