@@ -195,22 +195,37 @@ static x_obj_t *x_prim_guard(x_obj_t *p_base, x_obj_t *p_args)
 }
 
 /**
- * Error signalling form. x-lang: (error message)
+ * Error signalling form. x-lang: (error value [text])
  *
- * Signals an error with the given message (fexpr -- message is explicitly
+ * Signals an error with the given value (fexpr -- arguments are explicitly
  * evaluated via x_eargs).  If a guard handler is installed, transfers
  * control to it via longjmp.  Otherwise falls through to a fatal error.
  *
  * @param p_base  Base (execution context).
- * @param p_args  Unevaluated argument list; expects (caller message).
+ * @param p_args  Unevaluated argument list; expects (caller value [text]).
  * @return Does not return normally when a handler is installed.
  * @note Falls through to x_obj_error for fatal output when no handler exists.
+ *
+ * @details **The optional second argument is the uncaught report.**  A
+ *          guard receives the VALUE -- structured errors want to arrive
+ *          as objects, and (Err kind-of e) depends on it -- but an
+ *          uncaught non-string value used to print as the bare literal
+ *          "error", because this layer cannot render an arbitrary object
+ *          and the object's own fields are the class layer's business
+ *          (x-lang#211).  Every message the x-lang library raises was
+ *          invisible that way.  Rather than teach the evaluator what an
+ *          Err looks like, the raiser hands down a string to print: the
+ *          prose stays where prose belongs, and C only carries it.
+ *
  * @see x_prim_guard
  */
 static x_obj_t *x_prim_error(x_obj_t *p_base, x_obj_t *p_args)
 {
-	x_obj_t *p_msg, *p_handler = x_firstobj(x_eval_field_error_handler(p_base));
-	x_eargs(p_base, p_args, 2, NULL, &p_msg);
+	x_obj_t *p_msg, *p_text = NULL;
+	x_obj_t *p_handler = x_firstobj(x_eval_field_error_handler(p_base));
+	/* x_eargs NULLs positions a short call does not supply, so the
+	 * one-argument (error v) spelling is unchanged. */
+	x_eargs(p_base, p_args, 3, NULL, &p_msg, &p_text);
 
 	/* If handler installed, use it. */
 	if ( ! x_obj_isnil(p_base, p_handler)) {
@@ -231,9 +246,13 @@ static x_obj_t *x_prim_error(x_obj_t *p_base, x_obj_t *p_args)
 		longjmp(*(jmp_buf *)x_error_handler_jmp(p_handler), 1);
 	}
 
-	/* No handler: fall through to fatal error. */
+	/* No handler: fall through to fatal error.  A string value prints
+	 * itself; otherwise the raiser's report text prints when it supplied
+	 * one; only a bare unprintable value falls back to "error". */
 	if (x_obj_type_isstr(p_base, p_msg)) {
 		x_obj_error(p_base, x_strval(p_msg), NULL);
+	} else if (p_text != NULL && x_obj_type_isstr(p_base, p_text)) {
+		x_obj_error(p_base, x_strval(p_text), NULL);
 	} else {
 		x_obj_error(p_base, "error", p_msg);
 	}
