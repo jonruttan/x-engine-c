@@ -602,6 +602,14 @@ install: $(EXECUTABLE) $(NAME).sh boot ## Install to PREFIX (DESTDIR honoured)
 	@if [ -f entitlements.plist ]; then codesign -s - --entitlements entitlements.plist -f $(DESTDIR)$(LIBEXECDIR)/$(EXECUTABLE) 2>/dev/null || true; fi
 	install $C -m 0755 $(NAME).sh $(DESTDIR)$(BINDIR)/$(NAME)
 	rm -rf $(DESTDIR)$(LIBDIR)/lib $(DESTDIR)$(LIBDIR)/apps $(DESTDIR)$(LIBDIR)/boot
+	# The engine's ISA fingerprint travels WITH the engine.  An installed
+	# tree has no source checkout, so before this there was no way to ask
+	# "which engine contract is this?" -- fetch could not compare (#186)
+	# and a pinned boot could not refuse a mismatched amalgam (#187); it
+	# just ran it and segfaulted.  One precomputed hex line: the wrapper
+	# needs a STRING compare against a release manifest, not a digester.
+	install -d -m 0755 $(DESTDIR)$(LIBDIR)/contract
+	@sh -c 'if command -v shasum >/dev/null 2>&1; then shasum -a 256 tools/contract/isa.x | cut -d" " -f1; 		else sha256sum tools/contract/isa.x | cut -d" " -f1; fi' 		> $(DESTDIR)$(LIBDIR)/contract/isa.sha256
 	cp -R lib $(DESTDIR)$(LIBDIR)/lib
 	cp -R apps $(DESTDIR)$(LIBDIR)/apps
 	cp -R build/boot $(DESTDIR)$(LIBDIR)/boot
