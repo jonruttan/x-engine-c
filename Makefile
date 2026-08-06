@@ -591,7 +591,14 @@ watch: ## Watch for changes
 install: $(EXECUTABLE) $(NAME).sh boot ## Install to PREFIX (DESTDIR honoured)
 	install -d -m 0755 $(DESTDIR)$(BINDIR) $(DESTDIR)$(LIBEXECDIR) $(DESTDIR)$(LIBDIR)
 	install $C -m 0755 $(EXECUTABLE) $(DESTDIR)$(LIBEXECDIR)/$(EXECUTABLE)
-	strip $(DESTDIR)$(LIBEXECDIR)/$(EXECUTABLE)
+	# strip -x, NOT bare strip: the JIT resolves its runtime helpers
+	# (jit_mkint, jit_atomint, ...) through dlsym on the engine itself,
+	# and those live in exports.sym.  Bare strip removes the exported
+	# symbol table, every dlsym then answers nil, and compiled code
+	# called address 0 -- a SIGSEGV inside jit_atomint on every INSTALLED
+	# engine while the repo build (which already used -x, line ~158) was
+	# clean (x-lang#201).  Release tarballs come from this same target.
+	strip -x $(DESTDIR)$(LIBEXECDIR)/$(EXECUTABLE)
 	@if [ -f entitlements.plist ]; then codesign -s - --entitlements entitlements.plist -f $(DESTDIR)$(LIBEXECDIR)/$(EXECUTABLE) 2>/dev/null || true; fi
 	install $C -m 0755 $(NAME).sh $(DESTDIR)$(BINDIR)/$(NAME)
 	rm -rf $(DESTDIR)$(LIBDIR)/lib $(DESTDIR)$(LIBDIR)/apps $(DESTDIR)$(LIBDIR)/boot
