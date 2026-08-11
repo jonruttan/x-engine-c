@@ -225,7 +225,7 @@ doctest: $(EXECUTABLE) ## Extract (example ...) forms and run them as doctests
 # CI's "Contract gates" step runs exactly this target.  They must not
 # drift -- ci.yml once hand-listed a subset, and check-pin's first run
 # on Linux happened in the RELEASE job (where it promptly died).
-gates: check-isa check-obj-layout check-base-paths check-boot-order check-path-literals check-boot-amalgam check-pin check-release-manifest check-bootstrap check-package check-doc-vocab check-dup-defs check-bare-globals check-dialect-cover ## Run the contract gates
+gates: check-isa check-obj-layout check-base-paths check-boot-order check-path-literals check-boot-amalgam check-pin check-release-manifest check-bootstrap check-package check-doc-vocab check-dup-defs check-bare-globals check-percent-globals check-dialect-cover ## Run the contract gates
 .PHONY: gates
 
 # The local-latency split (2026-08-03 audit): `make test` grew past ten
@@ -236,7 +236,7 @@ gates: check-isa check-obj-layout check-base-paths check-boot-order check-path-l
 # ratchet, none of the targets that build or boot artifacts.  The hook
 # runs test-fast; CI still runs the FULL `make test` on every push/PR
 # (ci.yml unchanged -- it stays the enforcing gate for the heavy surface).
-gates-fast: check-isa check-obj-layout check-base-paths check-boot-order check-path-literals check-doc-vocab check-dup-defs check-bare-globals check-dialect-cover ## The fast contract gates (pre-push subset)
+gates-fast: check-isa check-obj-layout check-base-paths check-boot-order check-path-literals check-doc-vocab check-dup-defs check-bare-globals check-percent-globals check-dialect-cover ## The fast contract gates (pre-push subset)
 .PHONY: gates-fast
 
 test-fast: gates-fast test-c test-x ## Pre-push gate: fast gates + both spec suites (CI runs full `make test`)
@@ -364,6 +364,12 @@ check-boot-amalgam: $(EXECUTABLE) boot ## Boot every amalgam in batch mode and p
 check-bare-globals: ## Diff the runtime library's bare top-level defs against tools/contract/bare-globals.x
 	sh tools/check/bare-globals.sh
 .PHONY: check-bare-globals
+
+# The %-global budget (the bare ratchet's closed exemption): per-file
+# counts in tools/contract/percent-globals.x, shrink-only.
+check-percent-globals: ## Diff every lib file's %-global count against its shrinking budget
+	sh tools/check/percent-globals.sh
+.PHONY: check-percent-globals
 
 # The dialect coverage ratchet (#70): every lib/*.x entry point needs an
 # end-to-end smoke group, so a new dialect cannot ship untested the way the
