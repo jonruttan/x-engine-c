@@ -478,6 +478,17 @@ x_obj_t *x_eval_tco_trampoline(x_obj_t *p_base, x_obj_t *p_result)
 	int op_outermost = 0, kept_any = 0;
 	int is_op;
 	int has_proc, has_op;
+	/* Roots for the kept restore records (#243, mirrors x_eval): they
+	 * are popped off the save-stack and the tco-env field is cleared,
+	 * so across the arbitrary evaluation below these locals hold the
+	 * only references -- and a C local is not a root (x-heap.h).  An
+	 * argument eval that triggers (heap-collect) would otherwise sweep
+	 * the records the exit restores then read. */
+	x_obj_t **p_cell = x_heap_root_slot(p_base);
+	x_spair_t tco_root = x_obj_set((x_obj_t *)x_type_pair_obj,
+		X_OBJ_FLAG_NONE, { NULL }, { NULL });
+
+	x_heap_root_push(p_cell, tco_root);
 
 	while ( ! x_obj_isnil(p_base, x_firstobj(x_eval_field_tco_expr(p_base)))) {
 		p_tco = x_firstobj(x_eval_field_tco_expr(p_base));
@@ -491,10 +502,13 @@ x_obj_t *x_eval_tco_trampoline(x_obj_t *p_base, x_obj_t *p_result)
 
 			if ( ! kept_any) { op_outermost = is_op; kept_any = 1; }
 			if (is_op) {
-				if (p_op_save == NULL || x_obj_isnil(p_base, p_op_save))
+				if (p_op_save == NULL || x_obj_isnil(p_base, p_op_save)) {
 					p_op_save = p_te;
+					x_restobj((x_obj_t *)tco_root) = p_op_save;
+				}
 			} else if (p_tco_env == NULL || x_obj_isnil(p_base, p_tco_env)) {
 				p_tco_env = p_te;
+				x_firstobj((x_obj_t *)tco_root) = p_tco_env;
 			}
 		}
 
@@ -520,6 +534,8 @@ x_obj_t *x_eval_tco_trampoline(x_obj_t *p_base, x_obj_t *p_result)
 		if (has_proc)
 			x_tco_restore(p_base, p_tco_env);
 	}
+
+	x_heap_root_pop(p_cell);
 
 	return p_result;
 }
