@@ -690,7 +690,7 @@ static x_obj_t *x_prim_obj_to_ptr(x_obj_t *p_base, x_obj_t *p_args)
  * objects, not just integers.
  *
  * UNCHECKED, like first/rest: an address that is not a live object is
- * undefined behavior.  Safe under the explicit-only GC (allocation never
+ * undefined behaviour.  Safe under the explicit-only GC (allocation never
  * relocates), same argument as holding obj->ptr across an expression.
  *
  * @param p_base  Base (execution context).

@@ -110,7 +110,7 @@ static x_obj_t *x_prim_match(x_obj_t *p_base, x_obj_t *p_args)
  * @note Uses setjmp/longjmp for non-local error transfer.  The jmp_buf
  *       lives on this C frame, so the handler is only valid while this
  *       function is on the call stack.  Capturing and invoking it after
- *       return would be undefined behavior.
+ *       return would be undefined behaviour.
  *
  * @note The body is evaluated with x_eval_body (no TCO), not
  *       x_eval_body_tco.  This ensures the guard's C frame (and its

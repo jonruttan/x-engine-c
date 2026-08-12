@@ -53,7 +53,7 @@ void x_prim_clear_shadows(x_obj_t *p_base)
  * @param p_old   x_obj_t* -- Previous shadow-list head to restore to
  *
  * @details DORMANT since GH #47: nothing pushes to the shadow list
- *          anymore -- lookup honors X_OBJ_FLAG_FRAME on env spine cells
+ *          anymore -- lookup honours X_OBJ_FLAG_FRAME on env spine cells
  *          instead of shadow bits on interned symbols (which were
  *          process-global and blinded other chains' BST lookups).  The
  *          restore paths still call this so the plumbing (save compounds,
@@ -215,7 +215,7 @@ x_obj_t *x_eval_list(x_obj_t *p_base, x_obj_t *p_args)
  *       remaining value list, not just one value.  This implements
  *       rest-parameter semantics: @c (fn (a . rest) ...).
  *
- * @see x_type_symbol_eval -- the 3-step lookup that honors FRAME cells
+ * @see x_type_symbol_eval -- the 3-step lookup that honours FRAME cells
  * @see x_prim_define      -- marks closure-scope def cells the same way
  * @see x_eval_body_tco    -- saves/restores env around extended scopes
  */
