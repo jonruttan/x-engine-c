@@ -185,6 +185,14 @@ x-bin-asan: ## Build with AddressSanitizer for memory-safety testing
 	$(MAKE) clean-obj
 .PHONY: x-bin-asan
 
+# Not PHONY: once the file exists the target is satisfied, so the double
+# rebuild (clean-obj brackets, like the variants above) is paid once per
+# clean, not once per test run.  `make clean` removes it.
+x-bin-cov: ## Build the coverage binary (-DX_COV flag-marking eval)
+	$(MAKE) clean-obj
+	$(MAKE) OUTPUT=$@ CFLAGS="$(CFLAGS) -DX_COV" $(EXECUTABLE)
+	$(MAKE) clean-obj
+
 clean-obj:
 	rm -f $(SRCDIR)/*.o $(SRCDIR)/**/*.o $(SRCDIR)/**/**/*.o $(OPTDIR)/**/*.o $(X_EXPR_DIR)/src/*.o
 
@@ -203,12 +211,13 @@ test-x: $(EXECUTABLE) ## Run x-lang tests
 	sh tests/x/spec-runner.sh
 .PHONY: test-x
 
-# The tools' own spec suite (tools/tests).  NOT in `make test`: the suite
-# rotted while orphaned (API drift: make-base retired, includes? homed on
-# List, printer output changes) and joins the gate only once it is green
-# again -- see the tracking issue filed with the tools/ taxonomy overhaul.
-test-tools: $(EXECUTABLE) ## Run the tool suite's specs (tools/tests; currently red, ungated)
+# The tools' own spec suite (tools/tests), repaired from the post-overhaul
+# rot (#180).  Two runners: spec-runner.sh takes the top-level specs on the
+# plain engine; cov-spec-runner.sh takes specs/cov/ on x-bin-cov, because
+# coverage marking only exists under -DX_COV.
+test-tools: $(EXECUTABLE) x-bin-cov ## Run the tool suite's specs (tools/tests)
 	sh tools/tests/spec-runner.sh
+	sh tools/tests/cov-spec-runner.sh
 .PHONY: test-tools
 
 # The doctest ratchet (#16): every (example "in" "out") in the doc registry
@@ -248,7 +257,7 @@ check-bootstrap: $(EXECUTABLE) ## Smoke the one-command bootstrap install
 	sh tools/check/bootstrap-smoke.sh
 .PHONY: check-bootstrap
 
-test: gates test-c test-x doctest spec-examples check-examples lint-x ## Run all tests
+test: gates test-c test-x doctest spec-examples check-examples lint-x test-tools ## Run all tests
 .PHONY: test
 
 # The release manifest (SHASUMS + pin.release.xon over the amalgams;
