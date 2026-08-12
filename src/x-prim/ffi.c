@@ -349,12 +349,24 @@ static x_obj_t *x_prim_ptr_call(x_obj_t *p_base, x_obj_t *p_args)
 
 	while (!x_obj_isnil(p_base, p_args) && i < 7) {
 		arg = x_eval_arg(p_base, x_firstobj(p_args));
-		if (x_obj_type_isint(p_base, arg))
+		if (x_obj_isnil(p_base, arg))
+			/* nil = NULL (the settled model): a nil arg is the NULL
+			 * pointer/zero, filling its own slot (#244). */
+			p[i++] = 0;
+		else if (x_obj_type_isint(p_base, arg))
 			p[i++] = (long)x_intval(arg);
 		else if (x_obj_type_isstr(p_base, arg))
 			p[i++] = (long)x_strval(arg);
 		else if (x_obj_type_isptr(p_base, arg))
 			p[i++] = (long)x_ptrval(arg);
+		else
+			/* #244: an unsupported arg used to be SKIPPED, shifting
+			 * every following arg one parameter slot left -- silent
+			 * positional corruption in a raw-call primitive.  Raise
+			 * catchably instead, before anything executes. */
+			x_obj_error(p_base,
+				(x_char_t *)"ptr-call: argument is not nil/int/str/ptr",
+				arg);
 		p_args = x_restobj(p_args);
 	}
 

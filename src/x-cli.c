@@ -68,11 +68,27 @@ static x_obj_t *x_prim_syscall(x_obj_t *p_base, x_obj_t *p_args)
 	while ( ! x_obj_isnil(p_base, p_args) && i < 7) {
 		arg = x_eval_arg(p_base, x_firstobj(p_args));
 
-		if (x_obj_type_isint(p_base, arg)) {
+		if (x_obj_isnil(p_base, arg)) {
+			/* nil = NULL (the settled model): a nil arg is the NULL
+			 * pointer/zero, filling its OWN slot (#244) -- the
+			 * execve/wait4 examples spell NULL as (). */
+			p[i++] = 0;
+		}
+		else if (x_obj_type_isint(p_base, arg)) {
 			p[i++] = x_intval(arg);
 		}
 		else if (x_obj_type_isstr(p_base, arg)) {
 			p[i++] = (long)x_strval(arg);
+		}
+		else {
+			/* #244: an unsupported arg used to be SKIPPED, shifting
+			 * every following arg one syscall parameter slot left --
+			 * silent positional corruption in the most dangerous
+			 * primitive in the tree.  Raise catchably instead,
+			 * before the syscall fires. */
+			x_obj_error(p_base,
+				(x_char_t *)"syscall: argument is not nil/int/str",
+				arg);
 		}
 
 		p_args = x_restobj(p_args);
