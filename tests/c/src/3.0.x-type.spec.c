@@ -458,23 +458,71 @@ static char *test_type_prim_units(void)
 			p_ret == NULL);
 	}
 
-	/* typed object with units function */
+	/* x-lang#241: the units slot is an INT count -- the same ABI the
+	 * GC and the spine guard read. The old code called the slot as a
+	 * function, jumping to the count as an address. */
 	{
 		struct x_type_t type_desc;
-		x_obj_t *p_type;
+		x_obj_t *p_type, *p_count;
 
 		memset(&type_desc, 0, sizeof(type_desc));
-		type_desc.p_name = x_mksatom(p_base, X_OBJ_FLAG_NONE, "TEST");
-		type_desc.p_units = x_mksatom(p_base, X_OBJ_FLAG_NONE, mock_fn);
+		type_desc.p_name = x_mksatom(p_base, X_OBJ_FLAG_NONE, "T241");
+		type_desc.p_units = x_mksatom(p_base, X_OBJ_FLAG_NONE, (x_int_t)3);
 		p_type = x_type_struct_make(p_base, type_desc);
 		p_obj = x_obj_make(p_base, p_type, X_OBJ_FLAG_NONE,
 			X_OBJ_LENGTH_ATOM, 0);
 		p_args = x_mkspair(p_base, X_OBJ_FLAG_NONE, p_obj, NULL);
-		mock_fn_calls = 0;
 		p_ret = x_type_prim_units(p_base, p_args);
-		_it_should("call units fn for typed obj",
-			1 == mock_fn_calls);
+		_it_should("return the int units count for a typed obj",
+			p_ret != NULL && x_atomint(p_ret) == 3);
+
+		/* Negative count = dynamic-size sentinel: instance slot 0
+		 * holds the payload count (vector convention; the same rule
+		 * x_type_heap_mark applies). */
+		memset(&type_desc, 0, sizeof(type_desc));
+		type_desc.p_name = x_mksatom(p_base, X_OBJ_FLAG_NONE, "T241D");
+		type_desc.p_units = x_mksatom(p_base, X_OBJ_FLAG_NONE, (x_int_t)-1);
+		p_type = x_type_struct_make(p_base, type_desc);
+		p_count = x_mksatom(p_base, X_OBJ_FLAG_NONE, (x_int_t)4);
+		p_obj = x_obj_make(p_base, p_type, X_OBJ_FLAG_NONE,
+			1, p_count);
+		p_args = x_mkspair(p_base, X_OBJ_FLAG_NONE, p_obj, NULL);
+		p_ret = x_type_prim_units(p_base, p_args);
+		_it_should("resolve the dynamic-size sentinel via slot 0",
+			p_ret != NULL && x_atomint(p_ret) == 5);
 	}
+
+	/* x-lang#241: the slot is never CALLED. (This block used to store
+	 * mock_fn in p_units and assert the call -- pinning the landmine:
+	 * every real type stores an int here, so the call jumped to the
+	 * count as an address the first time the hook path was reached.) */
+
+	test_cleanup(p_base);
+
+	return NULL;
+}
+
+/* x-lang#241 close condition: x_obj_units on a typed instance, reached
+ * through the base units hook a full base installs (x_eval_make wires
+ * x_type_prim_units as the hook). Crashed before the fix. */
+static char *test_obj_units_hook(void)
+{
+	x_obj_t *p_base, *p_obj, *p_type;
+	struct x_type_t type_desc;
+	x_int_t units;
+
+	p_base = x_eval_make(NULL, NULL);
+
+	memset(&type_desc, 0, sizeof(type_desc));
+	type_desc.p_name = x_mksatom(p_base, X_OBJ_FLAG_NONE, "T241H");
+	type_desc.p_units = x_mksatom(p_base, X_OBJ_FLAG_NONE, (x_int_t)3);
+	p_type = x_type_struct_make(p_base, type_desc);
+	p_obj = x_obj_make(p_base, p_type, X_OBJ_FLAG_NONE,
+		X_OBJ_LENGTH_ATOM, 0);
+
+	units = x_obj_units(p_base, p_obj);
+	_it_should("return the unit count through the base hook",
+		3 == units);
 
 	test_cleanup(p_base);
 
@@ -685,6 +733,7 @@ static char *run_tests() {
 	_run_test(test_type_struct_get);
 	_run_test(test_type_prim_type_name);
 	_run_test(test_type_prim_units);
+	_run_test(test_obj_units_hook);
 	_run_test(test_type_prim_length);
 	_run_test(test_type_heap_mark);
 	_run_test(test_type_heap_free);

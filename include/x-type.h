@@ -178,7 +178,11 @@ struct x_type_t
 	x_obj_t *p_make;       /**< Constructor handler. */
 	x_obj_t *p_free;       /**< Destructor handler. */
 	x_obj_t *p_clone;      /**< Clone handler. */
-	x_obj_t *p_units;      /**< Units (element size) handler. */
+	x_obj_t *p_units;      /**< Unit count: INT atom, read (never called)
+	                            by the GC, the spine guard, and
+	                            x_type_prim_units. Negative = dynamic-size
+	                            sentinel (instance slot 0 holds the payload
+	                            count; see x_type_heap_mark). */
 	x_obj_t *p_length;     /**< Length handler. */
 	x_obj_t *p_call;       /**< Call handler. */
 	x_obj_t *p_eval;       /**< Eval handler. */

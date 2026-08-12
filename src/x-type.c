@@ -266,7 +266,7 @@ x_obj_t *x_type_prim_type_name(x_obj_t *p_base, x_obj_t *p_args)
  * Return the unit count for an object. x-lang: (units obj)
  *
  * Dispatches to pair or atom unit primitives for built-in types.
- * For custom types, calls the type's units hook function.
+ * For custom types, reads the type's units count.
  *
  * @param p_base  x_obj_t* -- Base (execution context)
  * @param p_args  x_obj_t* -- (object)
@@ -275,6 +275,7 @@ x_obj_t *x_type_prim_type_name(x_obj_t *p_base, x_obj_t *p_args)
 x_obj_t *x_type_prim_units(x_obj_t *p_base, x_obj_t *p_args)
 {
 	x_obj_t *p_units, *p_obj;
+	x_int_t n;
 
 	if (x_obj_isnil(p_base, p_args) || x_obj_isnil(p_base, (p_obj = x_firstobj(p_args)))) {
 		return NULL;
@@ -293,11 +294,25 @@ x_obj_t *x_type_prim_units(x_obj_t *p_base, x_obj_t *p_args)
 
 	p_units = x_type_field_units(x_obj_type(p_obj));
 
-	if (x_obj_isnil(p_base, p_units) || x_obj_isnil(p_base, x_atomobj(p_units))) {
+	if (x_obj_isnil(p_base, p_units)) {
 		return NULL;
 	}
 
-	return (*x_atomfn(p_units))(p_base, p_args);
+	/* The units slot is an INT count -- the same ABI x_type_heap_mark
+	 * and the improper-spine guard read (#241: this used to call the
+	 * slot as a function, jumping to the count as an address). A
+	 * negative count is the dynamic-size sentinel: slot 0 of the
+	 * instance holds the payload count (the vector convention; see
+	 * x_type_heap_mark). Returns plain int atoms, the same shape the
+	 * x_atom_prim_units/x_pair_prim_units leaves return. */
+	n = x_atomint(p_units);
+
+	if (n < 0) {
+		return x_mksatom(p_base, X_OBJ_FLAG_NONE,
+			(x_int_t)(x_atomint(x_obj(x_obj_data_i(p_obj, 0))) + 1));
+	}
+
+	return p_units;
 }
 
 /**
