@@ -127,6 +127,9 @@ static x_obj_t *x_prim_guard(x_obj_t *p_base, x_obj_t *p_args)
 		*p_saved_save_stack = x_eval_field_save_stack(p_base),
 		*p_saved_eval_list = x_firstobj(x_eval_field_eval_list(p_base)),
 		*p_saved_root_chain = x_heap_root_chain(p_base),
+		*p_saved_filein = x_base_field_filein(p_base),
+		*p_saved_buffer = x_base_field_buffer(p_base),
+		*p_saved_line = x_eval_field_line(p_base),
 		*p_handler, *p_result = NULL;
 	x_obj_t *p_err, *p_pair;
 	x_args(p_args, 2, NULL, &p_clause);
@@ -171,6 +174,26 @@ static x_obj_t *x_prim_guard(x_obj_t *p_base, x_obj_t *p_args)
 		 * the handler body. */
 		x_firstobj(x_eval_field_tco_expr(p_base)) = NULL;
 		x_firstobj(x_eval_field_tco_env(p_base)) = NULL;
+		/* Unwind include state the longjmp cut away (#242): each filein
+		 * entry pushed since the guard carries an open fd whose
+		 * pop-and-close (x_prim_include's tail) never ran.  Without
+		 * this the fd leaks AND the un-popped heads corrupt reading --
+		 * top-level reads continue from the dead file's remaining
+		 * bytes instead of the stream below it.  Close head-first down
+		 * to the snapshot, then restore all three heads; the orphaned
+		 * buffer entries are heap objects the GC reclaims (an OWN
+		 * flag frees their read buffers with them).  Entries pushed
+		 * before this guard sit at or below the snapshots and are
+		 * preserved -- a guard inside an included file keeps that
+		 * file's frames. */
+		while (x_base_field_filein(p_base) != p_saved_filein) {
+			x_sys_close((int)x_atomint(
+				x_firstobj(x_base_field_filein(p_base))));
+			x_base_field_filein(p_base)
+				= x_restobj(x_base_field_filein(p_base));
+		}
+		x_base_field_buffer(p_base) = p_saved_buffer;
+		x_eval_field_line(p_base) = p_saved_line;
 		/* Pop the handler BEFORE the handler body runs: a re-raise --
 		 * (error e) inside the body, the documented propagation idiom
 		 * -- must reach the ENCLOSING guard.  With this guard still
