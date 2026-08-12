@@ -16,6 +16,7 @@
 #include "ext/x-expr/tests/src/test-helper-system.c"
 
 #include "ext/x-expr/src/x-sys.c"
+#include "ext/x-expr/src/x-stdlib.c"
 #include "ext/x-expr/src/x-lib.c"
 #include "ext/x-expr/src/x.c"
 #include "ext/x-expr/src/x-obj.c"
