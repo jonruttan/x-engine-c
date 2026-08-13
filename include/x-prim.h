@@ -217,6 +217,17 @@ x_obj_t *x_prim_type_build_struct(x_obj_t *p_base, x_obj_t *p_name_atom,
 /** Register the sandbox base primitives (make-base, base-eval, etc.). */
 x_obj_t *x_prim_base_register(x_obj_t *p_base, x_obj_t *p_args);
 
+/** Apply a single-arg type handler through the prim ABI (shared by the
+ *  buffer and iter primitives). */
+x_obj_t *x_prim_op1(x_obj_t *p_base, x_obj_t *p_args,
+	x_obj_t *(*op)(x_obj_t *, x_obj_t *));
+
+/** Register the buffer/tokenizer primitives. */
+x_obj_t *x_prim_buffer_register(x_obj_t *p_base, x_obj_t *p_args);
+
+/** Register the iterator primitives. */
+x_obj_t *x_prim_iter_register(x_obj_t *p_base, x_obj_t *p_args);
+
 /** Register FFI primitives (dlopen, dlsym, ffi-call, ptr-call,
  *  int->ptr/ptr->int, mem-*, ptr-*). */
 x_obj_t *x_prim_ffi_register(x_obj_t *p_base, x_obj_t *p_args);

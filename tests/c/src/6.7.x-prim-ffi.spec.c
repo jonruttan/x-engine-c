@@ -59,6 +59,8 @@ x_obj_t *x_prim_string_register(x_obj_t *p_base, x_obj_t *p_args) { return p_bas
 x_obj_t *x_prim_io_register(x_obj_t *p_base, x_obj_t *p_args) { return p_base; }
 x_obj_t *x_prim_heap_register(x_obj_t *p_base, x_obj_t *p_args) { return p_base; }
 x_obj_t *x_prim_base_register(x_obj_t *p_base, x_obj_t *p_args) { return p_base; }
+x_obj_t *x_prim_buffer_register(x_obj_t *p_base, x_obj_t *p_args) { return p_base; }
+x_obj_t *x_prim_iter_register(x_obj_t *p_base, x_obj_t *p_args) { return p_base; }
 x_obj_t *x_prim_type_register(x_obj_t *p_base, x_obj_t *p_args) { return p_base; }
 x_obj_t *x_prim_callcc_register(x_obj_t *p_base, x_obj_t *p_args) { return p_base; }
 x_obj_t *x_syntax_binding_register(x_obj_t *p_base, x_obj_t *p_args) { return p_base; }

@@ -389,6 +389,8 @@ x_obj_t *x_prim_register(x_obj_t *p_base, x_obj_t *p_args)
 	x_prim_heap_register(p_base, p_args);
 	x_prim_type_register(p_base, p_args);
 	x_prim_base_register(p_base, p_args);
+	x_prim_buffer_register(p_base, p_args);
+	x_prim_iter_register(p_base, p_args);
 	x_prim_ffi_register(p_base, p_args);
 	x_prim_callcc_register(p_base, p_args);
 #ifdef X_SIGNAL
