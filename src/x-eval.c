@@ -242,6 +242,69 @@ x_obj_t *x_eval_op_body(x_obj_t *p_base, x_obj_t *p_body,
 	return NULL;
 }
 
+/*
+ * Shared TCO keep/restore for the two trampoline loops -- x_eval's inline
+ * loop and x_eval_tco_trampoline.  Both keep the first (outermost) proc env
+ * compound and first operative record from the tco_env channel, then on exit
+ * apply them in reverse capture order.  Extracted so the two copies cannot
+ * drift (they were line-for-line duplicates).
+ */
+
+/* Keep the outermost record of each channel from a tco_env value.  The kept
+ * records are also stored into @p p_tco_root's slots so the GC roots them
+ * across the arbitrary evaluation between capture and restore (#243 -- a C
+ * local is not a root; the records are already off the save-stack). */
+static void x_tco_keep(x_obj_t *p_base, x_obj_t *p_te, x_obj_t *p_tco_root,
+	x_obj_t **pp_op_save, x_obj_t **pp_proc_save,
+	int *p_op_outermost, int *p_kept_any)
+{
+	int is_op;
+
+	if (x_obj_isnil(p_base, p_te))
+		return;
+
+	is_op = (x_firstobj(p_te) == (x_obj_t *)&x_tco_op_tag);
+
+	if ( ! *p_kept_any) {
+		*p_op_outermost = is_op;
+		*p_kept_any = 1;
+	}
+
+	if (is_op) {
+		if (*pp_op_save == NULL || x_obj_isnil(p_base, *pp_op_save)) {
+			*pp_op_save = p_te;
+			x_restobj(p_tco_root) = p_te;
+		}
+	} else if (*pp_proc_save == NULL || x_obj_isnil(p_base, *pp_proc_save)) {
+		*pp_proc_save = p_te;
+		x_firstobj(p_tco_root) = p_te;
+	}
+}
+
+/* Apply the kept records in REVERSE capture order so the OUTERMOST frame wins
+ * env-alist (inner applied first, then overridden).  A proc compound present
+ * alongside an op record means the op's tail resolved to an applied procedure
+ * (let), whose closure frame must be shed -- force_caller carries that.  The
+ * proc compound always restores the BST; ops leave it alone. */
+static void x_tco_apply(x_obj_t *p_base, x_obj_t *p_op_save,
+	x_obj_t *p_proc_save, int op_outermost)
+{
+	int has_proc = (p_proc_save != NULL && ! x_obj_isnil(p_base, p_proc_save));
+	int has_op = (p_op_save != NULL && ! x_obj_isnil(p_base, p_op_save));
+
+	if (op_outermost) {
+		if (has_proc)
+			x_tco_restore(p_base, p_proc_save);
+		if (has_op)
+			x_op_restore(p_base, p_op_save, has_proc);
+	} else {
+		if (has_op)
+			x_op_restore(p_base, p_op_save, has_proc);
+		if (has_proc)
+			x_tco_restore(p_base, p_proc_save);
+	}
+}
+
 /**
  * Evaluate an expression with tail-call optimization.
  *
@@ -314,8 +377,6 @@ x_obj_t *x_eval(x_obj_t *p_base, x_obj_t *p_args)
 	int trampolining = 0;
 	int op_outermost = 0;             /* the first record kept is an op record */
 	int kept_any = 0;                 /* a tco_env (either channel) was kept */
-	int is_op;
-	int has_proc, has_op;
 #ifdef X_SIGNAL
 	/* Interrupt-flag pointer, resolved once from the base (signal-register
 	 * publishes signal.c's static atom here).  Cached so the trampoline pays
@@ -391,27 +452,9 @@ eval_start:
 
 		/* Keep the first (outermost) of each channel: procedures provide an
 		 * env compound, operatives a tagged restore record.  if/do/match/and/or
-		 * set neither (tco_env nil) -- an inner fn/let/op fills it later.
-		 * op_outermost records whether the very first kept record is an op, so
-		 * the exit can apply the records in reverse capture order. */
-		if ( ! x_obj_isnil(p_base, p_te)) {
-			is_op = (x_firstobj(p_te) == (x_obj_t *)&x_tco_op_tag);
-
-			if ( ! kept_any) {
-				op_outermost = is_op;
-				kept_any = 1;
-			}
-
-			if (is_op) {
-				if (p_op_save == NULL || x_obj_isnil(p_base, p_op_save)) {
-					p_op_save = p_te;
-					x_restobj((x_obj_t *)tco_root) = p_op_save;
-				}
-			} else if (p_tco_env_save == NULL || x_obj_isnil(p_base, p_tco_env_save)) {
-				p_tco_env_save = p_te;
-				x_firstobj((x_obj_t *)tco_root) = p_tco_env_save;
-			}
-		}
+		 * set neither (tco_env nil) -- an inner fn/let/op fills it later. */
+		x_tco_keep(p_base, p_te, (x_obj_t *)tco_root,
+			&p_op_save, &p_tco_env_save, &op_outermost, &kept_any);
 
 		x_firstobj(x_eval_field_tco_env(p_base)) = NULL;
 		x_firstobj(x_eval_arg_exp(p_args)) = x_firstobj(x_eval_field_tco_expr(p_base));
@@ -421,39 +464,11 @@ eval_start:
 		goto eval_start;
 	}
 
-	/* TCO env restore: only the x_eval that trampolined restores env.
-	 * Apply the two channels in REVERSE capture order so the OUTERMOST frame
-	 * (captured first) wins env-alist: the inner record is applied first and
-	 * then overridden.  This matters because a procedure's tail can be an
-	 * operative (proc outer) or an operative's tail a procedure (op outer);
-	 * a fixed order would leave one of those with the inner frame.  The proc
-	 * compound always restores the BST (ops leave it alone), so whichever
-	 * order, the inner proc still re-establishes the correct BST.
-	 *
-	 * has_proc -> force the op record's env restore to the caller: a proc
-	 * compound here means the op's tail resolved to an applied procedure (let),
-	 * whose closure frame must be shed rather than kept. */
+	/* TCO env restore: only the x_eval that trampolined restores env
+	 * (see x_tco_apply for the reverse-capture-order rationale). */
 	if (trampolining && x_base_isset(p_base)) {
-		has_proc = (p_tco_env_save != NULL
-			&& ! x_obj_isnil(p_base, p_tco_env_save));
-		has_op = (p_op_save != NULL
-			&& ! x_obj_isnil(p_base, p_op_save));
-
 		x_firstobj(x_eval_field_tco_env(p_base)) = NULL;
-
-		if (op_outermost) {
-			/* op outermost -> apply inner proc first, outer op last. */
-			if (has_proc)
-				x_tco_restore(p_base, p_tco_env_save);
-			if (has_op)
-				x_op_restore(p_base, p_op_save, has_proc);
-		} else {
-			/* proc outermost (or no op) -> apply inner op first, outer proc last. */
-			if (has_op)
-				x_op_restore(p_base, p_op_save, has_proc);
-			if (has_proc)
-				x_tco_restore(p_base, p_tco_env_save);
-		}
+		x_tco_apply(p_base, p_op_save, p_tco_env_save, op_outermost);
 	}
 
 	x_heap_root_pop(p_cell);
@@ -823,8 +838,6 @@ x_obj_t *x_eval_tco_trampoline(x_obj_t *p_base, x_obj_t *p_result)
 {
 	x_obj_t *p_tco, *p_te, *p_tco_env = NULL, *p_op_save = NULL;
 	int op_outermost = 0, kept_any = 0;
-	int is_op;
-	int has_proc, has_op;
 	/* Roots for the kept restore records (#243, mirrors x_eval): they
 	 * are popped off the save-stack and the tco-env field is cleared,
 	 * so across the arbitrary evaluation below these locals hold the
@@ -840,47 +853,17 @@ x_obj_t *x_eval_tco_trampoline(x_obj_t *p_base, x_obj_t *p_result)
 	while ( ! x_obj_isnil(p_base, x_firstobj(x_eval_field_tco_expr(p_base)))) {
 		p_tco = x_firstobj(x_eval_field_tco_expr(p_base));
 
-		/* Keep the first procedure compound and the first operative record,
-		 * distinguished by the op tag, and note which was kept first (mirrors
-		 * x_eval's trampoline). */
+		/* Keep the outermost record of each channel (mirrors x_eval). */
 		p_te = x_firstobj(x_eval_field_tco_env(p_base));
-		if ( ! x_obj_isnil(p_base, p_te)) {
-			is_op = (x_firstobj(p_te) == (x_obj_t *)&x_tco_op_tag);
-
-			if ( ! kept_any) { op_outermost = is_op; kept_any = 1; }
-			if (is_op) {
-				if (p_op_save == NULL || x_obj_isnil(p_base, p_op_save)) {
-					p_op_save = p_te;
-					x_restobj((x_obj_t *)tco_root) = p_op_save;
-				}
-			} else if (p_tco_env == NULL || x_obj_isnil(p_base, p_tco_env)) {
-				p_tco_env = p_te;
-				x_firstobj((x_obj_t *)tco_root) = p_tco_env;
-			}
-		}
+		x_tco_keep(p_base, p_te, (x_obj_t *)tco_root,
+			&p_op_save, &p_tco_env, &op_outermost, &kept_any);
 
 		x_firstobj(x_eval_field_tco_expr(p_base)) = NULL;
 		x_firstobj(x_eval_field_tco_env(p_base)) = NULL;
 		p_result = x_eval_arg(p_base, p_tco);
 	}
 
-	/* Apply the two channels in REVERSE capture order so the outermost frame
-	 * (captured first) wins env-alist; see x_eval for the rationale.  has_proc
-	 * forces the op record's env restore to the caller (applied-procedure tail). */
-	has_proc = (p_tco_env != NULL && ! x_obj_isnil(p_base, p_tco_env));
-	has_op = (p_op_save != NULL && ! x_obj_isnil(p_base, p_op_save));
-
-	if (op_outermost) {
-		if (has_proc)
-			x_tco_restore(p_base, p_tco_env);
-		if (has_op)
-			x_op_restore(p_base, p_op_save, has_proc);
-	} else {
-		if (has_op)
-			x_op_restore(p_base, p_op_save, has_proc);
-		if (has_proc)
-			x_tco_restore(p_base, p_tco_env);
-	}
+	x_tco_apply(p_base, p_op_save, p_tco_env, op_outermost);
 
 	x_heap_root_pop(p_cell);
 

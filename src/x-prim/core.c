@@ -116,14 +116,10 @@ static x_obj_t *x_prim_apply(x_obj_t *p_base, x_obj_t *p_args)
 
 	/* Procedure: bind params, eval body with TCO for eval trampoline. */
 	if (x_obj_type_isprocedure(p_base, p_fn)) {
-		/* Push ((env . boundary) . (bst . shadow_head)) onto save-stack */
-		x_eval_field_save_stack(p_base) = x_mkspair(p_base, X_OBJ_FLAG_NONE,
-			x_mkspair(p_base, X_OBJ_FLAG_NONE,
-				x_mkspair(p_base, X_OBJ_FLAG_NONE, x_firstobj(x_eval_field_env_alist(p_base)),
-				                   x_eval_field_env_local_boundary(p_base)),
-				x_mkspair(p_base, X_OBJ_FLAG_NONE, x_eval_field_env_global_tree(p_base),
-				                   x_eval_field_shadow_list(p_base))),
-			x_eval_field_save_stack(p_base));
+		/* Push ((env . boundary) . (bst . shadow_head)) onto save-stack --
+		 * the same compound x_tco_compound_save builds for the procedure
+		 * call path; x_prim_eval already routes through it. */
+		x_tco_compound_save(p_base);
 
 		/* Set boundary and BST to closure's captured values.  Skip the
 		 * BST swap if the closure was captured before any top-level def
