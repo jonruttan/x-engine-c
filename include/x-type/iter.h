@@ -53,8 +53,6 @@ x_obj_t *x_type_iter_register(x_obj_t *p_base, x_obj_t *p_args);
 x_obj_t *x_type_iter_struct(x_obj_t *p_base, x_obj_t *p_args);
 /** Type-dispatch make callback for ITER. */
 x_obj_t *x_type_iter_make(x_obj_t *p_base, x_obj_t *p_args);
-/** Test whether an iterator is exhausted. */
-x_obj_t *x_type_iter_isempty(x_obj_t *p_base, x_obj_t *p_args);
 /** Advance an iterator by one step, returning the current element. */
 x_obj_t *x_type_iter_next(x_obj_t *p_base, x_obj_t *p_args);
 /** Step an iterator functionally: (value . next-iterator) pair, or NULL. */

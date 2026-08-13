@@ -835,34 +835,6 @@ x_obj_t *x_eval_env_alist_extend(x_obj_t *p_base, x_obj_t *p_args)
 }
 
 /**
- * Push a file descriptor onto the input file stack.
- *
- * @param p_base  x_obj_t* -- Base (execution context)
- * @param fd      x_int_t -- File descriptor to push
- * @return x_obj_t* -- The new top-of-stack atom
- */
-x_obj_t *x_eval_filein_push(x_obj_t *p_base, x_int_t fd)
-{
-	x_base_field_filein(p_base) = x_mkspair(p_base, X_OBJ_FLAG_NONE,
-		x_mksatom(p_base, X_OBJ_FLAG_NONE, fd), x_base_field_filein(p_base));
-	return x_firstobj(x_base_field_filein(p_base));
-}
-
-/**
- * Pop the top file descriptor from the input file stack.
- *
- * @param p_base  x_obj_t* -- Base (execution context)
- * @return x_obj_t* -- The popped top-of-stack atom
- */
-x_obj_t *x_eval_filein_pop(x_obj_t *p_base)
-{
-	x_obj_t *p_top = x_firstobj(x_base_field_filein(p_base));
-	x_base_field_filein(p_base) =
-		x_restobj(x_base_field_filein(p_base));
-	return p_top;
-}
-
-/**
  * Push a buffer onto the buffer stack.
  *
  * @param p_base   x_obj_t* -- Base (execution context)
@@ -874,20 +846,6 @@ x_obj_t *x_eval_buffer_push(x_obj_t *p_base, x_obj_t *p_buffer)
 	x_base_field_buffer(p_base) = x_mkspair(p_base, X_OBJ_FLAG_NONE,
 		p_buffer, x_base_field_buffer(p_base));
 	return p_buffer;
-}
-
-/**
- * Pop the top buffer from the buffer stack.
- *
- * @param p_base  x_obj_t* -- Base (execution context)
- * @return x_obj_t* -- The popped buffer object
- */
-x_obj_t *x_eval_buffer_pop(x_obj_t *p_base)
-{
-	x_obj_t *p_top = x_firstobj(x_base_field_buffer(p_base));
-	x_base_field_buffer(p_base) =
-		x_restobj(x_base_field_buffer(p_base));
-	return p_top;
 }
 
 /**

@@ -116,17 +116,8 @@ x_obj_t *x_eval_type_alist_extend(x_obj_t *p_base, x_obj_t *p_args);
 /** Look up a type in the base type alist. */
 x_obj_t *x_eval_type_alist_assoc(x_obj_t *p_base, x_obj_t *p_args);
 
-/** Push a file descriptor onto the file-input stack. */
-x_obj_t *x_eval_filein_push(x_obj_t *p_base, x_int_t fd);
-
-/** Pop the top file descriptor from the file-input stack. */
-x_obj_t *x_eval_filein_pop(x_obj_t *p_base);
-
 /** Push a buffer onto the input buffer stack. */
 x_obj_t *x_eval_buffer_push(x_obj_t *p_base, x_obj_t *p_buffer);
-
-/** Pop the top buffer from the input buffer stack. */
-x_obj_t *x_eval_buffer_pop(x_obj_t *p_base);
 
 /** Extend the environment alist with new bindings. */
 x_obj_t *x_eval_env_alist_extend(x_obj_t *p_base, x_obj_t *p_args);

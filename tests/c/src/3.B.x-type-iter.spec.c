@@ -563,27 +563,6 @@ static char *test_type_iter_step_fn(void)
 	return NULL;
 }
 
-static char *test_type_iter_isempty_fn(void)
-{
-	x_obj_t *p_base, *p_iter, *p_args, *p_ret;
-
-	helper_alloc_reset();
-
-	p_base = x_eval_make(NULL, NULL);
-
-	p_iter = x_mkiter(p_base, NULL, NULL);
-	p_args = x_mkspair(p_base, X_OBJ_FLAG_NONE, p_iter, NULL);
-	p_ret = x_type_iter_isempty(p_base, p_args);
-	_it_should("return base for empty iter", p_ret == p_base);
-
-	p_iter = x_mkiter(p_base, NULL, (void *)1);
-	x_firstobj(p_args) = p_iter;
-	p_ret = x_type_iter_isempty(p_base, p_args);
-	_it_should("return args for non-empty iter", p_ret == p_args);
-
-	return NULL;
-}
-
 static char *run_tests() {
 	_run_test(test_obj_type_isiter);
 	_run_test(test_iterprim);
@@ -599,7 +578,6 @@ static char *run_tests() {
 	_run_test(test_type_iter_next);
 	_run_test(test_type_iter_next_cell_abi);
 	_run_test(test_type_iter_step_fn);
-	_run_test(test_type_iter_isempty_fn);
 
 	return NULL;
 }

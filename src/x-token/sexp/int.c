@@ -19,7 +19,6 @@
 #include "x-type/buffer.h"
 #include "x-type/int.h"
 #include "x-type/prim.h"
-#include "x-token/sexp/int.h"
 
 /* Analyzer states: spair (5-unit) with state slot for composable transitions.
  * State slot (second data unit) holds the default next-state, or NULL. */
@@ -190,9 +189,6 @@ x_obj_t *x_sexp_int_read(x_obj_t *p_base, x_obj_t *p_args)
 	if (x_bufferlen(p_buffer) < 1) {
 		return NULL;
 	}
-
-	/* Not required, final non-numeric char will act as delimiter. */
-	/* *x_bufferead(p_buffer) = '\0'; */
 
 	/* Leading zero reads DECIMAL (019 = 19); only an explicit 0x/0X
 	 * prefix is hex.  Base auto-detection read 019 as octal-then-stop

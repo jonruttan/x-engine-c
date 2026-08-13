@@ -15,7 +15,6 @@
  */
 #include "x-prim.h"
 #include "x-eval.h"
-#include "x-eval.h"
 #include "x-type/int.h"
 #include "x-type/list.h"
 #include "x-type/prim.h"

@@ -430,6 +430,14 @@ check-doc-vocab: ## Lint doc forms for banned type-token aliases + retired names
 		echo "doc-vocab: FAIL (doc strings speak 'x, not (lit x); #45 R2/R8)" >&2; \
 		exit 1; \
 	else echo "doc-string-quotes: ok"; fi
+	@# Retired C symbols (#249): dead exports deleted with the audit.  A
+	@# grep-ratchet so they cannot quietly return -- if one is reintroduced,
+	@# it is either genuinely needed (delete the name from this list with a
+	@# caller) or the deletion is being undone by mistake.
+	@if grep -rnw 'x_eval_filein_push\|x_eval_filein_pop\|x_eval_buffer_pop\|x_char_utf8_len\|x_char_utf8_encode\|x_type_alist_iter\|x_type_alist_iter_prim\|x_type_iter_isempty' src include; then \
+		echo "retired-c-symbols: FAIL (dead export removed in #249 reintroduced)" >&2; \
+		exit 1; \
+	else echo "retired-c-symbols: ok"; fi
 .PHONY: check-doc-vocab
 
 # Memory-safety gate: run BOTH suites against an AddressSanitizer build (reuses

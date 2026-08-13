@@ -15,7 +15,6 @@
  */
 #include "x-prim.h"
 #include "x-eval.h"
-#include "x-eval.h"
 #include "x-heap.h"
 #include "x-token.h"
 #include "x-type.h"

@@ -701,8 +701,7 @@ static x_obj_t *x_prim_iter_step(x_obj_t *p_base, x_obj_t *p_args)
 }
 
 /** x-lang (iter-empty? iter): #t when the iterator is exhausted, else #f.
- *  Wrapped (not x_type_iter_isempty directly) so it returns a real boolean
- *  rather than the p_base/p_args truthy convention. */
+ *  Reads x_iterempty directly and maps it to a real boolean. */
 static x_obj_t *x_prim_iter_empty(x_obj_t *p_base, x_obj_t *p_args)
 {
 	x_obj_t *p_iter;

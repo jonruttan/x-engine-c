@@ -226,18 +226,3 @@ x_obj_t *x_sexp_char_read(x_obj_t *p_base, x_obj_t *p_args)
 
 	return NULL;
 }
-
-/**
- * Display a character as a single raw byte (its code point's low 8 bits).
- *
- * Protocol-agnostic boot fallback: this is the bottom of the CHARACTER
- * display stack, correct for ASCII (code point < 0x80). The x-lang layer
- * pushes a display handler (via type-push-display) that emits the full
- * 1-4 byte UTF-8 encoding for non-ASCII code points using the x/codec/utf8
- * encoder; that handler shadows this one before any non-ASCII char is shown.
- * Keeping UTF-8 out of C: this fallback never encodes.
- *
- * @param p_base  Base (execution context).
- * @param p_args  Pair whose first element is the character to display.
- * @return The character object.
- */

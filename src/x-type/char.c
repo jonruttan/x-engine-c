@@ -48,61 +48,6 @@ x_obj_t *x_make_char(x_obj_t *p_base, x_obj_flag_t flags, x_int_t cp)
 }
 
 /**
- * Number of bytes in the UTF-8 encoding of a code point.
- *
- * @param cp  x_int_t -- Unicode code point
- * @return x_int_t -- Byte count (1-4)
- */
-x_int_t x_char_utf8_len(x_int_t cp)
-{
-	if (cp < 0x80)
-		return 1;
-	if (cp < 0x800)
-		return 2;
-	if (cp < 0x10000)
-		return 3;
-
-	return 4;
-}
-
-/**
- * Encode a code point as UTF-8.
- *
- * Out-of-range code points are emitted as U+FFFD (replacement char).
- *
- * @param cp   x_int_t -- Unicode code point
- * @param out  x_char_t* -- Destination buffer (>= 4 bytes)
- * @return x_int_t -- Number of bytes written (1-4)
- */
-x_int_t x_char_utf8_encode(x_int_t cp, x_char_t *out)
-{
-	if (cp < 0 || cp > 0x10FFFF)
-		cp = 0xFFFD;
-
-	if (cp < 0x80) {
-		out[0] = (x_char_t)cp;
-		return 1;
-	}
-	if (cp < 0x800) {
-		out[0] = (x_char_t)(0xC0 | (cp >> 6));
-		out[1] = (x_char_t)(0x80 | (cp & 0x3F));
-		return 2;
-	}
-	if (cp < 0x10000) {
-		out[0] = (x_char_t)(0xE0 | (cp >> 12));
-		out[1] = (x_char_t)(0x80 | ((cp >> 6) & 0x3F));
-		out[2] = (x_char_t)(0x80 | (cp & 0x3F));
-		return 3;
-	}
-	out[0] = (x_char_t)(0xF0 | (cp >> 18));
-	out[1] = (x_char_t)(0x80 | ((cp >> 12) & 0x3F));
-	out[2] = (x_char_t)(0x80 | ((cp >> 6) & 0x3F));
-	out[3] = (x_char_t)(0x80 | (cp & 0x3F));
-
-	return 4;
-}
-
-/**
  * Decode a UTF-8 byte sequence into a code point.
  *
  * Bytes are read unsigned.  The byte count is supplied by the caller

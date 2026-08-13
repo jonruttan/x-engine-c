@@ -104,18 +104,6 @@ x_obj_t *x_type_iter_make(x_obj_t *p_base, x_obj_t *p_args)
 }
 
 /**
- * Test whether an iterator is exhausted.
- *
- * @param p_base  x_obj_t* -- Base (execution context)
- * @param p_args  x_obj_t* -- (iterator)
- * @return p_base (truthy) if empty, p_args (non-nil/falsy) if not
- */
-x_obj_t *x_type_iter_isempty(x_obj_t *p_base, x_obj_t *p_args)
-{
-	return x_iterempty(p_base, x_firstobj(p_args)) ? p_base : p_args;
-}
-
-/**
  * Advance an iterator by one step.
  *
  * The iterator is a boxed GENERATOR: (step . state).  Steps are pure --

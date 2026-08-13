@@ -43,10 +43,6 @@
 /** Allocate a heap character object holding code point cp. */
 x_obj_t *x_make_char(x_obj_t *p_base, x_obj_flag_t flags, x_int_t cp);
 
-/** Number of bytes in the UTF-8 encoding of code point cp (1-4). */
-x_int_t x_char_utf8_len(x_int_t cp);
-/** Encode code point cp as UTF-8 into out (up to 4 bytes); returns byte count. */
-x_int_t x_char_utf8_encode(x_int_t cp, x_char_t *out);
 /** Decode an nbytes-long UTF-8 sequence into a code point. */
 x_int_t x_char_utf8_decode(const x_char_t *bytes, x_int_t nbytes);
 

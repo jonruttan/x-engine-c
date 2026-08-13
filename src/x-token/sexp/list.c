@@ -18,7 +18,6 @@
 #include "x-eval.h"
 #include "x-heap.h"
 #include "x-token.h"
-#include "x-token.h"
 #include "x-token/sexp/list.h"
 #include "x-token/sexp/whitespace.h"
 

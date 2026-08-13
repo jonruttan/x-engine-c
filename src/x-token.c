@@ -38,24 +38,22 @@
  * matched, NULL otherwise.
  *
  * @param p_base  x_obj_t* -- Base (execution context)
- * @param p_args  x_obj_t* -- (buffer . type) where type is excluded from checks
+ * @param p_args  x_obj_t* -- Read-args whose first element is the buffer
  * @return x_obj_t* -- The buffer if a delimiter matched, or NULL
  */
 x_obj_t *x_token_delimit(x_obj_t *p_base, x_obj_t *p_args)
 {
 	x_obj_t *p_buffer = x_firstobj(p_args),
-		*p_type = x_01(p_args),
 		*p_types = x_firstobj(x_eval_field_type_alist(p_base));
 	x_spair_t prim_args[1] = {
 			x_obj_set(NULL, X_OBJ_FLAG_NONE, { NULL }, { p_args }),
 		};
 
-	/* Cycle through of all of the types. */
+	/* Try each registered type's delimit handler against the buffer. */
 	while ( ! x_obj_isnil(p_base, p_types)) {
 		prim_arg_prim = x_type_field_delimit(x_restobj(x_firstobj(p_types)));
 
-		if (p_type != x_restobj(x_firstobj(p_types))
-			&& ! x_obj_isnil(p_base, prim_arg_prim)
+		if ( ! x_obj_isnil(p_base, prim_arg_prim)
 			&& x_callable_apply(p_base, (x_obj_t *)prim_args) == p_buffer
 		) {
 			return p_buffer;
@@ -69,35 +67,10 @@ x_obj_t *x_token_delimit(x_obj_t *p_base, x_obj_t *p_args)
 
 extern x_satom_t x_type_list_iter_prim;
 
-x_obj_t *x_type_alist_iter(x_obj_t *p_base, x_obj_t *p_args);
-x_satom_t x_type_alist_iter_prim = x_obj_set(x_type_atom_obj, X_OBJ_FLAG_NONE, { .fn = x_type_alist_iter });
-
 /** Clean-EOF sentinel (see x-token.h).  The value word is its own
  *  address so eq?'s value-word compare cannot conflate it with a small
  *  integer; identity tests use the ADDRESS (C ==, x-lang (obj same?)). */
 x_satom_t x_token_eof_prim = x_obj_set(x_type_atom_obj, X_OBJ_FLAG_NONE, { .v = (void *)x_token_eof_prim });
-
-/**
- * Generator step that yields analyse hooks from type alist entries.
- *
- * Composes over the pure x_type_list_iter step (same caller-owned state
- * cell, cell ABI), projecting the analyse field from each yielded
- * entry's type struct.
- *
- * @param p_base  x_obj_t* -- Base (execution context)
- * @param p_args  x_obj_t* -- State cell (state . nil), caller-owned
- * @return x_obj_t* -- Analyse hook from the next type entry, or NULL at end
- */
-x_obj_t *x_type_alist_iter(x_obj_t *p_base, x_obj_t *p_args)
-{
-	x_obj_t *p_obj = x_type_list_iter(p_base, p_args);
-
-	if (x_obj_isnil(p_base, p_obj)) {
-		return p_obj;
-	}
-
-	return x_type_field_analyse(x_restobj(p_obj));
-}
 
 /**
  * Determine which type best matches the next token in the buffer.
