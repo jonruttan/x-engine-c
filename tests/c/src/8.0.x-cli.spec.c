@@ -60,6 +60,7 @@
 #include "src/x-prim/string.c"
 #define x_prim_atomic x_prim_atomic_io
 #include "src/x-prim/io.c"
+#include "src/x-prim/heap.c"
 #include "src/x-prim/type.c"
 #include "src/x-prim/ffi.c"
 x_obj_t *x_prim_callcc_register(x_obj_t *p_base, x_obj_t *p_args) { return p_base; }

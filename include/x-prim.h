@@ -198,6 +198,9 @@ x_obj_t *x_prim_string_register(x_obj_t *p_base, x_obj_t *p_args);
  *  heap-*-hook!, gc-pin!). */
 x_obj_t *x_prim_io_register(x_obj_t *p_base, x_obj_t *p_args);
 
+/** Register the GC primitives (heap-*, alloc-limit!, gc-pin!). */
+x_obj_t *x_prim_heap_register(x_obj_t *p_base, x_obj_t *p_args);
+
 /** Minimal C read-eval loop (no output, no hooks). */
 x_obj_t *x_prim_repl(x_obj_t *p_base, x_obj_t *p_args);
 
