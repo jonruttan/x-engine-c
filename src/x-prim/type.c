@@ -363,11 +363,20 @@ static x_obj_t *x_prim_base_eval(x_obj_t *p_base, x_obj_t *p_args)
 
 	x_eargs(p_base, p_args, 3, NULL, &p_target, &p_expr);
 
-	/* Build handler pair tree: (jmp-ptr saved-env error-value) */
+	/* Build handler pair tree, SAME shape as x_prim_guard's (#253):
+	 * (jmp-ptr . ((saved-env . saved-boundary) . (error-value . line))).
+	 * The x_error_handler_* accessors read saved-env as x_001 -- one
+	 * level below the (env . boundary) cell -- so the env must be
+	 * wrapped in that cell.  The old build put the bare env where the
+	 * (env . boundary) cell belongs, so recovery restored first(env),
+	 * degrading the child's env-alist head on every caught error until
+	 * a lookup walked a non-pair and segfaulted (0x18). */
 	p_handler = x_mkspair(p_target, X_OBJ_FLAG_NONE,
 		x_mkptr(p_target, &jmp),
 		x_mkspair(p_target, X_OBJ_FLAG_NONE,
-			x_firstobj(x_eval_field_env_alist(p_target)),
+			x_mkspair(p_target, X_OBJ_FLAG_NONE,
+				x_firstobj(x_eval_field_env_alist(p_target)),
+				x_eval_field_env_local_boundary(p_target)),
 			x_mkspair(p_target, X_OBJ_FLAG_NONE, NULL, NULL)));
 
 	/* Push handler onto error_handler_stack */
@@ -379,11 +388,14 @@ static x_obj_t *x_prim_base_eval(x_obj_t *p_base, x_obj_t *p_args)
 	} else {
 		p_err = x_error_handler_error(p_handler);
 
-		/* Error caught from target: pop handler, restore env, propagate. */
+		/* Error caught from target: pop handler, restore env and
+		 * boundary, propagate. */
 		x_eval_field_error_handler(p_target)
 			= x_restobj(x_eval_field_error_handler(p_target));
 		x_firstobj(x_eval_field_env_alist(p_target))
 			= x_error_handler_saved_env(p_handler);
+		x_eval_field_env_local_boundary(p_target)
+			= x_error_handler_saved_boundary(p_handler);
 
 		if ( ! x_obj_isnil(p_base, x_firstobj(x_eval_field_error_handler(p_base)))) {
 			p_parent = x_firstobj(x_eval_field_error_handler(p_base));
