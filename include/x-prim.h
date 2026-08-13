@@ -11,7 +11,7 @@
  * register functions.
  *
  * @author Jon Ruttan (jonruttan@gmail.com)
- * @copyright 2024 Jon Ruttan
+ * @copyright 2026 Jon Ruttan
  * @license MIT No Attribution (MIT-0)
  */
 
@@ -229,28 +229,36 @@ void x_prims_bind_table(x_obj_t *p_base, const x_prim_entry_t *table, int count)
 
 /** @name Module Registration Functions
  * @{ */
-/** Register core primitives (eval, if, do, let, fn, op, apply, guard, etc.). */
+/** Register core primitives (pair, first, rest, apply, eval, eval!,
+ *  tail-eval, wrap, unwrap, atomic, %base). */
 x_obj_t *x_prim_core_register(x_obj_t *p_base, x_obj_t *p_args);
 
-/** Register arithmetic primitives (+, -, *, /, modulo, etc.). */
+/** Register arithmetic primitives (+, -, *, /, %, ~, &, |, ^, <<, >>). */
 x_obj_t *x_prim_arith_register(x_obj_t *p_base, x_obj_t *p_args);
 
-/** Register predicate primitives (eq?, pair?, atom?, null?, etc.). */
+/** Register predicate primitives (same?, eq?, =, <, char->integer,
+ *  integer->char). */
 x_obj_t *x_prim_pred_register(x_obj_t *p_base, x_obj_t *p_args);
 
-/** Register string primitives (string-length, substring, etc.). */
+/** Register string primitives (str-append, make-str, str->symbol,
+ *  symbol->str, bytes->str, str-byte-len/-ref/-sub). */
 x_obj_t *x_prim_string_register(x_obj_t *p_base, x_obj_t *p_args);
 
-/** Register I/O primitives (read, write, display, load, etc.). */
+/** Register I/O and heap primitives (write-str, read, read-char, clock,
+ *  repl-read, heap-collect/-mark/-sweep/-count, alloc-limit!,
+ *  heap-*-hook!, gc-pin!). */
 x_obj_t *x_prim_io_register(x_obj_t *p_base, x_obj_t *p_args);
 
 /** Minimal C read-eval loop (no output, no hooks). */
 x_obj_t *x_prim_repl(x_obj_t *p_base, x_obj_t *p_args);
 
-/** Register custom type primitives (make-type, type accessors, etc.). */
+/** Register the type/base/buffer/token/iter primitives (make-type,
+ *  make-instance, type?, type-of, make-base, base-eval, token-read,
+ *  buffer-*, make-iter, iter-*). */
 x_obj_t *x_prim_type_register(x_obj_t *p_base, x_obj_t *p_args);
 
-/** Register FFI primitives (ffi-call, ffi-lib, etc.). */
+/** Register FFI primitives (dlopen, dlsym, ffi-call, ptr-call,
+ *  int->ptr/ptr->int, mem-*, ptr-*). */
 x_obj_t *x_prim_ffi_register(x_obj_t *p_base, x_obj_t *p_args);
 
 /** Register call/cc continuation primitives. */

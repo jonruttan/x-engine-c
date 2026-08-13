@@ -99,8 +99,13 @@ x_satom_t x_tco_op_tag = x_obj_set(x_type_atom_obj, X_OBJ_FLAG_NONE, { NULL });
  * and shadow always restore; the global BST is never touched (procedures own
  * it, and the trampoline applies the proc compound around this call).
  *
- * @param p_base    x_obj_t* -- Base (execution context)
- * @param p_record  x_obj_t* -- Operative record built by x_eval_op_body()
+ * @param p_base        x_obj_t* -- Base (execution context)
+ * @param p_record      x_obj_t* -- Operative record built by x_eval_op_body()
+ * @param force_caller  int -- Non-zero when a procedure compound was also
+ *                      captured here (the op's tail resolved to an applied
+ *                      procedure, e.g. let): restore env to the caller
+ *                      unconditionally rather than walking to the formal
+ *                      frame.  See the body.
  * @see x_eval_op_body
  */
 void x_op_restore(x_obj_t *p_base, x_obj_t *p_record, int force_caller)
@@ -905,16 +910,13 @@ x_obj_t *x_eval_buffer_pop(x_obj_t *p_base)
  *          expression is discarded except the last.
  *
  * @note This is the primary entry point for loading library files.
- *       The shell driver pipes library source via stdin:
- *       @code
- *       cat lib/x.x - | ./x
- *       @endcode
- *       There is no file I/O in the C interpreter; all loading goes
- *       through the buffer/fd mechanism.
+ *       The shell driver pipes library source via stdin
+ *       (@c cat lib/x.x - | ./x-bin).  The core loop reads through the
+ *       buffer/fd stack; the optional @c include primitive
+ *       (X_INCLUDE, x-cli.c) additionally opens files via x_sys_open
+ *       and pushes them onto the same stack.
  *
- * @see x_eval_buffer_push -- push buffer before calling
- * @see x_eval_buffer_pop  -- pop buffer after calling
- * @see x_eval             -- evaluator called for each expression
+ * @see x_eval  -- evaluator called for each expression
  */
 x_obj_t *x_eval_load(x_obj_t *p_base, x_obj_t *p_args)
 {

@@ -117,8 +117,9 @@ x_obj_t *x_type_alist_iter(x_obj_t *p_base, x_obj_t *p_args)
  * @return x_obj_t* -- Winning type alist entry (name . type-struct),
  *                      or NULL if no type matched
  *
- * @note Negative scores indicate inverse-priority matches (e.g.
- *       whitespace). The absolute value determines advancement.
+ * @note Negative scores indicate inverse-priority matches (the symbol
+ *       fallback scores negative, sexp/symbol.c, so any positive match
+ *       wins over it). The absolute value determines advancement.
  */
 x_obj_t *x_token_analyse(x_obj_t *p_base, x_obj_t *p_args)
 {

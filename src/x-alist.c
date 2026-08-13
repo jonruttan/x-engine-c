@@ -122,8 +122,9 @@ x_obj_t *x_alist_bst_lookup(x_obj_t *p_base, x_obj_t *p_tree,
 /**
  * Create a SHARED pair immune to GC sweep.
  *
- * BST nodes are structural and shared between persistent tree versions,
- * so they must not be collected.
+ * BST nodes are structural -- the global env tree lives for the base's
+ * lifetime and is reachable only through this tree, so its nodes must
+ * not be collected.
  *
  * @param p_base  x_obj_t* -- Base (execution context)
  * @param a       x_obj_t* -- First element
@@ -138,42 +139,27 @@ static x_obj_t *bst_pair(x_obj_t *p_base, x_obj_t *a, x_obj_t *b)
 }
 
 /**
- * Persistent (path-copying) BST insert.
+ * In-place BST insert into the global env tree.
  *
- * Returns a new root without mutating the old tree. On duplicate key,
- * the new root contains the updated entry while the old root is unchanged.
- * Unaffected subtrees are shared, not copied. All BST nodes carry
- * X_OBJ_FLAG_SHARED so they are immune to GC sweep.
+ * MUTATES the tree in place; every captured snapshot of the root (a
+ * closure's env) sees the new entry, which is required: a top-level
+ * (def ...) must become visible to fn closures created before it.
+ * On a duplicate key the existing node's value is overwritten.  The
+ * returned root equals the input root except when the tree was empty
+ * (the caller must then store the returned first node).
  *
- * @details
- * Path-copying creates new nodes only along the root-to-insertion path.
- * Siblings and their subtrees are shared by pointer with the old root.
- *
- * @code
- *  Old tree          Insert "d"          New tree (returned)
- *
- *     [c]               [c']  <-- new copy
- *    /   \              /   \
- *  [a]   [e]  -->    [a]   [e']  <-- new copy (right child changed)
- *        /                  /
- *      [d]               [d]  <-- new leaf
- *
- *  [a] and its subtree are SHARED between old and new roots.
- *  [c] and [e] in the old tree are untouched.
- * @endcode
- *
- * @note All new BST nodes are allocated via bst_pair() which sets
- *       X_OBJ_FLAG_SHARED on every node.  Shared objects are immune
- *       to GC sweep -- they persist until the entire tree is abandoned.
- *
- * @note Shared subtrees (unchanged children) are never copied.  Only
- *       ancestor nodes along the insertion path are freshly allocated.
- *       This makes insert O(log n) in both time and allocation.
+ * @note NOT path-copying.  The previous implementation returned a new
+ *       root and left the old one unchanged; that made every closure
+ *       created before an insertion silently miss any later top-level
+ *       def, so it was replaced by in-place mutation (see the body
+ *       comment below).  New nodes are allocated via bst_pair(), which
+ *       sets X_OBJ_FLAG_SHARED so the long-lived tree is never swept.
  *
  * @param p_base   x_obj_t* -- Base (execution context)
  * @param p_tree   x_obj_t* -- Existing BST root, or NULL for empty
  * @param p_entry  x_obj_t* -- (symbol . value) entry to insert
- * @return x_obj_t* -- New BST root
+ * @return x_obj_t* -- The tree root (a fresh node only when @p p_tree
+ *                     was empty)
  *
  * @see x_alist_bst_lookup
  * @see x_eval_field_env_global_tree

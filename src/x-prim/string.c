@@ -113,9 +113,9 @@ static x_obj_t *x_prim_symbol_to_string(x_obj_t *p_base, x_obj_t *p_args)
 }
 
 /** Build a string from a list of characters, one byte per character.
- *  x-lang: (list->str list-of-chars)
+ *  x-lang: (bytes->str list-of-chars)
  *  @param p_base Interpreter base context.
- *  @param p_args Unevaluated argument list: (list->str list-of-chars).
+ *  @param p_args Unevaluated argument list: (bytes->str list-of-chars).
  *  @return A newly allocated string holding each character's low byte.
  *  @note Byte-level and protocol-agnostic: each CHARACTER contributes one byte
  *        (its value masked to 0-255). This is the dumb byte-packer; assembling

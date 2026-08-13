@@ -85,7 +85,7 @@ static x_obj_t *x_prim_num_eq(x_obj_t *p_base, x_obj_t *p_args)
  *  x-lang: (< a b)
  *  @param p_base Interpreter base context.
  *  @param p_args Unevaluated argument list: (< a b).
- *  @return The @c t symbol if @p a is numerically less than @p b, @c f otherwise.
+ *  @return #t if @p a is numerically less than @p b, #f otherwise.
  */
 static x_obj_t *x_prim_lt(x_obj_t *p_base, x_obj_t *p_args)
 {

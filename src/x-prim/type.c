@@ -212,7 +212,7 @@ static x_obj_t *x_prim_make_instance(x_obj_t *p_base, x_obj_t *p_args)
  *
  * @param p_base  Base (execution context).
  * @param p_args  Unevaluated: (self obj type-handle).
- * @return The @c t symbol if the type matches, @c f otherwise.
+ * @return #t if the type matches, #f otherwise.
  */
 static x_obj_t *x_prim_typep(x_obj_t *p_base, x_obj_t *p_args)
 {
