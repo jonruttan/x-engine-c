@@ -42,7 +42,6 @@
  *       tco_expr remains nil and x_eval returns NULL.
  *
  * @see x_eval                 -- trampoline that consumes tco_expr
- * @see x_eval_body_tco_simple -- similar simple-TCO pattern used by if/do
  */
 static x_obj_t *x_prim_match(x_obj_t *p_base, x_obj_t *p_args)
 {

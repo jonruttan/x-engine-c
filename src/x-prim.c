@@ -356,7 +356,6 @@ x_obj_t *x_eval_body(x_obj_t *p_base, x_obj_t *p_body)
  *
  * @see x_eval                  -- outermost trampoline that consumes tco_expr/tco_env
  * @see x_eval_tco_trampoline   -- standalone trampoline for closure call paths
- * @see x_eval_body_tco_simple  -- lightweight variant without save-stack management
  * @see x_prim_clear_shadows_to -- called during early-exit restore
  */
 x_obj_t *x_eval_body_tco(x_obj_t *p_base, x_obj_t *p_body)
@@ -420,41 +419,6 @@ x_obj_t *x_eval_body_tco(x_obj_t *p_base, x_obj_t *p_body)
 	return p_result;
 }
 
-/**
- * Evaluate a body with simple (lightweight) tail-call optimization.
- *
- * Like x_eval_body_tco but without save-stack management. The tail
- * expression is stored in the TCO expr slot; no environment
- * save/restore is performed. Used by forms that do not alter the
- * environment (e.g. @c if, @c do).
- *
- * @param p_base  x_obj_t* -- Base (execution context)
- * @param p_body  x_obj_t* -- List of body expressions
- * @return x_obj_t* -- Result of non-tail expressions, or NULL when
- *                      tail expression is deferred
- *
- * @note When X_COV is defined, marks each body cell with X_OBJ_FLAG_COV.
- * @see x_eval_body_tco
- */
-x_obj_t *x_eval_body_tco_simple(x_obj_t *p_base, x_obj_t *p_body)
-{
-	x_obj_t *p_result = NULL;
-
-	while ( ! x_obj_isnil(p_base, p_body)) {
-#ifdef X_COV
-		x_obj_flags(p_body) |= X_OBJ_FLAG_COV;
-#endif
-		if (x_obj_isnil(p_base, x_restobj(p_body))) {
-			x_firstobj(x_eval_field_tco_expr(p_base)) = x_firstobj(p_body);
-			return NULL;
-		}
-
-		p_result = x_eval_arg(p_base, x_firstobj(p_body));
-		p_body = x_restobj(p_body);
-	}
-
-	return p_result;
-}
 
 /**
  * TCO trampoline: repeatedly evaluate deferred tail expressions.

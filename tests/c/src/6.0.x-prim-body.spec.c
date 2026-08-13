@@ -235,50 +235,6 @@ static char *test_body_eval_tco(void)
 	return NULL;
 }
 
-/*
- * ## x_eval_body_tco_simple
- */
-static char *test_body_eval_tco_simple(void)
-{
-	x_obj_t *p_base, *p_body, *p_result;
-
-	/* nil body returns NULL */
-	p_base = x_eval_make(NULL, NULL);
-	p_result = x_eval_body_tco_simple(p_base, NULL);
-	_it_should("return NULL for nil body (simple)", p_result == NULL);
-	test_cleanup(p_base);
-
-	/* single form sets tco_expr, returns NULL */
-	p_base = x_eval_make(NULL, NULL);
-	p_body = x_mkspair(p_base, X_OBJ_FLAG_NONE, x_mksatom(p_base, X_OBJ_FLAG_NONE, 42), NULL);
-	x_firstobj(x_eval_field_tco_env(p_base)) = NULL;
-	p_result = x_eval_body_tco_simple(p_base, p_body);
-	_it_should("set tco_expr for single form (simple)",
-		x_firstobj(x_eval_field_tco_expr(p_base)) != NULL
-		&& x_atomint(x_firstobj(x_eval_field_tco_expr(p_base))) == 42);
-	_it_should("return NULL when setting tco_expr (simple)",
-		p_result == NULL);
-	_it_should("not set tco_env (simple)",
-		x_obj_isnil(p_base, x_firstobj(x_eval_field_tco_env(p_base))));
-	x_firstobj(x_eval_field_tco_expr(p_base)) = NULL;
-	test_cleanup(p_base);
-
-	/* multi-form: evals all but last, sets tco_expr for last */
-	p_base = x_eval_make(NULL, NULL);
-	p_body = x_mkspair(p_base, X_OBJ_FLAG_NONE, x_mksatom(p_base, X_OBJ_FLAG_NONE, 10),
-		x_mkspair(p_base, X_OBJ_FLAG_NONE, x_mksatom(p_base, X_OBJ_FLAG_NONE, 20), NULL));
-	x_firstobj(x_eval_field_tco_env(p_base)) = NULL;
-	p_result = x_eval_body_tco_simple(p_base, p_body);
-	_it_should("set tco_expr to last form in multi-form (simple)",
-		x_firstobj(x_eval_field_tco_expr(p_base)) != NULL
-		&& x_atomint(x_firstobj(x_eval_field_tco_expr(p_base))) == 20);
-	_it_should("return NULL for multi-form (simple)",
-		p_result == NULL);
-	x_firstobj(x_eval_field_tco_expr(p_base)) = NULL;
-	test_cleanup(p_base);
-
-	return NULL;
-}
 
 /*
  * ## x_eval_tco_trampoline
@@ -563,7 +519,6 @@ static char *test_prim_call_procedure(void)
 static char *run_tests() {
 	_run_test(test_body_eval);
 	_run_test(test_body_eval_tco);
-	_run_test(test_body_eval_tco_simple);
 	_run_test(test_tco_trampoline);
 	_run_test(test_eval_arg);
 	_run_test(test_evlis);

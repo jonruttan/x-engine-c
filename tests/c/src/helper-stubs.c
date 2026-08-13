@@ -20,7 +20,6 @@ x_obj_t *x_env_extend(x_obj_t *p_base, x_obj_t *p_env,
 	x_obj_t *p_params, x_obj_t *p_vals) { return p_env; }
 x_obj_t *x_eval_body(x_obj_t *p_base, x_obj_t *p_body) { return NULL; }
 x_obj_t *x_eval_body_tco(x_obj_t *p_base, x_obj_t *p_body) { return NULL; }
-x_obj_t *x_eval_body_tco_simple(x_obj_t *p_base, x_obj_t *p_body) { return NULL; }
 x_obj_t *x_eval_tco_trampoline(x_obj_t *p_base, x_obj_t *p_result) { return p_result; }
 void x_callable_bind(x_obj_t *p_base, x_char_t *name, x_fn_t fn) {}
 #endif

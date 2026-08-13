@@ -264,7 +264,7 @@ x_obj_t *x_eval_op_body(x_obj_t *p_base, x_obj_t *p_body,
  * @details **tco_expr / tco_env lifecycle.**
  *          - **Set by:** x_eval_body_tco (full TCO) stores the tail
  *            expression in tco_expr and the compound env snapshot in
- *            tco_env.  x_eval_body_tco_simple and x_prim_match store
+ *            tco_env.  x_prim_match stores
  *            only tco_expr (tco_env stays nil -- no env change needed).
  *          - **Consumed by:** This function's trampoline loop.  On each
  *            iteration it copies tco_expr into the eval args, clears
@@ -292,7 +292,6 @@ x_obj_t *x_eval_op_body(x_obj_t *p_base, x_obj_t *p_body,
  *       a call chain performs env restoration.
  *
  * @see x_eval_body_tco      -- full TCO body evaluator (sets tco_expr + tco_env)
- * @see x_eval_body_tco_simple -- lightweight TCO (sets tco_expr only)
  * @see x_eval_tco_trampoline -- standalone trampoline used by closure call paths
  * @see x_prim_clear_shadows_to -- called during env restore to unwind shadow flags
  */
