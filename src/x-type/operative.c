@@ -54,6 +54,16 @@ x_satom_t x_type_operative_name = x_obj_set(x_type_atom_obj, X_OBJ_FLAG_NONE, { 
  * @param p_body     x_obj_t*    -- Body expression list
  * @param p_env      x_obj_t*    -- Captured environment
  * @return Heap-allocated operative object
+ *
+ * @note Constructor direction is DELIBERATELY the reverse of the simple
+ *       atom/int/ptr types (#248): there x_make_X packs its one payload
+ *       into an arg list and delegates to the x_type_X_make handler.  An
+ *       operative carries four fields, and this C-ABI constructor is the
+ *       hot path (x_mkop, called on every op form via closure.c), so it
+ *       builds the state tree directly; x_type_operative_make -- the rare
+ *       generic (make-instance) handler -- adapts an arg list to it.
+ *       Flipping to the simple-type direction would round-trip every op
+ *       construction through a pack-then-unpack for no gain.
  */
 x_obj_t *x_make_operative(x_obj_t *p_base, x_obj_flag_t flags,
 	x_obj_t *p_params, x_obj_t *p_envparam, x_obj_t *p_body, x_obj_t *p_env)

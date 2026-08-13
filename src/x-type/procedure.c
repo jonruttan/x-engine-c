@@ -68,6 +68,13 @@ x_satom_t x_type_procedure_name = x_obj_set(x_type_atom_obj, X_OBJ_FLAG_NONE, { 
  * @param p_env    x_obj_t*    -- Captured lexical environment
  * @param p_bst    x_obj_t*    -- Captured global BST
  * @return Heap-allocated procedure object
+ *
+ * @note Constructor direction is DELIBERATELY the reverse of the simple
+ *       atom/int/ptr types (#248) -- see x_make_operative.  A procedure
+ *       carries four fields and this is the hot path (x_mkproc, called on
+ *       every fn form via closure.c), so it builds the state tree
+ *       directly; x_type_procedure_make -- the rare generic handler --
+ *       adapts an arg list to it.
  */
 x_obj_t *x_make_procedure(x_obj_t *p_base, x_obj_flag_t flags,
 	x_obj_t *p_params, x_obj_t *p_body, x_obj_t *p_env, x_obj_t *p_bst)
