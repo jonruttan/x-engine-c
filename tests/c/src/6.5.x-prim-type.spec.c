@@ -50,6 +50,7 @@
 #include "src/x-token.c"
 #include "src/x-prim.c"
 #include "src/x-prim/type.c"
+#include "src/x-prim/base.c"
 
 /* Stubs for primitives not under test. */
 x_obj_t *x_prim_core_register(x_obj_t *p_base, x_obj_t *p_args) { return p_base; }

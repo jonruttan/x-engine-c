@@ -209,6 +209,14 @@ x_obj_t *x_prim_repl(x_obj_t *p_base, x_obj_t *p_args);
  *  buffer-*, make-iter, iter-*). */
 x_obj_t *x_prim_type_register(x_obj_t *p_base, x_obj_t *p_args);
 
+/** Build a type pair-tree from a name atom and handler alist (shared by
+ *  make-type and base-make-type). */
+x_obj_t *x_prim_type_build_struct(x_obj_t *p_base, x_obj_t *p_name_atom,
+	x_obj_t *p_handlers);
+
+/** Register the sandbox base primitives (make-base, base-eval, etc.). */
+x_obj_t *x_prim_base_register(x_obj_t *p_base, x_obj_t *p_args);
+
 /** Register FFI primitives (dlopen, dlsym, ffi-call, ptr-call,
  *  int->ptr/ptr->int, mem-*, ptr-*). */
 x_obj_t *x_prim_ffi_register(x_obj_t *p_base, x_obj_t *p_args);
