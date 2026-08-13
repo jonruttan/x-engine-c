@@ -226,7 +226,7 @@ x_obj_t *x_token_analyse(x_obj_t *p_base, x_obj_t *p_args)
 			}
 
 			/* EOF auto-score: if chars were consumed and a score
-			 * was set (via set-first-int side effect on first
+			 * was set (via set-cell-int! side effect on first
 			 * match), use the sign from the partial score to
 			 * compute final score from total consumed. */
 			i_consumed = x_bufferlen(p_buffer);
