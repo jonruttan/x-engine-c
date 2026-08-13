@@ -14,13 +14,6 @@
 #define HELPER_STUBS_C
 
 #ifdef STUB_X_PRIM
-x_obj_t *x_eval_arg(x_obj_t *p_base, x_obj_t *p_arg) { return p_arg; }
-x_obj_t *x_eval_list(x_obj_t *p_base, x_obj_t *p_args) { return p_args; }
-x_obj_t *x_env_extend(x_obj_t *p_base, x_obj_t *p_env,
-	x_obj_t *p_params, x_obj_t *p_vals) { return p_env; }
-x_obj_t *x_eval_body(x_obj_t *p_base, x_obj_t *p_body) { return NULL; }
-x_obj_t *x_eval_body_tco(x_obj_t *p_base, x_obj_t *p_body) { return NULL; }
-x_obj_t *x_eval_tco_trampoline(x_obj_t *p_base, x_obj_t *p_result) { return p_result; }
 void x_callable_bind(x_obj_t *p_base, x_char_t *name, x_fn_t fn) {}
 #endif
 
@@ -32,8 +25,23 @@ x_obj_t *x_type_procedure_call(x_obj_t *p_base, x_obj_t *p_args) { return NULL; 
 x_obj_t *x_type_operative_call(x_obj_t *p_base, x_obj_t *p_args) { return NULL; }
 #endif
 
+#ifdef STUB_X_LIST
+/* Link-only: base/eval specs compile the moved x_eval_list / x_env_extend
+ * (now in x-eval.c) but never call them -- they stub the list type and the
+ * procedure/operative call paths that would. */
+x_obj_t *x_make_list(x_obj_t *p_base, x_obj_flag_t flags, void *p1, void *p2)
+	{ return x_mkspair(p_base, flags, (x_obj_t *)p1, (x_obj_t *)p2); }
+#endif
+
 #ifdef STUB_X_EVAL
 x_obj_t *x_eval(x_obj_t *p_base, x_obj_t *p_obj) { return NULL; }
+x_obj_t *x_eval_arg(x_obj_t *p_base, x_obj_t *p_arg) { return p_arg; }
+x_obj_t *x_eval_list(x_obj_t *p_base, x_obj_t *p_args) { return p_args; }
+x_obj_t *x_env_extend(x_obj_t *p_base, x_obj_t *p_env,
+	x_obj_t *p_params, x_obj_t *p_vals) { return p_env; }
+x_obj_t *x_eval_body(x_obj_t *p_base, x_obj_t *p_body) { return NULL; }
+x_obj_t *x_eval_body_tco(x_obj_t *p_base, x_obj_t *p_body) { return NULL; }
+x_obj_t *x_eval_tco_trampoline(x_obj_t *p_base, x_obj_t *p_result) { return p_result; }
 #endif
 
 #ifdef STUB_X_BASE_ERROR

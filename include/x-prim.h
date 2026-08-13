@@ -24,10 +24,9 @@
 
 #include "x-obj.h"
 #include "x-heap.h"
+#include "x-eval.h"	/* x_eval_arg: the x_eargs helper below evaluates args */
 #include <stdarg.h>
 
-/** Evaluate a single argument expression. */
-x_obj_t *x_eval_arg(x_obj_t *p_base, x_obj_t *p_arg);
 
 /**
  * @defgroup arg_helpers Argument Unpacking Helpers
@@ -118,55 +117,6 @@ static void __attribute__((unused)) x_eargs(x_obj_t *p_base, x_obj_t *p_args, in
 
 /** @} */ /* end arg_helpers */
 
-/** @name Evaluation Entry Points
- * @{ */
-
-/** Evaluate an argument list, returning a list of results. */
-x_obj_t *x_eval_list(x_obj_t *p_base, x_obj_t *p_args);
-
-/** Extend an environment by binding params to vals. */
-x_obj_t *x_env_extend(x_obj_t *p_base, x_obj_t *p_env,
-	x_obj_t *p_params, x_obj_t *p_vals);
-
-/** Evaluate a body (sequence of expressions), returning the last result. */
-x_obj_t *x_eval_body(x_obj_t *p_base, x_obj_t *p_body);
-
-/** Evaluate a body with TCO, setting up a trampoline for the tail call. */
-x_obj_t *x_eval_body_tco(x_obj_t *p_base, x_obj_t *p_body);
-
-/** Simplified TCO body evaluation for non-wrapping contexts. */
-
-/** Execute the TCO trampoline loop until a non-TCO result is produced. */
-x_obj_t *x_eval_tco_trampoline(x_obj_t *p_base, x_obj_t *p_result);
-
-/** Push the current env state as a TCO restore compound onto the save-stack.
- *  The compound shape is @c ((env-alist . local-boundary) . (global-bst .
- *  shadow-head)); returns the pushed compound.  Used by procedure calls and
- *  eval-with-env to snapshot the environment before extending it. */
-x_obj_t *x_tco_compound_save(x_obj_t *p_base);
-
-/** Restore env-alist, local-boundary, global-bst, and shadow list from a TCO
- *  compound previously built by x_tco_compound_save().  Does NOT pop the
- *  save-stack (callers that took the compound from the save-stack pop
- *  separately). */
-void x_tco_restore(x_obj_t *p_base, x_obj_t *p_compound);
-
-/** Discriminator atom whose address tags a tco_env value as an operative
- *  restore record (vs a procedure env compound).  See x_eval_op_body. */
-extern x_satom_t x_tco_op_tag;
-
-/** Restore env-alist, local-boundary, and shadow from an operative record
- *  @c (TAG . ((caller . op_head) . (boundary . shadow))).  Env restore is
- *  conditional on op_head reachability; never touches the BST. */
-void x_op_restore(x_obj_t *p_base, x_obj_t *p_record, int force_caller);
-
-/** Defer an operative body's tail to the outer trampoline: evaluate non-tail
- *  forms, then set tco_expr (tail) and a tagged restore record in tco_env. */
-x_obj_t *x_eval_op_body(x_obj_t *p_base, x_obj_t *p_body,
-	x_obj_t *p_caller, x_obj_t *p_op_head,
-	x_obj_t *p_boundary, x_obj_t *p_shadow);
-
-/** @} */
 
 /**
  * @defgroup callable_bind Callable Binding

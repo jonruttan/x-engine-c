@@ -28,6 +28,7 @@
 #include "src/x-type/prim.c"
 
 #define STUB_X_PRIM
+#define STUB_X_LIST
 #define STUB_X_PROCEDURE
 #define STUB_X_OPERATIVE
 #define STUB_X_HEAP

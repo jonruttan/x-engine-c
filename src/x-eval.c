@@ -20,6 +20,8 @@
 #include "x-alist.h"
 #include "x-type/ptr.h"
 #include "x-type/str.h"
+#include "x-type/list.h"
+#include "x-type/symbol.h"
 #include "x-token.h"
 #include <setjmp.h>
 
@@ -457,6 +459,432 @@ eval_start:
 	x_heap_root_pop(p_cell);
 
 	return p_exp;
+}
+
+
+/**
+ * Evaluate a single expression.
+ *
+ * Wraps @p p_arg in a stack-allocated (atom . nil) pair and passes it
+ * through x_eval, which unwraps and evaluates the inner expression.
+ *
+ * @param p_base  x_obj_t* -- Base (execution context)
+ * @param p_arg   x_obj_t* -- Expression to evaluate
+ * @return x_obj_t* -- Evaluation result
+ */
+x_obj_t *x_eval_arg(x_obj_t *p_base, x_obj_t *p_arg)
+{
+	x_satom_t wrap = x_obj_set(NULL, X_OBJ_FLAG_NONE, { p_arg });
+	x_spair_t args = x_obj_set(NULL, X_OBJ_FLAG_NONE, { wrap }, { NULL });
+
+	return x_eval(p_base, (x_obj_t *)args);
+}
+
+/**
+ * Evaluate each element of a list, returning a new list of results.
+ *
+ * Recursively evaluates via x_eval_arg, rooting the tail on the
+ * eval-list GC root so the garbage collector does not free remaining
+ * arguments while evaluating the current one.
+ *
+ * @param p_base  x_obj_t* -- Base (execution context)
+ * @param p_args  x_obj_t* -- List of unevaluated expressions
+ * @return x_obj_t* -- New list of evaluated results, or NULL if empty
+ *
+ * @details **GC rooting protocol.**  Before evaluating the current
+ *          element, the entire remaining arg list is pushed onto
+ *          eval_list (a GC root on p_base) as a stack-allocated pair.
+ *          This prevents the collector from freeing the rest of the
+ *          list while x_eval_arg runs (which may trigger GC).  After
+ *          evaluation, the root is popped.  The push/pop is O(1) per
+ *          element, but the recursion itself is O(n) in C stack depth
+ *          -- one frame per list element.  This is acceptable for
+ *          argument lists (typically short) but would overflow on
+ *          very long lists.
+ *
+ * @note Returns NULL for nil input (empty arg list), which is the
+ *       identity for list construction.
+ *
+ * @see x_eval_arg  -- evaluates a single expression
+ * @see x_eval_body -- iterative body evaluator (same GC rooting pattern)
+ */
+x_obj_t *x_eval_list(x_obj_t *p_base, x_obj_t *p_args)
+{
+	x_obj_t *p_val, *p_rest, *p_t, *p_units;
+	int is_cell;
+	x_obj_t **p_cell = x_heap_root_slot(p_base);
+	x_spair_t root = x_obj_set((x_obj_t *)x_type_pair_obj, X_OBJ_FLAG_NONE,
+		{ NULL }, { NULL });
+
+	if (x_obj_isnil(p_base, p_args)) {
+		return NULL;
+	}
+
+	/* Improper-spine guard (#69, ruled).  The walk below navigates
+	 * first/rest, which is only meaningful for an object whose TYPE
+	 * DECLARES pair units -- the same shape contract the collector's
+	 * payload walk trusts (x_type_prim_heap_mark).  The test is
+	 * STRUCTURAL, not a type-identity list: any reader personality's
+	 * spine type participates by declaring pair units (the reader and
+	 * the evaluator need not be symmetric), and raw stack cells (NULL
+	 * type slot) are cells by construction.  A dotted tail lands here
+	 * as a non-cell and raises a catchable error in place of the
+	 * segfault it replaces -- (list 1 . 5), and bare-x-core (f 1.5)
+	 * where the float module is absent and 1.5 reads as a dotted pair.
+	 * This walker is the single point that ACCEPTS every applicative's
+	 * argument spine, so per the do-guard doctrine the check lives
+	 * here; ops receive their spines raw and bind dotted tails
+	 * legitimately, so they are untouched. */
+	p_t = x_obj_type(p_args);
+	is_cell = p_t == NULL;
+
+	if ( ! is_cell && ! x_obj_type_issatom(p_args)
+		&& ! x_obj_isnil(p_base, p_t) && x_obj_type_isspair(p_t)) {
+		p_units = x_type_field_units(p_t);
+		is_cell = p_units != NULL
+			&& x_atomint(p_units) == X_OBJ_UNITS_PAIR;
+	}
+
+	if ( ! is_cell) {
+		x_eval_error(p_base,
+			(x_char_t *)"call: improper argument list (dotted tail)",
+			NULL);
+	}
+
+	/* Root p_args so GC doesn't free rest while evaluating first; the
+	 * cell's rest slot then keeps the fresh result alive across the
+	 * recursion (a hold the eval-list idiom never covered -- only the
+	 * conservative scan did). */
+	x_firstobj((x_obj_t *)root) = p_args;
+	x_heap_root_push(p_cell, root);
+
+	p_val = x_eval_arg(p_base, x_firstobj(p_args));
+	x_restobj((x_obj_t *)root) = p_val;
+
+	p_rest = x_eval_list(p_base, x_restobj(p_args));
+
+	x_heap_root_pop(p_cell);
+
+	return x_mklist(p_base, p_val, p_rest);
+}
+
+/**
+ * Extend an environment by binding parameters to values.
+ *
+ * Handles three cases: (1) variadic -- a bare symbol binds to the
+ * entire remaining value list, (2) base -- no more params returns
+ * the environment unchanged, (3) recursive -- binds first param to
+ * first value, then recurses on the rest.
+ *
+ * The new spine cells carry X_OBJ_FLAG_FRAME, marking them as local
+ * frame bindings: symbol lookup walks the frame region of the chain
+ * before consulting the global BST, so locals -- including enclosing-
+ * frame captures -- shadow globals with correct lexical semantics
+ * (GH #47).
+ *
+ * @param p_base   x_obj_t* -- Base (execution context)
+ * @param p_env    x_obj_t* -- Current environment alist
+ * @param p_params x_obj_t* -- Parameter list (or single symbol for variadic)
+ * @param p_vals   x_obj_t* -- Value list
+ * @return x_obj_t* -- Extended environment alist (newly consed pairs)
+ *
+ * @details **No in-place mutation.**  Each binding creates a new
+ *          (symbol . value) pair and a new alist cons cell prepended
+ *          to @p p_env.  The original environment is never modified,
+ *          which is essential for the TCO env-restore protocol: the
+ *          saved env snapshot remains valid even after extension.
+ *
+ * @note The variadic case (bare symbol for p_params) binds the ENTIRE
+ *       remaining value list, not just one value.  This implements
+ *       rest-parameter semantics: @c (fn (a . rest) ...).
+ *
+ * @see x_type_symbol_eval -- the 3-step lookup that honours FRAME cells
+ * @see x_prim_define      -- marks closure-scope def cells the same way
+ * @see x_eval_body_tco    -- saves/restores env around extended scopes
+ */
+x_obj_t *x_env_extend(x_obj_t *p_base, x_obj_t *p_env,
+	x_obj_t *p_params, x_obj_t *p_vals)
+{
+	x_obj_t *p_pair;
+	x_obj_t *p_val;
+	x_obj_t *p_rest;
+	x_obj_t **pp_spine;
+
+	/* Variadic: single symbol binds to entire remaining arg list. */
+	if ( ! x_obj_isnil(p_base, p_params)
+		&& x_obj_type_issymbol(p_base, p_params)) {
+		/* Callers self-pass via transient stack pairs (NULL type
+		 * slot) at the head of p_vals -- x_type_procedure_call's sp,
+		 * x_callable_apply sites' stack-built arg lists.  A bare-
+		 * variadic binding captures the spine itself, and the binding
+		 * outlives those frames (TCO defers the body to the
+		 * trampoline; apply-path closures can escape with the env),
+		 * so materialize every leading stack pair on the heap.  Heap
+		 * spines carry x_type_pair_obj and pass through untouched. */
+		for (pp_spine = &p_vals;
+			*pp_spine != NULL && x_obj_type(*pp_spine) == NULL;
+			pp_spine = &x_restobj(*pp_spine)) {
+			*pp_spine = x_mklist(p_base,
+				x_firstobj(*pp_spine), x_restobj(*pp_spine));
+		}
+
+		p_pair = x_mkspair(p_base, X_OBJ_FLAG_NONE, p_params, p_vals);
+
+		return x_mkspair(p_base, X_OBJ_FLAG_FRAME, p_pair, p_env);
+	}
+
+	/* Base case: no more params. */
+	if (x_obj_isnil(p_base, p_params)) {
+		return p_env;
+	}
+
+	/* Recursive case: bind first param to first val, continue.
+	 * When the args run out before the params do (fewer args than params),
+	 * bind the remaining params to nil -- symmetric with surplus args, which
+	 * are ignored once params run out.  Without this guard x_firstobj/
+	 * x_restobj would dereference a nil p_vals and crash. */
+	p_val  = x_obj_isnil(p_base, p_vals)
+		? NULL : x_firstobj(p_vals);
+	p_rest = x_obj_isnil(p_base, p_vals)
+		? NULL : x_restobj(p_vals);
+	p_pair = x_mkspair(p_base, X_OBJ_FLAG_NONE,
+		x_firstobj(p_params), p_val);
+
+	return x_env_extend(p_base,
+		x_mkspair(p_base, X_OBJ_FLAG_FRAME, p_pair, p_env),
+		x_restobj(p_params),
+		p_rest);
+}
+
+/**
+ * Evaluate a body (list of expressions) sequentially, returning the last result.
+ *
+ * Each expression is rooted on the eval-list before evaluation so the
+ * GC does not collect the remaining body. No tail-call optimization.
+ *
+ * @param p_base  x_obj_t* -- Base (execution context)
+ * @param p_body  x_obj_t* -- List of body expressions
+ * @return x_obj_t* -- Result of the last expression, or NULL if empty
+ *
+ * @note When X_COV is defined, marks each body cell with X_OBJ_FLAG_COV.
+ */
+x_obj_t *x_eval_body(x_obj_t *p_base, x_obj_t *p_body)
+{
+	x_obj_t *p_result = NULL;
+	x_obj_t **p_cell = x_heap_root_slot(p_base);
+	x_spair_t root = x_obj_set((x_obj_t *)x_type_pair_obj, X_OBJ_FLAG_NONE,
+		{ NULL }, { NULL });
+
+	/* Root the advancing body so GC doesn't free remaining exprs --
+	 * one registered cell for the whole walk instead of an eval-list
+	 * cons per element. */
+	x_heap_root_push(p_cell, root);
+
+	while ( ! x_obj_isnil(p_base, p_body)) {
+#ifdef X_COV
+		x_obj_flags(p_body) |= X_OBJ_FLAG_COV;
+#endif
+		x_firstobj((x_obj_t *)root) = p_body;
+
+		p_result = x_eval_arg(p_base, x_firstobj(p_body));
+
+		p_body = x_restobj(p_body);
+	}
+
+	x_heap_root_pop(p_cell);
+
+	return p_result;
+}
+
+/**
+ * Evaluate a body with full tail-call optimization.
+ *
+ * Non-tail expressions are evaluated normally. The tail (last)
+ * expression is stored in the TCO expr slot instead of being evaluated
+ * directly, and the caller's saved environment is captured in
+ * tco-env so the trampoline can restore it after the tail call.
+ *
+ * On early exit (nil tail) or empty body, pops and restores the
+ * compound save-stack frame (env, boundary, BST, shadow list).
+ *
+ * @param p_base  x_obj_t* -- Base (execution context)
+ * @param p_body  x_obj_t* -- List of body expressions
+ * @return x_obj_t* -- Result of non-tail expressions, or NULL when
+ *                      tail expression is deferred to the trampoline
+ *
+ * @details **Save-stack protocol.**  The caller (fn/let dispatch)
+ *          pushes a compound pair onto save_stack BEFORE calling this
+ *          function.  The compound has the shape:
+ *          @code
+ *          ((env-alist . local-boundary) . (global tree (a BST) . shadow-head))
+ *          @endcode
+ *          This captures the full env state prior to extension so it
+ *          can be restored after the tail call completes.
+ *
+ * @details **tco_env capture.**  When the tail expression is reached
+ *          (last element of body), this function checks whether
+ *          tco_env is still nil.  If so, it copies the save-stack top
+ *          into tco_env, providing the env snapshot that x_eval's
+ *          trampoline will use for restoration.  If tco_env is already
+ *          set (by a prior TCO iteration), the existing value is kept.
+ *
+ * @details **Save-stack pop.**  After capturing tco_env (or on early
+ *          exit), the save-stack is popped.  On the normal tail-call
+ *          path this is a simple pop (the trampoline in x_eval handles
+ *          restore).  On early exit (nil tail or empty body), this
+ *          function does a full restore from the popped frame before
+ *          returning, since no trampoline iteration will follow.
+ *
+ * @note When X_COV is defined, marks each body cell with X_OBJ_FLAG_COV.
+ *
+ * @see x_eval                  -- outermost trampoline that consumes tco_expr/tco_env
+ * @see x_eval_tco_trampoline   -- standalone trampoline for closure call paths
+ * @see x_prim_clear_shadows_to -- called during early-exit restore
+ */
+x_obj_t *x_eval_body_tco(x_obj_t *p_base, x_obj_t *p_body)
+{
+	x_obj_t *p_result = NULL;
+	x_obj_t **p_cell = x_heap_root_slot(p_base);
+	x_spair_t root = x_obj_set((x_obj_t *)x_type_pair_obj, X_OBJ_FLAG_NONE,
+		{ NULL }, { NULL });
+
+	/* Root the advancing body so GC doesn't free remaining exprs (one
+	 * cell for the walk; popped on every exit path). */
+	x_heap_root_push(p_cell, root);
+
+	while ( ! x_obj_isnil(p_base, p_body)) {
+#ifdef X_COV
+		x_obj_flags(p_body) |= X_OBJ_FLAG_COV;
+#endif
+		if (x_obj_isnil(p_base, x_restobj(p_body))) {
+			x_firstobj(x_eval_field_tco_expr(p_base)) = x_firstobj(p_body);
+
+			if (x_obj_isnil(p_base,
+				x_firstobj(x_eval_field_tco_expr(p_base)))) {
+				/* Nil tail: restore from save-stack top and pop. */
+				x_tco_restore(p_base,
+					x_firstobj(x_eval_field_save_stack(p_base)));
+				x_eval_field_save_stack(p_base)
+					= x_restobj(x_eval_field_save_stack(p_base));
+				x_heap_root_pop(p_cell);
+				return NULL;
+			}
+
+			if (x_obj_isnil(p_base,
+				x_firstobj(x_eval_field_tco_env(p_base)))) {
+				/* Save compound (env . boundary) for TCO restore */
+				x_firstobj(x_eval_field_tco_env(p_base))
+					= x_firstobj(x_eval_field_save_stack(p_base));
+			}
+
+			/* Pop save-stack */
+			x_eval_field_save_stack(p_base)
+				= x_restobj(x_eval_field_save_stack(p_base));
+
+			x_heap_root_pop(p_cell);
+			return NULL;
+		}
+
+		x_firstobj((x_obj_t *)root) = p_body;
+
+		p_result = x_eval_arg(p_base, x_firstobj(p_body));
+
+		p_body = x_restobj(p_body);
+	}
+
+	/* Empty body: restore from save-stack top and pop. */
+	x_tco_restore(p_base, x_firstobj(x_eval_field_save_stack(p_base)));
+	x_eval_field_save_stack(p_base)
+		= x_restobj(x_eval_field_save_stack(p_base));
+
+	x_heap_root_pop(p_cell);
+
+	return p_result;
+}
+
+
+/**
+ * TCO trampoline: repeatedly evaluate deferred tail expressions.
+ *
+ * After a TCO-aware body defers its tail expression, this loop
+ * evaluates it. If that evaluation itself defers another tail call,
+ * the loop continues until no more TCO expressions remain.
+ *
+ * On exit, restores the environment, local boundary, global BST, and
+ * shadow list from the compound saved in tco-env.
+ *
+ * @param p_base   x_obj_t* -- Base (execution context)
+ * @param p_result x_obj_t* -- Initial result (from non-tail evaluation)
+ * @return x_obj_t* -- Final evaluation result
+ *
+ * @see x_eval_body_tco
+ */
+x_obj_t *x_eval_tco_trampoline(x_obj_t *p_base, x_obj_t *p_result)
+{
+	x_obj_t *p_tco, *p_te, *p_tco_env = NULL, *p_op_save = NULL;
+	int op_outermost = 0, kept_any = 0;
+	int is_op;
+	int has_proc, has_op;
+	/* Roots for the kept restore records (#243, mirrors x_eval): they
+	 * are popped off the save-stack and the tco-env field is cleared,
+	 * so across the arbitrary evaluation below these locals hold the
+	 * only references -- and a C local is not a root (x-heap.h).  An
+	 * argument eval that triggers (heap-collect) would otherwise sweep
+	 * the records the exit restores then read. */
+	x_obj_t **p_cell = x_heap_root_slot(p_base);
+	x_spair_t tco_root = x_obj_set((x_obj_t *)x_type_pair_obj,
+		X_OBJ_FLAG_NONE, { NULL }, { NULL });
+
+	x_heap_root_push(p_cell, tco_root);
+
+	while ( ! x_obj_isnil(p_base, x_firstobj(x_eval_field_tco_expr(p_base)))) {
+		p_tco = x_firstobj(x_eval_field_tco_expr(p_base));
+
+		/* Keep the first procedure compound and the first operative record,
+		 * distinguished by the op tag, and note which was kept first (mirrors
+		 * x_eval's trampoline). */
+		p_te = x_firstobj(x_eval_field_tco_env(p_base));
+		if ( ! x_obj_isnil(p_base, p_te)) {
+			is_op = (x_firstobj(p_te) == (x_obj_t *)&x_tco_op_tag);
+
+			if ( ! kept_any) { op_outermost = is_op; kept_any = 1; }
+			if (is_op) {
+				if (p_op_save == NULL || x_obj_isnil(p_base, p_op_save)) {
+					p_op_save = p_te;
+					x_restobj((x_obj_t *)tco_root) = p_op_save;
+				}
+			} else if (p_tco_env == NULL || x_obj_isnil(p_base, p_tco_env)) {
+				p_tco_env = p_te;
+				x_firstobj((x_obj_t *)tco_root) = p_tco_env;
+			}
+		}
+
+		x_firstobj(x_eval_field_tco_expr(p_base)) = NULL;
+		x_firstobj(x_eval_field_tco_env(p_base)) = NULL;
+		p_result = x_eval_arg(p_base, p_tco);
+	}
+
+	/* Apply the two channels in REVERSE capture order so the outermost frame
+	 * (captured first) wins env-alist; see x_eval for the rationale.  has_proc
+	 * forces the op record's env restore to the caller (applied-procedure tail). */
+	has_proc = (p_tco_env != NULL && ! x_obj_isnil(p_base, p_tco_env));
+	has_op = (p_op_save != NULL && ! x_obj_isnil(p_base, p_op_save));
+
+	if (op_outermost) {
+		if (has_proc)
+			x_tco_restore(p_base, p_tco_env);
+		if (has_op)
+			x_op_restore(p_base, p_op_save, has_proc);
+	} else {
+		if (has_op)
+			x_op_restore(p_base, p_op_save, has_proc);
+		if (has_proc)
+			x_tco_restore(p_base, p_tco_env);
+	}
+
+	x_heap_root_pop(p_cell);
+
+	return p_result;
 }
 
 #endif /* !STUB_X_EVAL && !X_EVAL_OWN -- evaluator engine */

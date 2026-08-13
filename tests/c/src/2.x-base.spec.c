@@ -22,6 +22,7 @@
 #include "src/x-eval.c"
 
 #define STUB_X_PRIM
+#define STUB_X_LIST
 #define STUB_X_PRIM_REGISTER
 #define STUB_X_PROCEDURE
 #define STUB_X_OPERATIVE
