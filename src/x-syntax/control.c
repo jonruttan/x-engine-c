@@ -131,6 +131,7 @@ static x_obj_t *x_prim_guard(x_obj_t *p_base, x_obj_t *p_args)
 		*p_saved_line = x_eval_field_line(p_base),
 		*p_handler, *p_result = NULL;
 	x_obj_t *p_err, *p_pair;
+	x_int_t unwind_fd;
 	x_args(p_args, 2, NULL, &p_clause);
 	p_var = x_firstobj(p_clause);
 	p_handler_body = x_restobj(p_clause);
@@ -186,8 +187,14 @@ static x_obj_t *x_prim_guard(x_obj_t *p_base, x_obj_t *p_args)
 		 * preserved -- a guard inside an included file keeps that
 		 * file's frames. */
 		while (x_base_field_filein(p_base) != p_saved_filein) {
-			x_sys_close((int)x_atomint(
-				x_firstobj(x_base_field_filein(p_base))));
+			/* A latched cell (#170 sticky EOF) holds the fd's
+			 * bitwise complement, not the fd -- recover it, or the
+			 * close is a -1 no-op and the descriptor leaks (#278).
+			 * Reachable: the read-error raise fires with the latch
+			 * already written. */
+			unwind_fd = x_atomint(
+				x_firstobj(x_base_field_filein(p_base)));
+			x_sys_close((int)(unwind_fd < 0 ? ~unwind_fd : unwind_fd));
 			x_base_field_filein(p_base)
 				= x_restobj(x_base_field_filein(p_base));
 		}

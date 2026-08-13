@@ -239,16 +239,23 @@ x_obj_t *x_type_buffer_read(x_obj_t *p_base, x_obj_t *p_args)
 			 * yields a single zero-length read and the next read
 			 * blocks -- but the tokenizer scores every type x
 			 * analyser, each re-observing EOF, so it needs EOF to
-			 * be STICKY (as it is on pipes and files).  Poison the
-			 * CURRENT filein cell to -1: every later read fails
-			 * instantly through the existing path, no new state.
-			 * Scoping is the filein chain itself -- include pushes
-			 * a cell per file and pops it, so an included file's
-			 * latch dies with its cell and the outer stream's cell
-			 * is never touched.  This is the sole x_base_read call
-			 * site in the tree. */
+			 * be STICKY (as it is on pipes and files).  Latch the
+			 * CURRENT filein cell to the fd's bitwise complement
+			 * (negative for every valid fd; stdin's ~0 is the old
+			 * -1): every later read fails instantly through the
+			 * existing < 0 check, no new state.  The complement,
+			 * not a flat -1, because the fd must stay RECOVERABLE:
+			 * when the #170 read-error raise below fires with the
+			 * latch already set, the guard unwind (#278) closes the
+			 * cut-away include's fd out of this cell -- a destroyed
+			 * value leaked the descriptor.  Scoping is the filein
+			 * chain itself -- include pushes a cell per file and
+			 * pops it, so an included file's latch dies with its
+			 * cell and the outer stream's cell is never touched.
+			 * This is the sole x_base_read call site in the tree. */
 			if (x_base_isset(p_base)) {
-				x_atomint(x_firstobj(x_base_field_filein(p_base))) = -1;
+				x_atomint(x_firstobj(x_base_field_filein(p_base)))
+					= ~x_atomint(x_firstobj(x_base_field_filein(p_base)));
 			}
 
 			/* Read ERROR vs end-of-stream (#170): x_base_read wrote
