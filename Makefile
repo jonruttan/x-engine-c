@@ -531,7 +531,7 @@ lint: ## Lint C sources
 # so it joined only once fully green): lib AND apps both sweep clean since
 # the sibling-preload / value-call linter round (#176).
 lint-x: $(EXECUTABLE) ## Lint x-lang files
-	sh tools/dev/lint.sh
+	PARALLEL=1 sh tools/dev/lint.sh
 .PHONY: lint-x
 
 fmt-x: $(EXECUTABLE) ## Format x-lang files
