@@ -541,17 +541,23 @@ x_obj_t *x_eval_list(x_obj_t *p_base, x_obj_t *p_args)
 	 * payload walk trusts (x_type_prim_heap_mark).  The test is
 	 * STRUCTURAL, not a type-identity list: any reader personality's
 	 * spine type participates by declaring pair units (the reader and
-	 * the evaluator need not be symmetric), and raw stack cells (NULL
-	 * type slot) are cells by construction.  A dotted tail lands here
-	 * as a non-cell and raises a catchable error in place of the
-	 * segfault it replaces -- (list 1 . 5), and bare-x-core (f 1.5)
-	 * where the float module is absent and 1.5 reads as a dotted pair.
-	 * This walker is the single point that ACCEPTS every applicative's
-	 * argument spine, so per the do-guard doctrine the check lives
-	 * here; ops receive their spines raw and bind dotted tails
-	 * legitimately, so they are untouched. */
+	 * the evaluator need not be symmetric), and two shapes are cells
+	 * by construction -- raw stack cells (NULL type slot) and heap
+	 * pairs tagged with the built-in pair static (the x_mkspair
+	 * product; #296).  The static's own type slot is NULL, so the
+	 * registered-type probe below could never accept it -- omitting
+	 * it here made every C-built spine handed to an applicative in a
+	 * minimal base raise spuriously.  A dotted tail lands here as a
+	 * non-cell and raises a catchable error in place of the segfault
+	 * it replaces -- (list 1 . 5), and bare-x-core (f 1.5) where the
+	 * float module is absent and 1.5 reads as a dotted pair; the
+	 * tail atom is atom-tagged or registered-typed, so neither new
+	 * shape re-admits it.  This walker is the single point that
+	 * ACCEPTS every applicative's argument spine, so per the do-guard
+	 * doctrine the check lives here; ops receive their spines raw and
+	 * bind dotted tails legitimately, so they are untouched. */
 	p_t = x_obj_type(p_args);
-	is_cell = p_t == NULL;
+	is_cell = p_t == NULL || x_obj_type_isspair(p_args);
 
 	if ( ! is_cell && ! x_obj_type_issatom(p_args)
 		&& ! x_obj_isnil(p_base, p_t) && x_obj_type_isspair(p_t)) {
