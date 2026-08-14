@@ -814,6 +814,72 @@ static char *test_core_error_no_handler_str(void)
 	return NULL;
 }
 
+static char *test_core_mkspair_spine_not_dotted(void)
+{
+	x_obj_t *p_base, *p_args, *p_fn, *p_arglist;
+	x_obj_t *p_handler, *p_saved_roots;
+	jmp_buf jmp;
+	int caught = 0;
+
+	p_base = x_eval_make(NULL, NULL);
+	x_prim_register(p_base, NULL);
+
+	/* (fn (x) x) bound to idfn, '(42) bound to args -- the embedder
+	 * shape: C code hands x_mkspair-built spines to a prim directly. */
+	p_args = x_mkspair(p_base, X_OBJ_FLAG_NONE, NULL,
+		x_mkspair(p_base, X_OBJ_FLAG_NONE,
+		x_mkspair(p_base, X_OBJ_FLAG_NONE, x_mksymbol(p_base, "x"), NULL),
+		x_mkspair(p_base, X_OBJ_FLAG_NONE, x_mksymbol(p_base, "x"), NULL)));
+	p_fn = x_prim_closure(p_base, p_args);
+	x_eval_env_alist_extend(p_base,
+		x_mkspair(p_base, X_OBJ_FLAG_NONE, x_mksymbol(p_base, "idfn"), p_fn));
+	p_arglist = x_mklist(p_base,
+		x_mksatom(p_base, X_OBJ_FLAG_NONE, (x_int_t)42), NULL);
+	x_eval_env_alist_extend(p_base,
+		x_mkspair(p_base, X_OBJ_FLAG_NONE, x_mksymbol(p_base, "args"), p_arglist));
+
+	/* Install a real jmp handler (guard shape, #253) so a raise is
+	 * observable instead of hitting the no-handler exit path. */
+	p_handler = x_mkspair(p_base, X_OBJ_FLAG_NONE,
+		x_mkptr(p_base, &jmp),
+		x_mkspair(p_base, X_OBJ_FLAG_NONE,
+			x_mkspair(p_base, X_OBJ_FLAG_NONE,
+				x_firstobj(x_eval_field_env_alist(p_base)),
+				x_eval_field_env_local_boundary(p_base)),
+			x_mkspair(p_base, X_OBJ_FLAG_NONE, NULL, NULL)));
+	x_firstobj(x_eval_field_error_handler(p_base)) = x_mkspair(p_base,
+		X_OBJ_FLAG_NONE, p_handler, NULL);
+
+	/* (apply idfn args) with an x_mkspair-built spine: tagged with the
+	 * built-in pair static, whose own type slot is NULL.  Pre-#296 the
+	 * evlis dotted-tail guard could not classify that shape as a cell
+	 * and raised on a proper list. */
+	x_firstobj(x_eval_field_tco_expr(p_base)) = NULL;
+	p_args = x_mkspair(p_base, X_OBJ_FLAG_NONE, NULL,
+		x_mkspair(p_base, X_OBJ_FLAG_NONE, x_mksymbol(p_base, "idfn"),
+		x_mkspair(p_base, X_OBJ_FLAG_NONE, x_mksymbol(p_base, "args"), NULL)));
+
+	/* Snapshot the root chain: a longjmp out of the evlis walk abandons
+	 * its root-push frames (dead-stack nodes), so the catch branch must
+	 * restore the snapshot before anything walks the chain (#243 rule). */
+	p_saved_roots = x_heap_root_chain(p_base);
+	if (setjmp(jmp) == 0) {
+		x_prim_apply(p_base, p_args);
+	} else {
+		caught = 1;
+		x_heap_root_chain(p_base) = p_saved_roots;
+	}
+	x_firstobj(x_eval_field_error_handler(p_base)) = NULL;
+
+	_it_should("mkspair spine does not raise dotted-tail",
+		caught == 0);
+	_it_should("apply on mkspair spine still defers its tail",
+		! x_obj_isnil(p_base, x_firstobj(x_eval_field_tco_expr(p_base))));
+
+	test_cleanup(p_base);
+	return NULL;
+}
+
 static char *run_tests() {
 	_run_test(test_core_quote);
 	_run_test(test_core_pair_first_rest);
@@ -835,6 +901,7 @@ static char *run_tests() {
 	/* test_core_set_first_rest_int: moved to X (lib/x-core.x) */
 	_run_test(test_core_eval_with_env);
 	_run_test(test_core_apply);
+	_run_test(test_core_mkspair_spine_not_dotted);
 	_run_test(test_core_error_guard_catch);
 	_run_test(test_core_set_unbound);
 	_run_test(test_core_error_no_handler_str);
