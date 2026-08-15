@@ -550,14 +550,32 @@ fmt-x: $(EXECUTABLE) ## Format x-lang files
 	done
 .PHONY: fmt-x
 
+# Three outcomes, not two (#307).  The old check compared command
+# substitutions with stderr sent to /dev/null and the exit status never
+# consulted, so a formatter that DIED on a file printed the same F as a
+# file that merely needs reformatting -- and the four known-red files
+# would have hidden a real crash among them.  ERROR now says so, and
+# quotes the tool's own last words.
+#
+# The comparison is byte-exact (cmp, not "$(...)" = "$(...)"), because
+# the question this target answers is "would fmt-x change this file?" --
+# and fmt-x writes fmt's stdout verbatim.  Command substitution strips
+# trailing newlines from both sides, so it could answer "no" while fmt-x
+# would in fact rewrite the file.
 fmt-check-x: $(EXECUTABLE) ## Check x-lang formatting
-	@FAIL=0; for f in lib/x-core.x lib/x/*.x; do \
-		if [ "$$(sh x.sh --no-pin -q -f tools/dev/fmt.x -- "$$f" 2>/dev/null)" = "$$(cat "$$f")" ]; then \
+	@FAIL=0; TMP=$$(mktemp); ERR=$$(mktemp); \
+	for f in lib/x-core.x lib/x/*.x; do \
+		if ! sh x.sh --no-pin -q -f tools/dev/fmt.x -- "$$f" > "$$TMP" 2> "$$ERR"; then \
+			FAIL=1; \
+			printf '  \033[1;31mERROR\033[0m %s -- the formatter FAILED (this is not a formatting diff)\n' "$$f"; \
+			tail -3 "$$ERR" | sed 's/^/          /'; \
+		elif cmp -s "$$TMP" "$$f"; then \
 			printf '  \033[1;32m.\033[0m %s\n' "$$f"; \
 		else \
 			FAIL=1; printf '  \033[1;31mF\033[0m %s\n' "$$f"; \
 		fi; \
-	done; [ "$$FAIL" -eq 0 ]
+	done; \
+	rm -f "$$TMP" "$$ERR"; [ "$$FAIL" -eq 0 ]
 .PHONY: fmt-check-x
 
 doc-c: ## Generate C reference documentation (HTML + man pages)
