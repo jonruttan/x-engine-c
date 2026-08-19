@@ -162,9 +162,21 @@ default: all strip ## Build and strip
 
 all: $(SOURCES) $(EXECUTABLE) ## Build all
 
-strip: $(EXECUTABLE) ## Strip non-global symbols (keep dynamic exports for dlopen)
+# Stamp-gated (#367): the bare `strip` recipe ran on EVERY make,
+# mutating the binary (strip + macOS ad-hoc re-codesign) even when
+# nothing had rebuilt -- churning the content hash that #325's
+# boot-order verdict cache keys on, and making "did that target dirty
+# the tree?" undiagnosable by a follow-up make.  The stamp is touched
+# AFTER the strip mutates the binary, so it lands newer and the next
+# make no-ops; a real relink leaves the binary newer than the stamp and
+# re-strips exactly once.  `make strip` stays the manual entry.
+strip: build/.strip-stamp ## Strip non-global symbols (keep dynamic exports for dlopen)
+.PHONY: strip
+
+build/.strip-stamp: $(EXECUTABLE)
 	strip -x $(EXECUTABLE)
 	@if [ -f entitlements.plist ]; then codesign -s - --entitlements entitlements.plist -f $(EXECUTABLE) 2>/dev/null || true; fi
+	@mkdir -p build && touch $@
 
 # Keyed on $(OUTPUT), not $(EXECUTABLE): a variant recursion passes
 # OUTPUT=x-bin-<variant> and names ITSELF as the goal, so make checks
@@ -681,7 +693,7 @@ uninstall: ## Uninstall from PREFIX
 .PHONY: uninstall
 
 clean: cov-clean ## Clean build artifacts
-	rm -f $(EXECUTABLE) x-bin-debug x-bin-profile x-bin-asan x-bin-cov *.out $(SRCDIR)/*.o $(SRCDIR)/**/*.o $(SRCDIR)/**/**/*.o $(OPTDIR)/**/*.o $(X_EXPR_DIR)/src/*.o *.core core
+	rm -f $(EXECUTABLE) x-bin-debug x-bin-profile x-bin-asan x-bin-cov build/.strip-stamp *.out $(SRCDIR)/*.o $(SRCDIR)/**/*.o $(SRCDIR)/**/**/*.o $(OPTDIR)/**/*.o $(X_EXPR_DIR)/src/*.o *.core core
 	@# Pre-rename binary names (engine was `x` until the x-bin rename): a
 	@# checkout that built before the rename has stale copies at the root.
 	rm -f x x-debug x-profile x-asan x-cov
