@@ -86,13 +86,21 @@ OPTDIR=$(BASEDIR)/opt
 # x-expr foundation library
 X_EXPR_DIR=ext/x-expr
 X_EXPR_SOURCES=$(wildcard $(X_EXPR_DIR)/src/*.c)
-X_EXPR_OBJECTS=$(X_EXPR_SOURCES:.c=.o)
+# Per-configuration object extension (#329).  The plain build owns .o;
+# each variant compiles to its own suffix (.cov.o, .asan.o, ...) beside
+# it, so no two configurations ever share an object path -- the old
+# clean-obj brackets (which deleted EVERY object on both sides of a
+# variant build, forcing the next plain-build-dependent target to
+# silently re-pay the whole C compile) are gone, and variants rebuild
+# incrementally like the plain build always has.
+OBJ_EXT?=.o
+X_EXPR_OBJECTS=$(X_EXPR_SOURCES:.c=$(OBJ_EXT))
 
 CFLAGS+=-I$(X_EXPR_DIR)/include -I$(INCDIR)
 
 HEADERS=$(wildcard $(INCDIR)/*.h $(INCDIR)/**/*.h $(INCDIR)/**/**/*.h $(X_EXPR_DIR)/include/*.h)
 SOURCES=$(wildcard $(SRCDIR)/*.c $(SRCDIR)/**/*.c $(SRCDIR)/**/**/*.c)
-OBJECTS=$(SOURCES:.c=.o)
+OBJECTS=$(SOURCES:.c=$(OBJ_EXT))
 # NAME is the PROJECT name: the wrapper's installed command (bin/x) and the
 # install-tree dirs (share/x, libexec/x) -- x.sh's X_SHARE/X_ENGINE and the
 # bootstrap tarball layout depend on it.  EXECUTABLE is the ENGINE BINARY's
@@ -158,45 +166,54 @@ strip: $(EXECUTABLE) ## Strip non-global symbols (keep dynamic exports for dlope
 	strip -x $(EXECUTABLE)
 	@if [ -f entitlements.plist ]; then codesign -s - --entitlements entitlements.plist -f $(EXECUTABLE) 2>/dev/null || true; fi
 
-$(EXECUTABLE): $(OBJECTS) $(X_EXPR_OBJECTS) $(EXTRA_OBJS)
+# Keyed on $(OUTPUT), not $(EXECUTABLE): a variant recursion passes
+# OUTPUT=x-bin-<variant> and names ITSELF as the goal, so make checks
+# the variant binary's staleness against the variant's own objects.
+# (Under the old shared-object scheme the inner goal was the plain
+# binary and only linked because clean-obj had just made every object
+# newer than it.)
+$(OUTPUT): $(OBJECTS) $(X_EXPR_OBJECTS) $(EXTRA_OBJS)
 	$(CC) $(LDFLAGS) $(OBJECTS) $(X_EXPR_OBJECTS) $(EXTRA_OBJS) $(EXTRA_LIBS) -o $(OUTPUT)
 
-# Variant builds (debug / profile / asan) share src/*.o with the normal build,
-# so each brackets its work with clean-obj: the leading one forces a rebuild
-# under the variant's flags; the trailing one removes those objects so a later
-# plain `make` doesn't relink them -- silently picking up -DDEBUG, or hard-
-# failing on the ASan runtime ("_asan.module_ctor ... symbol(s) not found").
+# Variant builds (debug / profile / cov / asan): each compiles to its
+# own object suffix (#329), so nothing collides with the plain build's
+# .o and nothing needs the old clean-obj brackets.  Every variant is
+# PHONY -- the recursion is the freshness check: the inner make no-ops
+# in milliseconds when the variant binary is newer than its own
+# objects, and rebuilds exactly the stale ones otherwise (the coverage
+# binary used to go STALE after its first build instead, because the
+# bracket dance made rebuilding cost the whole tree twice).
+#
+# Defined ONLY in the plain (.o) universe: the inner make's goal IS the
+# variant's filename, which must resolve to the $(OUTPUT) link rule --
+# were this phony also defined there, it would override that rule
+# (later definition wins) and recurse forever.
+ifeq ($(OBJ_EXT),.o)
 x-bin-debug: ## Build debug target
-	$(MAKE) clean-obj
-	$(MAKE) OUTPUT=$@ CFLAGS="$(CFLAGS) -g -Og -DDEBUG" $(EXECUTABLE)
-	$(MAKE) clean-obj
+	$(MAKE) OUTPUT=$@ OBJ_EXT=.debug.o CFLAGS="$(CFLAGS) -g -Og -DDEBUG" $@
+.PHONY: x-bin-debug
 
 x-bin-profile: ## Build profiling binary (includes coverage)
-	$(MAKE) clean-obj
-	$(MAKE) OUTPUT=$@ CFLAGS="$(CFLAGS) -DX_PROFILE -DX_COV" $(EXECUTABLE)
-	$(MAKE) clean-obj
+	$(MAKE) OUTPUT=$@ OBJ_EXT=.profile.o CFLAGS="$(CFLAGS) -DX_PROFILE -DX_COV" $@
+.PHONY: x-bin-profile
 
 # ASan flags go in CFLAGS only: 'LDFLAGS?=$(CFLAGS)' (above) carries them into
 # the link too, so the runtime links while KEEPING the project's -dead_strip /
 # exports.sym LDFLAGS (passing LDFLAGS on the command line would lose those).
 x-bin-asan: ## Build with AddressSanitizer for memory-safety testing
-	$(MAKE) clean-obj
-	$(MAKE) OUTPUT=$@ CFLAGS="$(CFLAGS) -fsanitize=address -fno-omit-frame-pointer -g" $(EXECUTABLE)
-	$(MAKE) clean-obj
+	$(MAKE) OUTPUT=$@ OBJ_EXT=.asan.o CFLAGS="$(CFLAGS) -fsanitize=address -fno-omit-frame-pointer -g" $@
 .PHONY: x-bin-asan
 
-# Not PHONY: once the file exists the target is satisfied, so the double
-# rebuild (clean-obj brackets, like the variants above) is paid once per
-# clean, not once per test run.  `make clean` removes it.
 x-bin-cov: ## Build the coverage binary (-DX_COV flag-marking eval)
-	$(MAKE) clean-obj
-	$(MAKE) OUTPUT=$@ CFLAGS="$(CFLAGS) -DX_COV" $(EXECUTABLE)
-	$(MAKE) clean-obj
+	$(MAKE) OUTPUT=$@ OBJ_EXT=.cov.o CFLAGS="$(CFLAGS) -DX_COV" $@
+.PHONY: x-bin-cov
+endif
 
+# The *.o globs also catch every variant suffix (x.cov.o ends in .o).
 clean-obj:
 	rm -f $(SRCDIR)/*.o $(SRCDIR)/**/*.o $(SRCDIR)/**/**/*.o $(OPTDIR)/**/*.o $(X_EXPR_DIR)/src/*.o
 
-.c.o:
+%$(OBJ_EXT): %.c
 	$(CC) -c $(CFLAGS) $(DEFS) -o $@ $<
 
 # ============================================================================
