@@ -457,8 +457,15 @@ check-doc-vocab: ## Lint doc forms for banned type-token aliases + retired names
 #   - WRAPPER= disables the C runner's valgrind auto-wrap (ASan != valgrind).
 #   - TIMEOUT_UNIT_SECS raised: instrumentation slows each spec ~2-3x.
 ASAN_RUN_OPTIONS=detect_leaks=0:detect_stack_use_after_return=0
+#   - SPEC_HEAVY_JOBS=1 (#366): the scheduler's heavy-set admission cap
+#     of 2 is tuned at NORMAL resident sizes; sanitizer instrumentation
+#     multiplies RSS ~2-3x, and two co-resident heavies OOM-killed the
+#     7GB hosted runner on every merge after the #320 heaviest-first
+#     ordering landed (exit 143, no failing test -- the runner dies).
+#     One heavy at a time under ASan; light jobs still fill the
+#     remaining slots.
 test-asan: x-bin-asan ## Run both suites under AddressSanitizer (memory-safety gate)
-	ASAN_OPTIONS=$(ASAN_RUN_OPTIONS) TIMEOUT_UNIT_SECS=180 X_BIN=./x-bin-asan sh tests/x/spec-runner.sh
+	ASAN_OPTIONS=$(ASAN_RUN_OPTIONS) TIMEOUT_UNIT_SECS=180 SPEC_HEAVY_JOBS=1 X_BIN=./x-bin-asan sh tests/x/spec-runner.sh
 	ASAN_OPTIONS=$(ASAN_RUN_OPTIONS) WRAPPER= CFLAGS="$(TEST_CFLAGS) -fsanitize=address -fno-omit-frame-pointer" sh $(PATH_TESTS_C)/test-runner/test-runner.sh $(TESTS)
 .PHONY: test-asan
 
