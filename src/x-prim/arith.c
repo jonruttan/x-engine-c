@@ -25,7 +25,7 @@
  * optionally dispatch through the type-ops registry, guard nil, compute.
  *
  * use_ops selects the x_type_op_try dispatch. The tower ops (+ * / %)
- * pass 1 so a typed operand (float, bignum, ...) reaches its type's
+ * pass 1 so a typed operand (float, bigint, ...) reaches its type's
  * handler; the bitwise family passes 0 -- #52 ruled bitwise has no tower
  * semantics (there is no float `&`; lib/x/core/arithmetic.x records the
  * ruling), so the dispatch hook is deliberately not offered there.
