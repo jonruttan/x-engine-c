@@ -253,6 +253,10 @@ test-fast: gates-fast test-c test-x ## Pre-push gate: fast gates + both spec sui
 
 # bootstrap.sh's build+install path (its coupling to the install layout);
 # the clone path is exercised by the release workflow on a clean checkout.
+# The smoke stages a tracked-files copy and builds THERE (#326): the
+# script's own `make clean` used to wipe this repo's x-bin and objects
+# mid-gate, and the next $(EXECUTABLE)-dependent target silently re-paid
+# the whole C build.  The repo's artifacts now survive the gate.
 check-bootstrap: $(EXECUTABLE) ## Smoke the one-command bootstrap install
 	sh tools/check/bootstrap-smoke.sh
 .PHONY: check-bootstrap
