@@ -104,7 +104,11 @@ static x_obj_t *x_prim_token_read_string(x_obj_t *p_base, x_obj_t *p_args)
 	x_lib_memcpy(buf, str, len);
 	buf[len] = '\0';
 
-	p_buffer = x_mkfbufferown(p_token_base, X_OBJ_FLAG_RO, buf);
+	/* RO WITHOUT own (#354): retain bumps an RO buffer's val past the
+	 * malloc base, so the OWN free (x_obj_free frees x_firstobj = val)
+	 * must never see it -- this function frees its own copy below,
+	 * after the loop; tokens copy out of the buffer and never view it. */
+	p_buffer = x_mkfbuffer(p_token_base, X_OBJ_FLAG_RO, buf);
 	x_bufferwrite(p_buffer) = x_bufferval(p_buffer) + len;
 
 	if (x_atomint(x_firstobj(x_base_field_obj_meta_extra(p_base))) > 0
@@ -145,6 +149,8 @@ static x_obj_t *x_prim_token_read_string(x_obj_t *p_base, x_obj_t *p_args)
 
 		p_tail = p_node;
 	}
+
+	x_sys_free(buf);
 
 	return p_result;
 }

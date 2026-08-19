@@ -164,6 +164,22 @@ x_obj_t *x_type_buffer_retain(x_obj_t *p_base, x_obj_t *p_args)
 	x_obj_t *p_buffer = x_firstobj(p_args);
 	x_int_t n = x_bufferwrite(p_buffer) - x_bufferread(p_buffer);
 
+	/* A read-only buffer never refills, so compaction serves nothing
+	 * but the val==read mark the tokenizer's consumption math needs
+	 * (x_bufferlen = read - val).  Advance the mark as a pointer bump
+	 * instead of memcpying the whole unread remainder: the tokenizer
+	 * retains PER TOKEN, which made (tok read-str) -- whose buffer is
+	 * the entire input -- O(input^2) in total bytes copied (#354; a
+	 * 47KB source file cost hundreds of MB of memcpy per read).  The
+	 * bytes do not move, so lastchar (read[-1]) stays valid; unread
+	 * (write - read) is untouched; and no RO tokenizer buffer is OWN
+	 * (token-read-string frees its copy itself), so the free path
+	 * never sees the bumped val. */
+	if (x_obj_flags(p_buffer) & X_OBJ_FLAG_RO) {
+		x_bufferval(p_buffer) = x_bufferread(p_buffer);
+		return p_buffer;
+	}
+
 	x_lib_memcpy(x_bufferval(p_buffer), x_bufferread(p_buffer), n);
 	x_bufferread(p_buffer) = x_bufferval(p_buffer);
 	x_bufferwrite(p_buffer) = x_bufferread(p_buffer) + n;
