@@ -323,11 +323,19 @@ check-release-manifest: boot ## Generate + self-check the release manifest
 .PHONY: check-release-manifest
 
 # The relocatable binary tarball (release.yml ships one per platform on a
-# tag) -- gated with a throwaway tag: package.sh stages the install tree,
-# tars it, and self-proves relocation (unpack elsewhere, run) so the
-# packaging cannot rot between releases.  Output lands under build/.
+# tag) -- gated so the packaging cannot rot between releases: package.sh
+# stages the install tree, tars it, and self-proves relocation (unpack
+# elsewhere, run).  Output lands under build/.
+#
+# The tag it is handed is THIS BUILD'S $(X_RELEASE), not a throwaway
+# literal.  package.sh passes its tag through to `make install`, which
+# stamps the engine with it -- so a literal would rebuild x-cli.o and
+# relink the repo's own binary under a fake release, then relink it back
+# on the next make.  Handing it the value the tree already has keeps the
+# gate a no-op on the build while still exercising the whole path,
+# stamp assertions included.
 check-package: $(EXECUTABLE) ## Build + self-check a relocatable binary tarball
-	sh tools/release/package.sh check build/dist-check
+	sh tools/release/package.sh "$(X_RELEASE)" build/dist-check
 .PHONY: check-package
 
 # Project pinning (docs/modules.md "Pinning"): the wrapper's pin.xon probe
