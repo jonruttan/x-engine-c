@@ -226,5 +226,6 @@
   (%token-eof)
   (args)
   (x-machine)
+  (x-release)
   (x-version)
 )))

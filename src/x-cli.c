@@ -23,6 +23,18 @@
 #include "x-eval.h"
 #include "x-heap.h"
 #include "x-prim.h"
+/* The build's release identity, generated per build by the Makefile from
+ * `git describe`.  A fallback keeps a hand-run compile (one that never went
+ * through the Makefile rule) building rather than failing on a missing
+ * header, and "dev" is the truthful answer for such a build. */
+#if defined(__has_include)
+#if __has_include("x-release.h")
+#include "x-release.h"
+#endif
+#endif
+#ifndef X_RELEASE
+#define X_RELEASE "dev"
+#endif
 #include "x-type/buffer.h"
 #include "x-type/char.h"
 #include "x-type/comment.h"
@@ -276,8 +288,8 @@ x_obj_t * init(x_obj_t *p_base, x_char_t *buffer)
  *
  * Initializes the interpreter, records the stack base for conservative
  * GC scanning, binds command-line arguments as the x-lang `args` list,
- * binds `x-machine` and `x-version` platform constants, then enters
- * the REPL.
+ * binds `x-machine`, `x-version` and `x-release` platform constants, then
+ * enters the REPL.
  *
  * @param argc  int -- Argument count
  * @param argv  char*[] -- Argument vector
@@ -308,6 +320,13 @@ int main(int argc, char *argv[])
 	/* Bind platform constants. */
 	x_value_bind(p_base, "x-machine", x_mkstr(p_base, (x_char_t *)X_MACHINE));
 	x_value_bind(p_base, "x-version", x_mkstr(p_base, (x_char_t *)X_VERSION));
+	/* x-version is the EXPRESSION LAYER's version (ext/x-expr's X_VERSION,
+	 * "0.1.0" and rightly stable); x-release is which RELEASE of x-lang this
+	 * engine is.  Before this binding existed nothing in a built engine
+	 * differed between releases whose C never changed -- v0.4.0 and v0.5.0
+	 * were the same bytes reporting the same version -- and a pinned amalgam
+	 * from one could boot on the other and segfault (#435). */
+	x_value_bind(p_base, "x-release", x_mkstr(p_base, (x_char_t *)X_RELEASE));
 
 	/* REPL. */
 	x_prim_repl(p_base, NULL);

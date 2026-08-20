@@ -90,3 +90,6 @@ build/
 # macOS finder metadata -- must be repo-local, not left to a contributor's
 # global gitignore, or the first macOS clone commits one
 .DS_Store
+
+# Generated per build from `git describe` (Makefile: X_RELEASE); never committed.
+include/x-release.h
