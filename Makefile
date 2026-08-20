@@ -648,7 +648,12 @@ fmt-check-x: $(EXECUTABLE) ## Check x-lang formatting (whole library)
 	sh tools/dev/fmt-sweep.sh
 .PHONY: fmt-check-x
 
+# docs/ref/c/ is gitignored, so a fresh clone does not have it, and Doxygen
+# refuses to create its own OUTPUT_DIRECTORY (docs/ref/README.md quotes the
+# error).  The target makes its own output root rather than leaving that to
+# whoever cloned -- CI runs this on a fresh checkout.
 doc-c: ## Generate C reference documentation (HTML + man pages)
+	@mkdir -p docs/ref/c
 	doxygen Doxyfile
 .PHONY: doc-c
 
