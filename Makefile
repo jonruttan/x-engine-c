@@ -240,6 +240,13 @@ test-x: $(EXECUTABLE) ## Run x-lang tests
 	sh tests/x/spec-runner.sh
 .PHONY: test-x
 
+# The applicative stress lane rides test-x only when STRESS=1 (CI's
+# native specs jobs set it; see #300).  This target is the local
+# spelling -- SERIAL, because the lane's files peak ~4.7GB each.
+test-stress: $(EXECUTABLE) ## Run x-lang tests including the stress lane
+	STRESS=1 PARALLEL=1 sh tests/x/spec-runner.sh
+.PHONY: test-stress
+
 # The tools' own spec suite (tools/tests), repaired from the post-overhaul
 # rot (#180).  Two runners: spec-runner.sh takes the top-level specs on the
 # plain engine; cov-spec-runner.sh takes specs/cov/ on x-bin-cov, because
