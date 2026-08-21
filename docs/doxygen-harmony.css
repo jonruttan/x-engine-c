@@ -98,3 +98,29 @@ html {
 #projectbrief {
   color: #586069;
 }
+
+/* THE ONE EXCEPTION to the by-variable rule above, and worth naming as one.
+ * The selected row in the tree is the single piece of chrome Doxygen does
+ * not drive from a custom property: navtree.css hardcodes
+ *
+ *     #nav-tree .selected { background-image: url('tab_a.png'); color: white; }
+ *
+ * so no token can reach it, and a selector override is the only lever. It
+ * needs no !important -- HTML_EXTRA_STYLESHEET is linked after navtree.css,
+ * and this matches the original's specificity exactly.
+ *
+ * Verified against the DEPLOYED 1.9.8 stylesheet rather than the local 1.17
+ * one, by computed style: background-image none, background-color
+ * rgb(3, 102, 214).  It was the last navy left on the page.
+ */
+#nav-tree .selected {
+  background-image: none;
+  background-color: #0366d6;
+  color: #ffffff;
+  text-shadow: none;
+}
+
+#nav-tree .selected a,
+#nav-tree .selected .arrow {
+  color: #ffffff;
+}
