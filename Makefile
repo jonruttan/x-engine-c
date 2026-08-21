@@ -654,7 +654,7 @@ fmt-check-x: $(EXECUTABLE) ## Check x-lang formatting (whole library)
 # whoever cloned -- CI runs this on a fresh checkout.
 doc-c: ## Generate C reference documentation (HTML + man pages)
 	@mkdir -p docs/ref/c
-	doxygen Doxyfile
+	X_RELEASE="$(X_RELEASE)" doxygen Doxyfile
 .PHONY: doc-c
 
 # No stderr masking and fail on error/empty output: a 2>/dev/null here once

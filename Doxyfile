@@ -48,7 +48,11 @@ PROJECT_NAME           = "x-lang"
 # could be handy for archiving the generated documentation or if some version
 # control system is used.
 
-PROJECT_NUMBER         = 0.2.0
+# Taken from the environment, which `make doc-c` sets to the build's
+# $(X_RELEASE) -- the same `git describe` the engine reports.  Hardcoding it
+# here left the published C reference claiming 0.2.0 while the library was at
+# 0.5.0.  Empty when doxygen is run by hand instead of through make.
+PROJECT_NUMBER         = $(X_RELEASE)
 
 # Using the PROJECT_BRIEF tag one can provide an optional one line description
 # for a project that appears at the top of each page and should give viewers a
