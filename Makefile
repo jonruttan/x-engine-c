@@ -287,7 +287,7 @@ doctest: $(EXECUTABLE) ## Extract (example ...) forms and run them as doctests
 # CI's "Contract gates" step runs exactly this target.  They must not
 # drift -- ci.yml once hand-listed a subset, and check-pin's first run
 # on Linux happened in the RELEASE job (where it promptly died).
-gates: check-isa check-obj-layout check-base-paths check-boot-order check-path-literals check-boot-amalgam check-pin check-release-manifest check-bootstrap check-package check-doc-vocab check-dup-defs check-bare-globals check-percent-globals check-dialect-cover check-highlight-roundtrip ## Run the contract gates
+gates: check-isa check-prim-coverage check-obj-layout check-base-paths check-boot-order check-path-literals check-boot-amalgam check-pin check-release-manifest check-bootstrap check-package check-doc-vocab check-dup-defs check-bare-globals check-percent-globals check-dialect-cover check-highlight-roundtrip ## Run the contract gates
 .PHONY: gates
 
 # The local-latency split (2026-08-03 audit): `make test` grew past ten
@@ -298,7 +298,7 @@ gates: check-isa check-obj-layout check-base-paths check-boot-order check-path-l
 # ratchet, none of the targets that build or boot artifacts.  The hook
 # runs test-fast; CI still runs the FULL `make test` on every push/PR
 # (ci.yml unchanged -- it stays the enforcing gate for the heavy surface).
-gates-fast: check-isa check-obj-layout check-base-paths check-boot-order check-path-literals check-doc-vocab check-dup-defs check-bare-globals check-percent-globals check-dialect-cover ## The fast contract gates (pre-push subset)
+gates-fast: check-isa check-prim-coverage check-obj-layout check-base-paths check-boot-order check-path-literals check-doc-vocab check-dup-defs check-bare-globals check-percent-globals check-dialect-cover ## The fast contract gates (pre-push subset)
 .PHONY: gates-fast
 
 test-fast: gates-fast test-c test-x ## Pre-push gate: fast gates + both spec suites (CI runs full `make test`)
@@ -373,6 +373,14 @@ check-logo-tty: $(EXECUTABLE) ## Run the logo interactive-contract pty tests
 check-isa: ## Diff the C source's binding surface against tools/contract/isa.x
 	sh tools/check/isa.sh
 .PHONY: check-isa
+
+# Sixteen primitives had no test and nobody knew -- found by accident, because
+# nothing enumerated the C surface and asked which parts of it run.  This asks.
+# An untestable primitive has to say so in prose next to the subject rather
+# than being quietly absent, and a reason cannot outlive its subject.
+check-prim-coverage: ## Assert every C primitive is exercised by a spec, or says why not
+	sh tools/check/prim-coverage.sh
+.PHONY: check-prim-coverage
 
 # The object-layout contract, source half: the header-word layout parsed out
 # of ext/x-expr/include/x-obj.h must match the committed descriptor
