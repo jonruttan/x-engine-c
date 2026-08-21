@@ -284,7 +284,7 @@ doctest: $(EXECUTABLE) ## Extract (example ...) forms and run them as doctests
 # CI's "Contract gates" step runs exactly this target.  They must not
 # drift -- ci.yml once hand-listed a subset, and check-pin's first run
 # on Linux happened in the RELEASE job (where it promptly died).
-gates: check-isa check-obj-layout check-base-paths check-boot-order check-path-literals check-boot-amalgam check-pin check-release-manifest check-bootstrap check-package check-doc-vocab check-dup-defs check-bare-globals check-percent-globals check-dialect-cover ## Run the contract gates
+gates: check-isa check-obj-layout check-base-paths check-boot-order check-path-literals check-boot-amalgam check-pin check-release-manifest check-bootstrap check-package check-doc-vocab check-dup-defs check-bare-globals check-percent-globals check-dialect-cover check-highlight-roundtrip ## Run the contract gates
 .PHONY: gates
 
 # The local-latency split (2026-08-03 audit): `make test` grew past ten
@@ -446,6 +446,15 @@ check-percent-globals: ## Diff every lib file's %-global count against its shrin
 # end-to-end smoke group, so a new dialect cannot ship untested the way the
 # tower launchers did (#49 -- both crashed at the exact invocation the README
 # documents, while every numeric spec passed against a bespoke harness).
+# The highlighter must not alter what it renders: strip the span markup from
+# every rendered block, unescape the three entities, and the fence's original
+# bytes must come back.  A highlighter that drops a character or eats a brace
+# is worse than none -- the reader cannot tell, and the page is the reference.
+# Deep tier only: it sweeps every page, which is tens of seconds.
+check-highlight-roundtrip: $(EXECUTABLE) ## Assert highlighting is byte-preserving
+	@sh tools/check/highlight-roundtrip.sh
+.PHONY: check-highlight-roundtrip
+
 check-dialect-cover: $(EXECUTABLE) ## Assert every lib/*.x dialect has an end-to-end smoke group
 	sh x.sh --no-pin -q -f tools/check/dialect-cover.x
 .PHONY: check-dialect-cover
