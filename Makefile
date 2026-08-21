@@ -684,6 +684,19 @@ doc-x: $(EXECUTABLE) ## Generate x-lang documentation
 	@sh tools/check/doc-forms.sh
 .PHONY: doc-x
 
+# The x-lang library as roff, section 3x -- the same sweep as doc-x behind
+# its --man flag (one file list, one chunking policy, one set of per-file
+# verdicts; only the emitter differs).  X_RELEASE rides the .TH date slot,
+# exactly as doc-c hands it to Doxygen, so an installed page can say which
+# build it came from.
+#
+# NOT part of `doc`: that target is what CI runs on every push, and a second
+# full library sweep would double its cost for an artifact only install-man
+# consumes.  install-man depends on this directly instead.
+doc-man: $(EXECUTABLE) ## Generate x-lang man pages (section 3x)
+	@X_RELEASE="$(X_RELEASE)" sh tools/dev/doc-sweep.sh --man
+.PHONY: doc-man
+
 doc: doc-c doc-x ## Generate all documentation
 .PHONY: doc
 
@@ -782,9 +795,10 @@ uninstall: ## Uninstall from PREFIX
 # hold nothing but a subdirectory listing.  The filter keys on the page
 # TITLE, not the file name, so it stays right on whatever box ran Doxygen.
 MANSRC=docs/ref/c/man/man3
+MANSRC_X=docs/ref/man/man3x
 
-install-man: doc-c ## Install the C reference man pages to MANDIR (needs Doxygen)
-	install -d -m 0755 $(DESTDIR)$(MANDIR)/man3
+install-man: doc-c doc-man ## Install the C and x-lang man pages to MANDIR (needs Doxygen)
+	install -d -m 0755 $(DESTDIR)$(MANDIR)/man3 $(DESTDIR)$(MANDIR)/man3x
 	@n=0; \
 	for page in $(MANSRC)/*.3; do \
 		if head -n 1 "$$page" | grep -q 'Directory Reference" 3'; then \
@@ -793,7 +807,14 @@ install-man: doc-c ## Install the C reference man pages to MANDIR (needs Doxygen
 		install -m 0644 "$$page" $(DESTDIR)$(MANDIR)/man3/ || exit 1; \
 		n=`expr $$n + 1`; \
 	done; \
-	echo "  $$n man pages -> $(DESTDIR)$(MANDIR)/man3"
+	echo "  $$n C reference pages -> $(DESTDIR)$(MANDIR)/man3"
+	@n=0; \
+	for page in $(MANSRC_X)/*.3x; do \
+		install -m 0644 "$$page" $(DESTDIR)$(MANDIR)/man3x/ || exit 1; \
+		n=`expr $$n + 1`; \
+	done; \
+	echo "  $$n x-lang pages -> $(DESTDIR)$(MANDIR)/man3x"
+	@echo "  NOTE: section 3x is not searched by default -- \`man 3x <name>\`, or set MANSECT."
 .PHONY: install-man
 
 # Removal is BY NAME, from the same generated tree install-man read, so it
@@ -807,8 +828,8 @@ install-man: doc-c ## Install the C reference man pages to MANDIR (needs Doxygen
 #   make install-man MANDIR=$(PREFIX)/share/$(NAME)/man
 #
 uninstall-man: ## Remove the C reference man pages from MANDIR
-	@if [ ! -d $(MANSRC) ]; then \
-		echo "uninstall-man reads $(MANSRC) to know what install-man shipped; run 'make doc-c' first" >&2; \
+	@if [ ! -d $(MANSRC) ] || [ ! -d $(MANSRC_X) ]; then \
+		echo "uninstall-man reads $(MANSRC) and $(MANSRC_X) to know what install-man shipped; run 'make doc-c doc-man' first" >&2; \
 		exit 1; \
 	fi
 	@n=0; \
@@ -819,7 +840,16 @@ uninstall-man: ## Remove the C reference man pages from MANDIR
 			n=`expr $$n + 1`; \
 		fi; \
 	done; \
-	echo "  removed $$n man pages from $(DESTDIR)$(MANDIR)/man3"
+	echo "  removed $$n C reference pages from $(DESTDIR)$(MANDIR)/man3"
+	@n=0; \
+	for page in $(MANSRC_X)/*.3x; do \
+		installed=$(DESTDIR)$(MANDIR)/man3x/`basename "$$page"`; \
+		if [ -f "$$installed" ]; then \
+			rm -f "$$installed" || exit 1; \
+			n=`expr $$n + 1`; \
+		fi; \
+	done; \
+	echo "  removed $$n x-lang pages from $(DESTDIR)$(MANDIR)/man3x"
 .PHONY: uninstall-man
 
 clean: cov-clean ## Clean build artifacts
