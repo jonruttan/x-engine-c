@@ -697,6 +697,14 @@ doc-man: $(EXECUTABLE) ## Generate x-lang man pages (section 3x)
 	@X_RELEASE="$(X_RELEASE)" sh tools/dev/doc-sweep.sh --man
 .PHONY: doc-man
 
+# Neither doc-man nor install-man had any gate target, which is how both
+# reached main unexercised by CI.  Structural checks only, against a
+# throwaway prefix -- see the script header for what each one catches.
+# CHECK_MAN_C=1 adds the Doxygen half where Doxygen is installed.
+check-man: $(EXECUTABLE) ## Smoke man generation + install (CHECK_MAN_C=1 adds the C half)
+	@sh tools/check/man-smoke.sh $${CHECK_MAN_C:+--with-c}
+.PHONY: check-man
+
 doc: doc-c doc-x ## Generate all documentation
 .PHONY: doc
 
@@ -797,8 +805,12 @@ uninstall: ## Uninstall from PREFIX
 MANSRC=docs/ref/c/man/man3
 MANSRC_X=docs/ref/man/man3x
 
-install-man: doc-c doc-man ## Install the C and x-lang man pages to MANDIR (needs Doxygen)
-	install -d -m 0755 $(DESTDIR)$(MANDIR)/man3 $(DESTDIR)$(MANDIR)/man3x
+# Split by REFERENCE, not for tidiness: the C half needs Doxygen and the
+# x-lang half needs only the engine, so joining them would force a Doxygen
+# dependency on anyone who wants the library pages -- and on any CI leg that
+# checks them.  install-man is still the both-halves door.
+install-man-c: doc-c ## Install the C reference man pages (section 3, needs Doxygen)
+	install -d -m 0755 $(DESTDIR)$(MANDIR)/man3
 	@n=0; \
 	for page in $(MANSRC)/*.3; do \
 		if head -n 1 "$$page" | grep -q 'Directory Reference" 3'; then \
@@ -808,6 +820,10 @@ install-man: doc-c doc-man ## Install the C and x-lang man pages to MANDIR (need
 		n=`expr $$n + 1`; \
 	done; \
 	echo "  $$n C reference pages -> $(DESTDIR)$(MANDIR)/man3"
+.PHONY: install-man-c
+
+install-man-x: doc-man ## Install the x-lang reference man pages (section 3x)
+	install -d -m 0755 $(DESTDIR)$(MANDIR)/man3x
 	@n=0; \
 	for page in $(MANSRC_X)/*.3x; do \
 		install -m 0644 "$$page" $(DESTDIR)$(MANDIR)/man3x/ || exit 1; \
@@ -815,6 +831,9 @@ install-man: doc-c doc-man ## Install the C and x-lang man pages to MANDIR (need
 	done; \
 	echo "  $$n x-lang pages -> $(DESTDIR)$(MANDIR)/man3x"
 	@echo "  NOTE: section 3x is not searched by default -- \`man 3x <name>\`, or set MANSECT."
+.PHONY: install-man-x
+
+install-man: install-man-c install-man-x ## Install both man references to MANDIR (needs Doxygen)
 .PHONY: install-man
 
 # Removal is BY NAME, from the same generated tree install-man read, so it
@@ -827,9 +846,9 @@ install-man: doc-c doc-man ## Install the C and x-lang man pages to MANDIR (need
 #
 #   make install-man MANDIR=$(PREFIX)/share/$(NAME)/man
 #
-uninstall-man: ## Remove the C reference man pages from MANDIR
-	@if [ ! -d $(MANSRC) ] || [ ! -d $(MANSRC_X) ]; then \
-		echo "uninstall-man reads $(MANSRC) and $(MANSRC_X) to know what install-man shipped; run 'make doc-c doc-man' first" >&2; \
+uninstall-man-c: ## Remove the C reference man pages from MANDIR
+	@if [ ! -d $(MANSRC) ]; then \
+		echo "uninstall-man-c reads $(MANSRC) to know what install-man-c shipped; run 'make doc-c' first" >&2; \
 		exit 1; \
 	fi
 	@n=0; \
@@ -841,6 +860,13 @@ uninstall-man: ## Remove the C reference man pages from MANDIR
 		fi; \
 	done; \
 	echo "  removed $$n C reference pages from $(DESTDIR)$(MANDIR)/man3"
+.PHONY: uninstall-man-c
+
+uninstall-man-x: ## Remove the x-lang man pages from MANDIR
+	@if [ ! -d $(MANSRC_X) ]; then \
+		echo "uninstall-man-x reads $(MANSRC_X) to know what install-man-x shipped; run 'make doc-man' first" >&2; \
+		exit 1; \
+	fi
 	@n=0; \
 	for page in $(MANSRC_X)/*.3x; do \
 		installed=$(DESTDIR)$(MANDIR)/man3x/`basename "$$page"`; \
@@ -850,6 +876,9 @@ uninstall-man: ## Remove the C reference man pages from MANDIR
 		fi; \
 	done; \
 	echo "  removed $$n x-lang pages from $(DESTDIR)$(MANDIR)/man3x"
+.PHONY: uninstall-man-x
+
+uninstall-man: uninstall-man-c uninstall-man-x ## Remove both man references from MANDIR
 .PHONY: uninstall-man
 
 clean: cov-clean ## Clean build artifacts
