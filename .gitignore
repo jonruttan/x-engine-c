@@ -79,6 +79,7 @@ tmp/
 *.core
 docs/ref/c/
 docs/ref/x/
+docs/ref/man/
 
 # Agent / editor local state (Claude Code, etc.)
 .claude/
