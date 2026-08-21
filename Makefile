@@ -678,6 +678,7 @@ doc-x: $(EXECUTABLE) ## Generate x-lang documentation
 	@sh tools/dev/doc-sweep.sh
 	@sh x.sh --no-pin -q -f tools/dev/doc-index.x > docs/ref/x/index.md
 	@printf '  %s\n' "docs/ref/x/index.md"
+	@sh tools/check/doc-forms.sh
 .PHONY: doc-x
 
 doc: doc-c doc-x ## Generate all documentation
