@@ -314,7 +314,7 @@ check-bootstrap: $(EXECUTABLE) ## Smoke the one-command bootstrap install
 	sh tools/check/bootstrap-smoke.sh
 .PHONY: check-bootstrap
 
-test: gates test-c test-x doctest spec-examples check-examples lint-x test-tools doc-x ## Run all tests
+test: gates test-c test-x doctest spec-examples doc-examples check-examples lint-x test-tools doc-x ## Run all tests
 .PHONY: test
 
 # The release manifest (SHASUMS + pin.release.xon over the amalgams;
@@ -473,6 +473,18 @@ spec-examples: $(EXECUTABLE) ## Run docs/spec.md's examples (gate: spec.md canno
 	sh tools/check/spec-examples.sh
 	sh tests/x/spec-example-runner.sh
 .PHONY: spec-examples
+
+# The same extraction pointed at the OTHER docs that write examples in the
+# `EXPR -> EXPECTED` form.  spec.md was gated; primitives.md and
+# standard-library.md were not, and 235 assertions had never been executed --
+# retired primitives still documented as live, list functions documented as
+# bare globals long after they moved onto classes, three swapped argument
+# orders (#452, #453).  Report-only until those are fixed, on the same
+# criterion spec-examples was promoted under: a red gate rots.  Which docs run
+# and whether they are fatal is tools/check/doc-examples.conf.
+doc-examples: $(EXECUTABLE) ## Run the prose docs' examples (see doc-examples.conf)
+	sh tools/check/doc-examples.sh
+.PHONY: doc-examples
 
 check-doc-vocab: ## Lint doc forms for banned type-token aliases + retired names
 	@if grep -rn 'INTEGER\|BOOLEAN\|FUNCTION' lib --include='*.x' \
