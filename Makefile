@@ -149,11 +149,14 @@ EXTRA_LIBS+=-ldl
 # Where to install the stuff.  The user-facing command is the WRAPPER,
 # installed as bin/x; the engine binary hides in libexec (without the
 # library on its stdin pipe it cannot even print, so it is not a user
-# command).  MANDIR is reserved for a future man page.
+# command).  MANDIR is the man HIERARCHY ROOT, not a section dir: the pages
+# `make install-man` ships are Doxygen's C reference (section 3), and its
+# alias pages are `.so man3/<page>` -- a source directive resolved against
+# the hierarchy root, so it only works if the pages land in $(MANDIR)/man3.
 BINDIR?=$(PREFIX)/bin
 LIBDIR?=$(PREFIX)/share/$(NAME)
 LIBEXECDIR?=$(PREFIX)/libexec/$(NAME)
-MANDIR?=$(PREFIX)/man/man1
+MANDIR?=$(PREFIX)/share/man
 
 # C test config
 ifndef PATH_TESTS_C
@@ -678,6 +681,7 @@ doc-x: $(EXECUTABLE) ## Generate x-lang documentation
 	@sh tools/dev/doc-sweep.sh
 	@sh x.sh --no-pin -q -f tools/dev/doc-index.x > docs/ref/x/index.md
 	@printf '  %s\n' "docs/ref/x/index.md"
+	@sh tools/check/doc-forms.sh
 .PHONY: doc-x
 
 doc: doc-c doc-x ## Generate all documentation
@@ -749,6 +753,74 @@ uninstall: ## Uninstall from PREFIX
 	rm -rf $(DESTDIR)$(LIBEXECDIR)
 	rm -f $(DESTDIR)$(BINDIR)/$(NAME)
 .PHONY: uninstall
+
+# Doxygen's C reference as man pages, deliberately NOT wired into `install`
+# and `uninstall`: they are a separate, opt-in pair.  Three reasons.  The
+# pages are a build product of doc-c, so `install` would grow a hard Doxygen
+# dependency it does not have today.  They are not part of the x-lang tree
+# whose bytes contract/payload.sha256 attests, and `install` writes that
+# digest AFTER its copies precisely so it describes the shipped payload --
+# man pages under MANDIR are outside $(LIBDIR) and would not belong to it.
+# And MANDIR is a SHARED hierarchy: an unconditional install would make
+# `make install` scatter files outside the three dirs `uninstall` owns.
+#
+# Two classes of page come out of doc-c and both must ship:
+#
+#   real pages    112 of them -- one per file, group and struct.
+#   alias pages   964 one-line `.so man3/<real>.3` stubs, one per documented
+#                 entity (MAN_LINKS=YES in the Doxyfile).  Without these
+#                 `man x_lib_strlen` finds nothing, because the symbol is
+#                 documented INSIDE its file's page.  Their `.so` argument
+#                 is resolved against the man hierarchy ROOT, which is why
+#                 MANDIR is that root and the pages land in its man3/.
+#
+# What does NOT ship: Doxygen's 18 directory pages.  It builds those file
+# names from the ABSOLUTE build path (`_Users_jon_Workspace_x_src_.3`), and
+# STRIP_FROM_PATH does not reach them -- it rewrites titles, not man file
+# names (A/B tested; blank and `.` produce identical output).  Installing
+# them would publish this checkout's path into a shared man tree, and they
+# hold nothing but a subdirectory listing.  The filter keys on the page
+# TITLE, not the file name, so it stays right on whatever box ran Doxygen.
+MANSRC=docs/ref/c/man/man3
+
+install-man: doc-c ## Install the C reference man pages to MANDIR (needs Doxygen)
+	install -d -m 0755 $(DESTDIR)$(MANDIR)/man3
+	@n=0; \
+	for page in $(MANSRC)/*.3; do \
+		if head -n 1 "$$page" | grep -q 'Directory Reference" 3'; then \
+			continue; \
+		fi; \
+		install -m 0644 "$$page" $(DESTDIR)$(MANDIR)/man3/ || exit 1; \
+		n=`expr $$n + 1`; \
+	done; \
+	echo "  $$n man pages -> $(DESTDIR)$(MANDIR)/man3"
+.PHONY: install-man
+
+# Removal is BY NAME, from the same generated tree install-man read, so it
+# needs doc-c output to exist -- it says so rather than silently removing
+# nothing.  Note the shared-hierarchy hazard this inherits: Doxygen names
+# the real pages after their source files (`atom.c.3`, `buffer.h.3`), so if
+# another package owns a page of the same name, install-man overwrote it and
+# this removes it.  Point MANDIR at a private tree (and add it to MANPATH)
+# to keep both sides out of the shared namespace:
+#
+#   make install-man MANDIR=$(PREFIX)/share/$(NAME)/man
+#
+uninstall-man: ## Remove the C reference man pages from MANDIR
+	@if [ ! -d $(MANSRC) ]; then \
+		echo "uninstall-man reads $(MANSRC) to know what install-man shipped; run 'make doc-c' first" >&2; \
+		exit 1; \
+	fi
+	@n=0; \
+	for page in $(MANSRC)/*.3; do \
+		installed=$(DESTDIR)$(MANDIR)/man3/`basename "$$page"`; \
+		if [ -f "$$installed" ]; then \
+			rm -f "$$installed" || exit 1; \
+			n=`expr $$n + 1`; \
+		fi; \
+	done; \
+	echo "  removed $$n man pages from $(DESTDIR)$(MANDIR)/man3"
+.PHONY: uninstall-man
 
 clean: cov-clean ## Clean build artifacts
 	rm -f $(EXECUTABLE) x-bin-debug x-bin-profile x-bin-asan x-bin-cov build/.strip-stamp *.out $(SRCDIR)/*.o $(SRCDIR)/**/*.o $(SRCDIR)/**/**/*.o $(OPTDIR)/**/*.o $(X_EXPR_DIR)/src/*.o *.core core
