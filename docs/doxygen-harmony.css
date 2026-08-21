@@ -1,0 +1,100 @@
+/* doxygen-harmony.css -- make the C reference look like the rest of the site
+ *
+ * The documentation site is two generators wearing different clothes: 144
+ * pages rendered by Jekyll in the primer theme, and 222 rendered by Doxygen
+ * in its own.  A reader crossing from one to the other should not feel they
+ * have left, so this restates Doxygen's palette and type in the theme's.
+ *
+ * BY VARIABLE, not by selector.  Doxygen 1.9.6+ declares ~270 custom
+ * properties on `html` and drives the whole stylesheet from them, so
+ * overriding a dozen tokens re-skins every page and keeps working across
+ * Doxygen versions -- which matters here, because CI generates with the
+ * runner's apt version (1.9.8) while a developer's machine may have another.
+ * Chasing class names instead would break the first time either moved.
+ *
+ * The dark half of the mismatch is fixed in the Doxyfile, not here:
+ * HTML_COLORSTYLE was AUTO_LIGHT, so the C reference followed the reader's
+ * system preference into dark while the Jekyll half -- which has no dark
+ * mode -- stayed white.  One side adapting and the other not IS the
+ * mismatch; pinning LIGHT makes both sides answer the same way.
+ */
+
+html {
+  /* Type: the theme's own stacks, so headings and prose match across the
+   * seam.  Doxygen splits its font by role; all the prose roles take the
+   * body stack and code takes the monospace one. */
+  --font-family-normal: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+  --font-family-title: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+  --font-family-nav: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+  --font-family-toc: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+  --font-family-search: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+  --font-family-tooltip: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+  --font-family-monospace: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, Courier, monospace;
+
+  /* Page: the theme's ink on its paper, and its one link blue. */
+  --page-background-color: #ffffff;
+  --page-foreground-color: #24292e;
+  --page-link-color: #0366d6;
+  --page-visited-link-color: #0366d6;
+
+  /* Chrome: the navy gradient bar is the loudest thing on the page and has
+   * no counterpart on the Jekyll side.  Flatten it to paper with a hairline,
+   * which is how the theme separates its own sections. */
+  --title-background-color: #ffffff;
+  --header-background-color: #ffffff;
+  --header-gradient-image: none;
+  --header-separator-color: #e1e4e8;
+  --title-separator-color: #e1e4e8;
+  --separator-color: #e1e4e8;
+  --directory-separator-color: #e1e4e8;
+  --group-header-color: #24292e;
+  --group-header-separator-color: #e1e4e8;
+  --index-separator-color: #e1e4e8;
+  --blockquote-background-color: #f6f8fa;
+  --blockquote-border-color: #e1e4e8;
+
+  /* The tree sidebar, in the theme's off-white rather than slate. */
+  --nav-background-color: #fafbfc;
+  --nav-foreground-color: #24292e;
+  --nav-gradient-image: none;
+  --nav-gradient-hover-image: none;
+  --nav-gradient-active-image: none;
+  --nav-gradient-active-image-parent: none;
+  --nav-breadcrumb-image: none;
+  --nav-breadcrumb-border-color: #e1e4e8;
+  --nav-arrow-color: #586069;
+  --nav-arrow-selected-color: #0366d6;
+  --scrollbar-thumb-color: #d1d5da;
+
+  /* Code: the SAME colours the x-lang pages use, taken from the theme's
+   * Rouge stylesheet.  This is the part a reader compares most directly --
+   * the two references sit one click apart and both are mostly code. */
+  --fragment-background-color: #f6f8fa;
+  --fragment-foreground-color: #24292e;
+  --fragment-border-color: #e1e4e8;
+  --fragment-lineno-background-color: #f6f8fa;
+  --fragment-lineno-foreground-color: #6a737d;
+  --fragment-lineno-border-color: #e1e4e8;
+  --code-keyword-color: #000000;
+  --code-flow-keyword-color: #000000;
+  --code-type-keyword-color: #445588;
+  --code-string-literal-color: #dd1144;
+  --code-char-literal-color: #dd1144;
+  --code-comment-color: #999988;
+  --code-preprocessor-color: #008080;
+  --code-link-color: #0366d6;
+  --code-external-link-color: #0366d6;
+
+  --footer-foreground-color: #6a737d;
+}
+
+/* Doxygen prints the project name in its title bar at a weight and size the
+ * theme reserves for a page heading; bring it down to the theme's scale. */
+#projectname {
+  font-size: 200%;
+  font-weight: 600;
+}
+
+#projectbrief {
+  color: #586069;
+}
