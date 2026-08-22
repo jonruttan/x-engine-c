@@ -40,16 +40,15 @@
   (provides reflect/layout-data)
   ; int<->ptr round-trips faithfully enough for x-lang to size a word at boot.
   (provides reflect/word-probe)
-  ; The wrapper protocol (x.sh): library concatenated on stdin, --batch
-  ; suppressing the entry's launcher, argv reaching the `args` value, the REPL
-  ; reclaiming terminal stdin from fd 3, and errors printed to STDOUT.  The
-  ; engine's own prefix is `*** ERROR: ` -- `Error: <value>` is x-lang's Err
-  ; class formatting the same channel once the library is loaded.
+  ; What this engine actually owes the wrapper: it reads its program from stdin,
+  ; binds every argv element as the `args` list, and writes diagnostics to STDERR
+  ; prefixed `*** ERROR: `.  It parses no flags -- --batch and --quiet are read by
+  ; lib/x/repl/banner.x, and the fd-3 stdin reclaim is lib/x/repl/loop.x calling
+  ; (Sys dup2 3 0).  Those are wrapper/library conventions, not engine ones, and
+  ; claiming them here would have been claiming credit for someone else's work.
   (provides invoke/pipe-stdin)
-  (provides invoke/batch-flag)
   (provides invoke/argv)
-  (provides io/fd3-stdin)
-  (provides err/stdout-prefix)
+  (provides err/stderr-prefix)
   ; Coverage marking and eval counters.  Claimed at the IMPLEMENTATION level: the
   ; repo builds both variants.  A binary compiled without them is a build fact,
   ; recorded beside that binary, not a limit of this engine.
