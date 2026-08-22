@@ -39,7 +39,7 @@ PREFIX?=/usr/local
 # WHOSE tag, after the repo split: the LANGUAGE's, not this repo's.  The pin
 # lock records the x-lang release, and lib/x/tool/pin.x REFUSES at boot when a
 # pinned amalgam's release differs from the engine's -- so an engine stamped
-# with x-eval-c's own `git describe` would fail every pinned project on sight.
+# with x-engine-c's own `git describe` would fail every pinned project on sight.
 # x-lang's Makefile therefore passes ITS `git describe` down when it builds
 # this repo as a submodule, exactly as tools/release/package.sh already does
 # for a tarball.  The default below is only what a STANDALONE build of this

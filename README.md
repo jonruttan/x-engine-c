@@ -1,4 +1,4 @@
-# x-eval-c
+# x-engine-c
 
 The C engine for [x-lang][x-lang]: the evaluator, the primitive surface, and
 the tokenizer, built on the [x-expr][x-expr] object, type and heap machinery.
@@ -17,8 +17,8 @@ release it was built for.
 
 ## Build
 
-    git clone --recursive https://github.com/jonruttan/x-eval-c.git
-    cd x-eval-c
+    git clone --recursive https://github.com/jonruttan/x-engine-c.git
+    cd x-engine-c
     make
 
 `--recursive` matters: [x-expr][x-expr] is a submodule and the build needs its

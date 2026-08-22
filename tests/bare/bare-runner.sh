@@ -1,7 +1,7 @@
 #!/bin/sh
 # bare-runner.sh -- run a spec against the ENGINE ALONE.
 #
-# SCOPE.  This is x-eval-c's own smoke harness: it asks whether THIS engine
+# SCOPE.  This is x-engine-c's own smoke harness: it asks whether THIS engine
 # stands up unaided.  It is deliberately NOT the cross-engine conformance
 # suite -- that defines what any evaluator must do, so it belongs with the
 # LANGUAGE and lives in x-lang, with engines vendoring a pinned copy.  A
