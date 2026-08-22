@@ -14,8 +14,6 @@
 *.ilk
 *.map
 *.exp
-# ...but expect(1) scripts in the tty harness are SOURCE, not linker exports
-!tests/logo-tty/*.exp
 
 # Precompiled Headers
 *.gch
@@ -78,8 +76,6 @@ tmp/
 /core
 *.core
 docs/ref/c/
-docs/ref/x/
-docs/ref/man/
 
 # Agent / editor local state (Claude Code, etc.)
 .claude/

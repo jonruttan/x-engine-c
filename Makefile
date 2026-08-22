@@ -35,6 +35,15 @@ PREFIX?=/usr/local
 # so an amalgam from one release booted on another's engine passed the
 # pairing guard and segfaulted.  The tag is the one key that cannot silently
 # under-approximate, so the engine now carries it.
+#
+# WHOSE tag, after the repo split: the LANGUAGE's, not this repo's.  The pin
+# lock records the x-lang release, and lib/x/tool/pin.x REFUSES at boot when a
+# pinned amalgam's release differs from the engine's -- so an engine stamped
+# with x-bin-c's own `git describe` would fail every pinned project on sight.
+# x-lang's Makefile therefore passes ITS `git describe` down when it builds
+# this repo as a submodule, exactly as tools/release/package.sh already does
+# for a tarball.  The default below is only what a STANDALONE build of this
+# repo reports, where there is no library to pair with and nothing to refuse.
 X_RELEASE?=$(shell git describe --tags --always --dirty 2>/dev/null || echo dev)
 
 # Override default compiler and flags
@@ -167,7 +176,6 @@ TESTS=$(PATH_TESTS_C)/src/*.spec.c
 endif
 TEST_CFLAGS=$(CFLAGS) -fno-common -g -Og -I. -DTESTS
 
-
 # Coverage
 COVERAGE_DIR=.coverage
 
@@ -253,118 +261,23 @@ test-c: ## Run C unit tests
 	CFLAGS="$(TEST_CFLAGS)" RUNNER=command sh $(PATH_TESTS_C)/test-runner/test-runner.sh $(TESTS)
 .PHONY: test-c
 
-test-x: $(EXECUTABLE) ## Run x-lang tests
-	sh tests/x/spec-runner.sh
-.PHONY: test-x
-
-# The applicative stress lane rides test-x only when STRESS=1 (CI's
-# native specs jobs set it; see #300).  This target is the local
-# spelling -- SERIAL, because the lane's files peak ~4.7GB each.
-test-stress: $(EXECUTABLE) ## Run x-lang tests including the stress lane
-	STRESS=1 PARALLEL=1 sh tests/x/spec-runner.sh
-.PHONY: test-stress
-
-# The tools' own spec suite (tools/tests), repaired from the post-overhaul
-# rot (#180).  Two runners: spec-runner.sh takes the top-level specs on the
-# plain engine; cov-spec-runner.sh takes specs/cov/ on x-bin-cov, because
-# coverage marking only exists under -DX_COV.
-test-tools: $(EXECUTABLE) x-bin-cov ## Run the tool suite's specs (tools/tests)
-	sh tools/tests/spec-runner.sh
-	sh tools/tests/cov-spec-runner.sh
-.PHONY: test-tools
-
-# The doctest ratchet (#16): every (example "in" "out") in the doc registry
-# is an executable contract -- "out" must be the true echo.  tools/check/doctest.sh
-# extracts them into a generated spec; the personality runner executes it.
-# Illustrations that must not run are (sample ...) forms (see doc.x).
-doctest: $(EXECUTABLE) ## Extract (example ...) forms and run them as doctests
-	mkdir -p build/doctest-specs
-	sh tools/check/doctest.sh > build/doctest-specs/doctests.spec.md
-	sh tests/x/doctest-runner.sh
-.PHONY: doctest
-
 # The contract gates, ONE definition: `make test` runs them first and
 # CI's "Contract gates" step runs exactly this target.  They must not
-# drift -- ci.yml once hand-listed a subset, and check-pin's first run
-# on Linux happened in the RELEASE job (where it promptly died).
-gates: check-isa check-prim-coverage check-obj-layout check-base-paths check-boot-order check-path-literals check-boot-amalgam check-pin check-release-manifest check-bootstrap check-package check-doc-vocab check-dup-defs check-bare-globals check-percent-globals check-dialect-cover check-highlight-roundtrip ## Run the contract gates
+# drift -- ci.yml once hand-listed a subset, and a gate CI never reaches
+# is a gate that rots.
+#
+# These are the three contracts whose SOURCE half is C and whose subject
+# lives entirely in this repo.  Each has a RUNTIME half -- a spec that
+# probes the live engine -- and those stay in x-lang, under
+# tests/x/specs/meta/, because only a booted engine can answer them.
+# check-prim-coverage is the fourth contract and it lives in x-lang too:
+# it asks whether every C primitive is EXERCISED, and that answer is
+# spread across BOTH spec suites, so only the superset repo can ask it.
+gates: check-isa check-obj-layout check-base-paths ## Run the contract gates
 .PHONY: gates
 
-# The local-latency split (2026-08-03 audit): `make test` grew past ten
-# minutes (build/install/package smokes, amalgam boots, doctest walk,
-# example programs) and the pre-push hook ran ALL of it inside the open
-# push connection -- long enough for GitHub to hang up the idle SSH
-# channel mid-hook.  gates-fast is the sub-minute subset: every scan
-# ratchet, none of the targets that build or boot artifacts.  The hook
-# runs test-fast; CI still runs the FULL `make test` on every push/PR
-# (ci.yml unchanged -- it stays the enforcing gate for the heavy surface).
-gates-fast: check-isa check-prim-coverage check-obj-layout check-base-paths check-boot-order check-path-literals check-doc-vocab check-dup-defs check-bare-globals check-percent-globals check-dialect-cover ## The fast contract gates (pre-push subset)
-.PHONY: gates-fast
-
-test-fast: gates-fast test-c test-x ## Pre-push gate: fast gates + both spec suites (CI runs full `make test`)
-.PHONY: test-fast
-
-# bootstrap.sh's build+install path (its coupling to the install layout);
-# the clone path is exercised by the release workflow on a clean checkout.
-# The smoke stages a tracked-files copy and builds THERE (#326): the
-# script's own `make clean` used to wipe this repo's x-bin and objects
-# mid-gate, and the next $(EXECUTABLE)-dependent target silently re-paid
-# the whole C build.  The repo's artifacts now survive the gate.
-check-bootstrap: $(EXECUTABLE) ## Smoke the one-command bootstrap install
-	sh tools/check/bootstrap-smoke.sh
-.PHONY: check-bootstrap
-
-test: gates test-c test-x doctest spec-examples doc-examples check-examples lint-x test-tools doc-x ## Run all tests
+test: gates test-c ## Run all tests
 .PHONY: test
-
-# The release manifest (SHASUMS + pin.release.xon over the amalgams;
-# .github/workflows/release.yml publishes it on a version tag) -- gated
-# here with a throwaway tag so the self-checking script cannot rot
-# between releases.
-check-release-manifest: boot ## Generate + self-check the release manifest
-	sh tools/release/release-manifest.sh local
-.PHONY: check-release-manifest
-
-# The relocatable binary tarball (release.yml ships one per platform on a
-# tag) -- gated so the packaging cannot rot between releases: package.sh
-# stages the install tree, tars it, and self-proves relocation (unpack
-# elsewhere, run).  Output lands under build/.
-#
-# The tag it is handed is THIS BUILD'S $(X_RELEASE), not a throwaway
-# literal.  package.sh passes its tag through to `make install`, which
-# stamps the engine with it -- so a literal would rebuild x-cli.o and
-# relink the repo's own binary under a fake release, then relink it back
-# on the next make.  Handing it the value the tree already has keeps the
-# gate a no-op on the build while still exercising the whole path,
-# stamp assertions included.
-check-package: $(EXECUTABLE) ## Build + self-check a relocatable binary tarball
-	sh tools/release/package.sh "$(X_RELEASE)" build/dist-check
-.PHONY: check-package
-
-# Project pinning (docs/modules.md "Pinning"): the wrapper's pin.xon probe
-# and lib/x/tool/pin.x, end to end -- overlay resolution, root precedence,
-# the unpinnable boot core, the closed manifest vocabulary, --no-pin.
-check-pin: $(EXECUTABLE) ## Smoke the pin.xon probe + loader end to end
-	sh tools/check/pin-smoke.sh
-.PHONY: check-pin
-
-# The examples ratchet: every file under examples/*/ runs under its documented
-# dialect in batch mode; output-pinned where portable (sidecars in
-# tests/examples/).  The examples are the first code a newcomer runs and were
-# previously the only code with no gate.  UPDATE=1 regenerates sidecars.
-check-examples: $(EXECUTABLE) ## Run every example under its documented dialect
-	sh tools/check/examples.sh
-.PHONY: check-examples
-
-# The logo tty contract (#152/#157): expect-driven pty sessions pinning the
-# interactive behaviors (ctrl-c cancel, exit paths, hooks, execute-once)
-# that isatty guards hide from every batch suite.  Not part of `make test`
-# (tty environments flake); CI runs it explicitly on both OSes.  Skips
-# with a note when expect(1) is absent.  known-fail.txt entries pin the
-# post-#157 ruling; a listed test PASSING is red (delete its line).
-check-logo-tty: $(EXECUTABLE) ## Run the logo interactive-contract pty tests
-	sh tools/check/logo-tty.sh
-.PHONY: check-logo-tty
 
 # The C-surface ratchet, source half: every binding site in the C source must
 # appear in the committed manifest tools/contract/isa.x, so growing the C layer requires
@@ -373,14 +286,6 @@ check-logo-tty: $(EXECUTABLE) ## Run the logo interactive-contract pty tests
 check-isa: ## Diff the C source's binding surface against tools/contract/isa.x
 	sh tools/check/isa.sh
 .PHONY: check-isa
-
-# Sixteen primitives had no test and nobody knew -- found by accident, because
-# nothing enumerated the C surface and asked which parts of it run.  This asks.
-# An untestable primitive has to say so in prose next to the subject rather
-# than being quietly absent, and a reason cannot outlive its subject.
-check-prim-coverage: ## Assert every C primitive is exercised by a spec, or says why not
-	sh tools/check/prim-coverage.sh
-.PHONY: check-prim-coverage
 
 # The object-layout contract, source half: the header-word layout parsed out
 # of ext/x-expr/include/x-obj.h must match the committed descriptor
@@ -398,146 +303,13 @@ check-base-paths: ## Diff the base-field macro chains against tools/contract/bas
 	sh tools/check/base-paths.sh
 .PHONY: check-base-paths
 
-# The boot-order lint: derives the effective load order from each boot entry
-# (lib/x-core.x + the three dialect entries; include forms, the
-# %include-list-cell pre-seed, import expansion) and flags (a) load-time
-# class-calls whose def-class comes later in the order -- the silent
-# class-call trap -- and (b) pre-seed drift: double loads and raw-included
-# lib paths never registered (see tools/check/boot-order.x).
-check-boot-order: $(EXECUTABLE) ## Lint the boot load order: class-call order + pre-seed drift
-	sh tools/check/boot-order.sh
-.PHONY: check-boot-order
-
-# Doc-type vocabulary ratchet: the adjudicated losers (INTEGER/BOOLEAN/
-# FUNCTION -- see contributing.md) must not reappear in (param ...)/
-# (returns ...) forms; INT/BOOL/CALLABLE are the one-name-per-concept picks.
-# The duplicate-global-def ratchet (#47): top-level redefinition updates the
-# shared binding in place, so two modules defining one name with different
-# meanings is a real collision (the %alist-find segfault).  tools/check/dup-defs.sh
-# holds the rule + the adjudicated allowlist.
-check-dup-defs: ## Lint lib+apps for cross-module duplicate global defs
-	sh tools/check/dup-defs.sh
-.PHONY: check-dup-defs
-
-check-path-literals: ## Lint for root-relative load literals outside the boot closure
-	sh tools/check/path-literals.sh
-.PHONY: check-path-literals
-
-# Amalgamated boot entries: each dialect's raw-include
-# chain flattened into one self-ordered stream, plus one per app entry.
-# Build products only -- never committed; regenerated on every call, so the
-# amalgams cannot drift from the sources they are made of.
-boot: ## Generate amalgamated boot entries into build/boot
-	@mkdir -p build/boot
-	@for e in x he xe rn x-base; do \
-		sh tools/release/amalgamate.sh "lib/$$e.x" > "build/boot/$$e.x" || exit 1; done
-	@for a in apps/*/run.x; do \
-		n=$$(basename "$$(dirname "$$a")"); \
-		sh tools/release/amalgamate.sh "$$a" > "build/boot/$$n.x" || exit 1; done
-	@echo "boot: generated $$(ls build/boot | wc -l | tr -d ' ') entries"
-.PHONY: boot
-
-check-boot-amalgam: $(EXECUTABLE) boot ## Boot every amalgam in batch mode and pin a smoke expression
-	sh tools/check/amalgam-smoke.sh
-.PHONY: check-boot-amalgam
-
-# THE TOP LEVEL IS SACRED (#108): the runtime library may bind only the names
-# tools/contract/bare-globals.x sanctions; the manifest can only shrink.
-check-bare-globals: ## Diff the runtime library's bare top-level defs against tools/contract/bare-globals.x
-	sh tools/check/bare-globals.sh
-.PHONY: check-bare-globals
-
-# The %-global budget (the bare ratchet's closed exemption): per-file
-# counts in tools/contract/percent-globals.x, shrink-only.
-check-percent-globals: ## Diff every lib file's %-global count against its shrinking budget
-	sh tools/check/percent-globals.sh
-.PHONY: check-percent-globals
-
-# The dialect coverage ratchet (#70): every lib/*.x entry point needs an
-# end-to-end smoke group, so a new dialect cannot ship untested the way the
-# tower launchers did (#49 -- both crashed at the exact invocation the README
-# documents, while every numeric spec passed against a bespoke harness).
-# The highlighter must not alter what it renders: strip the span markup from
-# every rendered block, unescape the three entities, and the fence's original
-# bytes must come back.  A highlighter that drops a character or eats a brace
-# is worse than none -- the reader cannot tell, and the page is the reference.
-# Deep tier only: it sweeps every page, which is tens of seconds.
-check-highlight-roundtrip: $(EXECUTABLE) ## Assert highlighting is byte-preserving
-	@sh tools/check/highlight-roundtrip.sh
-.PHONY: check-highlight-roundtrip
-
-check-dialect-cover: $(EXECUTABLE) ## Assert every lib/*.x dialect has an end-to-end smoke group
-	sh x.sh --no-pin -q -f tools/check/dialect-cover.x
-.PHONY: check-dialect-cover
-
-# spec.md's worked examples, extracted and executed -- the ratchet that keeps
-# the normative spec honest (#70 seam 2, PROMOTED at 356/356 green).  It began
-# report-only at 86 failures; the drift burned down through #72 #73 #76 the
-# #31 order sweep, the regex-escaping fix, the reader-section repairs and
-# depth-tracked quasi (#55), and on the stated criterion -- red would rot it
-# like lint-x (#60) -- it joined `test` only once fully green.  A spec.md
-# example that stops reproducing now fails the build with a file:line name.
-spec-examples: $(EXECUTABLE) ## Run docs/spec.md's examples (gate: spec.md cannot drift silently)
-	sh tools/check/spec-examples.sh
-	sh tests/x/spec-example-runner.sh
-.PHONY: spec-examples
-
-# The same extraction pointed at the OTHER docs that write examples in the
-# `EXPR -> EXPECTED` form.  spec.md was gated; primitives.md and
-# standard-library.md were not, and 235 assertions had never been executed --
-# retired primitives still documented as live, list functions documented as
-# bare globals long after they moved onto classes, three swapped argument
-# orders (#452, #453).  Report-only until those are fixed, on the same
-# criterion spec-examples was promoted under: a red gate rots.  Which docs run
-# and whether they are fatal is tools/check/doc-examples.conf.
-doc-examples: $(EXECUTABLE) ## Run the prose docs' examples (see doc-examples.conf)
-	sh tools/check/doc-examples.sh
-.PHONY: doc-examples
-
-check-doc-vocab: ## Lint doc forms for banned type-token aliases + retired names
-	@if grep -rn 'INTEGER\|BOOLEAN\|FUNCTION' lib --include='*.x' \
-		| grep '(param \|(returns '; then \
-		echo "doc-vocab: FAIL (use INT/BOOL/CALLABLE; see contributing.md)" >&2; \
-		exit 1; \
-	else echo "doc-vocab: ok"; fi
-	@# Retired/banned names from the #42/#44 adjudications (see contributing.md's
-	@# adjudication block): shapes ride the name, synonyms stay dead.
-	@if grep -rnw 'from-pairs\|->pairs' lib --include='*.x' \
-		|| grep -rn '(method nth \|(method member? \|(method every? \|(method size ' lib --include='*.x'; then \
-		echo "doc-vocab: FAIL (retired name; see contributing.md adjudications)" >&2; \
-		exit 1; \
-	else echo "retired-names: ok"; fi
-	@# Retired dialect spellings (#95): the noble-gas names (he/xe/rn,
-	@# modules x/xe, x/rn) replaced x-and/x-or; the compat shims are gone.
-	@if grep -rnw 'x-and\|x-or\|x/and\|x/or' lib --include='*.x'; then \
-		echo "doc-vocab: FAIL (retired dialect spelling; use he/xe/rn -- #95)" >&2; \
-		exit 1; \
-	else echo "retired-dialects: ok"; fi
-	@# The quote-idiom ratchet (#45 R2/R8, added at the 2026-07-18 reopen):
-	@# user-facing doc STRINGS -- (example ...), (sample ...), (note ...) --
-	@# speak 'x, never the longhand (lit x), even inside boot-constrained
-	@# files (strings never hit the boot reader).  Allowlist: doc-prims.x's
-	@# definitional docs for lit itself.
-	@if grep -rn '(example "\|(sample "\|(note "' lib --include='*.x' \
-		| grep -v 'lib/x/doc/doc-prims\.x' \
-		| grep '(lit '; then \
-		echo "doc-vocab: FAIL (doc strings speak 'x, not (lit x); #45 R2/R8)" >&2; \
-		exit 1; \
-	else echo "doc-string-quotes: ok"; fi
-	@# Retired C symbols (#249): dead exports deleted with the audit.  A
-	@# grep-ratchet so they cannot quietly return -- if one is reintroduced,
-	@# it is either genuinely needed (delete the name from this list with a
-	@# caller) or the deletion is being undone by mistake.
-	@if grep -rnw 'x_eval_filein_push\|x_eval_filein_pop\|x_eval_buffer_pop\|x_char_utf8_len\|x_char_utf8_encode\|x_type_alist_iter\|x_type_alist_iter_prim\|x_type_iter_isempty' src include; then \
-		echo "retired-c-symbols: FAIL (dead export removed in #249 reintroduced)" >&2; \
-		exit 1; \
-	else echo "retired-c-symbols: ok"; fi
-.PHONY: check-doc-vocab
-
-# Memory-safety gate: run BOTH suites against an AddressSanitizer build (reuses
-# the x-asan target). Catches the crash class we keep hitting -- e.g. an
-# unchecked `first` reading past a non-pair, which is silently wrong on 64-bit
-# but SIGSEGVs on 32-bit/Pi -- on the dev box, before a Pi run surfaces it.
+# Memory-safety gate: run the C suite against an AddressSanitizer build.
+# Catches the crash class we keep hitting -- e.g. an unchecked `first`
+# reading past a non-pair, which is silently wrong on 64-bit but SIGSEGVs
+# on 32-bit/Pi -- on the dev box, before a Pi run surfaces it.  x-lang's
+# repo runs the same ASan ENGINE against the x spec suite (its own
+# `make test-asan`); this half is the C specs, which link the sources
+# directly and need no engine binary at all.
 #   - address only: UBSan is deferred until its baseline noise on the C89
 #     stack-pair pointer tricks is assessed (it would flag intentional UB).
 #   - detect_leaks=0: the interpreter is a GC that does not free at exit, so
@@ -549,29 +321,10 @@ check-doc-vocab: ## Lint doc forms for banned type-token aliases + retired names
 #     limitation every fiber/coroutine library documents). Off on some
 #     arch/compiler defaults already; pinned off so behavior matches.
 #   - WRAPPER= disables the C runner's valgrind auto-wrap (ASan != valgrind).
-#   - TIMEOUT_UNIT_SECS raised: instrumentation slows each spec ~2-3x.
 ASAN_RUN_OPTIONS=detect_leaks=0:detect_stack_use_after_return=0
-#   - SPEC_HEAVY_JOBS=1 (#366): the scheduler's heavy-set admission cap
-#     of 2 is tuned at NORMAL resident sizes; sanitizer instrumentation
-#     multiplies RSS ~2-3x, and two co-resident heavies OOM-killed the
-#     7GB hosted runner on every merge after the #320 heaviest-first
-#     ordering landed (exit 143, no failing test -- the runner dies).
-#     One heavy at a time under ASan; light jobs still fill the
-#     remaining slots.
-test-asan: x-bin-asan ## Run both suites under AddressSanitizer (memory-safety gate)
-	ASAN_OPTIONS=$(ASAN_RUN_OPTIONS) TIMEOUT_UNIT_SECS=180 SPEC_HEAVY_JOBS=1 X_BIN=./x-bin-asan sh tests/x/spec-runner.sh
+test-asan: ## Run the C suite under AddressSanitizer (memory-safety gate)
 	ASAN_OPTIONS=$(ASAN_RUN_OPTIONS) WRAPPER= CFLAGS="$(TEST_CFLAGS) -fsanitize=address -fno-omit-frame-pointer" sh $(PATH_TESTS_C)/test-runner/test-runner.sh $(TESTS)
 .PHONY: test-asan
-
-# Install the local pre-push gate (first line of defence before the Actions
-# CI gates). Points git at the tracked .githooks/ dir so `make test` runs
-# before every push. RUN_ASAN=1 in the environment also runs `make test-asan`
-# as a non-blocking advisory.
-install-hooks: ## Install the pre-push test gate (core.hooksPath=.githooks)
-	git config core.hooksPath .githooks
-	@chmod +x .githooks/* 2>/dev/null || true
-	@echo "pre-push gate active (core.hooksPath=.githooks). Bypass: git push --no-verify. Uninstall: git config --unset core.hooksPath."
-.PHONY: install-hooks
 
 # ============================================================================
 # Coverage
@@ -581,23 +334,6 @@ test-c-cov: cov-clean ## C tests with coverage
 	COVERAGE_DIR=$(COVERAGE_DIR) CFLAGS="$(TEST_CFLAGS)" sh $(PATH_TESTS_C)/test-runner/test-runner-coverage.sh $(TESTS)
 .PHONY: test-c-cov
 
-test-x-cov: cov-clean $(EXECUTABLE) ## x-lang tests with coverage
-	$(MAKE) clean
-	CFLAGS="-Og --coverage" $(MAKE) $(EXECUTABLE)
-	sh tests/x/spec-runner.sh
-	mkdir -p $(COVERAGE_DIR)
-	gcovr -r . --filter 'src/' --print-summary --html-details $(COVERAGE_DIR)/index.html
-.PHONY: test-x-cov
-
-test-cov: cov-clean ## All tests with coverage
-	$(MAKE) clean
-	CFLAGS="-Og --coverage" $(MAKE) $(EXECUTABLE)
-	sh tests/x/spec-runner.sh
-	CFLAGS="$(TEST_CFLAGS) -Og --coverage" RUNNER=command sh $(PATH_TESTS_C)/test-runner/test-runner.sh $(TESTS)
-	mkdir -p $(COVERAGE_DIR)
-	gcovr -r . --filter 'src/' --print-summary --html-details $(COVERAGE_DIR)/index.html
-.PHONY: test-cov
-
 cov-clean: ## Clean coverage artifacts
 	rm -rf $(COVERAGE_DIR)
 	find . -name '*.gcov' -o -name '*.gcda' -o -name '*.gcno' | xargs rm -f
@@ -606,13 +342,6 @@ cov-clean: ## Clean coverage artifacts
 # ============================================================================
 # Performance
 # ============================================================================
-
-bench: x-bin-profile ## Run benchmarks
-	sh tools/dev/bench.sh --no-build
-
-cov-x: x-bin-profile ## x-lang library coverage report
-	sh tools/dev/cov-lib.sh
-.PHONY: bench
 
 # ============================================================================
 # Dev tools
@@ -659,27 +388,6 @@ lint: ## Lint C sources
 	$(CC) -fsyntax-only $(CFLAGS) -g -Wall -pedantic $(SOURCES)
 .PHONY: lint
 
-# Promoted into `test` 2026-08-02 on the #60 criterion (red would rot it,
-# so it joined only once fully green): lib AND apps both sweep clean since
-# the sibling-preload / value-call linter round (#176).
-lint-x: $(EXECUTABLE) ## Lint x-lang files
-	PARALLEL=1 sh tools/dev/lint.sh
-.PHONY: lint-x
-
-# Both targets ride tools/dev/fmt-sweep.sh (#307): the whole library
-# (the old loops visited lib's top level only -- 4 of 111 files),
-# chunked batch runs behind %%FMT-X-PAGE%% sentinels, and the
-# three-outcome contract -- ERROR (the formatter FAILED; never reported
-# as a diff), F (a real formatting difference), '.' (byte-identical,
-# cmp not command substitution).
-fmt-x: $(EXECUTABLE) ## Format x-lang files (whole library)
-	sh tools/dev/fmt-sweep.sh --write
-.PHONY: fmt-x
-
-fmt-check-x: $(EXECUTABLE) ## Check x-lang formatting (whole library)
-	sh tools/dev/fmt-sweep.sh
-.PHONY: fmt-check-x
-
 # docs/ref/c/ is gitignored, so a fresh clone does not have it, and Doxygen
 # refuses to create its own OUTPUT_DIRECTORY (docs/ref/README.md quotes the
 # error).  The target makes its own output root rather than leaving that to
@@ -689,43 +397,7 @@ doc-c: ## Generate C reference documentation (HTML + man pages)
 	X_RELEASE="$(X_RELEASE)" doxygen Doxyfile
 .PHONY: doc-c
 
-# No stderr masking and fail on error/empty output: a 2>/dev/null here once
-# hid a retired-constructor crash for weeks -- 77 of 79 ref files were 0
-# bytes while the target reported success.
-# The sweep lives in tools/dev/doc-sweep.sh (#321): chunked engine runs
-# (~5 boots) instead of one boot per file (~98, ~70% of the old 287s CI
-# step), and an explicit find for the file list -- the old `lib/x/**`
-# glob was not recursive under sh, so depth-3 modules were silently
-# never documented (#322).  Page semantics (FAIL/EMPTY/skip) unchanged.
-doc-x: $(EXECUTABLE) ## Generate x-lang documentation
-	@sh tools/dev/doc-sweep.sh
-	@sh x.sh --no-pin -q -f tools/dev/doc-index.x > docs/ref/x/index.md
-	@printf '  %s\n' "docs/ref/x/index.md"
-	@sh tools/check/doc-forms.sh
-.PHONY: doc-x
-
-# The x-lang library as roff, section 3x -- the same sweep as doc-x behind
-# its --man flag (one file list, one chunking policy, one set of per-file
-# verdicts; only the emitter differs).  X_RELEASE rides the .TH date slot,
-# exactly as doc-c hands it to Doxygen, so an installed page can say which
-# build it came from.
-#
-# NOT part of `doc`: that target is what CI runs on every push, and a second
-# full library sweep would double its cost for an artifact only install-man
-# consumes.  install-man depends on this directly instead.
-doc-man: $(EXECUTABLE) ## Generate x-lang man pages (section 3x)
-	@X_RELEASE="$(X_RELEASE)" sh tools/dev/doc-sweep.sh --man
-.PHONY: doc-man
-
-# Neither doc-man nor install-man had any gate target, which is how both
-# reached main unexercised by CI.  Structural checks only, against a
-# throwaway prefix -- see the script header for what each one catches.
-# CHECK_MAN_C=1 adds the Doxygen half where Doxygen is installed.
-check-man: $(EXECUTABLE) ## Smoke man generation + install (CHECK_MAN_C=1 adds the C half)
-	@sh tools/check/man-smoke.sh $${CHECK_MAN_C:+--with-c}
-.PHONY: check-man
-
-doc: doc-c doc-x ## Generate all documentation
+doc: doc-c ## Generate all documentation
 .PHONY: doc
 
 valgrind: ## Run Valgrind
@@ -738,62 +410,6 @@ watch: ## Watch for changes
 		make debug && make test-c; \
 	done
 .PHONY: watch
-
-# The installed library is BYTE-IDENTICAL to the repo's:
-# lib/ and apps/ copy verbatim -- diff -r inside the recipe is the proof, and
-# it fails the install if anything diverges.  Only the boot/ entries are
-# generated (the amalgams; build products, like the binary itself).  The
-# import root reaches the installed tree as data: the wrapper emits one
-# (def %install-root ...) form at the top of the pipe (see x.sh + module.x).
-install: $(EXECUTABLE) $(NAME).sh boot ## Install to PREFIX (DESTDIR honoured)
-	install -d -m 0755 $(DESTDIR)$(BINDIR) $(DESTDIR)$(LIBEXECDIR) $(DESTDIR)$(LIBDIR)
-	install $C -m 0755 $(EXECUTABLE) $(DESTDIR)$(LIBEXECDIR)/$(EXECUTABLE)
-	# strip -x, NOT bare strip: the JIT resolves its runtime helpers
-	# (jit_mkint, jit_atomint, ...) through dlsym on the engine itself,
-	# and those live in exports.sym.  Bare strip removes the exported
-	# symbol table, every dlsym then answers nil, and compiled code
-	# called address 0 -- a SIGSEGV inside jit_atomint on every INSTALLED
-	# engine while the repo build (which already used -x, line ~158) was
-	# clean (x-lang#201).  Release tarballs come from this same target.
-	strip -x $(DESTDIR)$(LIBEXECDIR)/$(EXECUTABLE)
-	@if [ -f entitlements.plist ]; then codesign -s - --entitlements entitlements.plist -f $(DESTDIR)$(LIBEXECDIR)/$(EXECUTABLE) 2>/dev/null || true; fi
-	install $C -m 0755 $(NAME).sh $(DESTDIR)$(BINDIR)/$(NAME)
-	rm -rf $(DESTDIR)$(LIBDIR)/lib $(DESTDIR)$(LIBDIR)/apps $(DESTDIR)$(LIBDIR)/boot
-	# The engine's ISA fingerprint travels WITH the engine.  An installed
-	# tree has no source checkout, so before this there was no way to ask
-	# "which engine contract is this?" -- fetch could not compare (#186)
-	# and a pinned boot could not refuse a mismatched amalgam (#187); it
-	# just ran it and segfaulted.  One precomputed hex line: the wrapper
-	# needs a STRING compare against a release manifest, not a digester.
-	install -d -m 0755 $(DESTDIR)$(LIBDIR)/contract
-	@sh -c 'if command -v shasum >/dev/null 2>&1; then shasum -a 256 tools/contract/isa.x | cut -d" " -f1; 		else sha256sum tools/contract/isa.x | cut -d" " -f1; fi' 		> $(DESTDIR)$(LIBDIR)/contract/isa.sha256
-	cp -R lib $(DESTDIR)$(LIBDIR)/lib
-	cp -R apps $(DESTDIR)$(LIBDIR)/apps
-	cp -R build/boot $(DESTDIR)$(LIBDIR)/boot
-	diff -r lib $(DESTDIR)$(LIBDIR)/lib
-	diff -r apps $(DESTDIR)$(LIBDIR)/apps
-	diff -r build/boot $(DESTDIR)$(LIBDIR)/boot
-	# The tree's RELEASE IDENTITY, beside the engine's ISA fingerprint and
-	# for the same reason: an installed tree has no source checkout and no
-	# git, so without these two lines it cannot answer "which release is
-	# this?" -- and the wrapper's pairing guard, which must decide BEFORE
-	# the amalgam reaches the engine, has nothing to compare (#435).
-	#
-	#   release           the tag this engine was built as; the guard's key,
-	#                     compared against the lock's (release "vX.Y.Z")
-	#   payload.sha256    the digest of what this tree actually ships, the
-	#                     same value the release manifest records -- written
-	#                     AFTER the copies above so it describes the
-	#                     installed bytes, not the repo's
-	printf '%s\n' '$(X_RELEASE)' > $(DESTDIR)$(LIBDIR)/contract/release
-	sh tools/release/payload-digest.sh $(DESTDIR)$(LIBDIR) > $(DESTDIR)$(LIBDIR)/contract/payload.sha256
-.PHONY: install
-
-uninstall: ## Uninstall from PREFIX
-	rm -rf $(DESTDIR)$(LIBDIR)
-	rm -rf $(DESTDIR)$(LIBEXECDIR)
-	rm -f $(DESTDIR)$(BINDIR)/$(NAME)
-.PHONY: uninstall
 
 # Doxygen's C reference as man pages, deliberately NOT wired into `install`
 # and `uninstall`: they are a separate, opt-in pair.  Three reasons.  The
@@ -823,12 +439,12 @@ uninstall: ## Uninstall from PREFIX
 # hold nothing but a subdirectory listing.  The filter keys on the page
 # TITLE, not the file name, so it stays right on whatever box ran Doxygen.
 MANSRC=docs/ref/c/man/man3
-MANSRC_X=docs/ref/man/man3x
 
-# Split by REFERENCE, not for tidiness: the C half needs Doxygen and the
-# x-lang half needs only the engine, so joining them would force a Doxygen
-# dependency on anyone who wants the library pages -- and on any CI leg that
-# checks them.  install-man is still the both-halves door.
+# The C reference needs Doxygen; x-lang's library reference needs only the
+# engine, and it ships from the x-lang repo (`make install-man-x` there).
+# Keeping them apart is what lets someone install the library pages without
+# a Doxygen dependency -- and lets this repo ship its half with no x-lang
+# checkout at all.
 install-man-c: doc-c ## Install the C reference man pages (section 3, needs Doxygen)
 	install -d -m 0755 $(DESTDIR)$(MANDIR)/man3
 	@n=0; \
@@ -842,18 +458,7 @@ install-man-c: doc-c ## Install the C reference man pages (section 3, needs Doxy
 	echo "  $$n C reference pages -> $(DESTDIR)$(MANDIR)/man3"
 .PHONY: install-man-c
 
-install-man-x: doc-man ## Install the x-lang reference man pages (section 3x)
-	install -d -m 0755 $(DESTDIR)$(MANDIR)/man3x
-	@n=0; \
-	for page in $(MANSRC_X)/*.3x; do \
-		install -m 0644 "$$page" $(DESTDIR)$(MANDIR)/man3x/ || exit 1; \
-		n=`expr $$n + 1`; \
-	done; \
-	echo "  $$n x-lang pages -> $(DESTDIR)$(MANDIR)/man3x"
-	@echo "  NOTE: section 3x is not searched by default -- \`man 3x <name>\`, or set MANSECT."
-.PHONY: install-man-x
-
-install-man: install-man-c install-man-x ## Install both man references to MANDIR (needs Doxygen)
+install-man: install-man-c ## Alias for install-man-c (this repo ships only the C half)
 .PHONY: install-man
 
 # Removal is BY NAME, from the same generated tree install-man read, so it
@@ -882,23 +487,7 @@ uninstall-man-c: ## Remove the C reference man pages from MANDIR
 	echo "  removed $$n C reference pages from $(DESTDIR)$(MANDIR)/man3"
 .PHONY: uninstall-man-c
 
-uninstall-man-x: ## Remove the x-lang man pages from MANDIR
-	@if [ ! -d $(MANSRC_X) ]; then \
-		echo "uninstall-man-x reads $(MANSRC_X) to know what install-man-x shipped; run 'make doc-man' first" >&2; \
-		exit 1; \
-	fi
-	@n=0; \
-	for page in $(MANSRC_X)/*.3x; do \
-		installed=$(DESTDIR)$(MANDIR)/man3x/`basename "$$page"`; \
-		if [ -f "$$installed" ]; then \
-			rm -f "$$installed" || exit 1; \
-			n=`expr $$n + 1`; \
-		fi; \
-	done; \
-	echo "  removed $$n x-lang pages from $(DESTDIR)$(MANDIR)/man3x"
-.PHONY: uninstall-man-x
-
-uninstall-man: uninstall-man-c uninstall-man-x ## Remove both man references from MANDIR
+uninstall-man: uninstall-man-c ## Alias for uninstall-man-c
 .PHONY: uninstall-man
 
 clean: cov-clean ## Clean build artifacts

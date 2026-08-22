@@ -1,4 +1,4 @@
-[submodule "specs/c/test-runner"]
+[submodule "tests/c/test-runner"]
 	path = tests/c/test-runner
 	url = https://github.com/jonruttan/test-runner.git
 [submodule "ext/x-expr"]

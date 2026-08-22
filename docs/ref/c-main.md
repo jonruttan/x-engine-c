@@ -1,4 +1,4 @@
-# x-lang C API Reference
+# x-bin-c API Reference
 
 The C engine: the evaluator, the primitive surface, and the object, type and
 heap machinery underneath them. Generated from the sources by Doxygen; the
@@ -6,9 +6,10 @@ version above the title is the release this reference was built from.
 
 ## The other half
 
-This documents the engine written in C. The library written *in x-lang* —
-every module under `lib/x/` — is a separate reference, generated from the
-`(doc ...)` forms in the source:
+This documents the engine written in C, which is all this repository holds.
+The library written *in x-lang* lives in the
+[x-lang](https://github.com/jonruttan/x-lang) repository and has its own
+reference, generated from the `(doc ...)` forms in its sources:
 
 - [x-lang API Reference](https://jonruttan.github.io/x-lang/docs/ref/x/index.html)
   — every module, class, method and member
