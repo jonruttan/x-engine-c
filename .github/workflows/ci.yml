@@ -4,16 +4,13 @@ name: CI
 # anything alone -- without the x-lang library on its stdin pipe x-bin
 # cannot even print -- so what CI can prove here is bounded, and the
 # bound is worth stating: the C compiles clean on both platforms, the C
-# spec suite passes, the three contracts whose SOURCE half is C still
-# agree with their committed manifests, and the whole thing is clean
-# under AddressSanitizer.
+# spec suite passes, and the whole thing is clean under AddressSanitizer.
 #
-# The other half of every contract is a spec that probes a LIVE engine,
-# and those live in x-lang (tests/x/specs/meta/).  So does
-# check-prim-coverage, which asks whether every C primitive is actually
-# exercised -- an answer spread across BOTH spec suites.  x-lang's CI
-# builds this repo as a submodule and runs all of it.  Green here means
-# "the C is sound"; green there means "the pair works".
+# The contract ratchets are NOT here.  All four check this C against
+# manifests that x-lang's library loads at boot, so they live with the
+# library and scan this repo across the submodule boundary.  x-lang's CI
+# is what refuses a C change that skips its manifest edit.  Green here
+# means "the C is sound"; green there means "the pair works".
 
 on:
   push:
@@ -42,34 +39,15 @@ jobs:
         run: make
       - name: C specs
         run: make test-c
-
-  gates:
-    name: gates (${{ matrix.os }})
-    runs-on: ${{ matrix.os }}
-    timeout-minutes: 10
-    strategy:
-      fail-fast: false
-      matrix:
-        os: [macos-14, ubuntu-24.04]
-    steps:
-      - uses: actions/checkout@v7
-        with:
-          submodules: recursive
-      # The three gates are pure source scans -- no binary needed -- but
-      # the build runs first anyway so a compile break is reported here
-      # as a compile break rather than as a mystery gate failure.
-      - name: Build
-        run: make
-      - name: Contract gates
-        run: make gates
-      # gen-layout must be a no-op: include/x-eval-layout.h is COMMITTED
-      # (so a plain checkout builds without awk) and generated from
-      # tools/contract/base-layout.x.  A dirty tree here means someone
-      # edited the descriptor and did not regenerate the header.
+      # gen-layout must be a no-op: include/x-eval-layout.h is COMMITTED (so a
+      # plain checkout builds without awk) and generated from
+      # tools/contract/base-layout.x.  A dirty tree here means someone edited
+      # the descriptor and did not regenerate the header.
       - name: Generated layout header is current
         run: |
           make gen-layout
           git diff --exit-code include/x-eval-layout.h
+
 
   asan:
     name: asan (${{ matrix.os }})

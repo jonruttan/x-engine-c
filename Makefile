@@ -261,47 +261,20 @@ test-c: ## Run C unit tests
 	CFLAGS="$(TEST_CFLAGS)" RUNNER=command sh $(PATH_TESTS_C)/test-runner/test-runner.sh $(TESTS)
 .PHONY: test-c
 
-# The contract gates, ONE definition: `make test` runs them first and
-# CI's "Contract gates" step runs exactly this target.  They must not
-# drift -- ci.yml once hand-listed a subset, and a gate CI never reaches
-# is a gate that rots.
+# NO CONTRACT GATES HERE, deliberately.  The four ratchets that pin this C
+# surface -- isa, obj-layout, base-paths, prim-coverage -- all check the C
+# against manifests under x-lang's tools/contract/, and those manifests are
+# not merely descriptions: lib/x-core.x INCLUDES base-paths.x and
+# obj-layout.x as the first things it loads, and pin.x reads isa.x at
+# runtime.  They are boot data, so they live with the library that boots on
+# them, and the gates live there too, scanning this submodule's sources
+# across the boundary.  Adding a primitive here therefore takes a manifest
+# edit in x-lang, and x-lang's CI is what refuses the commit that skips it.
 #
-# These are the three contracts whose SOURCE half is C and whose subject
-# lives entirely in this repo.  Each has a RUNTIME half -- a spec that
-# probes the live engine -- and those stay in x-lang, under
-# tests/x/specs/meta/, because only a booted engine can answer them.
-# check-prim-coverage is the fourth contract and it lives in x-lang too:
-# it asks whether every C primitive is EXERCISED, and that answer is
-# spread across BOTH spec suites, so only the superset repo can ask it.
-gates: check-isa check-obj-layout check-base-paths ## Run the contract gates
-.PHONY: gates
-
-test: gates test-c ## Run all tests
+# What this repo can prove alone is below: it compiles, its C specs pass,
+# and it is clean under AddressSanitizer.
+test: test-c ## Run all tests
 .PHONY: test
-
-# The C-surface ratchet, source half: every binding site in the C source must
-# appear in the committed manifest tools/contract/isa.x, so growing the C layer requires
-# a deliberate manifest edit in the same commit.  The runtime half lives in
-# tests/x/specs/meta/isa.spec.md (runs under test-x).
-check-isa: ## Diff the C source's binding surface against tools/contract/isa.x
-	sh tools/check/isa.sh
-.PHONY: check-isa
-
-# The object-layout contract, source half: the header-word layout parsed out
-# of ext/x-expr/include/x-obj.h must match the committed descriptor
-# tools/contract/obj-layout.x, which reflective X code reads its offsets from.  The
-# runtime half is tests/x/specs/meta/obj-layout.spec.md (runs under test-x).
-check-obj-layout: ## Diff x-obj.h's object layout against tools/contract/obj-layout.x
-	sh tools/check/obj-layout.sh
-.PHONY: check-obj-layout
-
-# The base-paths contract, source half: every base-field accessor macro
-# (x-eval-layout.h, x-base.h, the error-handler in x-eval.h) flattened to a
-# first/rest path must match tools/contract/base-paths.x, which reflect.x walks.
-# The runtime half is tests/x/specs/meta/base-paths.spec.md.
-check-base-paths: ## Diff the base-field macro chains against tools/contract/base-paths.x
-	sh tools/check/base-paths.sh
-.PHONY: check-base-paths
 
 # Memory-safety gate: run the C suite against an AddressSanitizer build.
 # Catches the crash class we keep hitting -- e.g. an unchecked `first`
