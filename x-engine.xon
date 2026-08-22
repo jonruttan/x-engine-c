@@ -37,6 +37,5 @@
 (guarantee gc/explicit-only)
 (guarantee gc/non-moving)
 (guarantee eval/tco)
-(guarantee tok/callback-no-alloc)
 (guarantee str/nul-terminated)
 (guarantee int/ptr-same-width)

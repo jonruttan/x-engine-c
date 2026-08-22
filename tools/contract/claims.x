@@ -65,8 +65,6 @@
   ; Proper tail calls, unbounded.  Not a speed claim: x-lang's library recurses
   ; in tail position throughout and binds tail `def`s globally because of it.
   (guarantee eval/tco)
-  ; Tokenizer callbacks run inside the reader's inner loop without allocating.
-  (guarantee tok/callback-no-alloc)
   ; A str value IS a C string: bytes past the NUL are unobservable.
   (guarantee str/nul-terminated)
   ; ext/x-expr/include/x.h asserts sizeof(x_int_t) == sizeof(void *) at COMPILE
