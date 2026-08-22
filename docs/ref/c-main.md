@@ -1,4 +1,4 @@
-# x-bin-c API Reference
+# x-eval-c API Reference
 
 The C engine: the evaluator, the primitive surface, and the object, type and
 heap machinery underneath them. Generated from the sources by Doxygen; the
