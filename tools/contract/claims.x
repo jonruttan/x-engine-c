@@ -16,17 +16,21 @@
 ;    which the ISA manifest does not describe because it describes the instruction
 ;    surface, not the switches or the calling convention.
 ;
-; SCOPE: THE DEFAULT BUILD.  `make` here produces x-bin with -DX_HEAP -DX_TYPE
-; -DX_SYS_CLOCK -DX_SYSCALL -DX_INCLUDE -DX_SIGNAL.  Coverage and profiling are
-; VARIANT builds (x-bin-cov, x-bin-profile), so instr/cov and instr/profile are
-; deliberately NOT claimed: the default engine genuinely does not have them, and
-; claiming them would be the over-declaration that compliance exists to catch.
+; SCOPE: THE IMPLEMENTATION, NOT ONE BUILD OF IT.  x-engine.xon is generated from
+; SOURCE facts -- the ISA manifest, the layout descriptors, their digests -- so its
+; subject is what this engine CAN do, not what one compilation of it happened to
+; switch on.  Coverage and profiling are claimed here because this repo builds them
+; (the cov and profile variant targets); the fact that a given binary was compiled
+; without -DX_COV is a property of that BINARY, and per-build facts are stamped
+; beside it at install time, which is where the param rows go for exactly the same
+; reason.  Scoping this file to the default build while deriving everything else
+; from source would put two different subjects in one manifest.
 ;
 ; Vocabulary: every atom below must exist in x-lang's tools/contract/features.x.
 ; A typo here is caught there, not tolerated here.
 
 (def %claims (lit (
-  ; --- non-ISA capabilities the default build has ---
+  ; --- non-ISA capabilities this implementation has ---
   ; The `include` primitive, -DX_INCLUDE.  Repo-mode boot cannot start without
   ; it: the wrapper cats an entry whose first act is to include the boot closure.
   (provides io/include)
@@ -38,13 +42,19 @@
   (provides reflect/word-probe)
   ; The wrapper protocol (x.sh): library concatenated on stdin, --batch
   ; suppressing the entry's launcher, argv reaching the `args` value, the REPL
-  ; reclaiming terminal stdin from fd 3, and errors printed to stdout as
-  ; `Error: <value>`.
+  ; reclaiming terminal stdin from fd 3, and errors printed to STDOUT.  The
+  ; engine's own prefix is `*** ERROR: ` -- `Error: <value>` is x-lang's Err
+  ; class formatting the same channel once the library is loaded.
   (provides invoke/pipe-stdin)
   (provides invoke/batch-flag)
   (provides invoke/argv)
   (provides io/fd3-stdin)
   (provides err/stdout-prefix)
+  ; Coverage marking and eval counters.  Claimed at the IMPLEMENTATION level: the
+  ; repo builds both variants.  A binary compiled without them is a build fact,
+  ; recorded beside that binary, not a limit of this engine.
+  (provides instr/cov)
+  (provides instr/profile)
 
   ; --- guarantees ---
   ; Collection happens only when asked.  Allocation never triggers it, so a raw
