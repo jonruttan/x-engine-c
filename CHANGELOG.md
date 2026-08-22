@@ -21,13 +21,17 @@ alongside the library changes they landed with.
   repo-relative paths and their history. x-lang consumes this repo as a
   submodule and builds `x-bin` from it.
 
-  The contract manifests did NOT come along, and that is the load-bearing
-  decision: `lib/x-core.x` includes `base-paths.x` and `obj-layout.x` as the
-  first things it loads and `pin.x` reads `isa.x` at runtime, so they are boot
-  data for the library rather than descriptions of the engine. They stay in
-  x-lang with the gates that check them, which now scan this repo across the
-  submodule boundary. `tools/contract/base-layout.x` is the exception — a pure
-  build input for `gen-layout` — and it lives here.
+  The contract manifests came too, and with them the three ratchets that
+  check the C against them, so this repo gates itself with no x-lang checkout
+  in the loop. The manifests are the engine's published self-description:
+  x-lang's boot loads `base-paths.x` and `obj-layout.x` to learn this engine's
+  field offsets, and its `pin.x` reads `isa.x`. Shipping them with the engine
+  is what stops a library running on an engine whose layout disagrees with the
+  copy the library holds.
+
+  `check-prim-coverage` stays in x-lang: it asks whether every primitive is
+  *exercised*, and most are reachable only through the library, so the answer
+  needs both spec suites at once.
 
   `X_RELEASE` now defaults to *this* repo's `git describe` for a standalone
   build; x-lang passes its own tag down when it builds the submodule, so the

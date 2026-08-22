@@ -261,19 +261,54 @@ test-c: ## Run C unit tests
 	CFLAGS="$(TEST_CFLAGS)" RUNNER=command sh $(PATH_TESTS_C)/test-runner/test-runner.sh $(TESTS)
 .PHONY: test-c
 
-# NO CONTRACT GATES HERE, deliberately.  The four ratchets that pin this C
-# surface -- isa, obj-layout, base-paths, prim-coverage -- all check the C
-# against manifests under x-lang's tools/contract/, and those manifests are
-# not merely descriptions: lib/x-core.x INCLUDES base-paths.x and
-# obj-layout.x as the first things it loads, and pin.x reads isa.x at
-# runtime.  They are boot data, so they live with the library that boots on
-# them, and the gates live there too, scanning this submodule's sources
-# across the boundary.  Adding a primitive here therefore takes a manifest
-# edit in x-lang, and x-lang's CI is what refuses the commit that skips it.
+# The contract gates, ONE definition: `make test` runs them first and CI's
+# "Contract gates" step runs exactly this target, so the two cannot drift.
 #
-# What this repo can prove alone is below: it compiles, its C specs pass,
-# and it is clean under AddressSanitizer.
-test: test-c ## Run all tests
+# These three are SELF-CONTAINED: each scans this repo's C and diffs it
+# against a committed manifest in tools/contract/, with no x-lang checkout
+# anywhere in the loop.  That is the point of them living here -- the engine
+# refuses its own drift instead of waiting to be told about it downstream.
+#
+# The manifests are ALSO the engine's published description of itself.
+# x-lang's boot loads base-paths.x and obj-layout.x to learn this engine's
+# field offsets, and pin.x reads isa.x to answer which C surface a tree
+# carries -- so they ship with the engine rather than being copied into the
+# library, which is what kept a library's private layout copy from silently
+# disagreeing with the engine actually running it.
+#
+# NOT here: check-prim-coverage, which asks whether every primitive is
+# EXERCISED by a spec.  Most primitives are reachable only through the
+# library, so the honest answer needs both spec suites at once and only the
+# repo holding both trees can ask it.  It runs in x-lang, over this
+# submodule's sources and both suites.
+gates: check-isa check-obj-layout check-base-paths ## Run the contract gates
+.PHONY: gates
+
+# The C-surface ratchet: every binding site in the C source must appear in
+# the committed manifest tools/contract/isa.x, so growing the C layer takes a
+# deliberate manifest edit in the same commit.  The runtime half -- a walk of
+# the LIVE catalog -- is x-lang's tests/x/specs/meta/isa.spec.md.
+check-isa: ## Diff the C source's binding surface against tools/contract/isa.x
+	sh tools/check/isa.sh
+.PHONY: check-isa
+
+# The object-layout contract: the header-word layout parsed out of
+# ext/x-expr/include/x-obj.h must match tools/contract/obj-layout.x, which
+# reflective x-lang code reads its offsets from.  Runtime half:
+# x-lang's tests/x/specs/meta/obj-layout.spec.md.
+check-obj-layout: ## Diff x-obj.h's object layout against tools/contract/obj-layout.x
+	sh tools/check/obj-layout.sh
+.PHONY: check-obj-layout
+
+# The base-paths contract: every base-field accessor macro (x-eval-layout.h,
+# x-base.h, the error handler in x-eval.h) flattened to a first/rest path
+# must match tools/contract/base-paths.x, which x-lang's reflect.x walks.
+# Runtime half: x-lang's tests/x/specs/meta/base-paths.spec.md.
+check-base-paths: ## Diff the base-field macro chains against tools/contract/base-paths.x
+	sh tools/check/base-paths.sh
+.PHONY: check-base-paths
+
+test: gates test-c ## Run all tests
 .PHONY: test
 
 # Memory-safety gate: run the C suite against an AddressSanitizer build.

@@ -26,8 +26,9 @@ sources. C89 (`-ansi`), no dependencies beyond libc and `-ldl` (the FFI and JIT
 layers use `dlopen`/`dlsym`).
 
     make            # build + strip
-    make test       # the C spec suite
-    make test-c     # the same, spelled explicitly
+    make test       # the contract gates + the C spec suite
+    make gates      # the three contract gates alone
+    make test-c     # the C spec suite alone
     make test-asan  # the C suite under AddressSanitizer
     make help       # every target
 
@@ -50,44 +51,53 @@ object path and variants rebuild incrementally.
 | `include/` | headers, including the generated `x-eval-layout.h` |
 | `ext/x-expr/` | the foundation library, as a submodule |
 | `tests/c/` | the C spec suite |
-| `tools/contract/base-layout.x` | the base-object descriptor `gen-layout` reads |
+| `tools/contract/` | the committed manifests, shipped as the engine's self-description |
 
 ## The contracts
 
-Four ratchets pin this C surface so it cannot grow or shift silently — and
-none of them live here. Each checks the C against a manifest under x-lang's
-`tools/contract/`, and those manifests are not merely descriptions of the
-engine: `lib/x-core.x` *includes* `base-paths.x` and `obj-layout.x` as the
-first things it loads, and `pin.x` reads `isa.x` at runtime. They are boot
-data. So they live with the library that boots on them, and the gates live
-there too, scanning this submodule's sources across the boundary.
+Four ratchets pin this C surface so it cannot grow or shift silently. Three
+live here and are fully self-contained — each scans this repo's C and diffs it
+against a committed manifest, with no x-lang checkout anywhere in the loop:
 
-| contract | what it pins | run from |
+| gate | pins | against |
 |---|---|---|
-| `check-isa` | every binding site in the C | x-lang |
-| `check-obj-layout` | the object header layout | x-lang |
-| `check-base-paths` | the base-field accessor chains | x-lang |
-| `check-prim-coverage` | every primitive is exercised by a spec | x-lang |
+| `make check-isa` | every binding site in the C | `tools/contract/isa.x` |
+| `make check-obj-layout` | the object header layout | `tools/contract/obj-layout.x` |
+| `make check-base-paths` | the base-field accessor chains | `tools/contract/base-paths.x` |
 
-The one descriptor that *is* ours is `tools/contract/base-layout.x`, a pure
-build input: `make gen-layout` turns it into `include/x-eval-layout.h`. That
-header is committed, so a plain checkout builds without awk. Edit the
-descriptor, regenerate, then `make clean && make` — header changes do not
-trigger object rebuilds on their own here.
+Those manifests are also **the engine's published description of itself**.
+x-lang's boot loads `base-paths.x` and `obj-layout.x` to learn this engine's
+field offsets, and its `pin.x` reads `isa.x` to answer which C surface a tree
+carries. They ship with the engine rather than being copied into the library,
+so a library can never run on an engine whose layout disagrees with the copy
+it holds — which is exactly the failure the release-identity work was about.
+
+Each of the three has a **runtime half** — a spec that probes a live engine —
+and those need a library to boot, so they run in x-lang under
+`tests/x/specs/meta/`.
+
+The fourth ratchet, `check-prim-coverage`, asks whether every primitive is
+*exercised* by a spec. Most primitives are reachable only through the library,
+so the honest answer needs both spec suites at once; it runs in x-lang, over
+this repo's sources and both suites.
+
+`tools/contract/base-layout.x` is a pure build input: `make gen-layout` turns
+it into `include/x-eval-layout.h`. That header is committed, so a plain
+checkout builds without awk. Edit the descriptor, regenerate, then
+`make clean && make` — header changes do not trigger object rebuilds on their
+own here.
 
 ## Adding a primitive
 
 Growing the C surface takes a deliberate manifest edit in the same commit —
-that is the point of the ratchet, and the edit lands in **x-lang**, not here.
-Register the primitive, then in an x-lang checkout run `make check-isa` and add
-the line it reports to `tools/contract/isa.x`. Give it a spec too: in `tests/c/`
-here if it is reachable from C, or in x-lang's suite if it is only reachable
-through the library — `make check-prim-coverage` there will fail until one of
-those exists, or until the primitive carries a written reason for being
-deliberately unspecced.
+that is the point of the ratchet. Register the primitive, run `make check-isa`,
+and add the line it reports to `tools/contract/isa.x`. CI here refuses the
+commit that skips it.
 
-This repo's CI cannot catch a missing manifest edit; x-lang's will, on the
-commit that bumps the submodule pointer.
+Then give it a spec: in `tests/c/` if it is reachable from C, or in x-lang's
+suite if it is only reachable through the library. `make check-prim-coverage`
+in x-lang will fail until one of those exists, or until the primitive carries
+a written reason for being deliberately unspecced.
 
 ## Documentation
 

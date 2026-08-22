@@ -4,13 +4,15 @@ name: CI
 # anything alone -- without the x-lang library on its stdin pipe x-bin
 # cannot even print -- so what CI can prove here is bounded, and the
 # bound is worth stating: the C compiles clean on both platforms, the C
-# spec suite passes, and the whole thing is clean under AddressSanitizer.
+# spec suite passes, the three self-contained contract ratchets agree with
+# their manifests, and the whole thing is clean under AddressSanitizer.
 #
-# The contract ratchets are NOT here.  All four check this C against
-# manifests that x-lang's library loads at boot, so they live with the
-# library and scan this repo across the submodule boundary.  x-lang's CI
-# is what refuses a C change that skips its manifest edit.  Green here
-# means "the C is sound"; green there means "the pair works".
+# Each ratchet has a RUNTIME half -- a spec that probes a live engine --
+# and those need a library to boot, so they run in x-lang.  So does
+# check-prim-coverage, which asks whether every primitive is EXERCISED:
+# most are reachable only through the library, so that answer needs both
+# spec suites at once.  Green here means "the C is sound and self
+# consistent"; green in x-lang means "the pair works".
 
 on:
   push:
@@ -39,6 +41,8 @@ jobs:
         run: make
       - name: C specs
         run: make test-c
+      - name: Contract gates
+        run: make gates
       # gen-layout must be a no-op: include/x-eval-layout.h is COMMITTED (so a
       # plain checkout builds without awk) and generated from
       # tools/contract/base-layout.x.  A dirty tree here means someone edited
