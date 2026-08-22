@@ -185,7 +185,21 @@ COVERAGE_DIR=.coverage
 
 default: all strip ## Build and strip
 
-all: $(SOURCES) $(EXECUTABLE) ## Build all
+all: $(SOURCES) $(EXECUTABLE) x-engine-build.xon ## Build all
+
+# THE BUILD'S OWN FACTS.  x-engine.xon is generated from SOURCE and carries no
+# (param ...) rows on purpose -- word size, byte order and architecture are facts
+# of a BINARY, and a 32-bit and a 64-bit build of this tree differ there and
+# nowhere else in the contract.  This is the other half, regenerated whenever the
+# engine relinks, installed beside it, and read by x-lang instead of inferred from
+# a triple at runtime.
+#
+# The compiler answers, not uname: a cross-compiled engine must report its TARGET,
+# and __SIZEOF_POINTER__ / __BYTE_ORDER__ come from the compiler producing this
+# binary.  A fact that cannot be established is recorded as `unknown` rather than
+# guessed -- x-lang would believe a wrong row.
+x-engine-build.xon: $(EXECUTABLE) tools/contract/gen-build-params.sh
+	@sh tools/contract/gen-build-params.sh $(X_MACHINE) "$(CC)" > $@
 
 # Stamp-gated (#367): the bare `strip` recipe ran on EVERY make,
 # mutating the binary (strip + macOS ad-hoc re-codesign) even when

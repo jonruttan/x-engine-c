@@ -90,3 +90,8 @@ build/
 
 # Generated per build from `git describe` (Makefile: X_RELEASE); never committed.
 include/x-release.h
+
+# The build-params declaration: facts of a BINARY, regenerated on every relink.
+# Committing it would assert whichever platform built last as though it were the
+# project's -- the reason x-engine.xon (generated from SOURCE) carries no param rows.
+x-engine-build.xon
