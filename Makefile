@@ -308,7 +308,20 @@ check-base-paths: ## Diff the base-field macro chains against tools/contract/bas
 	sh tools/check/base-paths.sh
 .PHONY: check-base-paths
 
-test: gates test-c ## Run all tests
+# The bare harness: every case is one engine process fed the allocation
+# guard and the source, with NO library on stdin.  Every other runner in
+# the world cats a library ahead of the test, so what it measures is the
+# library's surface -- for a primitive that is the wrong subject.  This is
+# the only place the engine is asked to stand up unaided.
+#
+# NOT the cross-engine conformance suite: that defines what ANY evaluator
+# must do, so it belongs with the language and lives in x-lang.  See the
+# header of tests/bare/bare-runner.sh.
+test-bare: $(EXECUTABLE) ## Run the bare-engine smoke specs (no library)
+	sh tests/bare/bare-runner.sh
+.PHONY: test-bare
+
+test: gates test-c test-bare ## Run all tests
 .PHONY: test
 
 # Memory-safety gate: run the C suite against an AddressSanitizer build.

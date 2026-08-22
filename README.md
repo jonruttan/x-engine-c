@@ -26,9 +26,10 @@ sources. C89 (`-ansi`), no dependencies beyond libc and `-ldl` (the FFI and JIT
 layers use `dlopen`/`dlsym`).
 
     make            # build + strip
-    make test       # the contract gates + the C spec suite
+    make test       # the contract gates + both spec suites
     make gates      # the three contract gates alone
     make test-c     # the C spec suite alone
+    make test-bare  # the bare-engine smoke specs (no library)
     make test-asan  # the C suite under AddressSanitizer
     make help       # every target
 
@@ -51,7 +52,25 @@ object path and variants rebuild incrementally.
 | `include/` | headers, including the generated `x-eval-layout.h` |
 | `ext/x-expr/` | the foundation library, as a submodule |
 | `tests/c/` | the C spec suite |
+| `tests/bare/` | bare-engine smoke specs — the engine with no library on stdin |
 | `tools/contract/` | the committed manifests, shipped as the engine's self-description |
+
+## Testing the engine unaided
+
+Every other runner in the project cats a library onto stdin ahead of the test,
+so what it measures is the library's surface. For a primitive that is the wrong
+subject: reached through `prim-ref`, through a class, or through any name the
+library rebinds, it is not the primitive under test. `+` is the plain case — the
+primitive is *binary*, and the variadic `+` every ordinary spec exercises is
+`lib/x/core/arithmetic.x` sitting on top of it.
+
+`make test-bare` loads nothing. Each case is one engine process fed two lines:
+the allocation guard, then the source.
+
+This is **not** the cross-engine conformance suite. That defines what *any*
+evaluator must do, so it belongs with the language and lives in
+[x-lang][x-lang]; an implementation that owned it would become the arbiter of
+the contract every other implementation is judged against.
 
 ## The contracts
 

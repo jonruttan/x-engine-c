@@ -41,6 +41,8 @@ jobs:
         run: make
       - name: C specs
         run: make test-c
+      - name: Bare-engine smoke
+        run: make test-bare
       - name: Contract gates
         run: make gates
       # gen-layout must be a no-op: include/x-eval-layout.h is COMMITTED (so a
