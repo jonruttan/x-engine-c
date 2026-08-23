@@ -199,7 +199,7 @@ all: $(SOURCES) $(EXECUTABLE) x-engine-build.xon ## Build all
 # binary.  A fact that cannot be established is recorded as `unknown` rather than
 # guessed -- x-lang would believe a wrong row.
 x-engine-build.xon: $(EXECUTABLE) tools/contract/gen-build-params.sh
-	@sh tools/contract/gen-build-params.sh $(X_MACHINE) "$(CC)" > $@
+	@X_RELEASE="$(X_RELEASE)" sh tools/contract/gen-build-params.sh $(X_MACHINE) "$(CC)" > $@
 
 # Stamp-gated (#367): the bare `strip` recipe ran on EVERY make,
 # mutating the binary (strip + macOS ad-hoc re-codesign) even when
