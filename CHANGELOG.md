@@ -11,7 +11,18 @@ alongside the library changes they landed with.
 [x-lang]: https://github.com/jonruttan/x-lang
 [x-changelog]: https://github.com/jonruttan/x-lang/blob/main/CHANGELOG.md
 
-## Unreleased
+## 0.1.0 — 2026-08-23
+
+The first release of this engine under its own version number. Everything
+before it shipped inside an x-lang release, which is what these three entries
+are about: an engine that can be packaged, named, and told apart from the
+language it runs.
+
+The version line starts here. The ten tags this repository inherited when the
+C was carved out of x-lang (`v0.3.1-rc*`, `v0.4.0`) were x-lang releases; no
+engine was ever cut or tested as one of them, and none had been pushed, so
+they were deleted rather than published.
+
 
 ### Added
 
