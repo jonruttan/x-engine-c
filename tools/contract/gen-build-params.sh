@@ -70,3 +70,15 @@ printf '(param word-size %s)\n' "$wordsize"
 printf '(param endian %s)\n' "$endian"
 printf '(param os %s)\n' "$os"
 printf '(param arch %s)\n' "$arch"
+# THE RELEASE THIS BINARY WAS BUILT AS, and it is a fact of the BINARY like
+# every other row here: the same sources cut as two releases give two engines
+# that differ in nothing else.  It is a STRING because a release is spelled
+# however its project spells it -- a tag, a describe, `dev` -- and nothing may
+# parse it: x-lang compares release strings for equality and never reads them.
+#
+# WHY IT IS DECLARED RATHER THAN ASKED.  The engine binds `x-release` too, and
+# that is the answer for a program already running.  A wrapper deciding whether
+# a pinned amalgam may boot is not running anything yet, and starting an engine
+# to find out whether it is allowed to start an engine is a worse shape than
+# reading a file beside it.
+printf '(param release "%s")\n' "$X_RELEASE"
