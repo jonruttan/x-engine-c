@@ -13,6 +13,37 @@ alongside the library changes they landed with.
 
 ## Unreleased
 
+### Added
+
+- **`make dist` — this engine as a consumable directory.** A tarball holding
+  the binary, its build params, its declaration, the contract manifests and
+  both include trees: everything a consumer resolves, at the paths a checkout
+  uses. x-lang points its `engine` link at an unpacked release and treats it
+  exactly as it treats a checkout. Sources, tests and build tooling stay out —
+  a half-source tarball that looks buildable and is not would be worse than an
+  honest binary one.
+
+- **A release pipeline, and a version line of its own.** A version tag builds,
+  gates and publishes one tarball per platform (`macos-14`, `ubuntu-24.04`),
+  each with a sha256 sidecar, and proves the *tarball* — unpacked elsewhere —
+  rather than the staging directory it came from.
+
+  **This line starts at v0.1.0.** The ten tags the carve inherited
+  (`v0.3.1-rc*`, `v0.4.0`) were x-lang releases; no engine was ever cut or
+  tested as one, so they have been removed rather than published. v0.x also
+  says the honest thing about the distribution format: it is new, and it may
+  change before it is worth a 1.0.
+
+  The engine still reports whatever `X_RELEASE` it is built with, so an engine
+  built inside x-lang reports x-lang's tag and a released one reports its own.
+  Those are two different questions, and x-lang's `x -V` now labels both
+  answers; teaching the pin lock to record the engine's is the next step there.
+
+- **The engine asserts its own name** (`(name "x-engine-c")` in `claims.x`).
+  x-lang's generator used to take it from the directory it found the engine
+  in, which is where an engine happens to sit rather than who it is — a
+  checkout and an unpacked release answered to different names.
+
 ### Changed
 
 - **The C engine is its own repository.** `src/`, `include/`, `opt/`,
