@@ -1,0 +1,148 @@
+name: Release
+
+# A version tag publishes this engine as a consumable DIRECTORY, one tarball
+# per platform: the binary, its build params, its declaration, the contract
+# manifests and both include trees.  x-lang consumes it by pointing `engine`
+# at the unpacked tree -- a checkout and a release are the same subject, and
+# nothing downstream has to know which one it has.
+#
+# THE LOGIC IS IN THE MAKEFILE, NOT HERE.  `make dist` stages, verifies and
+# tars; this workflow builds, calls it, and uploads.  That split is not
+# stylistic: a workflow that runs only on tags is invisible to every gate, so
+# anything written inline here is code nobody tests until a release is already
+# under way.  x-lang lost a v0.4.0 tag exactly that way, on an inline script
+# calling an API that had been retired months earlier.  `make dist` runs on
+# every developer machine and can be run before tagging.
+#
+# WHAT THIS DOES NOT DO: notarize.  The engine binary ships ad-hoc signed
+# (the strip target re-signs it with entitlements.plist).  The consumer of
+# these tarballs is a build step -- x-lang's `make engine` -- not a human
+# double-clicking a download, and x-lang's own release signs and notarizes
+# the whole install tree including the engine it ships.  Duplicating the
+# notarization apparatus here would buy nothing today; when engine tarballs
+# are something people download directly, port tools/release/macos-notarize.sh
+# from x-lang rather than inventing a second one.
+
+on:
+  push:
+    tags: ['v*']
+
+permissions:
+  contents: write
+
+jobs:
+  # Create the release first, once, so the per-platform jobs have somewhere to
+  # upload to.  Same shape as x-lang's release workflow, for the same reason:
+  # matrix legs racing to create the same release is a coin flip.
+  release:
+    name: create the release
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v7
+      - name: Publish release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        # A hyphenated tag (v0.1.0-rc1) is a prerelease by convention -- it
+        # must not surface as the repo's "Latest release".
+        run: |
+          case "$GITHUB_REF_NAME" in
+            *-*) PRERELEASE=--prerelease ;;
+            *)   PRERELEASE= ;;
+          esac
+          notes="$(cat <<'NOTES'
+          ## What this is
+
+          The x-engine-c evaluator, packaged as an **engine directory**: the
+          binary, the platform facts of that build, this engine's declaration
+          of what it provides, the contract manifests x-lang's boot reads, and
+          the headers the JIT compiles against.
+
+          ```
+          x-bin                  the engine
+          x-engine-build.xon     word size, byte order, os, arch -- of THIS build
+          x-engine.xon           what this engine provides, and what it claims
+          tools/contract/*.x     isa, obj-layout, base-paths, base-layout, claims
+          include/               engine headers
+          ext/x-expr/include/    object-substrate headers
+          ```
+
+          ## Using it
+
+          Unpack it and point x-lang at it:
+
+          ```sh
+          tar -xzf x-engine-c-<tag>-<os>-<arch>.tar.gz
+          cd /path/to/x-lang && make X_ENGINE_DIR=/path/to/x-engine-c-<tag>-<os>-<arch>
+          ```
+
+          x-lang links `engine` at that directory and uses the binary as it
+          comes -- an unpacked release has no sources to build, and the build
+          asks which kind of directory it was given rather than assuming.
+
+          Verify with the sidecar: `sha256sum -c <tarball>.sha256`.
+
+          On macOS the engine is **ad-hoc signed**, not notarized. It is a
+          build input rather than a downloaded application; x-lang's own
+          release notarizes the install tree it ships.
+
+          ## What is not in here
+
+          Sources, tests and build tooling. Clone the repository for those --
+          a half-source tarball that looks buildable and is not would be worse
+          than an honest binary one.
+          NOTES
+          )"
+          gh release create "$GITHUB_REF_NAME" $PRERELEASE \
+            --title "$GITHUB_REF_NAME" --notes "$notes"
+
+  tarball:
+    name: engine tarball (${{ matrix.os }})
+    needs: release
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [macos-14, ubuntu-24.04]
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          submodules: recursive
+      # The full gate stands between a tag and its artifacts: a tag on a red
+      # tree publishes nothing.  `make test` is the contract ratchets, the C
+      # suite and the bare-engine smoke.  ASan is deliberately not here -- it
+      # runs on every push to main, and doubling a release's wall clock to
+      # re-prove a green main is not worth it.
+      - name: Full gate
+        run: make test
+      # X_RELEASE is the TAG, not `git describe`: a shallow checkout would
+      # reconstruct something else, and the binary's own reported release is
+      # what a consumer pairs against.
+      - name: Package
+        run: make dist X_RELEASE="$GITHUB_REF_NAME"
+      # Prove the TARBALL, not the staging directory: unpack it somewhere
+      # else and check the files a consumer resolves are all present. `make
+      # dist` verifies what it staged; this verifies what it shipped.
+      - name: Unpack and verify
+        run: |
+          tarball=$(ls build/dist/*.tar.gz)
+          work=$(mktemp -d)
+          tar -xzf "$tarball" -C "$work"
+          tree=$(ls -d "$work"/*/)
+          missing=
+          for f in x-bin x-engine.xon x-engine-build.xon LICENSE \
+                   tools/contract/isa.x tools/contract/obj-layout.x \
+                   tools/contract/base-paths.x tools/contract/base-layout.x \
+                   tools/contract/claims.x \
+                   include/x-eval.h ext/x-expr/include/x-obj.h; do
+            [ -f "$tree/$f" ] || missing="$missing $f"
+          done
+          [ -z "$missing" ] || { echo "tarball is missing:$missing" >&2; exit 1; }
+          echo "unpacked tree at $tree carries every path a consumer resolves"
+      - name: Upload to the release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release upload "$GITHUB_REF_NAME" \
+            build/dist/*.tar.gz build/dist/*.tar.gz.sha256 --clobber
