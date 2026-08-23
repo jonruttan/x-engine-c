@@ -268,6 +268,84 @@ clean-obj:
 	$(CC) -c $(CFLAGS) $(DEFS) -o $@ $<
 
 # ============================================================================
+# Distribute
+# ============================================================================
+
+# THE ENGINE AS AN ARTIFACT.  x-lang consumes an engine as a DIRECTORY: a
+# checkout of this repo is one, an unpacked release tarball is the other, and
+# X_ENGINE_DIR picks between them.  That only holds if the tarball carries
+# every path a consumer reaches for, spelled the way a checkout spells it --
+# then a checkout is a SUPERSET of a release and nothing downstream needs to
+# know which one it has.  This target stages exactly that directory.
+#
+# WHAT GOES IN, and who asks for it:
+#   x-bin                  the engine; x-lang copies it to its own root, where
+#                          its spec runner derives the awk harness path from it
+#   x-engine-build.xon     this BINARY's params -- word size, endian, os, arch
+#   x-engine.xon           what this engine provides, and what it claims
+#   tools/contract/*.x     x-lang's boot INCLUDES base-paths.x and obj-layout.x
+#                          before anything else; pin.x reads isa.x; compliance
+#                          falsifies claims.x; base-layout.x pairs with them
+#   include/               the JIT compiles C against these headers AT RUNTIME
+#   ext/x-expr/include/    (lib/x/tool/compile.x's -I flags name both dirs, so
+#                          the nesting has to survive packaging)
+#   entitlements.plist     macOS re-signs the engine after install
+#   LICENSE                it travels with the bytes
+#
+# WHAT STAYS OUT: sources, tests, build tooling.  A consumer needing those
+# needs a checkout, and saying so is more honest than a half-source tarball
+# that looks buildable and is not.
+#
+# THE NAME COMES FROM THE BUILD PARAMS, NOT uname.  A cross-compiled engine
+# must be named for its TARGET, and x-engine-build.xon is where the compiler
+# already answered that -- naming it from the packaging host would put the
+# wrong platform on the file every consumer selects by.
+DIST_DIR?=build/dist
+DIST_OS=$(shell sed -n 's/^(param os \(.*\))$$/\1/p' x-engine-build.xon)
+DIST_ARCH=$(shell sed -n 's/^(param arch \(.*\))$$/\1/p' x-engine-build.xon)
+DIST_NAME=x-engine-c-$(X_RELEASE)-$(DIST_OS)-$(DIST_ARCH)
+
+# The manifest is a LIST, not a comment: the staging step copies these paths
+# and the verify step re-reads the same list, so a file that stops being
+# copied fails the target instead of shipping as a hole.  Consumers meet a
+# missing contract file as a segfault in field access, which is the worst
+# possible place to learn that packaging drifted.
+DIST_REQUIRED=x-bin x-engine.xon x-engine-build.xon LICENSE \
+	tools/contract/isa.x tools/contract/obj-layout.x \
+	tools/contract/base-paths.x tools/contract/base-layout.x \
+	tools/contract/claims.x \
+	include/x-eval.h ext/x-expr/include/x-obj.h
+
+dist: all strip ## Package this engine as a consumable artifact (tar.gz + sha256)
+	@rm -rf $(DIST_DIR)/$(DIST_NAME)
+	@mkdir -p $(DIST_DIR)/$(DIST_NAME)/tools/contract $(DIST_DIR)/$(DIST_NAME)/ext/x-expr
+	@cp $(EXECUTABLE) x-engine.xon x-engine-build.xon LICENSE $(DIST_DIR)/$(DIST_NAME)/
+	@cp tools/contract/isa.x tools/contract/obj-layout.x tools/contract/base-paths.x \
+		tools/contract/base-layout.x tools/contract/claims.x \
+		$(DIST_DIR)/$(DIST_NAME)/tools/contract/
+	@cp -R $(INCDIR) $(DIST_DIR)/$(DIST_NAME)/include
+	@cp -R $(X_EXPR_DIR)/include $(DIST_DIR)/$(DIST_NAME)/ext/x-expr/include
+	@# Darwin-only, and absent elsewhere: copy it when it exists rather than
+	@# failing a Linux package for a file Linux has no use for.
+	@if [ -f entitlements.plist ]; then cp entitlements.plist $(DIST_DIR)/$(DIST_NAME)/; fi
+	@missing=; for f in $(DIST_REQUIRED); do \
+		[ -f "$(DIST_DIR)/$(DIST_NAME)/$$f" ] || missing="$$missing $$f"; \
+	done; \
+	if [ -n "$$missing" ]; then \
+		echo "dist: FAIL -- staged tree is missing:$$missing" >&2; exit 1; \
+	fi
+	@tar -czf $(DIST_DIR)/$(DIST_NAME).tar.gz -C $(DIST_DIR) $(DIST_NAME)
+	@# Digest from INSIDE the dist dir so the sidecar names the tarball by its
+	@# basename -- `shasum -c` resolves the name it reads relative to itself,
+	@# and a path-qualified line only verifies from one directory.
+	@cd $(DIST_DIR) && { \
+		if command -v shasum >/dev/null 2>&1; then shasum -a 256 $(DIST_NAME).tar.gz; \
+		else sha256sum $(DIST_NAME).tar.gz; fi; } > $(DIST_NAME).tar.gz.sha256
+	@echo "dist: $(DIST_DIR)/$(DIST_NAME).tar.gz"
+	@cat $(DIST_DIR)/$(DIST_NAME).tar.gz.sha256
+.PHONY: dist
+
+# ============================================================================
 # Test
 # ============================================================================
 

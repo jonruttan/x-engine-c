@@ -30,6 +30,16 @@
 ; A typo here is caught there, not tolerated here.
 
 (def %claims (lit (
+  ; --- who this engine IS ---
+  ; The generator used to take the name from the DIRECTORY it found the engine
+  ; in.  That is an accident of delivery, not an identity: a checkout sits in
+  ; `x-engine-c`, an unpacked release sits in `x-engine-c-<release>-<os>-<arch>`,
+  ; and the same engine would answer to two different names depending on how it
+  ; arrived -- refusing a project whose pin.xon says (engine "x-engine-c") for no
+  ; reason but the shape of a path.  So the name is asserted here, beside the
+  ; binary's, for the same reason the binary's is: no one else is entitled to
+  ; decide it.
+  (name "x-engine-c")
   ; --- non-ISA capabilities this implementation has ---
   ; The `include` primitive, -DX_INCLUDE.  Repo-mode boot cannot start without
   ; it: the wrapper cats an entry whose first act is to include the boot closure.
