@@ -31,6 +31,8 @@
 (provides isa/syscall)
 (provides isa/tok)
 (provides isa/types)
+(provides meta/identity)
+(provides meta/platform)
 (provides reflect/layout-data)
 (provides reflect/ptr-casts)
 (provides reflect/word-probe)
