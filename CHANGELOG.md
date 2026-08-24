@@ -11,6 +11,40 @@ alongside the library changes they landed with.
 [x-lang]: https://github.com/jonruttan/x-lang
 [x-changelog]: https://github.com/jonruttan/x-lang/blob/main/CHANGELOG.md
 
+## 0.1.1 — 2026-08-23
+
+A crash fix. `(= 1.5 1.5)` killed the process — uncatchably, from ordinary
+source text.
+
+
+### Fixed
+
+- **A prim raises on a dotted argument list instead of walking off it**
+  ([x-lang#487][i487]). A prim reads its arguments by walking the spine, and
+  the walk tested only for the PROPER ending: a proper list bottoms out at
+  nil, an improper one at an ATOM, which was then read as a pair — the tail
+  integer's value word dereferenced as a pointer. No `guard` could catch it,
+  because a prim call never enters the applicative walk that #69 guarded.
+
+  Ordinary text reaches it because the reader is honest: with no float module
+  loaded `1.5` reads as `(1 . 5)`, so `(= 1.5 1.5)` is exactly that call.
+  `=`, `eq?` and `same?` crashed while `+` and `<` raised cleanly — the split
+  being that the library shadows the latter with tower generics, so only the
+  unshadowed keep-list entries reached C directly.
+
+  The fix hoists #69's own structural cell test into `x_eval_spine_guard` and
+  points every C consumer of a spine at that one implementation: the prim
+  argument helpers, the three body walkers, `match`'s clause walk, and the
+  variadic walks in `atomic`/`syscall`/`ffi`. Ops still receive their spines
+  raw and bind dotted tails legitimately. Three bare specs pin the behaviour.
+
+  Unchanged: a satisfied arity still ignores a junk tail (`(= 1 2 . 5)` is
+  `#f`), and a non-pair or non-callable ARGUMENT is still the unchecked
+  contract it always was — `(first 1)` and `(match 1 2)` are a separate
+  question, deliberately not folded into this fix.
+
+[i487]: https://github.com/jonruttan/x-lang/issues/487
+
 ## 0.1.0 — 2026-08-23
 
 The first release of this engine under its own version number. Everything
