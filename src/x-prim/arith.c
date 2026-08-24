@@ -115,7 +115,7 @@ static x_obj_t *x_prim_sub(x_obj_t *p_base, x_obj_t *p_args)
 		return x_mkint(p_base, -x_intval(a));
 	}
 
-	b = x_eval_arg(p_base, x_011(p_args));
+	b = x_eval_arg(p_base, x_eval_spine_first(p_base, x_11(p_args)));
 	if (x_type_op_try(p_base, (x_char_t *)"-", a, b, &p_result))
 		return p_result;
 

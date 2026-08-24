@@ -78,6 +78,7 @@ static x_obj_t *x_prim_syscall(x_obj_t *p_base, x_obj_t *p_args)
 	p[0] = p[1] = p[2] = p[3] = p[4] = p[5] = p[6] = 0;
 
 	while ( ! x_obj_isnil(p_base, p_args) && i < 7) {
+		x_eval_spine_guard(p_base, p_args);	/* dotted tail (#487) */
 		arg = x_eval_arg(p_base, x_firstobj(p_args));
 
 		if (x_obj_isnil(p_base, arg)) {

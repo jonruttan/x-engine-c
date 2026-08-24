@@ -171,6 +171,9 @@ static x_obj_t *x_prim_eval(x_obj_t *p_base, x_obj_t *p_args)
 
 	x_eargs(p_base, p_args, 2, NULL, &p_expr);
 	p_env_arg = x_11(p_args);
+	if ( ! x_obj_isnil(p_base, p_env_arg)) {
+		x_eval_spine_guard(p_base, p_env_arg);	/* dotted tail (#487) */
+	}
 
 	if ( ! x_obj_isnil(p_base, p_env_arg)) {
 		/* eval with env: save/restore via base save-stack */
@@ -286,6 +289,8 @@ static x_obj_t *x_prim_atomic(x_obj_t *p_base, x_obj_t *p_args)
 	x_heap_root_push(p_cell, root);
 
 	while ( ! x_obj_isnil(p_base, p_args)) {
+		/* A dotted tail ends here as an atom, not nil (#487). */
+		x_eval_spine_guard(p_base, p_args);
 		x_firstobj((x_obj_t *)root) = p_args;
 
 		p_result = x_eval_arg(p_base, x_firstobj(p_args));

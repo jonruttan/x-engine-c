@@ -24,7 +24,7 @@
 static x_obj_t *x_prim_quote(x_obj_t *p_base, x_obj_t *p_args)
 {
 	x_obj_t *p_form;
-	x_args(p_args, 2, NULL, &p_form);
+	x_args(p_base, p_args, 2, NULL, &p_form);
 
 	return p_form;
 }

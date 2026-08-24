@@ -211,6 +211,9 @@ x_obj_t *x_eval_op_body(x_obj_t *p_base, x_obj_t *p_body,
 	x_heap_root_push(p_cell, root);
 
 	while ( ! x_obj_isnil(p_base, p_body)) {
+		/* A body is user-supplied: nil ends a proper one, an atom ends
+		 * a dotted one and must not be read as a cell (#487). */
+		x_eval_spine_guard(p_base, p_body);
 		if (x_obj_isnil(p_base, x_restobj(p_body))) {
 			x_firstobj(x_eval_field_tco_expr(p_base)) = x_firstobj(p_body);
 
@@ -496,6 +499,91 @@ x_obj_t *x_eval_arg(x_obj_t *p_base, x_obj_t *p_arg)
 }
 
 /**
+ * Raise unless @p p_obj is a spine cell that first/rest may navigate.
+ *
+ * @param p_base  Base (execution context).
+ * @param p_obj   The spine position about to be walked (never nil).
+ *
+ * @details **Improper-spine guard (#69, ruled).**  A first/rest walk is
+ *          only meaningful for an object whose TYPE DECLARES pair units
+ *          -- the same shape contract the collector's payload walk
+ *          trusts (x_type_prim_heap_mark).  The test is STRUCTURAL, not
+ *          a type-identity list: any reader personality's spine type
+ *          participates by declaring pair units (the reader and the
+ *          evaluator need not be symmetric), and two shapes are cells
+ *          by construction -- raw stack cells (NULL type slot) and heap
+ *          pairs tagged with the built-in pair static (the x_mkspair
+ *          product; #296).  The static's own type slot is NULL, so the
+ *          registered-type probe could never accept it -- omitting it
+ *          made every C-built spine handed to an applicative in a
+ *          minimal base raise spuriously.  A dotted tail lands here as
+ *          a non-cell and raises a catchable error in place of the
+ *          segfault it replaces -- (list 1 . 5), and bare-x-core
+ *          (f 1.5) where the float module is absent and 1.5 reads as a
+ *          dotted pair; the tail atom is atom-tagged or registered-typed,
+ *          so neither shape re-admits it.
+ *
+ * @note Every C consumer of an argument spine funnels through here:
+ *       x_eval_list for applicatives, and x_args/x_eargs for the prims
+ *       (#487 -- those walked past a dotted tail into x_firstobj on an
+ *       atom, reading its value word as a pair pointer, which no guard
+ *       could catch because a prim call never enters x_eval_list).
+ *       Ops still receive their spines RAW and bind dotted tails
+ *       legitimately, so they remain untouched.
+ *
+ * @see x_eval_list -- the applicative argument walk
+ * @see x_eargs     -- the prim argument walk (include/x-prim.h)
+ */
+void x_eval_spine_guard(x_obj_t *p_base, x_obj_t *p_obj)
+{
+	x_obj_t *p_t, *p_units;
+	int is_cell;
+
+	p_t = x_obj_type(p_obj);
+	is_cell = p_t == NULL || x_obj_type_isspair(p_obj);
+
+	if ( ! is_cell && ! x_obj_type_issatom(p_obj)
+		&& ! x_obj_isnil(p_base, p_t) && x_obj_type_isspair(p_t)) {
+		p_units = x_type_field_units(p_t);
+		is_cell = p_units != NULL
+			&& x_atomint(p_units) == X_OBJ_UNITS_PAIR;
+	}
+
+	if ( ! is_cell) {
+		x_eval_error(p_base,
+			(x_char_t *)"call: improper argument list (dotted tail)",
+			NULL);
+	}
+}
+
+/**
+ * Read the argument at an already-navigated spine position.
+ *
+ * @param p_base  Base (execution context).
+ * @param p_pos   A spine position (the result of an x_1/x_11 peek).
+ * @return The element at @p p_pos, or nil if the list ended there.
+ *
+ * @details The raw positional macros (x_011 and friends) navigate
+ *          first/rest UNCHECKED, which is their contract -- so a caller
+ *          peeking PAST the arity a guarded walk covered used to read
+ *          the atom a dotted tail ends with as a pair (#487).  This is
+ *          that peek, done safely: nil when the list ended, the element
+ *          when the position is a cell, and the ruled catchable raise
+ *          on anything else.
+ *
+ * @see x_eval_spine_guard -- the structural test
+ */
+x_obj_t *x_eval_spine_first(x_obj_t *p_base, x_obj_t *p_pos)
+{
+	if (x_obj_isnil(p_base, p_pos)) {
+		return NULL;
+	}
+	x_eval_spine_guard(p_base, p_pos);
+
+	return x_firstobj(p_pos);
+}
+
+/**
  * Evaluate each element of a list, returning a new list of results.
  *
  * Recursively evaluates via x_eval_arg, rooting the tail on the
@@ -525,8 +613,7 @@ x_obj_t *x_eval_arg(x_obj_t *p_base, x_obj_t *p_arg)
  */
 x_obj_t *x_eval_list(x_obj_t *p_base, x_obj_t *p_args)
 {
-	x_obj_t *p_val, *p_rest, *p_t, *p_units;
-	int is_cell;
+	x_obj_t *p_val, *p_rest;
 	x_obj_t **p_cell = x_heap_root_slot(p_base);
 	x_spair_t root = x_obj_set((x_obj_t *)x_type_pair_obj, X_OBJ_FLAG_NONE,
 		{ NULL }, { NULL });
@@ -535,42 +622,7 @@ x_obj_t *x_eval_list(x_obj_t *p_base, x_obj_t *p_args)
 		return NULL;
 	}
 
-	/* Improper-spine guard (#69, ruled).  The walk below navigates
-	 * first/rest, which is only meaningful for an object whose TYPE
-	 * DECLARES pair units -- the same shape contract the collector's
-	 * payload walk trusts (x_type_prim_heap_mark).  The test is
-	 * STRUCTURAL, not a type-identity list: any reader personality's
-	 * spine type participates by declaring pair units (the reader and
-	 * the evaluator need not be symmetric), and two shapes are cells
-	 * by construction -- raw stack cells (NULL type slot) and heap
-	 * pairs tagged with the built-in pair static (the x_mkspair
-	 * product; #296).  The static's own type slot is NULL, so the
-	 * registered-type probe below could never accept it -- omitting
-	 * it here made every C-built spine handed to an applicative in a
-	 * minimal base raise spuriously.  A dotted tail lands here as a
-	 * non-cell and raises a catchable error in place of the segfault
-	 * it replaces -- (list 1 . 5), and bare-x-core (f 1.5) where the
-	 * float module is absent and 1.5 reads as a dotted pair; the
-	 * tail atom is atom-tagged or registered-typed, so neither new
-	 * shape re-admits it.  This walker is the single point that
-	 * ACCEPTS every applicative's argument spine, so per the do-guard
-	 * doctrine the check lives here; ops receive their spines raw and
-	 * bind dotted tails legitimately, so they are untouched. */
-	p_t = x_obj_type(p_args);
-	is_cell = p_t == NULL || x_obj_type_isspair(p_args);
-
-	if ( ! is_cell && ! x_obj_type_issatom(p_args)
-		&& ! x_obj_isnil(p_base, p_t) && x_obj_type_isspair(p_t)) {
-		p_units = x_type_field_units(p_t);
-		is_cell = p_units != NULL
-			&& x_atomint(p_units) == X_OBJ_UNITS_PAIR;
-	}
-
-	if ( ! is_cell) {
-		x_eval_error(p_base,
-			(x_char_t *)"call: improper argument list (dotted tail)",
-			NULL);
-	}
+	x_eval_spine_guard(p_base, p_args);
 
 	/* Root p_args so GC doesn't free rest while evaluating first; the
 	 * cell's rest slot then keeps the fresh result alive across the
@@ -702,6 +754,9 @@ x_obj_t *x_eval_body(x_obj_t *p_base, x_obj_t *p_body)
 	x_heap_root_push(p_cell, root);
 
 	while ( ! x_obj_isnil(p_base, p_body)) {
+		/* A body is user-supplied: nil ends a proper one, an atom ends
+		 * a dotted one and must not be read as a cell (#487). */
+		x_eval_spine_guard(p_base, p_body);
 #ifdef X_COV
 		x_obj_flags(p_body) |= X_OBJ_FLAG_COV;
 #endif
@@ -774,6 +829,9 @@ x_obj_t *x_eval_body_tco(x_obj_t *p_base, x_obj_t *p_body)
 	x_heap_root_push(p_cell, root);
 
 	while ( ! x_obj_isnil(p_base, p_body)) {
+		/* A body is user-supplied: nil ends a proper one, an atom ends
+		 * a dotted one and must not be read as a cell (#487). */
+		x_eval_spine_guard(p_base, p_body);
 #ifdef X_COV
 		x_obj_flags(p_body) |= X_OBJ_FLAG_COV;
 #endif
