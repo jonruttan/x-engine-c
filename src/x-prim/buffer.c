@@ -203,6 +203,9 @@ static x_obj_t *x_prim_buffer_make(x_obj_t *p_base, x_obj_t *p_args)
 
 	x_eargs(p_base, p_args, 2, NULL, &p_str);
 	p_rest = x_11(p_args);
+	if ( ! x_obj_isnil(p_base, p_rest)) {
+		x_eval_spine_guard(p_base, p_rest);	/* dotted tail (#487) */
+	}
 	if ( ! x_obj_isnil(p_base, p_rest))
 		flags = (x_obj_flag_t)x_intval(
 			x_eval_arg(p_base, x_firstobj(p_rest)));

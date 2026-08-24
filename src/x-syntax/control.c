@@ -48,6 +48,9 @@ static x_obj_t *x_prim_match(x_obj_t *p_base, x_obj_t *p_args)
 	x_obj_t *p_clause, *p_test;
 	p_args = x_1(p_args);
 	while ( ! x_obj_isnil(p_base, p_args)) {
+		/* Nil ends a proper clause list; an atom ends a dotted one and
+		 * must not be read as a cell (#487). */
+		x_eval_spine_guard(p_base, p_args);
 		p_clause = x_firstobj(p_args);
 		p_test = x_eval_arg(p_base, x_firstobj(p_clause));
 
@@ -132,7 +135,7 @@ static x_obj_t *x_prim_guard(x_obj_t *p_base, x_obj_t *p_args)
 		*p_handler, *p_result = NULL;
 	x_obj_t *p_err, *p_pair;
 	x_int_t unwind_fd;
-	x_args(p_args, 2, NULL, &p_clause);
+	x_args(p_base, p_args, 2, NULL, &p_clause);
 	p_var = x_firstobj(p_clause);
 	p_handler_body = x_restobj(p_clause);
 	p_body = x_11(p_args);
@@ -310,7 +313,7 @@ static x_obj_t *x_prim_seq(x_obj_t *p_base, x_obj_t *p_args)
 	 * walk descends spair-typed pairs only). */
 	x_spair_t root = x_obj_set((x_obj_t *)x_type_pair_obj, X_OBJ_FLAG_NONE,
 		{ NULL }, { NULL });
-	x_args(p_args, 3, NULL, &p_a, &p_b);
+	x_args(p_base, p_args, 3, NULL, &p_a, &p_b);
 
 	/* Root args so GC doesn't free them during eval of first arg -- a
 	 * registered stack cell instead of an eval-list push: the same LIFO

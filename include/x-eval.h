@@ -145,6 +145,12 @@ x_obj_t *x_eval_arg(x_obj_t *p_base, x_obj_t *p_arg);
 /** Evaluate an argument list, returning a list of results. */
 x_obj_t *x_eval_list(x_obj_t *p_base, x_obj_t *p_args);
 
+/** Raise unless a spine position is a cell first/rest may navigate (#69, #487). */
+void x_eval_spine_guard(x_obj_t *p_base, x_obj_t *p_obj);
+
+/** Read the argument at a peeked spine position, guarding a dotted tail (#487). */
+x_obj_t *x_eval_spine_first(x_obj_t *p_base, x_obj_t *p_pos);
+
 /** Extend an environment by binding params to vals. */
 x_obj_t *x_env_extend(x_obj_t *p_base, x_obj_t *p_env,
 	x_obj_t *p_params, x_obj_t *p_vals);

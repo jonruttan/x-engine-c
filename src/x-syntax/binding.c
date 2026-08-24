@@ -57,8 +57,9 @@ static x_obj_t *x_prim_define(x_obj_t *p_base, x_obj_t *p_args)
 {
 	x_obj_t *p_name, *p_pair, *p_val, *p_entry;
 	int toplevel;
-	x_args(p_args, 2, NULL, &p_name);
-	p_val = x_eval_arg(p_base, x_011(p_args));
+	x_args(p_base, p_args, 2, NULL, &p_name);
+	p_val = x_eval_arg(p_base,
+		x_eval_spine_first(p_base, x_11(p_args)));
 
 	/* Top-level iff the save-stack is empty.  This is TRUE for fn-body
 	 * defs in TAIL position (the save frame is popped before the
@@ -124,8 +125,9 @@ static x_obj_t *x_prim_set(x_obj_t *p_base, x_obj_t *p_args)
 	/* Error-path name wrapper; filled only when the lookup misses. */
 	x_satom_t sym_name;
 
-	x_args(p_args, 2, NULL, &p_name);
-	p_val = x_eval_arg(p_base, x_011(p_args));
+	x_args(p_base, p_args, 2, NULL, &p_name);
+	p_val = x_eval_arg(p_base,
+		x_eval_spine_first(p_base, x_11(p_args)));
 
 	p_alist = x_firstobj(x_eval_field_env_alist(p_base));
 

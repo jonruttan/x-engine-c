@@ -39,14 +39,22 @@
  *
  * NULL pointers skip that position (like @c _ in pattern matching).
  * @code
- *   x_args(p_args, 3, NULL, &a, &b);  // skip self, extract 2
+ *   x_args(p_base, p_args, 3, NULL, &a, &b);  // skip self, extract 2
  * @endcode
  *
+ * @param p_base  Base/execution context (for the improper-spine raise).
  * @param p_args  Argument list (pair chain).
  * @param count   Number of positions to unpack.
  * @param ...     Pointers to @c x_obj_t* slots (or NULL to skip).
+ *
+ * @note Walking off the proper prefix of an IMPROPER list used to read
+ *       the tail atom's value word as a pair pointer (#487).  The nil
+ *       test below ends a proper list; x_eval_spine_guard raises on the
+ *       atom a dotted tail ends with, which is the same catchable error
+ *       an applicative already gave for the same call shape.
  */
-static void __attribute__((unused)) x_args(x_obj_t *p_args, int count, ...)
+static void __attribute__((unused)) x_args(x_obj_t *p_base, x_obj_t *p_args,
+	int count, ...)
 {
 	va_list ap;
 	int i;
@@ -54,6 +62,8 @@ static void __attribute__((unused)) x_args(x_obj_t *p_args, int count, ...)
 	va_start(ap, count);
 	for (i = 0; i < count; i++) {
 		x_obj_t **slot = va_arg(ap, x_obj_t **);
+		if (p_args == NULL) { if (slot) *slot = NULL; continue; }
+		x_eval_spine_guard(p_base, p_args);
 		if (slot != NULL)
 			*slot = x_firstobj(p_args);
 		p_args = x_restobj(p_args);
@@ -100,6 +110,12 @@ static void __attribute__((unused)) x_eargs(x_obj_t *p_base, x_obj_t *p_args, in
 	for (i = 0; i < count; i++) {
 		x_obj_t **slot = va_arg(ap, x_obj_t **);
 		if (p_args == NULL) { if (slot) *slot = NULL; continue; }
+		/* A proper list ends at nil, handled above; an IMPROPER one ends
+		 * at an ATOM, which the walk below would have read as a pair
+		 * (#487).  Raising here is safe with the roots pushed: the
+		 * handler restores the root chain to its snapshot on the error
+		 * path, exactly as it does for the C frames a longjmp cuts. */
+		x_eval_spine_guard(p_base, p_args);
 		if (slot != NULL) {
 			*slot = x_eval_arg(p_base, x_firstobj(p_args));
 			if (held < 4) {
