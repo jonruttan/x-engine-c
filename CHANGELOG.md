@@ -11,6 +11,28 @@ alongside the library changes they landed with.
 [x-lang]: https://github.com/jonruttan/x-lang
 [x-changelog]: https://github.com/jonruttan/x-lang/blob/main/CHANGELOG.md
 
+## 0.1.2 — 2026-08-25
+
+Another uncatchable crash made catchable, found the same way the last one
+was: by a test suite meeting a platform for the first time.
+
+
+### Fixed
+
+- **The FFI raises on a nil function pointer or operand instead of calling
+  it** ([x-lang#171][i171] class). A dlsym miss answers nil, and every call
+  convention handed that nil straight to the machine — `x_ptrval(nil)` as a
+  call target, `x_intval(nil)` as a memcpy source. x-lang's v0.5.0 release
+  run died on exactly this: the first conformance run Linux ever saw
+  resolved `sqrt` against an engine that links no libm, got nil, and called
+  it. One door per harm: `x_ffi_fptr` guards the function-pointer
+  conventions and `ptr-call`; the nil-operand check lives in
+  `x_ffi_to_double`, which every double convention shares. The arithmetic
+  and comparison conventions never touch the fptr and are untouched. Three
+  bare specs pin the behaviour.
+
+[i171]: https://github.com/jonruttan/x-lang/issues/171
+
 ## 0.1.1 — 2026-08-23
 
 A crash fix. `(= 1.5 1.5)` killed the process — uncatchably, from ordinary
