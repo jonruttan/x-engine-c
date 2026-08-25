@@ -55,7 +55,13 @@
  */
 static void x_ffi_to_double(x_obj_t *p_base, x_obj_t *p_bits, double *out)
 {
-	(void)p_base;
+	/* A nil operand used to be read as an object -- x_intval derefs a
+	 * field off NULL -- which is the #171 crash class (a library-level
+	 * nil reaching an unchecked FFI seat).  Raise catchably instead. */
+	if (x_obj_isnil(p_base, p_bits))
+		x_obj_error(p_base,
+			(x_char_t *)"ffi-call: nil operand (expected double bits)",
+			NULL);
 	memcpy(out, &x_intval(p_bits), sizeof(double));
 }
 
@@ -85,7 +91,10 @@ static x_obj_t *x_ffi_from_double(x_obj_t *p_base, double *in)
 static void x_ffi_to_double(x_obj_t *p_base, x_obj_t *p_bits, double *out)
 {
 	x_int_t parts[2];
-	(void)p_base;
+	if (x_obj_isnil(p_base, p_bits))
+		x_obj_error(p_base,
+			(x_char_t *)"ffi-call: nil operand (expected double bits)",
+			NULL);
 	parts[0] = x_intval(x_firstobj(p_bits));
 	parts[1] = x_intval(x_restobj(p_bits));
 	memcpy(out, parts, sizeof(double));
@@ -158,6 +167,29 @@ static x_obj_t *x_prim_dlsym(x_obj_t *p_base, x_obj_t *p_args)
 }
 
 /**
+ * @brief Unwrap a function pointer, raising on nil.
+ *
+ * @param p_base  Base (execution context).
+ * @param p_fptr  Evaluated fptr argument (a POINTER object, or nil).
+ * @param who     Prim name for the error message.
+ * @return The raw function pointer, never NULL.
+ *
+ * @note A nil here is almost always a dlsym MISS handed straight to a
+ *       call -- the v0.5.0 release run died exactly this way, on a Linux
+ *       runner where `sqrt` is not reachable from a self-handle (the
+ *       engine links no libm; macOS bundles the math functions, which is
+ *       why the crash never showed there).  Calling through NULL is not
+ *       catchable; this raise is.
+ */
+static void *x_ffi_fptr(x_obj_t *p_base, x_obj_t *p_fptr, const char *who)
+{
+	if (x_obj_isnil(p_base, p_fptr))
+		x_obj_error(p_base, (x_char_t *)who, NULL);
+
+	return x_ptrval(p_fptr);
+}
+
+/**
  * @brief Call a foreign function using a convention string.
  *
  * x-lang form: @code (ffi-call convention fptr args...) @endcode
@@ -195,7 +227,8 @@ static x_obj_t *x_prim_ffi_call(x_obj_t *p_base, x_obj_t *p_args)
 
 	/* Function call conventions */
 	if (x_lib_strcmp(conv, "d->d") == 0) {
-		fptr = x_ptrval(p_fptr);
+		fptr = x_ffi_fptr(p_base, p_fptr,
+			"ffi-call d->d: nil function pointer (dlsym miss?)");
 		p_a = x_eval_arg(p_base, x_firstobj(p_rest));
 		x_ffi_to_double(p_base, p_a, &a);
 		r = ((double (*)(double))fptr)(a);
@@ -203,7 +236,8 @@ static x_obj_t *x_prim_ffi_call(x_obj_t *p_base, x_obj_t *p_args)
 	}
 
 	if (x_lib_strcmp(conv, "dd->d") == 0) {
-		fptr = x_ptrval(p_fptr);
+		fptr = x_ffi_fptr(p_base, p_fptr,
+			"ffi-call dd->d: nil function pointer (dlsym miss?)");
 		p_a = x_eval_arg(p_base, x_firstobj(p_rest));
 		p_b = x_eval_arg(p_base,
 			x_firstobj(x_restobj(p_rest)));
@@ -294,6 +328,10 @@ static x_obj_t *x_prim_ffi_call(x_obj_t *p_base, x_obj_t *p_args)
 	/* Cast conventions */
 	if (x_lib_strcmp(conv, "i->d") == 0) {
 		p_a = x_eval_arg(p_base, x_firstobj(p_rest));
+		if (x_obj_isnil(p_base, p_a))
+			x_obj_error(p_base,
+				(x_char_t *)"ffi-call i->d: nil operand",
+				NULL);
 		a = (double)x_intval(p_a);
 		return x_ffi_from_double(p_base, &a);
 	}
@@ -306,8 +344,13 @@ static x_obj_t *x_prim_ffi_call(x_obj_t *p_base, x_obj_t *p_args)
 
 	/* String/double conversions */
 	if (x_lib_strcmp(conv, "s0->d") == 0) {
-		fptr = x_ptrval(p_fptr);
+		fptr = x_ffi_fptr(p_base, p_fptr,
+			"ffi-call s0->d: nil function pointer (dlsym miss?)");
 		p_a = x_eval_arg(p_base, x_firstobj(p_rest));
+		if (x_obj_isnil(p_base, p_a))
+			x_obj_error(p_base,
+				(x_char_t *)"ffi-call s0->d: nil operand (expected string)",
+				NULL);
 		r = ((double (*)(const char *, void *))fptr)(
 			x_firststr(p_a), NULL);
 		return x_ffi_from_double(p_base, &r);
@@ -372,7 +415,8 @@ static x_obj_t *x_prim_ptr_call(x_obj_t *p_base, x_obj_t *p_args)
 	}
 
 	fn = (long (*)(long, long, long, long, long, long, long))
-		x_ptrval(p_fptr);
+		x_ffi_fptr(p_base, p_fptr,
+			"ptr-call: nil function pointer (dlsym miss?)");
 
 	return x_mkint(p_base, (x_int_t)fn(
 		p[0], p[1], p[2], p[3], p[4], p[5], p[6]));

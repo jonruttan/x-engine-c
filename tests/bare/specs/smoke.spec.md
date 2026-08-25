@@ -86,3 +86,33 @@ past the proper prefix is unaffected, which is what it did before.
 ```
 ---
     *** ERROR: ignored
+
+### a nil function pointer raises instead of being called
+
+A dlsym miss answers nil, and handing that nil to a call convention used to
+CALL it -- an uncatchable SIGSEGV, found when the first Linux conformance
+run resolved `sqrt` against an engine that links no libm (x-lang#171 class;
+the v0.5.0 release run died on it).  The raise is catchable; the crash was
+not.
+
+```scheme
+(guard (e (error "raised")) ((prim-ref (lit ffi) (lit call)) "d->d" () 0))
+```
+---
+    *** ERROR: raised
+
+### a nil double operand raises the same way
+
+```scheme
+(guard (e (error "raised")) ((prim-ref (lit ffi) (lit call)) "d+d" 0 ()))
+```
+---
+    *** ERROR: raised
+
+### ptr-call refuses a nil function pointer too
+
+```scheme
+(guard (e (error "raised")) ((prim-ref (lit ptr) (lit call)) () 1))
+```
+---
+    *** ERROR: raised
