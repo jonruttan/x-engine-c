@@ -86,11 +86,30 @@ static x_obj_t *x_prim_base_make_type(x_obj_t *p_base, x_obj_t *p_args)
 static x_obj_t *x_prim_make_token_base(x_obj_t *p_base, x_obj_t *p_args)
 {
 	x_obj_t *p_new = x_eval_make(NULL, NULL);
+	x_char_t *buffer;
+	x_obj_t *p_buffer;
 	(void)p_args;
 
-	/* Inherit boolean singletons from calling base. */
-	x_eval_field_true(p_new) = x_firstobj(x_eval_field_true(p_base));
-	x_eval_field_false(p_new) = x_firstobj(x_eval_field_false(p_base));
+	/* Inherit boolean singletons from calling base.  WRITE THROUGH THE CELL:
+	 * true/false are cells (x-eval-layout.h), and x_eval_make's own parented
+	 * path assigns x_firstobj(field) for exactly that reason.  Assigning the
+	 * field itself replaced each cell with the singleton it should have
+	 * contained, so every later x_firstobj() on it read the singleton's first
+	 * slot as a cell -- garbage, and a segfault the moment the tokenizer
+	 * consulted a truth value.  x_eval_make skips its own inheritance here
+	 * because this base is made parentless. */
+	x_firstobj(x_eval_field_true(p_new)) = x_firstobj(x_eval_field_true(p_base));
+	x_firstobj(x_eval_field_false(p_new)) = x_firstobj(x_eval_field_false(p_base));
+	x_firstobj(x_eval_field_sigint(p_new)) = x_firstobj(x_eval_field_sigint(p_base));
+
+	/* A tokenizer base needs a read buffer, for the same reason make-base
+	 * gives itself one: the reader reads THROUGH the base's buffer.  Without
+	 * it an empty input happens to work (nothing is ever read) and the first
+	 * character dereferences a buffer that was never made. */
+	buffer = (x_char_t *)x_sys_malloc(256);
+	p_buffer = x_mkbuffer(p_new, buffer);
+	x_base_field_buffer(p_new) = x_mkspair(p_new, X_OBJ_FLAG_NONE,
+		p_buffer, x_base_field_buffer(p_new));
 
 	return p_new;
 }
