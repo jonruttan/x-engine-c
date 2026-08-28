@@ -12,6 +12,7 @@
  *      " "
  */
 #include "x-prim.h"
+#include "x-alist.h"
 #include "x-eval.h"
 #include "x-heap.h"
 #include "x-type.h"
@@ -268,6 +269,65 @@ static x_obj_t *x_prim_base_bind(x_obj_t *p_base, x_obj_t *p_args)
 }
 
 
+/**
+ * @brief Bind a name in the base's GLOBAL environment, whatever the frame depth.
+ *
+ * x-lang form: @code ((prim-ref 'base 'def-global) name value) @endcode
+ *
+ * @details `def` chooses global-versus-local by save-stack depth -- "top-level
+ *          iff the save-stack is empty" -- which is the settled semantics
+ *          include/import and define-sugar rely on, and must not change.
+ *
+ *          The consequence is that an OPERATIVE cannot define for its caller.
+ *          Every surface language on x (Scheme's `define`, Kernel's `$define!`)
+ *          works around it by putting its eval in tail position so TCO pops the
+ *          operative's frame first.  That is an accident of frame depth: one
+ *          extra wrapper frame and the binding silently lands nowhere -- not
+ *          shadowed, gone -- and a definition in BODY position never worked at
+ *          all.  See x-lang#527.
+ *
+ *          This takes the global path unconditionally: redefinition updates the
+ *          existing BST entry in place, a fresh name is inserted into the BST.
+ *          The env ALIST is extended only at top level, deliberately: inside a
+ *          frame that spine unwinds when the frame pops, so extending it would
+ *          leave the local-boundary pointing into reclaimed structure.  Globals
+ *          resolve through the BST (GH #47), so the BST insert is what makes
+ *          the binding findable afterwards.
+ *
+ * @param p_base  Base (execution context).
+ * @param p_args  Unevaluated: (self name value); value IS evaluated.
+ * @return The bound value.
+ * @see x_prim_define  -- the depth-sensitive form this complements
+ */
+static x_obj_t *x_prim_define_global(x_obj_t *p_base, x_obj_t *p_args)
+{
+	x_obj_t *p_name, *p_val, *p_pair, *p_entry;
+
+	x_eargs(p_base, p_args, 3, NULL, &p_name, &p_val);
+
+	p_entry = x_alist_bst_lookup(p_base,
+		x_eval_field_env_global_tree(p_base), p_name);
+	if ( ! x_obj_isnil(p_base, p_entry)) {
+		x_restobj(p_entry) = p_val;
+		return p_val;
+	}
+
+	p_pair = x_mkspair(p_base, X_OBJ_FLAG_NONE, p_name, p_val);
+
+	if (x_base_isset(p_base)
+		&& x_obj_isnil(p_base, x_eval_field_save_stack(p_base))) {
+		x_eval_env_alist_extend(p_base, p_pair);
+		x_eval_field_env_local_boundary(p_base)
+			= x_firstobj(x_eval_field_env_alist(p_base));
+	}
+
+	x_eval_field_env_global_tree(p_base) = x_alist_bst_insert(
+		p_base, x_eval_field_env_global_tree(p_base), p_pair);
+
+	return p_val;
+}
+
+
 /** Register the sandbox base primitives. */
 x_obj_t *x_prim_base_register(x_obj_t *p_base, x_obj_t *p_args)
 {
@@ -276,7 +336,8 @@ x_obj_t *x_prim_base_register(x_obj_t *p_base, x_obj_t *p_args)
 		{ "make-token-base",   x_prim_make_token_base,   "base",   "make-tok"      },
 		{ "make-base",         x_prim_make_base,         "base",   "make"          },
 		{ "base-eval",         x_prim_base_eval,         "base",   "eval"          },
-		{ "base-bind",         x_prim_base_bind,         "base",   "bind"          }
+		{ "base-bind",         x_prim_base_bind,         "base",   "bind"          },
+		{ "base-def-global",   x_prim_define_global,     "base",   "def-global"    }
 	};
 
 	x_prims_bind_table(p_base, entries,
