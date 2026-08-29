@@ -105,6 +105,29 @@ extern x_satom_t x_eval_obj;
  *  x_eval_field_error_str (a static in x_eval_make, reached via the base). */
 #define X_ERROR_BUF_SIZE	256
 
+/** Capacity of a base's READER buffer -- the one the tokenizer reads through,
+ *  hung off x_base_field_buffer.
+ *
+ *  ONE NUMBER FOR ALL OF THEM.  x_base_field_buffer is a STACK: the base is
+ *  constructed with one of these, and a reader may push another (a file read
+ *  pushes one, and tokenizing a string pushes one sized exactly to the string).
+ *  The constructed buffer is the bottom of that stack, so it is the default
+ *  rather than the usual target -- which is how it came to be 256 bytes in
+ *  x_prim_make_base while the CLI gave the same field 65536, a 256x difference
+ *  between two sites filling one slot, with only the larger one named.
+ *
+ *  Named for what it buffers rather than for who allocates it: the earlier name
+ *  lived in x-cli.c, so nothing outside the CLI could reach it even to agree
+ *  with it.
+ *
+ *  NOTE the buffer object records cursors (x_bufferval / x_bufferread /
+ *  x_bufferwrite) but NOT capacity, so this bound is not available to the code
+ *  that fills a buffer.  One constant is the floor of fixing that, not the fix.
+ *
+ *  Separate from X_ERROR_BUF_SIZE on purpose: unrelated buffers, and a change
+ *  to one must not silently move the other. */
+#define X_READ_BUF_SIZE	65536
+
 /** @} */ /* end base_field */
 
 /** Build the interpreter object (x-expr base object extended). */

@@ -70,6 +70,31 @@ static x_obj_t *x_prim_base_make_type(x_obj_t *p_base, x_obj_t *p_args)
 }
 
 /**
+ * @brief Give a base the reader buffer the tokenizer reads through.
+ *
+ * @details Both base constructors need this and each used to spell it out,
+ *          which is how make-tok came to be missing it entirely: an empty
+ *          input happened to work, because nothing was ever read, and the
+ *          first character dereferenced a buffer that was never made.
+ *
+ *          Attaching rather than allocating-and-returning keeps each caller's
+ *          existing order intact -- make-base registers its types before this
+ *          runs, and that ordering is not something to disturb while fixing a
+ *          crash.
+ *
+ * @param p_new  The base to attach a reader buffer to.
+ */
+static void x_base_attach_read_buffer(x_obj_t *p_new)
+{
+	x_char_t *buffer = (x_char_t *)x_sys_malloc(X_READ_BUF_SIZE);
+	x_obj_t *p_buffer = x_mkbuffer(p_new, buffer);
+
+	x_base_field_buffer(p_new) = x_mkspair(p_new, X_OBJ_FLAG_NONE,
+		p_buffer, x_base_field_buffer(p_new));
+}
+
+
+/**
  * @brief Create a bare base suitable for tokenization only.
  *
  * x-lang form: @code (make-token-base) @endcode
@@ -88,9 +113,25 @@ static x_obj_t *x_prim_make_token_base(x_obj_t *p_base, x_obj_t *p_args)
 	x_obj_t *p_new = x_eval_make(NULL, NULL);
 	(void)p_args;
 
-	/* Inherit boolean singletons from calling base. */
-	x_eval_field_true(p_new) = x_firstobj(x_eval_field_true(p_base));
-	x_eval_field_false(p_new) = x_firstobj(x_eval_field_false(p_base));
+	/* Inherit the boolean singletons from the calling base, WRITING THROUGH
+	 * THE CELL.  true/false/sigint are cells (x-eval-layout.h), and
+	 * x_eval_make's own parented path assigns x_firstobj(field) for exactly
+	 * that reason; it is skipped here because this base is made parentless.
+	 *
+	 * Assigning the FIELD instead -- which is what this did -- replaced each
+	 * cell with the singleton it should have contained, so every later
+	 * x_firstobj() on it read the singleton's first slot as a cell: garbage,
+	 * and a segfault the moment the tokenizer consulted a truth value. */
+	x_firstobj(x_eval_field_true(p_new))   = x_firstobj(x_eval_field_true(p_base));
+	x_firstobj(x_eval_field_false(p_new))  = x_firstobj(x_eval_field_false(p_base));
+	x_firstobj(x_eval_field_sigint(p_new)) = x_firstobj(x_eval_field_sigint(p_base));
+
+	/* The reader reads THROUGH the base's buffer, so a tokenizer base needs
+	 * one exactly as make-base does -- and this is the constructor that was
+	 * missing it.  Without it an empty input happens to work, because nothing
+	 * is ever read, and the first character dereferences a buffer that was
+	 * never made. */
+	x_base_attach_read_buffer(p_new);
 
 	return p_new;
 }
@@ -112,11 +153,9 @@ static x_obj_t *x_prim_make_token_base(x_obj_t *p_base, x_obj_t *p_args)
  */
 static x_obj_t *x_prim_make_base(x_obj_t *p_base, x_obj_t *p_args)
 {
-	x_obj_t *p_new_base, *p_buffer;
-	x_char_t *buffer;
+	x_obj_t *p_new_base;
 	(void)p_args;
 
-	buffer = (x_char_t *)x_sys_malloc(256);
 	p_new_base = x_eval_make(NULL, NULL);
 
 	/* Register types. */
@@ -131,10 +170,7 @@ static x_obj_t *x_prim_make_base(x_obj_t *p_base, x_obj_t *p_args)
 	x_type_whitespace_register(p_new_base, p_new_base);
 	x_type_comment_register(p_new_base, p_new_base);
 
-	/* Set up read buffer. */
-	p_buffer = x_mkbuffer(p_new_base, buffer);
-	x_base_field_buffer(p_new_base) = x_mkspair(p_new_base, X_OBJ_FLAG_NONE,
-		p_buffer, x_base_field_buffer(p_new_base));
+	x_base_attach_read_buffer(p_new_base);
 
 	/* Register primitives. */
 	x_prim_register(p_new_base, p_new_base);
