@@ -11,6 +11,53 @@ alongside the library changes they landed with.
 [x-lang]: https://github.com/jonruttan/x-lang
 [x-changelog]: https://github.com/jonruttan/x-lang/blob/main/CHANGELOG.md
 
+## 0.1.3 — 2026-08-29
+
+Two things that could not do the one job they existed for: an error reporter
+that dropped the detail naming what went wrong, and an isolated tokenizer base
+that could not tokenize. Both had been that way since they were written, and
+both were found by someone trying to use them.
+
+
+### Fixed
+
+- **The error buffer no longer truncates away the part worth reading**
+  ([#12]). `x_eval_error` copies the message into the buffer and *then*
+  appends `" '<symbol>'"` — so the name saying which symbol was unbound, which
+  file could not be opened, which type was wrong, is appended last and is the
+  first thing dropped when the message fills the buffer. The loop simply stops
+  at the cap, silently. An error long enough to hit 256 bytes reported
+  everything except the one detail worth having.
+
+  `X_ERROR_BUF_SIZE` is 65536 now. The buffer is engine-level — `err_buf` is a
+  single file-scope static, one per process rather than one per base — so the
+  size is paid once and there is nothing to economise on. A diagnostic that
+  cannot fit in 64K is not being truncated, it is being generated wrong.
+
+- **`(Base make-tok)` can tokenize** ([#11]). It is documented for custom
+  tokenizer type registration on an isolated base, and it segfaulted on the
+  first character of any input. Two defects, and they were the same defect:
+  `make-base` and `make-token-base` were one constructor written twice, and
+  the copy drifted.
+
+  `true`/`false`/`sigint` are cells, and the parented path assigns
+  `x_firstobj(field)` for that reason. The parentless copy assigned the
+  *field*, replacing each cell with the singleton it should have contained —
+  so every later `x_firstobj()` on it read the singleton's first slot as a
+  cell, and the tokenizer segfaulted the moment it consulted a truth value.
+  `sigint` was not inherited at all. And a tokenizer base needs a read buffer,
+  because the reader reads *through* it; `make-base` set one up and
+  `make-token-base` never did, which is why empty input happened to work and
+  the first character did not.
+
+  The two buffer sizes in this release arrive at 64K for unrelated reasons —
+  that one is per-base and sized for input, the error buffer is per-process
+  and sized for a message. They keep separate names so a later change to one
+  cannot silently move the other.
+
+[#11]: https://github.com/jonruttan/x-engine-c/pull/11
+[#12]: https://github.com/jonruttan/x-engine-c/pull/12
+
 ## 0.1.2 — 2026-08-25
 
 Another uncatchable crash made catchable, found the same way the last one
