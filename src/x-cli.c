@@ -52,8 +52,6 @@
 #include <sys/syscall.h>
 #endif
 
-#define X_CLI_BUFFER_SIZE 65536
-
 #ifndef TESTS
 
 #ifdef X_SYSCALL
@@ -157,7 +155,7 @@ static x_obj_t *x_prim_include(x_obj_t *p_base, x_obj_t *p_args)
 	x_base_field_filein(p_base) = x_mkspair(p_base, X_OBJ_FLAG_NONE,
 		x_mksatom(p_base, X_OBJ_FLAG_NONE, fd), x_base_field_filein(p_base));
 
-	buf = (x_char_t *)x_sys_malloc(X_CLI_BUFFER_SIZE);
+	buf = (x_char_t *)x_sys_malloc(X_READ_BUF_SIZE);
 	p_buffer = x_mkbufferown(p_base, buf);
 	x_base_field_buffer(p_base) = x_mkspair(p_base, X_OBJ_FLAG_NONE,
 		p_buffer, x_base_field_buffer(p_base));
@@ -299,7 +297,7 @@ x_obj_t * init(x_obj_t *p_base, x_char_t *buffer)
 int main(int argc, char *argv[])
 {
 	x_obj_t *p_base;
-	x_char_t buffer[X_CLI_BUFFER_SIZE];
+	x_char_t buffer[X_READ_BUF_SIZE];
 	x_obj_t *p_list = NULL;
 	int i;
 
