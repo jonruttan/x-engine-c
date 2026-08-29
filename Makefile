@@ -264,8 +264,35 @@ endif
 clean-obj:
 	rm -f $(SRCDIR)/*.o $(SRCDIR)/**/*.o $(SRCDIR)/**/**/*.o $(OPTDIR)/**/*.o $(X_EXPR_DIR)/src/*.o
 
+# -MMD -MP: EMIT A DEPENDENCY FILE BESIDE EVERY OBJECT.
+#
+# Without this a changed HEADER rebuilds nothing.  make compares an object
+# against its .c and never learns which headers that .c included, so editing
+# x-eval.h -- a constant, a struct layout, a macro -- leaves every object that
+# reads it stale, and the binary silently mixes old and new definitions.  It
+# does not fail; it reports something that is not in the source in front of
+# you.  An hour was lost to exactly that on 2026-08-29: a phantom test failure
+# in a checkout carrying stale objects, bisected to an innocent PR, and only
+# unmasked when reverting every changed file to the last release STILL
+# reproduced it.
+#
+# CI never saw it, because CI always builds from clean.  This is a defect
+# local work pays for alone, which is why nothing caught it.
+#
+# -MMD, not -MD: user headers only.  A system header changing is the
+# compiler's business, not this tree's.  -MP adds a phony target per header so
+# that DELETING one does not wedge the build with "no rule to make target".
+#
+# The .d files land beside their objects and follow OBJ_EXT, so the variant
+# builds (.debug.o, .asan.o, .cov.o, .profile.o) each keep their own set and
+# cannot poison one another.
 %$(OBJ_EXT): %.c
-	$(CC) -c $(CFLAGS) $(DEFS) -o $@ $<
+	$(CC) -c $(CFLAGS) $(DEFS) -MMD -MP -o $@ $<
+
+# Pulled in with `-include` rather than `include`: on a clean tree there are no
+# .d files yet and their absence is normal, not an error.
+-include $(OBJECTS:$(OBJ_EXT)=.d)
+-include $(X_EXPR_OBJECTS:$(OBJ_EXT)=.d)
 
 # ============================================================================
 # Distribute
@@ -605,6 +632,10 @@ uninstall-man: uninstall-man-c ## Alias for uninstall-man-c
 
 clean: cov-clean ## Clean build artifacts
 	rm -f $(EXECUTABLE) x-bin-debug x-bin-profile x-bin-asan x-bin-cov build/.strip-stamp *.out $(SRCDIR)/*.o $(SRCDIR)/**/*.o $(SRCDIR)/**/**/*.o $(OPTDIR)/**/*.o $(X_EXPR_DIR)/src/*.o *.core core
+	@# The dependency files beside them (-MMD -MP on the compile rule).  A .d
+	@# outliving its object would name headers for a build that no longer
+	@# exists; the *.d globs also catch the variants' .debug.d, .asan.d and so on.
+	rm -f $(SRCDIR)/*.d $(SRCDIR)/**/*.d $(SRCDIR)/**/**/*.d $(OPTDIR)/**/*.d $(X_EXPR_DIR)/src/*.d
 	@# Pre-rename binary names (engine was `x` until the x-bin rename): a
 	@# checkout that built before the rename has stale copies at the root.
 	rm -f x x-debug x-profile x-asan x-cov
