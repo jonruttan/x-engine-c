@@ -102,8 +102,20 @@ extern x_satom_t x_eval_obj;
 #include "x-eval-layout.h"	/* generated: x_eval_env/ctrl/io_state/state anchors + x_eval_field_* */
 
 /** Capacity of the error-message scratch buffer; its atom lives at
- *  x_eval_field_error_str (a static in x_eval_make, reached via the base). */
-#define X_ERROR_BUF_SIZE	256
+ *  x_eval_field_error_str (a static in x_eval_make, reached via the base).
+ *
+ *  THE SYMBOL IS APPENDED LAST, which is what made 256 too small to be a
+ *  formatting limit and turned it into a diagnostic one.  x_eval_error copies
+ *  the message, then appends " '<symbol>'" -- so when the message is long the
+ *  part that says WHICH name was unbound is the first thing dropped, silently,
+ *  by a loop that simply stops at cap.  An error that fills the buffer reports
+ *  everything except the one detail worth reading.
+ *
+ *  65536 because this one is ENGINE-LEVEL: err_buf is a single file-scope
+ *  static, one per process rather than one per base, so the size is paid once
+ *  and is not worth economising.  A diagnostic that cannot fit in 64K is not
+ *  being truncated, it is being generated wrong. */
+#define X_ERROR_BUF_SIZE	65536
 
 /** Capacity of a base's READER buffer -- the one the tokenizer reads through,
  *  hung off x_base_field_buffer.
