@@ -55,8 +55,30 @@ both were found by someone trying to use them.
   and sized for a message. They keep separate names so a later change to one
   cannot silently move the other.
 
+
+### Changed
+
+- **A changed header rebuilds the objects that include it** ([#14]). The
+  compile rule emitted no dependency files, so `make` compared each object
+  against its `.c` and never learned which headers that `.c` included. Editing
+  a constant, a struct layout or a macro left every object reading it stale,
+  and the binary silently mixed old and new definitions — it did not fail, it
+  reported something that was not in the source in front of you.
+
+  Found while preparing this release, by an hour spent chasing a test failure
+  that did not exist: bisected to an innocent PR, then defended through four
+  reverts that each changed nothing, and unmasked only by reverting *every*
+  file changed since 0.1.2 and still reproducing it. Source byte-identical to
+  a passing tree, still failing, is not a code problem.
+
+  `-MMD -MP` on the compile rule, `.d` files following `OBJ_EXT` so the
+  variant builds keep separate sets, `-include` so a clean tree is not an
+  error, and `clean` removing them. CI never saw the defect, because CI always
+  builds from clean: this one is paid by local work alone.
+
 [#11]: https://github.com/jonruttan/x-engine-c/pull/11
 [#12]: https://github.com/jonruttan/x-engine-c/pull/12
+[#14]: https://github.com/jonruttan/x-engine-c/pull/14
 
 ## 0.1.2 — 2026-08-25
 
