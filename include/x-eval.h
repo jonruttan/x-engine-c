@@ -105,6 +105,12 @@ extern x_satom_t x_eval_obj;
  *  x_eval_field_error_str (a static in x_eval_make, reached via the base). */
 #define X_ERROR_BUF_SIZE	256
 
+/** Capacity of a base's READER buffer -- the one the tokenizer reads through,
+ *  hung off x_base_field_buffer.  Deliberately its own name despite matching
+ *  X_ERROR_BUF_SIZE today: the two size unrelated buffers, and a future change
+ *  to one must not silently move the other. */
+#define X_READ_BUF_SIZE	256
+
 /** @} */ /* end base_field */
 
 /** Build the interpreter object (x-expr base object extended). */
