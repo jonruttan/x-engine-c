@@ -314,9 +314,22 @@ static x_obj_t *x_prim_define_global(x_obj_t *p_base, x_obj_t *p_args)
 
 	p_pair = x_mkspair(p_base, X_OBJ_FLAG_NONE, p_name, p_val);
 
+	/* Extend the alist ALWAYS, advance the boundary only at top level.
+	 *
+	 * Skipping the extension inside a frame left the binding in the BST but
+	 * not on the spine, and anything that walks the env alist rather than
+	 * resolving through the BST could not see it -- syntax-rules' hygiene
+	 * lookup is one such walker, and a macro expanding to a lambda bound its
+	 * parameter to a stale entry.  A half-present binding is worse than
+	 * either alternative.
+	 *
+	 * The boundary is the part that must not move under a frame: it marks
+	 * where globals end, and the spine it would point into unwinds when the
+	 * frame pops. */
+	x_eval_env_alist_extend(p_base, p_pair);
+
 	if (x_base_isset(p_base)
 		&& x_obj_isnil(p_base, x_eval_field_save_stack(p_base))) {
-		x_eval_env_alist_extend(p_base, p_pair);
 		x_eval_field_env_local_boundary(p_base)
 			= x_firstobj(x_eval_field_env_alist(p_base));
 	}

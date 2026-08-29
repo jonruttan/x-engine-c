@@ -21,6 +21,53 @@
 #include "x-token/sexp/list.h"
 #include "x-token/sexp/whitespace.h"
 
+static x_obj_t *x_sexp_list_dot_tail(x_obj_t *p_base, x_obj_t *p_args);
+
+/** Deciding state for a '.': looks at the character AFTER the dot. */
+static x_satom_t x_sexp_list_dot_tail_prim
+	= x_obj_set(x_type_atom_obj, X_OBJ_FLAG_NONE, { .fn = x_sexp_list_dot_tail });
+
+/**
+ * Analyse continuation for a '.': is this the pair separator or a symbol?
+ *
+ * A lone @c . is the dotted-pair separator; a @c . with more token after it
+ * begins an ordinary symbol -- @c ... , which R5RS syntax-rules is written in,
+ * and anything else a program cares to spell that way.
+ *
+ * Deciding this needs one character of lookahead, which is why it is a state
+ * rather than a test inside the analyser: the tokenizer calls analyse per
+ * character, so the dot's fate is only knowable on the next call.
+ *
+ * A delimiter here means the dot stood alone -- score 1, consuming the dot and
+ * leaving the delimiter for the next token.  Anything else declines, and the
+ * symbol analyser (which is greedy and scores negative) takes the whole thing.
+ *
+ * @param p_base  Base (execution context).
+ * @param p_args  Read-args containing the token buffer and score.
+ * @return The score on a lone dot, or NULL to decline.
+ */
+static x_obj_t *x_sexp_list_dot_tail(x_obj_t *p_base, x_obj_t *p_args)
+{
+	x_obj_t *p_buffer = x_token_read_arg_buffer(p_args),
+		*p_score = x_token_read_arg_score(p_args);
+
+	/* A second dot is NOT a delimiter here, whatever x_token_delimit says.
+	 * It counts '.' among the delimiters because '.' is a list character,
+	 * so `...` would otherwise look like a lone dot followed by one -- and
+	 * split back into three dot tokens, which is the bug being fixed. */
+	if (x_bufferlastchar(p_buffer) == *X_SEXP_LIST_DOT_STR) {
+		return NULL;
+	}
+
+	if ( ! x_obj_isnil(p_base, x_token_delimit(p_base, p_args))) {
+		x_firstint(p_score) = 1;
+
+		return p_score;
+	}
+
+	return NULL;
+}
+
 /** Analyser / delimiter / reader primitive satoms for the list type. */
 x_satom_t x_sexp_list_analyse_prim = x_obj_set(x_type_atom_obj, X_OBJ_FLAG_NONE, { .fn = x_sexp_list_analyse }),
 	x_sexp_list_delimit_prim = x_obj_set(x_type_atom_obj, X_OBJ_FLAG_NONE, { .fn = x_sexp_list_delimit }),
@@ -40,6 +87,16 @@ x_obj_t *x_sexp_list_analyse(x_obj_t *p_base, x_obj_t *p_args)
 {
 	x_obj_t *p_buffer = x_token_read_arg_buffer(p_args),
 		*p_score = x_token_read_arg_score(p_args);
+
+	/* '(' and ')' really are always single-character tokens.  '.' is not:
+	 * it is the pair separator only when it stands alone, so it defers to a
+	 * state that can see the next character.  Scoring it here unconditionally
+	 * made `...` three dot tokens -- an improper list holding a raw C
+	 * sentinel, which segfaults on access and made syntax-rules
+	 * unimplementable (x-lang#158). */
+	if (x_bufferlastchar(p_buffer) == *X_SEXP_LIST_DOT_STR) {
+		return (x_obj_t *)x_sexp_list_dot_tail_prim;
+	}
 
 	if (x_lib_strchr(X_SEXP_LIST_CHARS_STR, x_bufferlastchar(p_buffer))) {
 		x_firstint(p_score) = x_bufferlen(p_buffer);
@@ -63,7 +120,7 @@ x_obj_t *x_sexp_list_delimit(x_obj_t *p_base, x_obj_t *p_args)
 {
 	x_obj_t *p_buffer = x_token_read_arg_buffer(p_args);
 
-	if (x_lib_strchr(X_SEXP_LIST_CHARS_STR, x_bufferlastchar(p_buffer))) {
+	if (x_lib_strchr(X_SEXP_LIST_DELIM_STR, x_bufferlastchar(p_buffer))) {
 		x_bufferread(p_buffer)--;
 		return p_buffer;
 	}
