@@ -11,6 +11,55 @@ alongside the library changes they landed with.
 [x-lang]: https://github.com/jonruttan/x-lang
 [x-changelog]: https://github.com/jonruttan/x-lang/blob/main/CHANGELOG.md
 
+## 0.1.5 — 2026-08-31
+
+An operative can define for its caller.
+
+### Added
+
+- **`(base def-global name value)`** ([#19]) — bind in the base's global
+  environment whatever the frame depth.
+
+  `x_prim_define` decides global-versus-local by save-stack depth ("top-level
+  iff the save-stack is empty"), which is settled semantics `include`/`import`
+  and define-sugar rely on and which nothing here changes. The consequence is
+  that an **operative cannot define for its caller**: Scheme's `define` and
+  Kernel's `$define!` are operatives, so `def` inside one sees a non-empty
+  save-stack, binds locally, and the binding is discarded when the frame pops.
+  Not shadowed — gone.
+
+  Every surface language on x worked around it the same two ways, and both are
+  unsound. Putting the `eval` in *tail* position lets TCO pop the operative's
+  frame first, which works and is an accident of frame depth — one extra
+  wrapper frame anywhere up the chain and every definition silently vanishes.
+  `eval!` evaluates with no env save/restore so the binding persists in the
+  current env, which is correct at the prompt and breaks the moment an
+  operative frame is interposed.
+
+  Measured: x-r7rs goes from 43 failures to **27** with no change to that
+  bundle — all of `error`, `error objects` and `guard`. `guard` is the live
+  case, because R7RS `guard` and x's `guard` are different forms sharing a
+  name, so providing one means shadowing the other, and shadowing interposes
+  exactly the frame that breaks `eval!`.
+
+  It extends the env alist **always** and advances the local boundary only at
+  top level. Skipping the extension inside a frame left the binding in the BST
+  but not on the spine, and anything walking the alist rather than resolving
+  through the BST could not see it — `syntax-rules`' hygiene lookup is one such
+  walker, and a macro expanding to a lambda bound its parameter to a stale
+  entry. A half-present binding is worse than either alternative.
+
+  **Two things it is not.** It is a special case standing in for a general
+  capability: x already hands an operative its caller's environment as `e` and
+  lets you `eval` in it, and what remains impossible is *binding into* an
+  environment you were given. First-class bindable environments would make this
+  redundant. And it duplicates `def`'s global-bind rule — BST update-in-place
+  on redefinition, insert on a fresh name, boundary advance — across two sites
+  with nothing keeping them in sync. A shared helper is worth doing before they
+  drift.
+
+[#19]: https://github.com/jonruttan/x-engine-c/pull/19
+
 ## 0.1.4 — 2026-08-30
 
 The reader stops claiming a character it never meant to own, and stops handing
