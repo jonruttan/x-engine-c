@@ -29,8 +29,14 @@ x_satom_t x_sexp_list_analyse_prim = x_obj_set(x_type_atom_obj, X_OBJ_FLAG_NONE,
 /**
  * Analyse: score on any list delimiter character.
  *
- * Matches @c (, @c ), and @c . characters.  Scores the buffer length
- * immediately since list delimiters are always single-character tokens.
+ * Matches @c ( and @c ) only.  Scores the buffer length immediately, which
+ * is sound because the brackets really are always single-character tokens.
+ *
+ * The dot is NOT matched, and that sentence used to be false of it: a dot
+ * scored here on sight, so a token merely BEGINNING with one was taken whole
+ * as the pair separator.  It is an ordinary character now -- the symbol
+ * analyser accumulates it, and the list reader recognises the symbol "."
+ * when it builds a pair.
  *
  * @param p_base  Base (execution context).
  * @param p_args  Read-args containing the token buffer and score.
@@ -98,11 +104,16 @@ static x_obj_t *x_sexp_list_read_next(x_obj_t *p_base, x_obj_t *p_args)
 /**
  * Read a list (or dotted pair) from the token stream.
  *
- * Handles three cases based on the delimiter character:
+ * Two cases, on the bracket character:
  * - @c ) -- returns the read_prim sentinel (end of list).
- * - @c . -- returns the delimit_prim sentinel (dotted pair).
- * - @c ( -- recursively reads elements via @c x_token_read until
- *   a close-paren or dot sentinel is encountered.
+ * - @c ( -- recursively reads elements via @c x_token_read until the
+ *   close-paren sentinel, treating the one-character symbol @c . as the
+ *   pair separator when it meets one.
+ *
+ * The separator has no sentinel of its own.  It used to: the dot was a
+ * single-character token and this returned delimit_prim for it, which meant
+ * every token beginning with a dot became the separator and `...` reached
+ * the caller as that raw satom, inside a list, as a value.
  *
  * @param p_base  Base (execution context).
  * @param p_args  Read-args containing the token buffer.
@@ -123,10 +134,6 @@ x_obj_t *x_sexp_list_read(x_obj_t *p_base, x_obj_t *p_args)
 		return x_sexp_list_read_prim;
 	}
 
-	if (c == *X_SEXP_LIST_DOT_STR) {
-		return x_sexp_list_delimit_prim;
-	}
-
 	/* '(' — read list contents.  Root the list under construction: each
 	 * nested x_token_read runs reader code that can collect. */
 	x_heap_root_push(p_cell, root);
@@ -139,7 +146,17 @@ x_obj_t *x_sexp_list_read(x_obj_t *p_base, x_obj_t *p_args)
 			break;
 		}
 
-		if (elem == (x_obj_t *)x_sexp_list_delimit_prim) {
+		/* THE SEPARATOR IS A SYMBOL, not a token kind.  `.` is read like
+		 * any other symbol and recognised HERE, where the decision it
+		 * affects is already being made.  The reader asks whether this
+		 * element is the one-character symbol "." -- it takes no view on
+		 * what any other dot-bearing symbol means, so `...` and `.foo`
+		 * are simply symbols it does not recognise and passes through.
+		 *
+		 * Identity would do (symbols intern), but the name compare says
+		 * what is meant and costs nothing at one element per list. */
+		if (x_obj_type_issymbol(p_base, elem)
+			&& x_lib_strcmp(x_symbolname(elem), X_SEXP_LIST_DOT_STR) == 0) {
 			if (tail == NULL) {
 				/* ( . x) -- a list that is only a tail IS the
 				 * tail: the bare-variadic parameter form

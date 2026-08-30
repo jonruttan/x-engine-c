@@ -30,7 +30,18 @@
 #endif /* X_SEXP_LIST_POST_STR */
 
 #ifndef X_SEXP_LIST_CHARS_STR
-#define X_SEXP_LIST_CHARS_STR		X_SEXP_LIST_PRE_STR X_SEXP_LIST_DOT_STR X_SEXP_LIST_POST_STR /**< All list-related delimiter characters. */
+/**< The characters the list type CLAIMS: the brackets, and nothing else.
+ *
+ *   The dot is deliberately absent.  It used to be here, which made it a
+ *   single-character token scored on sight -- so every token BEGINNING with a
+ *   dot became the pair separator, and `...` reached the caller as the raw
+ *   separator satom sitting in a list as a VALUE.  Touching it segfaulted.
+ *
+ *   A dot is now an ordinary character: nothing claims it, the symbol analyser
+ *   accumulates it like any other, and the list READER recognises the
+ *   one-character symbol "." as the separator when it builds a pair.  That is
+ *   where the structural decision already lived. */
+#define X_SEXP_LIST_CHARS_STR		X_SEXP_LIST_PRE_STR X_SEXP_LIST_POST_STR
 #endif /* X_SEXP_LIST_CHARS_STR */
 
 /** @name Analyser / reader primitives (satom). */

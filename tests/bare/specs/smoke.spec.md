@@ -116,3 +116,25 @@ not.
 ```
 ---
     *** ERROR: raised
+
+### a dot separates a pair only when it stands alone
+
+The dot used to be a single-character token scored on sight, so any token
+BEGINNING with one was taken whole as the pair separator -- and `...` reached
+the caller as the separator's raw satom, sitting in a list as a value.
+Touching it segfaulted, which is why this is asserted at the bare tier rather
+than left to a downstream lang's macro suite.
+
+```scheme
+(match ((eq? (first (rest (rest (lit (a ... b))))) (lit b)) (error "ok")) (#t (error "no")))
+```
+---
+    *** ERROR: ok
+
+### a lone dot still builds a pair
+
+```scheme
+(match ((eq? (rest (lit (a . b))) (lit b)) (error "ok")) (#t (error "no")))
+```
+---
+    *** ERROR: ok
