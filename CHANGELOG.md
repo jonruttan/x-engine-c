@@ -11,6 +11,68 @@ alongside the library changes they landed with.
 [x-lang]: https://github.com/jonruttan/x-lang
 [x-changelog]: https://github.com/jonruttan/x-lang/blob/main/CHANGELOG.md
 
+## 0.1.4 — 2026-08-30
+
+The reader stops claiming a character it never meant to own, and stops handing
+an internal marker back as a value.
+
+### Fixed
+
+- **A dot separates a pair only when it is one** ([#18]). `(lit (a ... b))`
+  read as an improper list whose tail was the reader's own separator satom,
+  and `(first (rest …))` on it segfaulted. Ordinary source text, not
+  malformed input.
+
+  The dot was a token *kind*: it sat in `X_SEXP_LIST_CHARS_STR` beside the
+  brackets, so the analyser scored it on sight. That is correct for `(` and
+  `)`, which really are always single-character tokens, and false for `.`,
+  which is a separator only when nothing follows it. A token merely
+  *beginning* with a dot was taken whole as the separator, and
+  `x_sexp_list_read` returned `x_sexp_list_delimit_prim` for it — consumed
+  inside a list, and returned to the caller at the head of one, where a raw C
+  satom is not a value any x program can survive touching.
+
+  It is an ordinary character now. Nothing claims it, the symbol analyser
+  accumulates it like any other, and the list *reader* recognises the
+  one-character symbol `.` as the separator, at the point where the structural
+  decision is already being made. The separator has no sentinel of its own, so
+  there is nothing left to leak.
+
+  This takes no view on `...`, which is Scheme's ellipsis and none of the
+  engine's business — it is simply a symbol the reader does not recognise and
+  passes through, exactly like `.foo`. Nor does it rule any dot sequence an
+  error, because the engine cannot know one: a base may register a type that
+  claims `.` and mean something by it.
+
+  One reading changes with it: `(a.b)` is the symbol `a.b` rather than an
+  improper list, the dot no longer terminating an adjacent token. That reading
+  was an accident of the delimiter set rather than deliberate syntax.
+
+- **A changed header rebuilds the objects that include it** ([#14]). The
+  compile rule emitted no dependency files, so `make` compared each object
+  against its `.c` and never learned which headers that `.c` included. Editing
+  a constant, a struct layout or a macro left every object reading it stale,
+  and the binary silently mixed old and new definitions — it did not fail, it
+  reported something that was not in the source in front of you.
+
+  Found while preparing this release, by an hour spent chasing a test failure
+  that did not exist: bisected to an innocent PR, then defended through four
+  reverts that each changed nothing, and unmasked only by reverting *every*
+  file changed since 0.1.2 and still reproducing it. Source byte-identical to
+  a passing tree, still failing, is not a code problem.
+
+  `-MMD -MP` on the compile rule, `.d` files following `OBJ_EXT` so the
+  variant builds keep separate sets, `-include` so a clean tree is not an
+  error, and `clean` removing them. CI never saw the defect, because CI always
+  builds from clean: this one is paid by local work alone.
+
+  Recorded under 0.1.3 before it landed: the entry was written while that
+  release was being prepared and the commit merged after the tag, so v0.1.3's
+  published notes describe a fix v0.1.3 does not contain. It ships here.
+
+[#14]: https://github.com/jonruttan/x-engine-c/pull/14
+[#18]: https://github.com/jonruttan/x-engine-c/pull/18
+
 ## 0.1.3 — 2026-08-29
 
 Two things that could not do the one job they existed for: an error reporter
@@ -58,27 +120,8 @@ both were found by someone trying to use them.
 
 ### Changed
 
-- **A changed header rebuilds the objects that include it** ([#14]). The
-  compile rule emitted no dependency files, so `make` compared each object
-  against its `.c` and never learned which headers that `.c` included. Editing
-  a constant, a struct layout or a macro left every object reading it stale,
-  and the binary silently mixed old and new definitions — it did not fail, it
-  reported something that was not in the source in front of you.
-
-  Found while preparing this release, by an hour spent chasing a test failure
-  that did not exist: bisected to an innocent PR, then defended through four
-  reverts that each changed nothing, and unmasked only by reverting *every*
-  file changed since 0.1.2 and still reproducing it. Source byte-identical to
-  a passing tree, still failing, is not a code problem.
-
-  `-MMD -MP` on the compile rule, `.d` files following `OBJ_EXT` so the
-  variant builds keep separate sets, `-include` so a clean tree is not an
-  error, and `clean` removing them. CI never saw the defect, because CI always
-  builds from clean: this one is paid by local work alone.
-
 [#11]: https://github.com/jonruttan/x-engine-c/pull/11
 [#12]: https://github.com/jonruttan/x-engine-c/pull/12
-[#14]: https://github.com/jonruttan/x-engine-c/pull/14
 
 ## 0.1.2 — 2026-08-25
 
