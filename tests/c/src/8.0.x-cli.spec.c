@@ -94,14 +94,17 @@ static void _teardown(void)
 void test_cleanup(x_obj_t *p_base)
 {
 	x_obj_t *p_gc = p_base, *p_tmp, *p_alloc;
-	size_t extra = (p_base != NULL
-		&& !x_obj_isnil(p_base, x_obj_type(p_base))
-		&& x_base_isset(p_base))
-		? (size_t)x_atomint(x_firstobj(x_base_field_obj_meta_extra(p_base))) : 0;
 
+	/* Recover each allocation from the OBJECT's own size element, exactly
+	 * as x_obj_free() does -- never from the base's obj-meta-extra, which
+	 * is mutable and describes only objects allocated since its last
+	 * change.  This fixture used to carry a copy of that base-derived
+	 * arithmetic, which is the very defect the size element fixed
+	 * (x-engine-c#21). */
 	while (p_gc) {
 		p_tmp = x_obj_heap(p_gc);
-		p_alloc = (x_obj_flags(p_gc) & X_OBJ_FLAG_META) ? p_gc - extra : p_gc;
+		p_alloc = (x_obj_flags(p_gc) & X_OBJ_FLAG_META)
+			? p_gc - ((size_t)x_obj_meta_size(p_gc) + 1) : p_gc;
 		x_sys_free(p_alloc);
 		p_gc = p_tmp;
 	}
