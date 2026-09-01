@@ -129,7 +129,8 @@ static int x_type_from_has(x_obj_t *p_base, x_obj_t *p_type, x_obj_t *p_name)
  *     complex declares from float/rational/int, so complex wins over float).
  *     The winning handler owns the coercion.  No invented ordering: the rule
  *     reads the relation the cvt from-alists already declare.  Neither side
- *     declaring the other falls through.
+ *     declaring the other raises: both registered the op, so the callers'
+ *     raw integer fallback is wrong for both (#584).
  *
  * Ops-less types (int, str, ...) have a nil ops alist, so int/int
  * arithmetic falls through to the callers' pure-C path after a few pointer
@@ -178,7 +179,9 @@ int x_type_op_try(x_obj_t *p_base, x_char_t *op, x_obj_t *p_a, x_obj_t *p_b,
 	} else if (x_type_from_has(p_base, p_tb, x_type_field_name(p_ta))) {
 		p_handler = p_hb;             /* b's type absorbs a's */
 	} else {
-		return 0;                     /* unrelated types: not ours to decide */
+		x_eval_error(p_base,          /* both registered the op: #584 */
+			(x_char_t *)X_TYPE_NO_CVT_TEXT, x_type_field_name(p_tb));
+		return 0;                     /* not reached: the raise longjmps */
 	}
 
 	/* (handler a b) on a stack-built frame -- zero heap allocation. */
