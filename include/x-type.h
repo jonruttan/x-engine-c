@@ -56,6 +56,9 @@
 
 #include "x-eval.h"
 
+/** The op-arbitration refusal (#584); x_eval_error appends the type name. */
+#define X_TYPE_NO_CVT_TEXT            "no declared promotion; declare the cvt relation for"
+
 /** @name Type Construction
  * @{ */
 /** Allocate a new type object with the given payload. */
