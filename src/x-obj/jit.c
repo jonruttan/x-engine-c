@@ -159,6 +159,22 @@ long jit_buffer_len(x_obj_t *buffer)
 }
 
 /**
+ * Return the buffer's most recently read character as a raw long.
+ *
+ * The tokenizer's delimiter handlers test the last character consumed;
+ * exposing it here lets those handlers JIT-compile through the same lane
+ * the tower's numeric analysers use, instead of running interpreted per
+ * character.  Peer of jit_buffer_len (a different buffer macro, same shape).
+ *
+ * @param buffer  x_obj_t* -- Token buffer object
+ * @return The last-read character, as a long
+ */
+long jit_buffer_last_char(x_obj_t *buffer)
+{
+	return (long)x_bufferlastchar(buffer);
+}
+
+/**
  * Create a proper x-lang prim callable from a JIT function address.
  *
  * Registered as an x-lang primitive so the return value flows through

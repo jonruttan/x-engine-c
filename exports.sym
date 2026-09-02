@@ -13,3 +13,4 @@ _jit_make_prim
 _jit_score_set
 _jit_buffer_unread
 _jit_buffer_len
+_jit_buffer_last_char
