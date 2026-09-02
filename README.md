@@ -1,5 +1,7 @@
 # x-engine-c
 
+<p align="center"><img src="docs/bitwise-banner.svg" alt="x-engine-c, with Bitwise the owl" width="100%"></p>
+
 The C engine for [x-lang][x-lang]: the evaluator, the primitive surface, and
 the tokenizer, built on the [x-expr][x-expr] object, type and heap machinery.
 
@@ -129,3 +131,5 @@ MIT No Attribution (MIT-0). See [LICENSE](LICENSE).
 
 [x-lang]: https://github.com/jonruttan/x-lang
 [x-expr]: https://github.com/jonruttan/x-expr
+
+<p align="center"><img src="docs/bitwise-mark.svg" alt="Bitwise" width="96"></p>
