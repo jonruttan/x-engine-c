@@ -11,6 +11,45 @@ alongside the library changes they landed with.
 [x-lang]: https://github.com/jonruttan/x-lang
 [x-changelog]: https://github.com/jonruttan/x-lang/blob/main/CHANGELOG.md
 
+## Unreleased
+
+**A raise carries its facts instead of a sentence.** `x_eval_error` used to
+flatten the message literal and the offending symbol into one English string
+in a static buffer and hand a guard a bare, NIL-TYPED atom. Nothing above
+could do better than pattern-match that English: the structure was gone, and
+a type-less value has no dispatch stacks to hang a replacement on. The
+handler now receives a typed **ERR** — a two-slot `(code . subject)` value
+whose type is `x-type/err.c` — so the wording belongs to the language
+instead of to C.
+
+The raise path stays **allocation-free**, which is the property the old
+in-place formatting existed to protect: the base holds one ERR, built at
+type registration, and a raise stores two pointers into it — the message
+literal (static storage, so it survives the `longjmp`) and the subject
+string. Nothing is copied, nothing is allocated, no truncation, and no
+x-lang code runs; rendering happens later, at display time, where
+allocation is safe again. `X_ERROR_BUF_SIZE`'s 64KB scratch buffer and the
+copy loop that filled it are both gone.
+
+The subject is the interned name **as a string**, not the object: raise
+sites build theirs on the C stack (`x-type/symbol.c` fills a local array and
+passes its address), and the `longjmp` destroys that frame, so retaining the
+pointer would hand out a dangling one. The string it points at is what the
+engine already trusted and all it ever kept.
+
+ERR's write/display stacks **boot empty**, as CHARACTER's do — x-lang's
+`x/type/err-io.x` pushes the default wording, byte-for-byte what C emitted
+before, and a lang pushes its own over that. The uncaught path is unchanged
+and still words itself in C: it runs before any library exists, and nothing
+on a fatal path calls into x-lang.
+
+`x_eval_make` does **not** build the ERR — it runs before the type registry
+exists, and x-eval must not depend on x-type (`tests/c/src/2.x-base.spec.c`
+pins that layering). `x_type_err_register` builds it at the first moment it
+can. A base still in that window raises through an ERR-SHAPED static
+fallback, so every C consumer reads `x_err_code`/`x_err_subject` without
+asking which window it came from.
+
 ## 0.1.6 — 2026-08-30
 
 The engine declares the ISA it actually ships.
