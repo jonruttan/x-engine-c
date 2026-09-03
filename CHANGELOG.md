@@ -11,6 +11,42 @@ alongside the library changes they landed with.
 [x-lang]: https://github.com/jonruttan/x-lang
 [x-changelog]: https://github.com/jonruttan/x-lang/blob/main/CHANGELOG.md
 
+## 0.2.1 — 2026-09-03
+
+**A unit declares what it IS, not just that it exists** ([#29]). `p_units` was
+a count, and the collector's fallback traced every unit it named. That made
+the slot undeclarable for any type whose units are not references — INTEGER,
+STRING, SYMBOL, CHARACTER, PRIMITIVE and POINTER all declared nothing, so
+their one-unit size lived in the C constructors and in no contract, and
+nothing reflective could learn where such an object ends.
+
+Declaring it was not merely useless but **unsafe**. `x_heap_tree_mark` sets
+the mark bit *through* the pointer it is handed, before it can establish that
+the pointer is on the heap, so `units 1` on STRING would OR a bit into memory
+three words ahead of the string's bytes at the next collect.
+
+So the slot **widens in place** — no new field. An INT atom keeps both of its
+meanings exactly (N units all references; negative for the slot-0-counted
+convention), and a structural pair `(count . mask)` adds two bits per unit
+saying what each one is: `ref`, `word`, `bytes`, `foreign`. Units past the
+described prefix take the kind of the last one described, which is not a
+special case added for vectors — it *is* the vector: `(word ref)` over a count
+of `-1` is a length word followed by slot-0-many references, with no repeat
+marker and no second rule. `X_TYPE_UNIT_REF` is 0, so a zero mask means "every
+unit a reference" and the pair form degrades exactly onto the integer form.
+
+Three sites read the slot and each takes one `x_obj_type_isspair()` test per
+object — the collector's traversal, the unit accessor, the spine guard — then
+a shift and mask per unit. Nothing allocates and nothing interns.
+
+**`(type set-shape!)` is a primitive** because the shape must be a
+*structural* pair: x makes list-pairs only, the readers discriminate on
+`x_obj_type_isspair()`, and an x-built shape would be read as a bare count
+whose value is the pair's first data word. The readable spelling stays in
+x-lang and compiles to two integers before the engine sees it.
+
+`(type set-units!)` is untouched: the integer form is still the integer form.
+
 ## 0.2.0 — 2026-09-03
 
 **A raise carries its facts instead of a sentence** ([#25]). `x_eval_error`
@@ -113,6 +149,7 @@ asking which window it came from.
 [#23]: https://github.com/jonruttan/x-engine-c/pull/23
 [#24]: https://github.com/jonruttan/x-engine-c/pull/24
 [#25]: https://github.com/jonruttan/x-engine-c/pull/25
+[#29]: https://github.com/jonruttan/x-engine-c/pull/29
 
 ## 0.1.6 — 2026-08-30
 
