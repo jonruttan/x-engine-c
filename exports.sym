@@ -14,3 +14,4 @@ _jit_score_set
 _jit_buffer_unread
 _jit_buffer_len
 _jit_buffer_last_char
+_jit_call_value
