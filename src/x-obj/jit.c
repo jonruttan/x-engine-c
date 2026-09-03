@@ -190,3 +190,45 @@ x_obj_t *jit_make_prim(x_obj_t *p_base, x_obj_t *p_args)
 
 	return x_make_prim(p_base, X_OBJ_FLAG_NONE, (x_fn_t)x_ptrval(p_addr));
 }
+
+/**
+ * Call a callable the compiled code CHOSE at run time.
+ *
+ * The lane's other calls branch to an address fixed when the code was
+ * generated -- the self-call trampoline, or an fvar's prim baked as an
+ * immediate.  This one takes the callee out of the argument list it was
+ * handed, which is where a computed head lands: the emitter builds
+ * @c (callee arg0 arg1 ...) exactly as the prim ABI wants it, so the
+ * callee is simply the first element and no second register is needed to
+ * carry it across the list construction.
+ *
+ * THE TYPE CHECK IS THE POINT.  @c x_primval is the object's first word;
+ * on anything that is not a PRIMITIVE that word is a length, a character,
+ * a pair -- and branching to it is a SIGSEGV with no relation to the call
+ * site, the same failure mode the emitter's "refuse loudly at generation"
+ * rule exists to prevent.  A head is only known at run time, so the
+ * refusal has to happen here.  It lives in C rather than in emitted
+ * instructions because the type name it consults is the type system's
+ * business, not a layout offset the emitter should be baking in.
+ *
+ * @param p_base  x_obj_t* -- Base (execution context)
+ * @param p_args  x_obj_t* -- (callee arg0 arg1 ...), the prim ABI shape
+ * @return Whatever the callee returns
+ */
+x_obj_t *jit_call_value(x_obj_t *p_base, x_obj_t *p_args)
+{
+	x_obj_t *p_fn = x_firstobj(p_args);
+
+	if (!x_obj_type_isprim(p_base, p_fn)) {
+		x_obj_error(p_base, (x_char_t *)
+			"asm-compile: call through a value that is not a callable prim",
+			NULL);
+
+		/* x_obj_error does not return when a handler is installed; when
+		 * none is it prints and DOES return, and falling through to the
+		 * branch is the crash this whole function exists to refuse. */
+		return NULL;
+	}
+
+	return (*x_primval(p_fn))(p_base, p_args);
+}
