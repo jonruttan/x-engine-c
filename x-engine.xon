@@ -33,6 +33,7 @@
 (provides isa/types)
 (provides meta/identity)
 (provides meta/platform)
+(provides native/jit)
 (provides reflect/layout-data)
 (provides reflect/ptr-casts)
 (provides reflect/word-probe)
