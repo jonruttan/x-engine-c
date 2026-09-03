@@ -317,8 +317,12 @@ x_int_t x_type_units_mask(x_obj_t *p_units)
  *
  * A fixed count describes exactly its own units. A dynamic count of -k
  * describes the k leading units plus the kind of the payload that follows
- * them -- k + 1 fields -- which is what lets (word, ref) over a count of -1
- * mean a length word followed by slot-0-many references.
+ * them -- k + 1 fields -- so a count of -1 with mask (ref, ref) covers slot 0
+ * and the slot-0-many payload units after it, with no repeat marker.
+ *
+ * Note that the slot-0-counted convention holds its length as a heap INTEGER
+ * OBJECT, so slot 0 is X_TYPE_UNIT_REF, not X_TYPE_UNIT_WORD -- see the kind
+ * documentation in x-type.h.
  *
  * @param p_units  x_obj_t* -- A type's p_units slot, or NULL
  * @return x_int_t -- Described field count, capped at the mask's capacity
