@@ -272,6 +272,92 @@ x_obj_t *x_type_prim_type_name(x_obj_t *p_base, x_obj_t *p_args)
 }
 
 /**
+ * The declared unit count, from either form of a p_units slot.
+ *
+ * A bare INT atom is the count itself; a pair is (count . mask) and the
+ * count is its first. Negative keeps its dynamic-size meaning in both.
+ *
+ * @param p_units  x_obj_t* -- A type's p_units slot, or NULL
+ * @return x_int_t -- The count, or 0 when the slot is unset
+ */
+x_int_t x_type_units_count(x_obj_t *p_units)
+{
+	if (p_units == NULL) {
+		return 0;
+	}
+
+	if (x_obj_type_isspair(p_units)) {
+		return x_atomint(x_firstobj(p_units));
+	}
+
+	return x_atomint(p_units);
+}
+
+/**
+ * The per-unit kind mask, from either form of a p_units slot.
+ *
+ * The bare-count form has no mask; 0 is the honest answer for it, since
+ * X_TYPE_UNIT_REF is 0 and "every unit a reference" is what a bare count
+ * has always meant.
+ *
+ * @param p_units  x_obj_t* -- A type's p_units slot, or NULL
+ * @return x_int_t -- The mask, or 0
+ */
+x_int_t x_type_units_mask(x_obj_t *p_units)
+{
+	if (p_units == NULL || ! x_obj_type_isspair(p_units)) {
+		return 0;
+	}
+
+	return x_atomint(x_restobj(p_units));
+}
+
+/**
+ * How many leading units the mask describes before the repeat rule applies.
+ *
+ * A fixed count describes exactly its own units. A dynamic count of -k
+ * describes the k leading units plus the kind of the payload that follows
+ * them -- k + 1 fields -- which is what lets (word, ref) over a count of -1
+ * mean a length word followed by slot-0-many references.
+ *
+ * @param p_units  x_obj_t* -- A type's p_units slot, or NULL
+ * @return x_int_t -- Described field count, capped at the mask's capacity
+ */
+x_int_t x_type_units_described(x_obj_t *p_units)
+{
+	x_int_t n = x_type_units_count(p_units);
+
+	n = (n < 0) ? (-n) + 1 : n;
+
+	return (n > X_TYPE_UNIT_DESCRIBED_MAX) ? X_TYPE_UNIT_DESCRIBED_MAX : n;
+}
+
+/**
+ * The kind of unit @p i.
+ *
+ * Units at or past @p described take the kind of the last described unit.
+ * That is the repeat rule, and it is how a dynamic-size type says what its
+ * payload units are without a marker.
+ *
+ * @param mask       x_int_t -- The kind mask
+ * @param i          x_int_t -- Unit index
+ * @param described  x_int_t -- Fields the mask describes
+ * @return int -- One of X_TYPE_UNIT_REF .. X_TYPE_UNIT_FOREIGN
+ */
+int x_type_unit_kind(x_int_t mask, x_int_t i, x_int_t described)
+{
+	if (described < 1) {
+		return X_TYPE_UNIT_REF;
+	}
+
+	if (i >= described) {
+		i = described - 1;
+	}
+
+	return (int)((mask >> (i * X_TYPE_UNIT_BITS)) & X_TYPE_UNIT_KIND_MASK);
+}
+
+/**
  * Return the unit count for an object. x-lang: (units obj)
  *
  * Dispatches to pair or atom unit primitives for built-in types.
@@ -307,18 +393,25 @@ x_obj_t *x_type_prim_units(x_obj_t *p_base, x_obj_t *p_args)
 		return NULL;
 	}
 
-	/* The units slot is an INT count -- the same ABI x_type_heap_mark
-	 * and the improper-spine guard read (#241: this used to call the
-	 * slot as a function, jumping to the count as an address). A
-	 * negative count is the dynamic-size sentinel: slot 0 of the
-	 * instance holds the payload count (the vector convention; see
-	 * x_type_heap_mark). Returns plain int atoms, the same shape the
-	 * x_atom_prim_units/x_pair_prim_units leaves return. */
-	n = x_atomint(p_units);
+	/* The units slot is read, never called (#241: this used to call the
+	 * slot as a function, jumping to the count as an address) -- the
+	 * same ABI x_type_heap_mark and the improper-spine guard read. A
+	 * negative count is the dynamic-size sentinel: -k means k leading
+	 * units and slot 0 of the instance holds how many follow (the vector
+	 * convention; see x_type_heap_mark). Returns plain int atoms, the
+	 * same shape the x_atom_prim_units/x_pair_prim_units leaves return. */
+	n = x_type_units_count(p_units);
 
 	if (n < 0) {
 		return x_mksatom(p_base, X_OBJ_FLAG_NONE,
-			(x_int_t)(x_atomint(x_obj(x_obj_data_i(p_obj, 0))) + 1));
+			(x_int_t)(x_atomint(x_obj(x_obj_data_i(p_obj, 0)))
+				+ (-n)));
+	}
+
+	/* The pair form's count is an atom of the same shape as the bare
+	 * form's slot, so callers see one answer either way. */
+	if (x_obj_type_isspair(p_units)) {
+		return x_firstobj(p_units);
 	}
 
 	return p_units;
@@ -383,6 +476,8 @@ x_obj_t *x_type_heap_mark(x_obj_t *p_base, x_obj_t *p_obj, x_obj_flag_t flags)
 	x_spair_t mark_args[2];
 	x_int_t n;
 	x_int_t i;
+	x_int_t mask;
+	x_int_t described;
 
 	/* Child base objects (e.g. %sh-base): traverse their pair tree
 	 * so type alist entries, env, etc. are not freed by GC. */
@@ -412,28 +507,43 @@ x_obj_t *x_type_heap_mark(x_obj_t *p_base, x_obj_t *p_obj, x_obj_flag_t flags)
 		}
 
 		/* Fall back to p_units generic N-slot traversal.
-		 * Mark ALL slots via tree_mark (handles non-heap
-		 * values safely — they won't be on the heap chain).
 		 *
-		 * A NEGATIVE units count is the dynamic-size sentinel:
-		 * slot 0 holds an INT atom with the payload count (the
-		 * vector convention -- (Vector make n) allocates n+1
-		 * slots with slot 0 = n).  Without this, per-instance
-		 * sized objects had no units to walk and their payloads
-		 * were never marked: a Dict held across a REPL turn
-		 * (the REPL collects each turn) lost its bucket alists
-		 * and the next access segfaulted. */
+		 * Mark only the units the type declares to be REFERENCES.
+		 * This is not fastidiousness: x_heap_tree_mark sets the
+		 * mark bit THROUGH the pointer it is given, before it can
+		 * establish that the pointer is on the heap, so tracing a
+		 * unit that holds bytes or a foreign address writes into
+		 * memory the collector does not own.  A bare count means
+		 * every unit is a reference (X_TYPE_UNIT_REF is 0, so the
+		 * absent mask says exactly that), which is what this loop
+		 * has always done.
+		 *
+		 * A NEGATIVE units count is the dynamic-size sentinel: -k
+		 * means k leading units, and slot 0 holds an INT atom with
+		 * how many payload units follow (the vector convention --
+		 * (Vector make n) allocates n+1 slots with slot 0 = n).
+		 * Without this, per-instance sized objects had no units to
+		 * walk and their payloads were never marked: a Dict held
+		 * across a REPL turn (the REPL collects each turn) lost its
+		 * bucket alists and the next access segfaulted. */
 		p_units = x_type_field_units(p_type);
 
 		if (p_units != NULL) {
-			n = x_atomint(p_units);
+			n = x_type_units_count(p_units);
+			mask = x_type_units_mask(p_units);
+			described = x_type_units_described(p_units);
 
 			if (n < 0) {
 				n = x_atomint(x_obj(x_obj_data_i(p_obj, 0)))
-					+ 1;
+					+ (-n);
 			}
 
 			for (i = 0; i < n; i++) {
+				if (x_type_unit_kind(mask, i, described)
+						!= X_TYPE_UNIT_REF) {
+					continue;
+				}
+
 				x_heap_tree_mark(p_base,
 					x_obj(x_obj_data_i(p_obj, i)),
 					flags);

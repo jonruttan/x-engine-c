@@ -547,7 +547,7 @@ void x_eval_spine_guard(x_obj_t *p_base, x_obj_t *p_obj)
 		&& ! x_obj_isnil(p_base, p_t) && x_obj_type_isspair(p_t)) {
 		p_units = x_type_field_units(p_t);
 		is_cell = p_units != NULL
-			&& x_atomint(p_units) == X_OBJ_UNITS_PAIR;
+			&& x_type_units_count(p_units) == X_OBJ_UNITS_PAIR;
 	}
 
 	if ( ! is_cell) {

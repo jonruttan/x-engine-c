@@ -181,11 +181,14 @@ struct x_type_t
 	x_obj_t *p_make;       /**< Constructor handler. */
 	x_obj_t *p_free;       /**< Destructor handler. */
 	x_obj_t *p_clone;      /**< Clone handler. */
-	x_obj_t *p_units;      /**< Unit count: INT atom, read (never called)
-	                            by the GC, the spine guard, and
-	                            x_type_prim_units. Negative = dynamic-size
-	                            sentinel (instance slot 0 holds the payload
-	                            count; see x_type_heap_mark). */
+	x_obj_t *p_units;      /**< Unit shape: read (never called) by the GC,
+	                            the spine guard, and x_type_prim_units.
+	                            Two forms, see x_type_units_count():
+	                            an INT atom is a bare count (negative =
+	                            dynamic-size sentinel, instance slot 0 holds
+	                            the payload count); a pair (count . mask)
+	                            adds a kind per unit -- see
+	                            #X_TYPE_UNIT_REF. */
 	x_obj_t *p_length;     /**< Length handler. */
 	x_obj_t *p_call;       /**< Call handler. */
 	x_obj_t *p_eval;       /**< Eval handler. */
@@ -218,6 +221,46 @@ x_obj_t *x_type_prim_type_name(x_obj_t *p_base, x_obj_t *p_args);
 
 /** Primitive: return the units (element size) of an object. */
 x_obj_t *x_type_prim_units(x_obj_t *p_base, x_obj_t *p_args);
+
+/** @name Unit Kinds
+ *
+ * A type's @c p_units slot says how many units an instance has and, in its
+ * pair form, what each unit @e is. The kind decides who may touch the unit:
+ * only #X_TYPE_UNIT_REF holds a heap object pointer, so only #X_TYPE_UNIT_REF
+ * may be handed to x_heap_tree_mark() -- which sets a mark bit through the
+ * pointer before it can establish that the pointer is a heap object, so a
+ * traced #X_TYPE_UNIT_BYTES would corrupt the bytes it names.
+ *
+ * The mask packs #X_TYPE_UNIT_BITS bits per unit, unit 0 lowest. Units past
+ * the described prefix take the kind of the last described unit, which is
+ * what gives a dynamic-size type its payload kind: a count of @c -1 with mask
+ * @c (word, ref) is a length word followed by slot-0-many references.
+ *
+ * #X_TYPE_UNIT_REF is 0, so a zero mask means "every unit a reference" -- the
+ * bare-count form's meaning, unchanged.
+ * @{ */
+#define X_TYPE_UNIT_REF		0  /**< A heap object pointer; the GC traces it. */
+#define X_TYPE_UNIT_WORD	1  /**< An immediate; nothing dereferences it. */
+#define X_TYPE_UNIT_BYTES	2  /**< A pointer to bytes the type can measure. */
+#define X_TYPE_UNIT_FOREIGN	3  /**< An address C owns. */
+#define X_TYPE_UNIT_BITS	2  /**< Mask bits per unit. */
+#define X_TYPE_UNIT_KIND_MASK	3  /**< Low-bit mask of one kind field. */
+/** Units a mask can describe before the repeat rule takes over. */
+#define X_TYPE_UNIT_DESCRIBED_MAX \
+	((x_int_t)(sizeof(x_int_t) * 8 / X_TYPE_UNIT_BITS))
+/** @} */
+
+/** The declared unit count from either form of a @c p_units slot. */
+x_int_t x_type_units_count(x_obj_t *p_units);
+
+/** The kind mask from either form of a @c p_units slot (0 = all references). */
+x_int_t x_type_units_mask(x_obj_t *p_units);
+
+/** How many leading units a @c p_units slot's mask describes. */
+x_int_t x_type_units_described(x_obj_t *p_units);
+
+/** The kind of unit @p i, applying the repeat rule past @p described. */
+int x_type_unit_kind(x_int_t mask, x_int_t i, x_int_t described);
 
 /** Primitive: return the length of an object. */
 x_obj_t *x_type_prim_length(x_obj_t *p_base, x_obj_t *p_args);

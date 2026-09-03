@@ -156,6 +156,12 @@
   (type make-instance alloc)
   (type of hot)               ; derived (header word 1 + name walk) but HOT: operatives.x's do-body
                               ;   validator (%boot-cell?) and the predicate layer call it per invocation
+  (type set-shape! types)     ; installs the PAIR form of a type's units slot -- (count . mask), a kind
+                              ;   per unit (X_TYPE_UNIT_REF..FOREIGN).  C because the shape must be a
+                              ;   STRUCTURAL pair: X makes list-pairs only, and the collector
+                              ;   discriminates the two forms of the slot by x_obj_type_isspair() on a
+                              ;   path it walks per object.  The count half stays (type set-units!)'s,
+                              ;   which is X and unchanged.
 )))
 
 (def %isa-bare (lit (
