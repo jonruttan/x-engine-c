@@ -11,16 +11,16 @@ alongside the library changes they landed with.
 [x-lang]: https://github.com/jonruttan/x-lang
 [x-changelog]: https://github.com/jonruttan/x-lang/blob/main/CHANGELOG.md
 
-## Unreleased
+## 0.2.0 — 2026-09-03
 
-**A raise carries its facts instead of a sentence.** `x_eval_error` used to
-flatten the message literal and the offending symbol into one English string
-in a static buffer and hand a guard a bare, NIL-TYPED atom. Nothing above
-could do better than pattern-match that English: the structure was gone, and
-a type-less value has no dispatch stacks to hang a replacement on. The
+**A raise carries its facts instead of a sentence** ([#25]). `x_eval_error`
+used to flatten the message literal and the offending symbol into one English
+string in a static buffer and hand a guard a bare, NIL-TYPED atom. Nothing
+above could do better than pattern-match that English: the structure was gone,
+and a type-less value has no dispatch stacks to hang a replacement on. The
 handler now receives a typed **ERR** — a two-slot `(code . subject)` value
-whose type is `x-type/err.c` — so the wording belongs to the language
-instead of to C.
+whose type is `x-type/err.c` — so the wording belongs to the language instead
+of to C.
 
 The raise path stays **allocation-free**, which is the property the old
 in-place formatting existed to protect: the base holds one ERR, built at
@@ -58,6 +58,61 @@ pins that layering). `x_type_err_register` builds it at the first moment it
 can. A base still in that window raises through an ERR-SHAPED static
 fallback, so every C consumer reads `x_err_code`/`x_err_subject` without
 asking which window it came from.
+
+### Added
+
+- **`jit_buffer_last_char`** ([#24]) — the last-read character as a raw long,
+  exposed to compiled code.
+
+  The JIT lane already publishes the engine's buffer and score macros as real
+  callable functions (`jit_score_set`, `jit_buffer_unread`, `jit_buffer_len`).
+  This is the peer of `jit_buffer_len` — a different buffer macro
+  (`x_bufferlastchar` vs `x_bufferlen`), the same three-line shape, not a
+  duplicate to factor — and it lets the tokenizer's per-character delimiter
+  handler JIT-compile through the same lane the tower's numeric analysers
+  already use, instead of running interpreted on every character of every
+  symbol.
+
+  Three lines plus one export; the stripped binary is unchanged in size. The
+  library side compiles the delimiter through this symbol, and an engine
+  without it is unaffected: the compile is guarded and falls back to the
+  interpreted handler.
+
+### Fixed
+
+- **Op arbitration read instance payload words as integers on an undeclared
+  pair** ([#22]).
+
+  `x_type_op_try` returned 0 when *both* operand types registered the op and
+  *neither* side's cvt from-alist declared the other, and every caller's raw
+  fallback then read instance payload words as integers. The cross-engine
+  differential fuzzer caught the result as address garbage that moves with
+  ASLR (x-lang#584).
+
+  Both sides declared interest in the operator, so the raw integer path is
+  certainly wrong for them. The arbitration raises instead, through
+  `x_eval_error`'s own append mechanism — one call, no local composition:
+
+      no declared promotion; declare the cvt relation for 'RATIONAL'
+
+  One raise covers every operator door: `+ - * / %` via the arith binop, `-`
+  via diff, `=` `<` via pred. Single-handler, same-type and declared-pair
+  dispatch are untouched, as is the no-handler fallthrough — int/int stays
+  pure C.
+
+- **The refusal over-reached on `=`** ([#23]). An undeclared typed pair *is*
+  answerable under equality — unrelated values are not equal — and raising
+  broke exactly the bundles that relied on that answer. x-python's
+  tuple-versus-list came up first: `(1, 2) == [1, 2]` must be `False`, and
+  the old raw fallback got it right only by address accident.
+
+  Arbitration now answers `#f` for `=` and keeps the teaching raise for every
+  op that has no answer without a declared relation.
+
+[#22]: https://github.com/jonruttan/x-engine-c/pull/22
+[#23]: https://github.com/jonruttan/x-engine-c/pull/23
+[#24]: https://github.com/jonruttan/x-engine-c/pull/24
+[#25]: https://github.com/jonruttan/x-engine-c/pull/25
 
 ## 0.1.6 — 2026-08-30
 
