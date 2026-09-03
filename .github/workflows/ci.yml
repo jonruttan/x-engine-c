@@ -54,6 +54,13 @@ jobs:
           make gen-layout
           git diff --exit-code include/x-eval-layout.h
 
+  # The declaration ratchet: x-engine.xon must be what x-lang's generator
+  # produces from this tree.  Defined once in declaration.yml and called from
+  # here and from Release, so the check a tag depends on is the same one that
+  # ran green on the commit being tagged.
+  declaration:
+    uses: ./.github/workflows/declaration.yml
+
 
   asan:
     name: asan (${{ matrix.os }})
