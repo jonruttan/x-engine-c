@@ -138,3 +138,52 @@ than left to a downstream lang's macro suite.
 ```
 ---
     *** ERROR: ok
+
+### a type registered on an isolated tokenizer base survives collection
+
+`base-make-type` builds the name atom, the type struct and the handler
+closures on the CALLING base, then files them in the TARGET base's type
+alist -- so the objects sit on one heap chain and their only referrer sits
+on another. Pinning them is the whole point of the SHARED mark there, and
+the mark used to start from the target's tree root, which marked NOTHING:
+`x_heap_tree_mark` stops at any object that already carries the flag it is
+setting, and a base's tree root is born SHARED (x-expr's `x_base_make`).
+
+The registration then survived exactly one collect and died on the next
+(x-lang#599). The calling base's mark walk reaches the target base through
+the binding that holds it and descends its tree, so the first collect
+marked these objects by that route -- but it also left the mark bit set on
+the target's own skeleton cells, which live on the target's chain and are
+never visited by the calling base's sweep. The second walk took those
+still-marked cells for already-done and stopped short, and the sweep freed
+the name atom the alist was keyed by; the next read walked the alist over a
+freed key. Three reads across two collects is the shortest shape that
+shows it.
+
+```scheme
+(include "tools/contract/base-paths.x")
+(def %assoc (fn (self k l)
+  (match ((eq? l ()) ())
+         ((eq? (first (first l)) k) (first l))
+         (#t (self k (rest l))))))
+(def %walk (fn (self steps o)
+  (match ((eq? steps ()) o)
+         ((eq? (first steps) (lit f)) (self (rest steps) (first o)))
+         (#t (self (rest steps) (rest o))))))
+(def %cat (first (%walk (rest (rest (%assoc (lit prims) %base-paths))) (%base))))
+(def %ref (fn (_ ns m) (rest (%assoc m (rest (%assoc ns %cat))))))
+(def %mk-tok   (%ref (lit base) (lit make-tok)))
+(def %mk-type  (%ref (lit base) (lit make-type)))
+(def %read-str (%ref (lit tok)  (lit read-str)))
+(def %collect  (%ref (lit heap) (lit collect)))
+(def b (%mk-tok))
+(%mk-type b "W" (pair (pair (lit read) (fn (_ . args) (lit w))) ()))
+(%read-str b "a")
+(%collect)
+(%read-str b "a")
+(%collect)
+(%read-str b "a")
+(error "type survived")
+```
+---
+    *** ERROR: type survived
