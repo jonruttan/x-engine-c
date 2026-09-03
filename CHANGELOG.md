@@ -11,6 +11,40 @@ alongside the library changes they landed with.
 [x-lang]: https://github.com/jonruttan/x-lang
 [x-changelog]: https://github.com/jonruttan/x-lang/blob/main/CHANGELOG.md
 
+## Unreleased
+
+**A type registered on another base outlives the collector again**
+([x-lang#599]). `base-make-type` builds the name atom, the type struct and the
+handler closures on the CALLING base and then files them in the TARGET base's
+type alist — so the objects sit on one heap chain while their only referrer
+sits on another. Pinning them as SHARED is the whole point of the mark at the
+end of that primitive, and the mark started from the target's tree root, which
+pinned **nothing**: `x_heap_tree_mark` stops at any object that already carries
+the flag it is setting, and a base's tree root is born SHARED (x-expr's
+`x_base_make` allocates every skeleton node that way), so the walk
+short-circuited on its own first node. It now starts from the type struct, an
+ordinary `X_OBJ_FLAG_NONE` pair tree, and reaches the name atom and every
+handler.
+
+The failure was delayed by exactly one collect, which is what made it read as
+a collector bug rather than a missing pin. The calling base's mark walk reaches
+the target base through whatever binding holds it and descends its tree, so the
+first collect marked these objects by that route and retained them — but it
+also left the mark bit set on the target's OWN skeleton cells, which live on
+the target's chain and are never visited by the calling base's sweep. The
+second walk took those still-marked cells for already-done and stopped short,
+leaving the name atom unmarked and unpinned; the sweep freed it, and the next
+read walked the type alist over a freed key (`x_alist_assoc`, a
+heap-use-after-free under ASan).
+
+The shape this cost is a bundle that registers its own tokenizer types on an
+isolated `make-tok` base: x-ash had to run its whole suite with the per-snippet
+`SPEC_SEAM_COLLECT` off, because with it on the tokenizer specs died first.
+Covered by a bare-tier regression case — three reads across two collects, which
+is the shortest shape that shows it.
+
+[x-lang#599]: https://github.com/jonruttan/x-lang/issues/599
+
 ## 0.2.0 — 2026-09-03
 
 **A raise carries its facts instead of a sentence** ([#25]). `x_eval_error`
