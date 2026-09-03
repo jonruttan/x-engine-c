@@ -227,6 +227,41 @@ static x_obj_t *x_prim_type_of(x_obj_t *p_base, x_obj_t *p_args)
  * type-rooted entries). */
 
 /**
+ * @brief Declare a type's unit shape.
+ *
+ * x-lang form: @code (type set-shape! type count mask) @endcode
+ *
+ * Installs the pair form of the @c p_units slot: @p count keeps both of the
+ * bare form's meanings (fixed, or negative for dynamic-size), and @p mask
+ * gives each unit its kind -- see #X_TYPE_UNIT_REF.
+ *
+ * The shape must be a STRUCTURAL pair, which is why this is a primitive at
+ * all: x builds list-pairs only, and the readers discriminate the two forms
+ * of the slot by x_obj_type_isspair() -- one pointer comparison on a path
+ * the collector walks per object. A list-pair here would be read as a bare
+ * count, and the count would be the pair's first data word.
+ *
+ * @param p_base  Base (execution context).
+ * @param p_args  Unevaluated: (self type count mask).
+ * @return The type struct, or nil if it was nil.
+ */
+static x_obj_t *x_prim_type_set_shape(x_obj_t *p_base, x_obj_t *p_args)
+{
+	x_obj_t *p_type, *p_count, *p_mask;
+
+	x_eargs(p_base, p_args, 4, NULL, &p_type, &p_count, &p_mask);
+
+	if (x_obj_isnil(p_base, p_type)) {
+		return NULL;
+	}
+
+	x_firstobj(x_type_field_units_stack(p_type))
+		= x_mkspair(p_base, X_OBJ_FLAG_NONE, p_count, p_mask);
+
+	return p_type;
+}
+
+/**
  * @brief Allocate a typed object with n slots, all initialized to NULL.
  *
  * x-lang form: @code (make-obj type-handle n) @endcode
@@ -318,6 +353,7 @@ x_obj_t *x_prim_type_register(x_obj_t *p_base, x_obj_t *p_args)
 		{ "make-type",         x_prim_make_type,         "type",   "make"          },
 		{ "make-instance",     x_prim_make_instance,     "type",   "make-instance" },
 		{ "make-obj",          x_prim_make_obj,          "obj",    "make"          },
+		{ "type-set-shape!",   x_prim_type_set_shape,    "type",   "set-shape!"    },
 		{ "type?",             x_prim_typep,             "type",   "?"             },
 		{ "type-of",           x_prim_type_of,           "type",   "of"            },
 	};
