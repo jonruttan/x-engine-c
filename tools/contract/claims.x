@@ -81,4 +81,10 @@
   ; time, so the fixnum and the pointer cannot diverge in width.  This is the
   ; strongest row here -- it is the only one the C compiler already enforces.
   (guarantee int/ptr-same-width)
+  ; src/x-type/err.c: a raise fills the base's ERR in place -- a registered type
+  ; with two slots, (code . subject) -- and x_type_err_register puts a value of
+  ; that type in the base's `err` row.  The type's write/display stacks BOOT
+  ; EMPTY on purpose: the wording is x-lang's (x/type/err-io.x), never this
+  ; engine's, which is the whole point of carrying the two facts apart.
+  (guarantee err/typed-raise)
 )))

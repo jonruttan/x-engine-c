@@ -36,7 +36,7 @@
 #define x_eval_field_eval_list(X)	x_0(x_eval_state(X))	/* cell */
 #define x_eval_field_token_cache(X)	x_01(x_eval_state(X))	/* cell */
 #define x_eval_field_sigint(X)	x_011(x_eval_state(X))	/* cell */
-#define x_eval_field_error_str(X)	x_0111(x_eval_state(X))	/* cell */
+#define x_eval_field_err(X)	x_0111(x_eval_state(X))	/* cell */
 #define x_eval_field_prims(X)	x_0111(x_1(x_eval_state(X)))	/* cell */
 #define x_eval_field_file(X)	x_0111(x_11(x_eval_state(X)))	/* cell */
 #define x_eval_field_err_line(X)	x_0111(x_111(x_eval_state(X)))	/* cell */

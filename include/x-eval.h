@@ -101,21 +101,6 @@ extern x_satom_t x_eval_obj;
 
 #include "x-eval-layout.h"	/* generated: x_eval_env/ctrl/io_state/state anchors + x_eval_field_* */
 
-/** Capacity of the error-message scratch buffer; its atom lives at
- *  x_eval_field_error_str (a static in x_eval_make, reached via the base).
- *
- *  THE SYMBOL IS APPENDED LAST, which is what made 256 too small to be a
- *  formatting limit and turned it into a diagnostic one.  x_eval_error copies
- *  the message, then appends " '<symbol>'" -- so when the message is long the
- *  part that says WHICH name was unbound is the first thing dropped, silently,
- *  by a loop that simply stops at cap.  An error that fills the buffer reports
- *  everything except the one detail worth reading.
- *
- *  65536 because this one is ENGINE-LEVEL: err_buf is a single file-scope
- *  static, one per process rather than one per base, so the size is paid once
- *  and is not worth economising.  A diagnostic that cannot fit in 64K is not
- *  being truncated, it is being generated wrong. */
-#define X_ERROR_BUF_SIZE	65536
 
 /** Capacity of a base's READER buffer -- the one the tokenizer reads through,
  *  hung off x_base_field_buffer.
@@ -136,8 +121,15 @@ extern x_satom_t x_eval_obj;
  *  x_bufferwrite) but NOT capacity, so this bound is not available to the code
  *  that fills a buffer.  One constant is the floor of fixing that, not the fix.
  *
- *  Separate from X_ERROR_BUF_SIZE on purpose: unrelated buffers, and a change
- *  to one must not silently move the other. */
+ *  It used to have a sibling, X_ERROR_BUF_SIZE, sized for the same reason and
+ *  kept separate so a change to one could not silently move the other.  That
+ *  one is gone: a raise no longer formats a message into a scratch buffer at
+ *  all.  It stores the message literal and the subject as two pointers in a
+ *  typed ERR (x-type/err.c), which also retires the hazard that constant's
+ *  comment was mostly about -- the symbol was appended LAST, so an
+ *  over-long message silently dropped the one detail worth reading, the name
+ *  that was unbound.  Nothing is concatenated now, so nothing can be
+ *  truncated. */
 #define X_READ_BUF_SIZE	65536
 
 /** @} */ /* end base_field */

@@ -20,6 +20,7 @@
 #include "x-token.h"
 #include "x-type/buffer.h"
 #include "x-type/char.h"
+#include "x-type/err.h"
 #include "x-type/comment.h"
 #include "x-type/int.h"
 #include "x-type/list.h"
@@ -168,6 +169,7 @@ static x_obj_t *x_prim_make_base(x_obj_t *p_base, x_obj_t *p_args)
 	x_type_int_register(p_new_base, p_new_base);
 	x_type_str_register(p_new_base, p_new_base);
 	x_type_char_register(p_new_base, p_new_base);
+	x_type_err_register(p_new_base, p_new_base);
 	x_type_whitespace_register(p_new_base, p_new_base);
 	x_type_comment_register(p_new_base, p_new_base);
 

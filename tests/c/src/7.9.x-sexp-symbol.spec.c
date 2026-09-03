@@ -28,6 +28,7 @@
 #include "src/x-type/iter.c"
 #include "src/x-type/buffer.c"
 #include "src/x-type/char.c"
+#include "src/x-type/err.c"
 #include "src/x-token/sexp/char.c"
 #include "src/x-type/str.c"
 #include "src/x-token/sexp/str.c"

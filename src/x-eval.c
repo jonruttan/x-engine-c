@@ -21,6 +21,7 @@
 #include "x-type/ptr.h"
 #include "x-type/str.h"
 #include "x-type/list.h"
+#include "x-type/err.h"
 #include "x-type/symbol.h"
 #include "x-token.h"
 #include <setjmp.h>
@@ -948,6 +949,13 @@ static x_satom_t x_type_prim_units_hook =
 	x_obj_set(NULL, X_OBJ_FLAG_NONE, { .fn = x_type_prim_units });
 static x_satom_t x_type_prim_length_hook =
 	x_obj_set(NULL, X_OBJ_FLAG_NONE, { .fn = x_type_prim_length });
+/* The pre-registration error value: an ERR-SHAPED (code . subject) pair
+ * with no type tag, for bases built before the type registry exists.
+ * See x_eval_error's else branch. */
+static x_satom_t s_bare_code = x_obj_set(NULL, X_OBJ_FLAG_NONE, { .s = NULL });
+static x_satom_t s_bare_subject = x_obj_set(NULL, X_OBJ_FLAG_NONE, { .s = NULL });
+static x_spair_t s_bare_err = x_obj_set(NULL, X_OBJ_FLAG_NONE,
+	{ (x_obj_t *)&s_bare_code }, { (x_obj_t *)&s_bare_subject });
 static x_satom_t x_eval_error_hook =
 	x_obj_set(NULL, X_OBJ_FLAG_NONE, { .v = (void *)x_eval_error });
 static x_satom_t x_type_heap_mark_hook =
@@ -1009,10 +1017,6 @@ static x_satom_t x_type_heap_free_hook =
  */
 x_obj_t *x_eval_make(x_obj_t *p_base, x_obj_t *p_args)
 {
-	/* Backing store for the error-message atom.  Static lifetime so it
-	 * survives the longjmp out of x_eval_error, but it is reached only
-	 * through the base (x_eval_field_error_str), never by this name. */
-	static x_char_t err_buf[X_ERROR_BUF_SIZE];
 	x_obj_t *p_parent = p_base;
 	struct x_base_t base_cfg;
 
@@ -1051,7 +1055,11 @@ x_obj_t *x_eval_make(x_obj_t *p_base, x_obj_t *p_args)
 	x_firstobj(x_eval_field_profile_gc_runs(p_base)) = atom(0);
 	x_firstobj(x_eval_field_profile_bst_hits(p_base)) = atom(0);
 	x_firstobj(x_eval_field_profile_bst_misses(p_base)) = atom(0);
-	x_firstobj(x_eval_field_error_str(p_base)) = atom(nil);
+	/* The err cell stays NIL here.  The ERR the raise path fills is built
+	 * by x_type_err_register, because building it needs the type registry
+	 * and this function runs before there is one -- x-eval must not depend
+	 * on the type layer (tests/c/src/2.x-base.spec.c links without it, and
+	 * that is the layering being kept, not an accident of the test). */
 
 	/* Source-location tracking.  `file` mirrors `line` (the live id of the
 	 * form being evaluated, 0 = no file / REPL input); err-line/err-file hold
@@ -1071,11 +1079,6 @@ x_obj_t *x_eval_make(x_obj_t *p_base, x_obj_t *p_args)
 		x_firstobj(x_eval_field_false(p_base)) = x_firstobj(x_eval_field_false(p_parent));
 		x_firstobj(x_eval_field_sigint(p_base)) = x_firstobj(x_eval_field_sigint(p_parent));
 	}
-
-	/* Point the error-message atom at the scratch buffer.  From here on the
-	 * buffer is reached only through the base (x_eval_field_error_str). */
-	x_atomstr(x_firstobj(x_eval_field_error_str(p_base))) = err_buf;
-
 
 	return p_base;
 }
@@ -1129,12 +1132,10 @@ void x_eval_error(x_obj_t *p_base, x_char_t *message, x_obj_t *p_obj)
 	x_char_t *symbol = NULL;
 	x_obj_t *p_handler;
 	x_obj_t *p_err;
-	x_char_t *buf;
-	x_char_t *p_src;
-	int n;
-	int cap;
 
-	/* Extract symbol string from object if possible. */
+	/* Extract symbol string from object if possible.  Still needed by the
+	 * UNCAUGHT path below, which words its own report in C: it runs before
+	 * any library is loaded, so there is no x-lang there to ask. */
 	if (p_obj != NULL && x_obj_type_issatom(p_obj)) {
 		symbol = x_atomstr(p_obj);
 	}
@@ -1155,34 +1156,57 @@ void x_eval_error(x_obj_t *p_base, x_char_t *message, x_obj_t *p_obj)
 	if (x_base_isset(p_base)
 		&& ! x_obj_isnil(p_base, x_firstobj(x_eval_field_error_handler(p_base)))) {
 		p_handler = x_firstobj(x_eval_field_error_handler(p_base));
-		/* The base-resident error atom; its string is the scratch buffer
-		 * (X_ERROR_BUF_SIZE), reached only through the base. */
-		p_err = x_firstobj(x_eval_field_error_str(p_base));
-		buf = x_atomstr(p_err);
-		n = 0;
-		cap = X_ERROR_BUF_SIZE - 2;		/* room for closing "'" + '\0' */
-		p_src = message;
 
-		/* Copy the message; when the error names a symbol, append " '<symbol>'"
-		 * so the guard reads e.g. "Unbound SYMBOL 'str'".  Formatting in place
-		 * means no allocation, so it is safe even for out-of-memory errors. */
-		while (*p_src != '\0' && n < cap) {
-			buf[n++] = *p_src++;
+		/* The base-resident ERR, filled IN PLACE: the code slot's atom is
+		 * repointed at this raise's message literal (static storage, so it
+		 * survives the longjmp) and the offending object goes in the obj
+		 * slot whole.  Two pointer stores -- no copy, no allocation, no
+		 * truncation, and safe even when the failure IS out of memory.
+		 *
+		 * The engine stops here.  It does not concatenate the symbol into
+		 * the message and it does not word anything: an ERR's write/display
+		 * stacks boot empty and x-lang's err-io.x pushes the prose, which is
+		 * what lets a lang push its own over that.  What used to be one
+		 * flattened English string is now the two facts it was flattened
+		 * from. */
+		/* Fill the base's ERR in place: the code slot's atom is repointed
+		 * at this raise's message literal (static storage, so it survives
+		 * the longjmp) and the subject beside it.  Two pointer stores --
+		 * no copy, no allocation, safe even when the failure IS OOM.
+		 *
+		 * A base whose ERR type is not registered yet (x_eval_make runs
+		 * before the registry exists, and the low-level C harnesses never
+		 * build one) has nil here.  THE JUMP STILL HAPPENS -- an installed
+		 * handler means the caller is prepared to be jumped to, and
+		 * turning that into a fatal exit because the type layer is absent
+		 * would be a silent semantic change.  Only the value differs. */
+		p_err = x_firstobj(x_eval_field_err(p_base));
+		if (p_err != NULL && ! x_obj_isnil(p_base, p_err)) {
+			x_atomstr(x_err_code(p_err)) = message;
+			x_atomstr(x_err_subject(p_err))
+				= (symbol != NULL) ? symbol : (x_char_t *)"";
+		} else {
+			/* No type registry on this base, so no ERR instance to fill:
+			 * the bare-C harnesses build an evaluator without the type
+			 * layer on purpose (tests/c/src/2.x-base.spec.c pins that
+			 * layering, and it is worth keeping -- x-eval must not depend
+			 * on x-type).
+			 *
+			 * The fallback has the SAME SHAPE, (code . subject), and only
+			 * lacks the type tag.  That matters: every C consumer reads a
+			 * raised error through x_err_code/x_err_subject and none of
+			 * them should have to ask which window it came from.  x-lang
+			 * never observes this one -- it closes when
+			 * x_type_err_register runs, before any library loads -- so the
+			 * missing tag costs nothing that can be seen from up there.
+			 *
+			 * File-static, like the scratch buffer it replaces, and safe
+			 * for the same reason: no second base can exist this early. */
+			x_atomstr((x_obj_t *)&s_bare_code) = message;
+			x_atomstr((x_obj_t *)&s_bare_subject)
+				= (symbol != NULL) ? symbol : (x_char_t *)"";
+			p_err = (x_obj_t *)&s_bare_err;
 		}
-		if (symbol != NULL) {
-			if (n < cap) {
-				buf[n++] = ' ';
-			}
-			if (n < cap) {
-				buf[n++] = '\'';
-			}
-			p_src = symbol;
-			while (*p_src != '\0' && n < cap) {
-				buf[n++] = *p_src++;
-			}
-			buf[n++] = '\'';
-		}
-		buf[n] = '\0';
 
 		x_error_handler_error(p_handler) = p_err;
 

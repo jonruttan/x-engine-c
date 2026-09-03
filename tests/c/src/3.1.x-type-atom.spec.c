@@ -20,6 +20,7 @@
 #include "src/x-alist.c"
 #include "ext/x-expr/src/x-base.c"
 #define STUB_X_EVAL
+#include "src/x-type/err.c"
 #include "src/x-eval.c"
 #include "ext/x-expr/src/x-heap.c"
 #include "src/x-type.c"

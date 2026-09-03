@@ -75,7 +75,12 @@
           (cell eval-list)
           (pair (cell token-cache)
             (pair (cell sigint)
-              (pair (cell error-str)
+              ; The raised-error value: ONE base-resident ERR instance
+              ; (x-type/err.c), reused by every raise.  It was a bare
+              ; atom holding a pre-flattened English string until the
+              ; language was given the job of wording errors; it is now
+              ; (code . obj), and the prose lives in x-lang's err-io.x.
+              (pair (cell err)
                 (pair (cell prims)
                   ; Source-location tracking (error reporting).  `file` is the
                   ; live current-file id (parallel to io-state's `line`), set by
