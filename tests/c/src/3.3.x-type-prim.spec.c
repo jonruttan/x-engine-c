@@ -26,6 +26,7 @@
 #include "src/x-type/atom.c"
 /*#include "src/x-type/pair.c"*/
 #include "src/x-type/char.c"
+#include "src/x-type/err.c"
 #include "src/x-token/sexp/char.c"
 #include "src/x-type/prim.c"
 #include "src/x-type/str.c"

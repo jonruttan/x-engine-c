@@ -25,6 +25,7 @@
 #include "src/x-type.c"
 #include "src/x-type/prim.c"
 #include "src/x-type/char.c"
+#include "src/x-type/err.c"
 #include "src/x-token/sexp/char.c"
 #include "src/x-type/buffer.c"
 #include "src/x-type/int.c"

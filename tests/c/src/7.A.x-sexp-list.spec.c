@@ -4,6 +4,7 @@
 
 #define TEST_RUNNER_OVERHEAD
 #include "test-runner.h"
+#include "x-type/err.h"
 #include "x-type/buffer.h"
 #include "x-token/sexp/list.h"
 
@@ -32,6 +33,7 @@
 #include "src/x-type/pair.c"
 #include "src/x-token/sexp/pair.c"
 #include "src/x-type/char.c"
+#include "src/x-type/err.c"
 #include "src/x-token/sexp/char.c"
 #include "src/x-type/buffer.c"
 #include "src/x-type/int.c"
@@ -333,9 +335,13 @@ static char *test_sexp_list_read_truncated_one(const char *s)
 	}
 
 	_it_should("raise on end of input inside an open list", 1 == caught);
+	/* The handler now receives a typed ERR, not a pre-flattened string:
+	 * the message literal is its CODE slot and any subject rides beside
+	 * it, so the wording can belong to the language.  This raise names no
+	 * subject, so the code alone is the whole of what C used to print. */
 	_it_should("report Unterminated input",
 		caught && 0 == x_lib_strncmp(
-			x_atomstr(x_error_handler_error(p_handler)),
+			x_atomstr(x_err_code(x_error_handler_error(p_handler))),
 			(x_char_t *)"Unterminated input", 18)
 	);
 

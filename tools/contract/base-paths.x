@@ -50,7 +50,7 @@
   (eval-list base f r r r r r f)
   (token-cache base f r r r r r r f)
   (sigint base f r r r r r r r f)
-  (error-str base f r r r r r r r r f)
+  (err base f r r r r r r r r f)
   (prims base f r r r r r r r r r f)
   (file base f r r r r r r r r r r f)
   (err-line base f r r r r r r r r r r r f)
