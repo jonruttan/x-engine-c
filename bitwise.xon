@@ -1,0 +1,22 @@
+; bitwise.xon -- what this project's owl wears.
+;
+; Bitwise is the ASCII owl in every x source header; x-lang's apps/bitwise
+; draws it for a named project, and THIS file is this project's own say in
+; how it looks.  The generator reads it during discovery; drop the file and
+; the owl goes plain.  Fields, all optional:
+;
+;   (mascot "LABEL")          shown on the gallery card and in the readout
+;   (logo "COLOUR NAME")      printed where the hashed hue would be
+;   (accent H S L)            replaces the hashed hue in the field and the eyes
+;   (secondary H S L)         the colour for role b
+;   (eyes (H S L) (H S L))    two-tone eyes, left then right
+;   (rows "ROW" ...)          the owl's glyph rows: printable ASCII, plus lambda and the turtle
+;   (roles "ROW" ...)         same shape: i ink, e/f the eyes, a accent, b secondary
+;   (reference "LINE")        one line in this project's own language, on the banner
+
+(costume "x-engine-c"
+  (logo "the C logo's blue")
+  (accent 206 100 31)
+  (rows "., .," "{OvO}" "(   )" " \" \"")
+  (roles "ii ii" "ieifi" "iiiii" " i i ")
+  (reference "return x; /* {O,O} */"))
