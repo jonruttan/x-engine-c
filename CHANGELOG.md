@@ -124,11 +124,21 @@ So the slot **widens in place** — no new field. An INT atom keeps both of its
 meanings exactly (N units all references; negative for the slot-0-counted
 convention), and a structural pair `(count . mask)` adds two bits per unit
 saying what each one is: `ref`, `word`, `bytes`, `foreign`. Units past the
-described prefix take the kind of the last one described, which is not a
-special case added for vectors — it *is* the vector: `(word ref)` over a count
-of `-1` is a length word followed by slot-0-many references, with no repeat
-marker and no second rule. `X_TYPE_UNIT_REF` is 0, so a zero mask means "every
-unit a reference" and the pair form degrades exactly onto the integer form.
+described prefix take the kind of the last one described, so a dynamic-size
+type says what its payload units are without a repeat marker.
+`X_TYPE_UNIT_REF` is 0, so a zero mask means "every unit a reference" and the
+pair form degrades exactly onto the integer form.
+
+**`word` means a raw machine value, not a small one.** The 0.2.1 entry as
+first published claimed `(word ref)` over a count of `-1` "is the vector".
+That is wrong, and wrong in the direction that corrupts: a vector's slot 0
+holds a heap INTEGER *object*, not an immediate, so declaring it `word` tells
+the collector not to trace it and the length is freed under the instance,
+leaving the slot dangling rather than nil. A vector is `(ref ref)` — mask 0,
+the bare count it already had. `word` is for a unit holding a machine value
+the collector must not follow, which is what the engine's own atom types
+carry: an int, a character code. Ask what the unit *holds*, not how big it
+looks. The code was always right; only that sentence was not.
 
 Three sites read the slot and each takes one `x_obj_type_isspair()` test per
 object — the collector's traversal, the unit accessor, the spine guard — then

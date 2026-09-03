@@ -233,8 +233,17 @@ x_obj_t *x_type_prim_units(x_obj_t *p_base, x_obj_t *p_args);
  *
  * The mask packs #X_TYPE_UNIT_BITS bits per unit, unit 0 lowest. Units past
  * the described prefix take the kind of the last described unit, which is
- * what gives a dynamic-size type its payload kind: a count of @c -1 with mask
- * @c (word, ref) is a length word followed by slot-0-many references.
+ * what gives a dynamic-size type its payload kind without a repeat marker: a
+ * count of @c -1 with mask @c (ref, ref) traces slot 0 and slot-0-many
+ * payload units after it.
+ *
+ * #X_TYPE_UNIT_WORD MEANS A RAW MACHINE VALUE, NOT A SMALL ONE. The
+ * slot-0-counted convention keeps its length in slot 0 as a heap INTEGER
+ * OBJECT, so @c (word, ref) is wrong for it: the collector would skip slot 0
+ * and free the length under the instance, leaving the slot dangling rather
+ * than nil. #X_TYPE_UNIT_WORD is for a unit that holds a machine value the
+ * collector must not follow -- what the atom types carry, an int or a
+ * character code. Ask what the unit HOLDS, not how big it looks.
  *
  * #X_TYPE_UNIT_REF is 0, so a zero mask means "every unit a reference" -- the
  * bare-count form's meaning, unchanged.
