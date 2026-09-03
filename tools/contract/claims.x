@@ -64,6 +64,23 @@
   ; recorded beside that binary, not a limit of this engine.
   (provides instr/cov)
   (provides instr/profile)
+  ; The in-process assembler lane: this engine EXPORTS its jit_* runtime helpers
+  ; from the running binary, so `dlopen` of self resolves jit_buffer_len and its
+  ; siblings, and it permits executing the pages the assembler writes.  Consumers
+  ; are x-lang's x/tool/asm-compile.x and the ten spec files carrying
+  ; `# @requires native/jit`.
+  ;
+  ; Claimed at the IMPLEMENTATION level, for the reason instr/cov above is: the
+  ; repo builds it, and what a particular binary ended up with is a build fact
+  ; recorded beside that binary.  Two such facts are worth naming because both
+  ; have bitten.  On macOS the execute half needs the code signature the Makefile
+  ; applies from entitlements.plist (allow-jit, allow-unsigned-executable-memory);
+  ; a build that skips the codesign step has the symbols and cannot run the pages.
+  ; And a bare `strip` drops the exported symbol table that `strip -x` keeps, so
+  ; an installed engine had no jit_* symbols at all while the repo build was fine
+  ; (x-lang#201) -- which asm-compile.x refuses on, by probing every helper before
+  ; it emits anything rather than compiling a `blr` to address 0.
+  (provides native/jit)
 
   ; --- guarantees ---
   ; Collection happens only when asked.  Allocation never triggers it, so a raw
