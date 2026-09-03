@@ -43,6 +43,15 @@ before, and a lang pushes its own over that. The uncaught path is unchanged
 and still words itself in C: it runs before any library exists, and nothing
 on a fatal path calls into x-lang.
 
+The shape is a declared guarantee, `err/typed-raise`, claimed in `claims.x`
+and so copied into `x-engine.xon` by the generator: a raise delivers a value
+of a registered type carrying `(code . subject)`, and the base's `err` row
+holds a value of that same type. Identity is deliberately not claimed — this
+engine reuses one instance so a raise allocates nothing, but an engine that
+allocates per raise satisfies it equally. x-lang's
+`tools/contract/compliance/guarantee-err-typed-raise.spec.md` is the
+executable form.
+
 `x_eval_make` does **not** build the ERR — it runs before the type registry
 exists, and x-eval must not depend on x-type (`tests/c/src/2.x-base.spec.c`
 pins that layering). `x_type_err_register` builds it at the first moment it

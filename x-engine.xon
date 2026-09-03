@@ -41,3 +41,4 @@
 (guarantee eval/tco)
 (guarantee str/nul-terminated)
 (guarantee int/ptr-same-width)
+(guarantee err/typed-raise)
