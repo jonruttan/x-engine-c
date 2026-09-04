@@ -493,13 +493,18 @@ static x_obj_t *x_prim_image_rebuild(x_obj_t *p_base, x_obj_t *p_args)
 
 		if (p_type == NULL)
 			p_type = x_obj_type(p_index);
-		/* Flags are NOT replayed from the file.  They describe an object
-		 * the allocator has not laid out -- metadata presence, heap
-		 * membership -- and handing them to x_obj_alloc claims a shape
-		 * that is not there.  A loader that needs SHARED or the meta bit
-		 * must set it after the object exists, not at birth. */
+		/* SHARED IS REPLAYED; nothing else is.  Most flags describe an
+		 * object the allocator has not laid out -- metadata presence,
+		 * heap membership -- so handing them to x_obj_alloc claims a
+		 * shape that is not there.  SHARED is different in kind: it is
+		 * not a description but a POLICY, "the collector may not sweep
+		 * this", and x-alist.c's bst_pair sets it on every node of the
+		 * global environment tree precisely because that tree outlives
+		 * every sweep.  A tree rebuilt without it is a tree the
+		 * collector is entitled to free. */
 		x_obj(x_obj_data_i(p_index, i)) = x_obj_alloc(p_base, p_type,
-			0, (size_t)(units < 1 ? 1 : units));
+			(x_obj_flag_t)(w[pos + 1] & X_OBJ_FLAG_SHARED),
+			(size_t)(units < 1 ? 1 : units));
 		pos += 2 + units;
 	}
 
