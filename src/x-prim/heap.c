@@ -459,7 +459,7 @@ static x_obj_t *x_prim_image_rebuild(x_obj_t *p_base, x_obj_t *p_args)
 	x_obj_t *p_statics, *p_blob, *p_index, *p_counts, *p_symti;
 	x_obj_t *p_type, *p_units, *p_obj;
 	const x_int_t *w;
-	x_int_t ostart, n, blob, nstat, pos, i, j, ti, units, v, k, given, symti;
+	x_int_t ostart, n, blob, nstat, nfor, pos, i, j, ti, units, v, k, given, symti;
 
 	x_eargs(p_base, p_args, 11, NULL, &p_buf, &p_ostart, &p_nobj,
 		&p_types, &p_foreign, &p_statics, &p_blob, &p_index, &p_counts,
@@ -470,6 +470,7 @@ static x_obj_t *x_prim_image_rebuild(x_obj_t *p_base, x_obj_t *p_args)
 	n = x_atomint(p_nobj);
 	blob = x_atomint(p_blob);
 	nstat = x_obj_units(p_base, p_statics);
+	nfor = x_obj_units(p_base, p_foreign);
 	symti = x_atomint(p_symti);
 
 	for (i = 1, pos = ostart; i <= n; i++) {
@@ -502,8 +503,18 @@ static x_obj_t *x_prim_image_rebuild(x_obj_t *p_base, x_obj_t *p_args)
 		 * global environment tree precisely because that tree outlives
 		 * every sweep.  A tree rebuilt without it is a tree the
 		 * collector is entitled to free. */
+		/* The ATTRIBUTE bits are semantic and must be replayed: WRAP says
+		 * a procedure is a wrapped applicative and is called through its
+		 * combiner, FRAME and FNFRAME say a spine cell is a lexical
+		 * frame, which is what symbol lookup's first step walks.  SHARED
+		 * is policy and RO advisory.  META, MARK and OWN are not
+		 * replayed: they describe a layout the allocator has not made,
+		 * the collector mid-write, and an allocation this object does
+		 * not own. */
 		x_obj(x_obj_data_i(p_index, i)) = x_obj_alloc(p_base, p_type,
-			(x_obj_flag_t)(w[pos + 1] & X_OBJ_FLAG_SHARED),
+			(x_obj_flag_t)(w[pos + 1] & (X_OBJ_FLAG_1 | X_OBJ_FLAG_2
+				| X_OBJ_FLAG_3 | X_OBJ_FLAG_4
+				| X_OBJ_FLAG_RO | X_OBJ_FLAG_SHARED)),
 			(size_t)(units < 1 ? 1 : units));
 		pos += 2 + units;
 	}
@@ -542,8 +553,16 @@ static x_obj_t *x_prim_image_rebuild(x_obj_t *p_base, x_obj_t *p_args)
 				x_ptr(x_obj_data_i(p_obj, j)) =
 					(void *)(blob + v + (x_int_t)sizeof(x_int_t));
 			} else if (k == X_TYPE_UNIT_FOREIGN) {
-				x_int(x_obj_data_i(p_obj, j)) =
-					(v > 0) ? x_image_int(x_obj(x_obj_data_i(p_foreign, v)), 0) : 0;
+				/* BOUNDS-CHECKED like the other two.  The writer emits
+				 * one past the table for an address it could not name,
+				 * so that a loader can refuse rather than restore a
+				 * silent nil -- and reading that sentinel AS an entry
+				 * walks off the end of the table.  The refusal has to
+				 * be honoured here or the sentinel is worse than the
+				 * nil it replaced. */
+				x_int(x_obj_data_i(p_obj, j)) = (v > 0 && v < nfor)
+					? x_image_int(x_obj(x_obj_data_i(p_foreign, v)), 0)
+					: 0;
 			} else {
 				x_int(x_obj_data_i(p_obj, j)) = v;
 			}
