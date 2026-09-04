@@ -450,27 +450,35 @@ static x_int_t x_image_kind(x_obj_t *p_units, x_int_t j)
  * would build a plausible wrong graph.
  *
  * @param p_base  Base (execution context).
- * @param p_args  Unevaluated: (self buf ostart nobj types foreign statics blob index counts symti).
+ * @param p_args  Unevaluated: (self buf ostart nobj types foreign statics blob index counts symti nfor nstat).
  * @return The index table, filled.
  */
 static x_obj_t *x_prim_image_rebuild(x_obj_t *p_base, x_obj_t *p_args)
 {
 	x_obj_t *p_buf, *p_ostart, *p_nobj, *p_types, *p_foreign;
 	x_obj_t *p_statics, *p_blob, *p_index, *p_counts, *p_symti;
+	x_obj_t *p_nfor, *p_nstat;
 	x_obj_t *p_type, *p_units, *p_obj;
 	const x_int_t *w;
 	x_int_t ostart, n, blob, nstat, nfor, pos, i, j, ti, units, v, k, given, symti;
 
-	x_eargs(p_base, p_args, 11, NULL, &p_buf, &p_ostart, &p_nobj,
+	x_eargs(p_base, p_args, 13, NULL, &p_buf, &p_ostart, &p_nobj,
 		&p_types, &p_foreign, &p_statics, &p_blob, &p_index, &p_counts,
-		&p_symti);
+		&p_symti, &p_nfor, &p_nstat);
 
 	w = (const x_int_t *)x_firstptr(p_buf);
 	ostart = x_atomint(p_ostart);
 	n = x_atomint(p_nobj);
 	blob = x_atomint(p_blob);
-	nstat = x_obj_units(p_base, p_statics);
-	nfor = x_obj_units(p_base, p_foreign);
+	/* THE CALLER STATES THE TABLE SIZES.  x_obj_units reports the TYPE's
+	 * declared unit count, not how many units an object was allocated
+	 * with -- these tables are allocated with the pair type, so it answers
+	 * 2 however large they are.  Bounds-checking against that silently
+	 * rejected every index above 1: all 1,271 callables in a rebuilt image
+	 * came back with a null call pointer, and every static reference came
+	 * back nil. */
+	nstat = x_atomint(p_nstat);
+	nfor = x_atomint(p_nfor);
 	symti = x_atomint(p_symti);
 
 	for (i = 1, pos = ostart; i <= n; i++) {
