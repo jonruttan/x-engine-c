@@ -367,6 +367,165 @@ static x_obj_t *x_prim_heap_chain_clear(x_obj_t *p_base, x_obj_t *p_args)
 		(x_obj_flag_t)x_atomint(p_flags));
 }
 
+
+/**
+ * @brief One object's unit count, from its type's declared shape.
+ *
+ * The count is the type's, not the file's: an image carries no length field,
+ * because (type set-shape!) already said how many units an instance has.  The
+ * negative form is k leading units plus a slot-0-counted payload, and slot 0
+ * is the first unit word of the record.
+ */
+/** @brief Unbox an INT atom from a caller-supplied table, or @p dflt when the
+ *  slot is empty.  X fills these tables through (obj set!), which stores an
+ *  OBJECT -- reading such a slot as a raw machine word reads the POINTER,
+ *  which is how a unit count once came back as 0x3020004fd9d28 and ASan
+ *  caught it at the allocation. */
+static x_int_t x_image_int(x_obj_t *p_val, x_int_t dflt)
+{
+	return (p_val == NULL) ? dflt : x_atomint(p_val);
+}
+
+static x_int_t x_image_units(x_obj_t *p_type, x_int_t given,
+	const x_int_t *w, x_int_t pos)
+{
+	x_obj_t *p_units;
+	x_int_t c;
+
+	/* The three NON-HEAP tags -- structural PAIR, static ATOM, nil-typed --
+	 * have no type to ask, so the caller states their count and this trusts
+	 * it.  Everything else asks the type, which is the whole point. */
+	if (given >= 0)
+		return given;
+
+	p_units = (p_type == NULL) ? NULL : x_type_field_units(p_type);
+	if (p_units == NULL)
+		return 0;
+
+	c = x_type_units_count(p_units);
+
+	return (c < 0) ? w[pos + 2] - c : c;
+}
+
+/** @brief The kind of unit @p j, from the type's mask. Units past the mask
+ *  repeat its last entry, which is what makes the -k form describable. */
+static x_int_t x_image_kind(x_obj_t *p_units, x_int_t j)
+{
+	x_int_t d, m;
+
+	if (p_units == NULL)
+		return X_TYPE_UNIT_WORD;
+
+	d = x_type_units_described(p_units);
+	m = x_type_units_mask(p_units);
+	if (d < 1)
+		d = 1;
+	if (j >= d)
+		j = d - 1;
+
+	return (m >> (X_TYPE_UNIT_BITS * j)) & ((1 << X_TYPE_UNIT_BITS) - 1);
+}
+
+/**
+ * @brief Rebuild an image's object graph.
+ * x-lang: (image rebuild! buf ostart nobj types foreign statics blob index)
+ *
+ * THE ONLY PART OF LOADING AN IMAGE THAT IS C, and it is here because it is
+ * the only part that is per-object.  Everything else -- verifying the header,
+ * resolving foreign names, walking base paths for the statics -- is per-entry
+ * work over a few hundred items, which X does in milliseconds.  This is two
+ * passes over ~90k records, which X does in ~30s while allocating garbage that
+ * nothing collects.
+ *
+ * The caller passes tables it has already resolved: @p types (slot i = the
+ * live type struct for type index i), @p foreign (slot i = the machine word to
+ * store), @p statics (slot i = the object a base path reached), and @p index,
+ * a pre-allocated table this fills with the rebuilt objects.  Allocating them
+ * here would mean choosing a type in C for a table that is X's business.
+ *
+ * A reference is an index: positive into @p index, negative into @p statics.
+ * Out of range is left nil rather than trusted -- the writer emits one-past
+ * each table for "nameable by nothing", and a loader that dereferenced that
+ * would build a plausible wrong graph.
+ *
+ * @param p_base  Base (execution context).
+ * @param p_args  Unevaluated: (self buf ostart nobj types foreign statics blob index counts).
+ * @return The index table, filled.
+ */
+static x_obj_t *x_prim_image_rebuild(x_obj_t *p_base, x_obj_t *p_args)
+{
+	x_obj_t *p_buf, *p_ostart, *p_nobj, *p_types, *p_foreign;
+	x_obj_t *p_statics, *p_blob, *p_index, *p_counts, *p_type, *p_units, *p_obj;
+	const x_int_t *w;
+	x_int_t ostart, n, blob, nstat, pos, i, j, ti, units, v, k, given;
+
+	x_eargs(p_base, p_args, 10, NULL, &p_buf, &p_ostart, &p_nobj,
+		&p_types, &p_foreign, &p_statics, &p_blob, &p_index, &p_counts);
+
+	w = (const x_int_t *)x_firstptr(p_buf);
+	ostart = x_atomint(p_ostart);
+	n = x_atomint(p_nobj);
+	blob = x_atomint(p_blob);
+	nstat = x_obj_units(p_base, p_statics);
+
+	for (i = 1, pos = ostart; i <= n; i++) {
+		ti = w[pos];
+		p_type = x_obj(x_obj_data_i(p_types, ti));
+		given = x_image_int(x_obj(x_obj_data_i(p_counts, ti)), -1);
+		units = x_image_units(p_type, given, w, pos);
+		if (p_type == NULL)
+			p_type = x_obj_type(p_index);
+		/* Flags are NOT replayed from the file.  They describe an object
+		 * the allocator has not laid out -- metadata presence, heap
+		 * membership -- and handing them to x_obj_alloc claims a shape
+		 * that is not there.  A loader that needs SHARED or the meta bit
+		 * must set it after the object exists, not at birth. */
+		x_obj(x_obj_data_i(p_index, i)) = x_obj_alloc(p_base, p_type,
+			0, (size_t)(units < 1 ? 1 : units));
+		pos += 2 + units;
+	}
+
+	for (i = 1, pos = ostart; i <= n; i++) {
+		ti = w[pos];
+		p_type = x_obj(x_obj_data_i(p_types, ti));
+		given = x_image_int(x_obj(x_obj_data_i(p_counts, ti)), -1);
+		p_units = (p_type == NULL) ? NULL : x_type_field_units(p_type);
+		units = x_image_units(p_type, given, w, pos);
+		p_obj = x_obj(x_obj_data_i(p_index, i));
+
+		for (j = 0; j < units; j++) {
+			v = w[pos + 2 + j];
+			/* A stated count means a tag: two units are a pair's
+			 * references, one is a word.  Mirrors %over-tw. */
+			k = (given >= 0)
+				? ((given == 2) ? X_TYPE_UNIT_REF : X_TYPE_UNIT_WORD)
+				: x_image_kind(p_units, j);
+
+			if (k == X_TYPE_UNIT_REF) {
+				if (v > 0 && v <= n)
+					x_obj(x_obj_data_i(p_obj, j)) =
+						x_obj(x_obj_data_i(p_index, v));
+				else if (v < 0 && -v <= nstat)
+					x_obj(x_obj_data_i(p_obj, j)) =
+						x_obj(x_obj_data_i(p_statics, -v));
+				else
+					x_obj(x_obj_data_i(p_obj, j)) = NULL;
+			} else if (k == X_TYPE_UNIT_BYTES) {
+				x_ptr(x_obj_data_i(p_obj, j)) =
+					(void *)(blob + v + (x_int_t)sizeof(x_int_t));
+			} else if (k == X_TYPE_UNIT_FOREIGN) {
+				x_int(x_obj_data_i(p_obj, j)) =
+					(v > 0) ? x_image_int(x_obj(x_obj_data_i(p_foreign, v)), 0) : 0;
+			} else {
+				x_int(x_obj_data_i(p_obj, j)) = v;
+			}
+		}
+		pos += 2 + units;
+	}
+
+	return p_index;
+}
+
 /** Register the GC primitives. */
 x_obj_t *x_prim_heap_register(x_obj_t *p_base, x_obj_t *p_args)
 {
@@ -381,7 +540,8 @@ x_obj_t *x_prim_heap_register(x_obj_t *p_base, x_obj_t *p_args)
 		{ "heap-mark-root!", x_prim_heap_mark_root,    "heap", "mark-root!"     },
 		{ "gc-pin!",         x_prim_system_mark,       "heap", "pin!"           },
 		{ "heap-tree-mark!", x_prim_heap_tree_mark,    "heap", "tree-mark!"     },
-		{ "heap-chain-clear!", x_prim_heap_chain_clear, "heap", "chain-clear!"  }
+		{ "heap-chain-clear!", x_prim_heap_chain_clear, "heap", "chain-clear!" },
+		{ "image-rebuild!",  x_prim_image_rebuild,     "image", "rebuild!"      }
 	};
 
 	x_prims_bind_table(p_base, entries,
