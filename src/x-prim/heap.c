@@ -318,6 +318,55 @@ static x_obj_t *x_prim_heap_mark_root(x_obj_t *p_base, x_obj_t *p_args)
 }
 
 
+/**
+ * @brief Mark a tree with caller-chosen flags. x-lang: (heap tree-mark! obj flags)
+ *
+ * x_heap_tree_mark is the collector's own traversal, and it takes the flag it
+ * sets as a parameter.  Exposed, it answers a question no walk written in
+ * x-lang can: what is reachable from here, counting the base sentinel, the
+ * custom mark handlers, the mark hooks and the root chain.
+ *
+ * WHICH FLAG IS THE CALLER'S PROBLEM, and the caller had better not pick one
+ * the collector owns: the flag doubles as the traversal's visited test, so
+ * X_OBJ_FLAG_SHARED halts at the first base-tree node, and a leftover
+ * X_OBJ_FLAG_MARK makes the next mark phase stop short and its sweep free the
+ * children it missed.  The layout descriptor names a bit reserved for this.
+ *
+ * @param p_base  Base (execution context).
+ * @param p_args  Unevaluated: (self obj flags).
+ * @return The object marked from.
+ */
+static x_obj_t *x_prim_heap_tree_mark(x_obj_t *p_base, x_obj_t *p_args)
+{
+	x_obj_t *p_obj, *p_flags;
+
+	x_eargs(p_base, p_args, 3, NULL, &p_obj, &p_flags);
+	x_heap_tree_mark(p_base, p_obj, (x_obj_flag_t)x_atomint(p_flags));
+
+	return p_obj;
+}
+
+/**
+ * @brief Clear flags across the allocation chain. x-lang: (heap chain-clear! flags)
+ *
+ * The counterpart to the above: sweeping would clear the flag too, but
+ * sweeping also frees.  A chain clear reaches every object, including whatever
+ * became garbage since the mark, which a tree walk would leave flagged.
+ *
+ * @param p_base  Base (execution context).
+ * @param p_args  Unevaluated: (self flags).
+ * @return nil.
+ */
+static x_obj_t *x_prim_heap_chain_clear(x_obj_t *p_base, x_obj_t *p_args)
+{
+	x_obj_t *p_flags;
+
+	x_eargs(p_base, p_args, 2, NULL, &p_flags);
+
+	return x_heap_chain_clear(x_obj_heap(p_base),
+		(x_obj_flag_t)x_atomint(p_flags));
+}
+
 /** Register the GC primitives. */
 x_obj_t *x_prim_heap_register(x_obj_t *p_base, x_obj_t *p_args)
 {
@@ -330,7 +379,9 @@ x_obj_t *x_prim_heap_register(x_obj_t *p_base, x_obj_t *p_args)
 		{ "heap-mark-hook!", x_prim_heap_mark_hook,    "heap", "mark-hook!"     },
 		{ "heap-free-hook!", x_prim_heap_free_hook,    "heap", "free-hook!"     },
 		{ "heap-mark-root!", x_prim_heap_mark_root,    "heap", "mark-root!"     },
-		{ "gc-pin!",         x_prim_system_mark,       "heap", "pin!"           }
+		{ "gc-pin!",         x_prim_system_mark,       "heap", "pin!"           },
+		{ "heap-tree-mark!", x_prim_heap_tree_mark,    "heap", "tree-mark!"     },
+		{ "heap-chain-clear!", x_prim_heap_chain_clear, "heap", "chain-clear!"  }
 	};
 
 	x_prims_bind_table(p_base, entries,
