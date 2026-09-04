@@ -82,6 +82,17 @@
   (heap mark-hook! gc)
   (heap mark-root! gc)
   (heap pin! gc)
+  (heap tree-mark! gc)        ; the collector's own tree traversal, with the flag to set as an
+                              ;   argument.  The one way to ask what is reachable from an object
+                              ;   and get an answer that counts the base sentinel, the custom mark
+                              ;   handlers, the hooks and the root chain -- an X walk sees none of
+                              ;   them, and a structural pair in a base spine can hold a raw C
+                              ;   function pointer that following would dereference.  WHICH flag is
+                              ;   X's problem: the collector owns SHARED and MARK, and the layout
+                              ;   descriptor names a bit reserved for callers.
+  (heap chain-clear! gc)      ; clear flags across the allocation chain, freeing nothing.  Sweeping
+                              ;   clears too, but sweeping frees; and a tree clear would miss
+                              ;   whatever became garbage since the mark.
   (heap sweep gc)
   (int % raw-op)
   (int & raw-op)
