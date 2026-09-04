@@ -16,6 +16,7 @@
 #include "x-type.h"
 #include "x-type/int.h"
 #include "x-type/str.h"
+#include "x-type/symbol.h"
 #include "x-obj/prim.h"
 
 /** Fire each hook on a hook list, draining any deferred tail call.  Shared
@@ -449,30 +450,47 @@ static x_int_t x_image_kind(x_obj_t *p_units, x_int_t j)
  * would build a plausible wrong graph.
  *
  * @param p_base  Base (execution context).
- * @param p_args  Unevaluated: (self buf ostart nobj types foreign statics blob index counts).
+ * @param p_args  Unevaluated: (self buf ostart nobj types foreign statics blob index counts symti).
  * @return The index table, filled.
  */
 static x_obj_t *x_prim_image_rebuild(x_obj_t *p_base, x_obj_t *p_args)
 {
 	x_obj_t *p_buf, *p_ostart, *p_nobj, *p_types, *p_foreign;
-	x_obj_t *p_statics, *p_blob, *p_index, *p_counts, *p_type, *p_units, *p_obj;
+	x_obj_t *p_statics, *p_blob, *p_index, *p_counts, *p_symti;
+	x_obj_t *p_type, *p_units, *p_obj;
 	const x_int_t *w;
-	x_int_t ostart, n, blob, nstat, pos, i, j, ti, units, v, k, given;
+	x_int_t ostart, n, blob, nstat, pos, i, j, ti, units, v, k, given, symti;
 
-	x_eargs(p_base, p_args, 10, NULL, &p_buf, &p_ostart, &p_nobj,
-		&p_types, &p_foreign, &p_statics, &p_blob, &p_index, &p_counts);
+	x_eargs(p_base, p_args, 11, NULL, &p_buf, &p_ostart, &p_nobj,
+		&p_types, &p_foreign, &p_statics, &p_blob, &p_index, &p_counts,
+		&p_symti);
 
 	w = (const x_int_t *)x_firstptr(p_buf);
 	ostart = x_atomint(p_ostart);
 	n = x_atomint(p_nobj);
 	blob = x_atomint(p_blob);
 	nstat = x_obj_units(p_base, p_statics);
+	symti = x_atomint(p_symti);
 
 	for (i = 1, pos = ostart; i <= n; i++) {
 		ti = w[pos];
 		p_type = x_obj(x_obj_data_i(p_types, ti));
 		given = x_image_int(x_obj(x_obj_data_i(p_counts, ti)), -1);
 		units = x_image_units(p_type, given, w, pos);
+
+		/* A SYMBOL IS REACQUIRED, NOT REBUILT.  Symbols are interned and
+		 * the evaluator resolves them by pointer identity, so a freshly
+		 * allocated one is a key nothing in the loading process can
+		 * match -- every binding in a restored environment would be
+		 * unreachable while looking perfectly well-formed.  Interning by
+		 * name is the same rule the foreign table follows. */
+		if (ti == symti) {
+			x_obj(x_obj_data_i(p_index, i)) = x_make_symbol(p_base, 0,
+				(x_char_t *)(blob + w[pos + 2] + (x_int_t)sizeof(x_int_t)));
+			pos += 2 + units;
+			continue;
+		}
+
 		if (p_type == NULL)
 			p_type = x_obj_type(p_index);
 		/* Flags are NOT replayed from the file.  They describe an object
@@ -492,6 +510,11 @@ static x_obj_t *x_prim_image_rebuild(x_obj_t *p_base, x_obj_t *p_args)
 		p_units = (p_type == NULL) ? NULL : x_type_field_units(p_type);
 		units = x_image_units(p_type, given, w, pos);
 		p_obj = x_obj(x_obj_data_i(p_index, i));
+
+		if (ti == symti) {	/* interned above; its bytes are its own */
+			pos += 2 + units;
+			continue;
+		}
 
 		for (j = 0; j < units; j++) {
 			v = w[pos + 2 + j];
