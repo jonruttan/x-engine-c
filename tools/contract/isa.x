@@ -103,6 +103,7 @@
   (int ->ptr ffi)
   (int / raw-op)
   (int < raw-op)
+  (int abs raw-op)            ; x_lib_abs
   (int << raw-op)
   (int = raw-op)
   (int >> raw-op)
@@ -153,7 +154,19 @@
   (ptr ref-word raw-mem)
   (ptr set! raw-mem)
   (ptr set-word! raw-mem)
-  (ptr copy! raw-mem)         ; the engine's own memcpy (x_lib_memcpy).  Without it the
+  (ptr alloc raw-mem)         ; x_sys_malloc, the engine's own allocator -- the one every
+                              ;   other part of the engine uses.  Unreachable from X, so X
+                              ;   code wanting a scratch buffer reached libc through dlsym.
+                              ;   (obj make) is not the answer for a buffer: it allocates
+                              ;   through the COLLECTOR, so an image writer's workspace
+                              ;   would land inside the image it writes.
+  (ptr free! raw-mem)         ; x_sys_free; the caller owns what (ptr alloc) returns.
+  (ptr copy! raw-mem)
+  (ptr strlen raw-mem)        ; x_lib_strlen, and the four below: the engine's own C
+  (ptr strcmp raw-mem)        ;   library, on RAW memory rather than x-lang strings, which
+  (ptr strncmp raw-mem)       ;   is why they are filed here and not under `str`.
+  (ptr strchr raw-mem)
+  (ptr strndup raw-mem)       ; the caller owns the result; (ptr free!) releases it.         ; the engine's own memcpy (x_lib_memcpy).  Without it the
                               ;   only ways to move bytes were libc through dlsym -- a
                               ;   system library a runtime cannot assume is present -- or
                               ;   a per-byte loop in X, which costs hundreds of evals a
@@ -173,6 +186,14 @@
                               ;   Added 2026-07-15 (user-approved: make-str for File/FFI/buffers)
   (sym ->str alloc)
   (sys clock sys)
+  (sys read sys)              ; x_sys_read/write over a POINTER and a length.  (io ...) and
+  (sys write sys)             ;   the library's Sys class work in strings, which cannot
+                              ;   carry binary -- an image is NULs and all -- so this was
+                              ;   the door that sent X code to libc through dlsym.
+  (sys open sys)
+  (sys close sys)
+  (sys read-char sys)
+  (sys exit sys)
   (tok read tok)
   (tok read-str tok)
   (type ? hot)                ; derived (tag compare) but HOT: runs per `do` form (dotted-body validator)
