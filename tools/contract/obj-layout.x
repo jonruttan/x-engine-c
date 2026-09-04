@@ -46,11 +46,17 @@
 ; Low nibble: general-purpose attribute bits.  Their MEANING is per-type:
 ; flag-1 is WRAP on procedures (wrapped applicative) and SHADOW on env
 ; pairs; flag-2 is COV.  The x-eval layer owns those aliases.
-(def %obj-flag-attr-mask 15)    ; 0x0F
+(def %obj-flag-attr-mask 31)    ; 0x1F  covers flag-5, and so overlaps the
+                                ;   simple-type base -- the two are alternative
+                                ;   readings of the same low-order bits
 (def %obj-flag-1 1)             ; 0x01  WRAP / SHADOW
 (def %obj-flag-2 2)             ; 0x02  COV
 (def %obj-flag-3 4)             ; 0x04
 (def %obj-flag-4 8)             ; 0x08
+(def %obj-flag-5 16)            ; 0x10  a fifth attribute bit, ABOVE attr-mask
+                                ;   and sharing its value with the simple-type
+                                ;   base: unusable on an object that carries a
+                                ;   simple type
 ; Simple-type code (advisory tag for C consumers; NOT the type slot)
 (def %obj-flag-simple-type 16)  ; 0x10  marker bit: a simple-type code follows
 (def %obj-flag-prim 16)         ; 0x10
