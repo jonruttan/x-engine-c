@@ -24,6 +24,7 @@
  * # Includes
  */
 #include "x-prim.h"
+#include "x-stdlib.h"
 #include "x-eval.h"
 #include "x-type/int.h"
 #include "x-type/prim.h"
@@ -642,6 +643,54 @@ static x_obj_t *x_prim_ptr_ref(x_obj_t *p_base, x_obj_t *p_args)
 	return x_mkint(p_base, val);
 }
 
+
+/**
+ * @brief Copy @p n bytes between raw regions. x-lang: (ptr copy! dst src n)
+ *
+ * The engine has its own memcpy (x_lib_memcpy); reaching dlopen/dlsym for
+ * libc's is borrowing a system library a runtime cannot assume is present.
+ * The alternative in X is a per-byte loop, which costs hundreds of evals a
+ * byte -- so without this coordinate the only options were a hack or a
+ * pathology.
+ *
+ * @param p_base  Base (execution context).
+ * @param p_args  Unevaluated: (self dst src n).
+ * @return The destination pointer object.
+ * @note No bounds checking: the C layer is a CPU.
+ */
+static x_obj_t *x_prim_ptr_copy(x_obj_t *p_base, x_obj_t *p_args)
+{
+	x_obj_t *p_dst, *p_src, *p_n;
+
+	x_eargs(p_base, p_args, 4, NULL, &p_dst, &p_src, &p_n);
+	x_lib_memcpy(x_ptrval(p_dst), x_ptrval(p_src),
+		(size_t)x_intval(p_n));
+
+	return p_dst;
+}
+
+/**
+ * @brief Set @p n bytes to @p byte. x-lang: (ptr fill! p byte n)
+ *
+ * The zeroing half of the same argument: a buffer wanted zeroed had to come
+ * from libc's calloc for want of this.
+ *
+ * @param p_base  Base (execution context).
+ * @param p_args  Unevaluated: (self ptr byte n).
+ * @return The pointer object.
+ * @note No bounds checking: the C layer is a CPU.
+ */
+static x_obj_t *x_prim_ptr_fill(x_obj_t *p_base, x_obj_t *p_args)
+{
+	x_obj_t *p_ptr, *p_byte, *p_n;
+
+	x_eargs(p_base, p_args, 4, NULL, &p_ptr, &p_byte, &p_n);
+	x_lib_memset(x_ptrval(p_ptr), (int)x_intval(p_byte),
+		(size_t)x_intval(p_n));
+
+	return p_ptr;
+}
+
 /**
  * @brief Write a machine-word-sized value into raw memory at ptr+offset.
  *
@@ -849,6 +898,8 @@ x_obj_t *x_prim_ffi_register(x_obj_t *p_base, x_obj_t *p_args)
 		{ "ptr-ref",         x_prim_ptr_ref,            "ptr", "ref"           },
 		{ "ptr-ref-word",    x_prim_ptr_ref_word,       "ptr", "ref-word"      },
 		{ "ptr-set-word!",   x_prim_ptr_set_word,       "ptr", "set-word!"     },
+		{ "ptr-copy!",       x_prim_ptr_copy,           "ptr", "copy!"         },
+		{ "ptr-fill!",       x_prim_ptr_fill,           "ptr", "fill!"         },
 		{ "obj->ptr",        x_prim_obj_to_ptr,         "obj", "->ptr"         },
 		{ "ptr->obj",        x_prim_ptr_to_obj,         "ptr", "->obj"         },
 		{ "str->ptr",        x_prim_string_to_ptr,      "str", "->ptr"         },

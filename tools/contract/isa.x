@@ -147,6 +147,14 @@
   (ptr ref-word raw-mem)
   (ptr set! raw-mem)
   (ptr set-word! raw-mem)
+  (ptr copy! raw-mem)         ; the engine's own memcpy (x_lib_memcpy).  Without it the
+                              ;   only ways to move bytes were libc through dlsym -- a
+                              ;   system library a runtime cannot assume is present -- or
+                              ;   a per-byte loop in X, which costs hundreds of evals a
+                              ;   byte.  A hack or a pathology, for a routine the engine
+                              ;   already had.
+  (ptr fill! raw-mem)         ; x_lib_memset; the zeroing half, so a buffer that wants
+                              ;   zeroing need not come from libc's calloc.
   (str ->ptr ffi)
   (str ->sym alloc)
   (str append alloc)
