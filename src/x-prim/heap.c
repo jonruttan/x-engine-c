@@ -15,6 +15,7 @@
 #include "x-heap.h"
 #include "x-type.h"
 #include "x-type/int.h"
+#include "x-type/ptr.h"
 #include "x-type/str.h"
 #include "x-type/symbol.h"
 #include "x-obj/prim.h"
@@ -451,7 +452,7 @@ static x_int_t x_image_kind(x_obj_t *p_units, x_int_t j)
  *
  * @param p_base  Base (execution context).
  * @param p_args  Unevaluated: (self buf ostart nobj types foreign statics blob index counts symti nfor nstat).
- * @return The index table, filled.
+ * @return The index table pointer, filled.
  */
 static x_obj_t *x_prim_image_rebuild(x_obj_t *p_base, x_obj_t *p_args)
 {
@@ -460,6 +461,7 @@ static x_obj_t *x_prim_image_rebuild(x_obj_t *p_base, x_obj_t *p_args)
 	x_obj_t *p_nfor, *p_nstat;
 	x_obj_t *p_type, *p_units, *p_obj;
 	const x_int_t *w;
+	x_obj_t **ix;
 	x_int_t ostart, n, blob, nstat, nfor, pos, i, j, ti, units, v, k, given, symti;
 
 	x_eargs(p_base, p_args, 13, NULL, &p_buf, &p_ostart, &p_nobj,
@@ -477,6 +479,13 @@ static x_obj_t *x_prim_image_rebuild(x_obj_t *p_base, x_obj_t *p_args)
 	 * rejected every index above 1: all 1,271 callables in a rebuilt image
 	 * came back with a null call pointer, and every static reference came
 	 * back nil. */
+	/* THE INDEX TABLE IS RAW MEMORY, not an object.  Allocating an object
+	 * of ~95k units for it cost 612ms of a 1.5s load -- more than every
+	 * other phase combined and eighty times the rebuild itself.  Nothing
+	 * needs the collector to see it: the objects are on the heap chain
+	 * from the moment they are allocated, and nothing collects between
+	 * here and the caller installing them. */
+	ix = (x_obj_t **)x_ptrval(p_index);
 	nstat = x_atomint(p_nstat);
 	nfor = x_atomint(p_nfor);
 	symti = x_atomint(p_symti);
@@ -494,7 +503,7 @@ static x_obj_t *x_prim_image_rebuild(x_obj_t *p_base, x_obj_t *p_args)
 		 * unreachable while looking perfectly well-formed.  Interning by
 		 * name is the same rule the foreign table follows. */
 		if (ti == symti) {
-			x_obj(x_obj_data_i(p_index, i)) = x_make_symbol(p_base, 0,
+			ix[i] = x_make_symbol(p_base, 0,
 				(x_char_t *)(blob + w[pos + 2] + (x_int_t)sizeof(x_int_t)));
 			pos += 2 + units;
 			continue;
@@ -519,7 +528,7 @@ static x_obj_t *x_prim_image_rebuild(x_obj_t *p_base, x_obj_t *p_args)
 		 * replayed: they describe a layout the allocator has not made,
 		 * the collector mid-write, and an allocation this object does
 		 * not own. */
-		x_obj(x_obj_data_i(p_index, i)) = x_obj_alloc(p_base, p_type,
+		ix[i] = x_obj_alloc(p_base, p_type,
 			(x_obj_flag_t)(w[pos + 1] & (X_OBJ_FLAG_1 | X_OBJ_FLAG_2
 				| X_OBJ_FLAG_3 | X_OBJ_FLAG_4
 				| X_OBJ_FLAG_RO | X_OBJ_FLAG_SHARED)),
@@ -533,7 +542,7 @@ static x_obj_t *x_prim_image_rebuild(x_obj_t *p_base, x_obj_t *p_args)
 		given = x_image_int(x_obj(x_obj_data_i(p_counts, ti)), -1);
 		p_units = (p_type == NULL) ? NULL : x_type_field_units(p_type);
 		units = x_image_units(p_type, given, w, pos);
-		p_obj = x_obj(x_obj_data_i(p_index, i));
+		p_obj = ix[i];
 
 		if (ti == symti) {	/* interned above; its bytes are its own */
 			pos += 2 + units;
@@ -550,8 +559,7 @@ static x_obj_t *x_prim_image_rebuild(x_obj_t *p_base, x_obj_t *p_args)
 
 			if (k == X_TYPE_UNIT_REF) {
 				if (v > 0 && v <= n)
-					x_obj(x_obj_data_i(p_obj, j)) =
-						x_obj(x_obj_data_i(p_index, v));
+					x_obj(x_obj_data_i(p_obj, j)) = ix[v];
 				else if (v < 0 && -v <= nstat)
 					x_obj(x_obj_data_i(p_obj, j)) =
 						x_obj(x_obj_data_i(p_statics, -v));
