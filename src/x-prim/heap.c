@@ -560,10 +560,18 @@ static x_obj_t *x_prim_image_rebuild(x_obj_t *p_base, x_obj_t *p_args)
 			if (k == X_TYPE_UNIT_REF) {
 				if (v > 0 && v <= n)
 					x_obj(x_obj_data_i(p_obj, j)) = ix[v];
-				else if (v < 0 && -v <= nstat)
+				else if (v < 0 && -v < nstat)
 					x_obj(x_obj_data_i(p_obj, j)) =
 						x_obj(x_obj_data_i(p_statics, -v));
 				else
+					/* -nstat is the writer's sentinel for a reference
+					 * it could not name -- one past the table, like
+					 * the foreign sentinel below -- and reading it AS
+					 * an entry is a word past the statics object.
+					 * That word held whatever the allocator left,
+					 * and it sat unnoticed in every object nothing
+					 * traversed until the type stacks were installed
+					 * and the collector walked through it. */
 					x_obj(x_obj_data_i(p_obj, j)) = NULL;
 			} else if (k == X_TYPE_UNIT_BYTES) {
 				x_ptr(x_obj_data_i(p_obj, j)) =
