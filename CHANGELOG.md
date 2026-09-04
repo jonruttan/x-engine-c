@@ -11,6 +11,43 @@ alongside the library changes they landed with.
 [x-lang]: https://github.com/jonruttan/x-lang
 [x-changelog]: https://github.com/jonruttan/x-lang/blob/main/CHANGELOG.md
 
+## 0.2.3 — 2026-09-04
+
+**Ask the collector what is reachable** ([#33]). A consumer that needs to know
+what a base can reach cannot work it out by walking. Measured against a booted
+helium: a reachability walk written in x-lang reaches 33,823 objects of 85,466
+live. It cannot see the base sentinel, the custom mark handlers, the mark hooks
+or the root chain — and a structural pair in the base spine can hold a raw C
+function pointer, which following dereferences.
+
+The collector already computes the answer, and `x_heap_tree_mark` already takes
+the flag it sets as a parameter. So two coordinates, and nothing more than the
+functions behind them:
+
+    (heap tree-mark! obj flags)    mark a tree with flags of the caller's choosing
+    (heap chain-clear! flags)      clear them again, freeing nothing
+
+Which flag is the caller's problem. The collector owns `SHARED` and `MARK`, so
+a caller picks a bit above them and names it in its own source. Getting that
+wrong has two shapes worth knowing: the flag doubles as the traversal's visited
+test, so `SHARED` halts at the first base-tree node — two objects marked, out
+of 85,431 live — and a leftover `MARK` makes the next mark phase stop short and
+its sweep free the children it missed.
+
+A **chain** clear rather than a tree one, and rather than an unset mode on the
+walker. The mark hooks call back into `x_heap_tree_mark` with the flags they
+are handed, so an unset mode would have hooks *setting* the flag on children
+unless the mode threaded through every hook signature. And a tree reaches only
+what is still reachable, so anything that became garbage since the mark would
+keep the flag for good.
+
+Through the coordinates: 0 marked, then 79,407 of 83,521 chain objects after
+marking from the base, then 0 again after the clear. The 4,114 not marked are
+the caller's own state and garbage — what a heap reader wants left out.
+
+x-expr gains `x_heap_chain_clear` and a fifth general-purpose attribute bit
+(`X_OBJ_FLAG_5`, with `X_OBJ_FLAG_ATTR_MASK` widened to `0x1F`).
+
 ## 0.2.2 — 2026-09-03
 
 The declaration matches the ISA again.
@@ -105,6 +142,7 @@ The declaration matches the ISA again.
 
 [#27]: https://github.com/jonruttan/x-engine-c/pull/27
 [#30]: https://github.com/jonruttan/x-engine-c/pull/30
+[#33]: https://github.com/jonruttan/x-engine-c/pull/33
 
 ## 0.2.1 — 2026-09-03
 
