@@ -109,6 +109,12 @@
   (int ^ raw-op)
   (int | raw-op)
   (int ~ raw-op)
+  (image rebuild! alloc)      ; allocate and patch every object of a state image.  The only
+                              ;   per-object half of loading one; everything else -- header,
+                              ;   foreign names, base paths -- is per-entry work X does in
+                              ;   milliseconds.  In X the same two passes take ~30s and
+                              ;   exhaust memory, because collection is manual and a
+                              ;   per-object interpreted loop has nowhere safe to collect.
   (io read io)
   (io read-char io)
   (io repl-read io)
