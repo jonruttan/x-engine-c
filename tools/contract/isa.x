@@ -88,8 +88,8 @@
                               ;   handlers, the hooks and the root chain -- an X walk sees none of
                               ;   them, and a structural pair in a base spine can hold a raw C
                               ;   function pointer that following would dereference.  WHICH flag is
-                              ;   X's problem: the collector owns SHARED and MARK, and the layout
-                              ;   descriptor names a bit reserved for callers.
+                              ;   X's problem: the collector owns SHARED and MARK, so a caller picks
+                              ;   a bit above them and names it in its own source.
   (heap chain-clear! gc)      ; clear flags across the allocation chain, freeing nothing.  Sweeping
                               ;   clears too, but sweeping frees; and a tree clear would miss
                               ;   whatever became garbage since the mark.

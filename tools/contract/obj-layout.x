@@ -73,8 +73,3 @@
 ; X_HEAP-only bits
 (def %obj-flag-shared 256)      ; 0x100
 (def %obj-flag-mark 512)        ; 0x200  the GC mark bit (was %obj-flag-heap pre-B1)
-(def %obj-flag-trace 1024)      ; 0x400  a reachability bit for CONSUMERS; the
-                                ;   collector never reads it.  (heap trace! o)
-                                ;   sets it over everything reachable from o
-                                ;   using the collector's own traversal, and
-                                ;   (heap untrace!) clears it from the chain.
