@@ -231,6 +231,11 @@ static char *test_type_buffer_save_load(void)
 	x_bufferread(p_buffer) = x_bufferval(p_buffer) + 2;
 	x_bufferwrite(p_buffer) = x_bufferval(p_buffer) + 5;
 
+	_it_should("mark the inner and not the outer with the inner flag",
+		(x_obj_flags(p_inner) & X_TYPE_BUFFER_FLAG_INNER) != 0
+		&& (x_obj_flags(p_buffer) & X_TYPE_BUFFER_FLAG_INNER) == 0
+	);
+
 	x_type_buffer_save(p_base, save_args(p_base, p_buffer, outer));
 	_it_should("save the outer as its bytes, its inner and the consumed count",
 		outer[0] == 3

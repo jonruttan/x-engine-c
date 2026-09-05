@@ -29,6 +29,16 @@
 
 #ifndef X_TYPE_BUFFER_NAME
 #define X_TYPE_BUFFER_NAME		"BUFFER"     /**< Canonical type name (overridable). */
+
+/**
+ * The flag that marks a buffer's INNER object, (read . write), apart from
+ * its outer, (bytes . inner).  Both are BUFFER-typed, and the inner's two
+ * slots are raw pointers into the bytes, so nothing may read them as
+ * objects to tell the two apart: the make sets this bit on the inner, and
+ * the save reads it.  It shares its bit with the evaluator's
+ * #X_OBJ_FLAG_FNFRAME, which marks env spine cells; a buffer is never one.
+ */
+#define X_TYPE_BUFFER_FLAG_INNER	X_OBJ_FLAG_4
 #endif /* X_TYPE_BUFFER_NAME */
 
 
