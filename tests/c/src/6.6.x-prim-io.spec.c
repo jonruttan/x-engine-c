@@ -54,6 +54,7 @@
 
 #include "src/x-prim/io.c"
 #include "src/x-prim/heap.c"
+#include "src/x-prim/image.c"
 
 /* Stubs for primitives not under test. */
 x_obj_t *x_prim_core_register(x_obj_t *p_base, x_obj_t *p_args) { return p_base; }

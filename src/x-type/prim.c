@@ -15,7 +15,6 @@
 #include "x-type/procedure.h"
 #include "x-type/operative.h"
 #include "x-eval.h"
-#include "x-prim.h"
 
 x_satom_t x_type_prim_name = x_obj_set(x_type_atom_obj, X_OBJ_FLAG_NONE, { .s = (x_char_t *)X_TYPE_PRIM_NAME }),
 	x_type_prim_make_prim = x_obj_set(x_type_atom_obj, X_OBJ_FLAG_NONE, { (x_obj_t *)&x_type_prim_make }),
@@ -51,9 +50,23 @@ x_obj_t *x_make_prim(x_obj_t *p_base, x_obj_flag_t flags, x_fn_t fn)
  * @param p_args  Unused.
  * @return Type struct pair-tree for PRIMITIVE.
  */
+/* Image save (docs/state-image-format.md): the function pointer, then the
+ * rest -- an address C owns when it is anything; the collector never
+ * traces it, so neither may an image. */
+x_obj_t *x_type_prim_save(x_obj_t *p_base, x_obj_t *p_args)
+{
+	static const int kinds[] = { X_TYPE_UNIT_FOREIGN, X_TYPE_UNIT_FOREIGN };
+	x_obj_t *p_obj = x_firstobj(p_args);
+	x_obj_t *p_buf = x_firstobj(x_restobj(p_args));
+
+	return x_type_save_units(p_obj, (x_int_t *)x_firstptr(p_buf), 2, kinds, 2);
+}
+x_satom_t x_type_prim_save_prim = x_obj_set(x_type_atom_obj, X_OBJ_FLAG_NONE, { (x_obj_t *)&x_type_prim_save });
+
 x_obj_t *x_type_prim_struct(x_obj_t *p_base, x_obj_t *p_args)
 {
 	struct x_type_t type = {
+		.p_save = (x_obj_t *)x_type_prim_save_prim,
 		.p_name = x_type_prim_name,
 		.p_make = x_type_prim_make_prim,
 		.p_call = x_callable_call_prim

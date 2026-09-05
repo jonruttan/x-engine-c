@@ -77,9 +77,63 @@ x_obj_t *x_type_buffer_mark(x_obj_t *p_base, x_obj_t *p_args)
  * @param p_args  Unused.
  * @return Type struct pair-tree for BUFFER.
  */
+/* Image save: the outer is (bytes . inner); the inner is (read . write),
+ * pointers into those bytes, saved as OFFSETS -- an inner is told apart
+ * from an outer by its rest slot pointing back into the same region. */
+x_obj_t *x_type_buffer_save(x_obj_t *p_base, x_obj_t *p_args)
+{
+	x_obj_t *p_obj = x_firstobj(p_args);
+	x_obj_t *p_buf = x_firstobj(x_restobj(p_args));
+	x_obj_t *p_rest;
+	x_int_t *buf;
+	x_char_t *val;
+
+	buf = (x_int_t *)x_firstptr(p_buf);
+	p_rest = x_restobj(p_obj);
+	if (p_rest != NULL && x_obj_type(p_rest) == x_obj_type(p_obj)) {
+		/* outer: (val . inner) */
+		buf[0] = 2;
+		buf[1] = X_TYPE_UNIT_BYTES; buf[2] = (x_int_t)x_firststr(p_obj);
+		buf[3] = X_TYPE_UNIT_REF;   buf[4] = (x_int_t)p_rest;
+	} else {
+		/* inner: (read . write) as offsets from the outer's val, which is
+		 * the smaller of the two pointers' region start -- read is never
+		 * below val, so val is recovered as read minus the unread-so-far
+		 * count the outer's load re-adds.  Offsets are what survive. */
+		val = x_firststr(p_obj);
+		buf[0] = 2;
+		buf[1] = X_TYPE_UNIT_WORD;  buf[2] = 0;
+		buf[3] = X_TYPE_UNIT_WORD;  buf[4] = (x_int_t)(x_reststr(p_obj) - val);
+	}
+
+	return p_obj;
+}
+x_satom_t x_type_buffer_save_prim = x_obj_set(x_type_atom_obj, X_OBJ_FLAG_NONE, { (x_obj_t *)&x_type_buffer_save });
+
+/* The inner object saved its read/write pointers as OFFSETS from val (its
+ * own save cannot know val is being re-based); the outer re-bases them. */
+x_obj_t *x_type_buffer_load(x_obj_t *p_base, x_obj_t *p_args)
+{
+	x_obj_t *p_obj = x_firstobj(p_args);
+	x_obj_t *p_inner;
+	x_char_t *val;
+
+	p_inner = x_restobj(p_obj);
+	val = x_bufferval(p_obj);
+	if (p_inner != NULL && val != NULL) {
+		x_firststr(p_inner) = val + x_firstint(p_inner);
+		x_reststr(p_inner) = val + x_restint(p_inner);
+	}
+
+	return p_obj;
+}
+x_satom_t x_type_buffer_load_prim = x_obj_set(x_type_atom_obj, X_OBJ_FLAG_NONE, { (x_obj_t *)&x_type_buffer_load });
+
 x_obj_t *x_type_buffer_struct(x_obj_t *p_base, x_obj_t *p_args)
 {
 	struct x_type_t type = {
+		.p_save = (x_obj_t *)x_type_buffer_save_prim,
+		.p_load = (x_obj_t *)x_type_buffer_load_prim,
 		.p_name = x_type_buffer_name,
 		.p_mark = x_type_buffer_mark_prim,
 		.p_make = x_type_buffer_make_prim

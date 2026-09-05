@@ -74,10 +74,66 @@ x_obj_t *x_type_struct_make(x_obj_t *p_base, struct x_type_t type)
 		/* Ops: '(ops-stack) */
 		pair(pair(pair(type.p_ops, nil),
 			nil),
-		nil))))))));
+		/* Image: '(save-stack load-stack) -- a type saves and loads its
+		 * own payload; the default save is the units shape. */
+		pair(pair(pair(type.p_save != NULL
+				? type.p_save : (x_obj_t *)x_type_save_default_prim, nil),
+			pair(pair(type.p_load, nil),
+			nil)),
+		nil)))))))));
 
 	return p_type;
 }
+
+/* --- image save: the type's own knowledge of its payload -------------- */
+
+x_obj_t *x_type_save_units(x_obj_t *p_obj, x_int_t *buf, x_int_t n, const int *kinds, int nkinds)
+{
+	x_int_t i;
+
+	buf[0] = n;
+	for (i = 0; i < n; i++) {
+		buf[1 + 2 * i] = kinds[i < nkinds ? i : nkinds - 1];
+		buf[2 + 2 * i] = x_obj_data_i(p_obj, i).i;
+	}
+
+	return p_obj;
+}
+
+/**
+ * @brief The default save: the units the type's shape declares, each with
+ * the kind the shape's mask gives it (a bare count: all references).
+ * Args are already evaluated: (obj buf).
+ */
+x_obj_t *x_type_save_default(x_obj_t *p_base, x_obj_t *p_args)
+{
+	x_obj_t *p_obj = x_firstobj(p_args);
+	x_obj_t *p_buf = x_firstobj(x_restobj(p_args));
+	x_obj_t *p_type, *p_units;
+	x_int_t *buf, n, mask, described, i;
+
+	buf = (x_int_t *)x_firstptr(p_buf);
+	p_type = x_obj_type(p_obj);
+	p_units = (p_type != NULL && x_obj_type_isspair(p_type))
+		? x_type_field_units(p_type) : NULL;
+	n = x_type_units_count(p_units);
+	mask = x_type_units_mask(p_units);
+	described = x_type_units_described(p_units);
+	if (n < 0) {
+		n = x_atomint(x_obj(x_obj_data_i(p_obj, 0))) + (-n);
+	}
+	if (described < 1) {
+		described = 1;
+	}
+	buf[0] = n;
+	for (i = 0; i < n; i++) {
+		buf[1 + 2 * i] = x_type_unit_kind(mask, i, described);
+		buf[2 + 2 * i] = x_obj_data_i(p_obj, i).i;
+	}
+
+	return p_obj;
+}
+x_satom_t x_type_save_default_prim = x_obj_set(x_type_atom_obj, X_OBJ_FLAG_NONE, { (x_obj_t *)&x_type_save_default });
 
 #undef nil
 #undef pair

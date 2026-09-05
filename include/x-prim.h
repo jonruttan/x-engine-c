@@ -217,6 +217,9 @@ x_obj_t *x_prim_io_register(x_obj_t *p_base, x_obj_t *p_args);
 /** Register the GC primitives (heap-*, alloc-limit!, gc-pin!). */
 x_obj_t *x_prim_heap_register(x_obj_t *p_base, x_obj_t *p_args);
 
+/** Register the state-image primitives (image save!, image rebuild!). */
+x_obj_t *x_prim_image_register(x_obj_t *p_base, x_obj_t *p_args);
+
 /** Minimal C read-eval loop (no output, no hooks). */
 x_obj_t *x_prim_repl(x_obj_t *p_base, x_obj_t *p_args);
 

@@ -14,7 +14,6 @@
 #include "x-type/operative.h"
 #include "x-eval.h"
 #include "x-heap.h"
-#include "x-prim.h"
 
 /**
  * GC mark callback for operative objects.
@@ -84,9 +83,22 @@ x_obj_t *x_make_operative(x_obj_t *p_base, x_obj_flag_t flags,
  * @param p_args  x_obj_t* -- Unused
  * @return Type struct pair list
  */
+/* Image save (docs/state-image-format.md): this type's payload, unit by
+ * unit, by kind. */
+x_obj_t *x_type_operative_save(x_obj_t *p_base, x_obj_t *p_args)
+{
+	static const int kinds[] = { X_TYPE_UNIT_FOREIGN, X_TYPE_UNIT_REF };
+	x_obj_t *p_obj = x_firstobj(p_args);
+	x_obj_t *p_buf = x_firstobj(x_restobj(p_args));
+
+	return x_type_save_units(p_obj, (x_int_t *)x_firstptr(p_buf), 2, kinds, 2);
+}
+x_satom_t x_type_operative_save_prim = x_obj_set(x_type_atom_obj, X_OBJ_FLAG_NONE, { (x_obj_t *)&x_type_operative_save });
+
 x_obj_t *x_type_operative_struct(x_obj_t *p_base, x_obj_t *p_args)
 {
 	struct x_type_t type = {
+		.p_save = (x_obj_t *)x_type_operative_save_prim,
 		.p_name = x_type_operative_name,
 		.p_units = (x_obj_t *)&x_type_operative_units_obj,
 		.p_make = x_type_operative_make_prim,

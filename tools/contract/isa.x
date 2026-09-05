@@ -111,6 +111,8 @@
   (int | raw-op)
   (int ~ raw-op)
   (image rebuild! alloc)      ; allocate and patch every object of a state image.  The only
+  (image save! types)         ; one object's payload through its type's save handler; docs/state-image-format.md 4.3
+  (image write! types)        ; the object table and blob of a state image: the walk, the index, the records; the names are the caller's
                               ;   per-object half of loading one; everything else -- header,
                               ;   foreign names, base paths -- is per-entry work X does in
                               ;   milliseconds.  In X the same two passes take ~30s and
