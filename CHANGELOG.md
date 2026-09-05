@@ -11,6 +11,56 @@ alongside the library changes they landed with.
 [x-lang]: https://github.com/jonruttan/x-lang
 [x-changelog]: https://github.com/jonruttan/x-lang/blob/main/CHANGELOG.md
 
+## 0.2.6 — 2026-09-05
+
+**The loader roots what it parks** ([#38]). `x_eval_load` displaces two pieces
+of the includer's state for the length of a load: it hides the save-stack so a
+loaded file's top-level `def`s bind globally, and strips the includer's `FRAME`
+cells off the env head so a closure the file defines does not capture them.
+Both right. Both waited in C locals — and the collector is precise: it marks
+from the base tree, the root chain and the registered roots, never the C stack.
+A loaded file that collected swept the includer's frame cells and restore
+compounds; the load returned, put the freed head back, and the includer walked
+freed memory on its next symbol lookup.
+
+Whether that walk crashed depended on the allocator. glibc reuses a freed cell
+at once, so on x86-64 Linux it was a SIGSEGV in `x_type_symbol_eval`; macOS's
+allocator mostly leaves the cell intact, so it answered right by luck — every
+local run, every macOS CI job. That is how it presented as an "x86-64 JIT
+crash" holding three x-lang pull requests red while their `main` stayed green
+on an older pin: x-lang's `compile-asm` collects every `%asm-gc-window`
+compiled expressions from inside the tower's own includes, and a core dump on
+an x86-64 guest showed the includer's `(%io-path …)` frame cell with glibc's
+safe-linked free-list pointer written through it.
+
+The saves now ride the root chain for the loop — the mechanism built for a C
+frame holding the only reference (`x_prims_add` roots a half-built catalog
+entry the same way). Two registered nodes rather than one pointing at the
+other, because the chain's pre-clear pass strips stale marks only from
+registered nodes. The error path needs nothing: the guard already restores the
+root chain from its snapshot. No layout change, no new field, no new
+coordinate.
+
+Two specs. `tests/c/src/4.5.x-eval-load.spec.c` stands an includer up, loads a
+file that only collects, and asks the allocation chain whether the frame and
+compound survived — chain membership is the collector's own record and reads
+no freed memory, so it is the same answer on every allocator; red before,
+green after. `tests/bare/specs/smoke.spec.md` gains the shape a program sees:
+a procedure includes a file that collects, then reads its own formal. Verified
+end to end: v0.1.6 plus this change, built on an x86-64 Linux guest, boots the
+xenon tower cold with `%asm-gc-window` forced to 1 — the configuration that
+crashed five of five — and prints `1`.
+
+The original comment defended the locals against `longjmp`, correctly, and not
+against collection: the engine never collects on its own, so a load loop
+looked like it contained no collector. It contains whatever the host puts in
+the file. That is the general lesson, and it is why x-lang now boots every
+dialect on an ASan build of the pinned engine before a push (x-lang#615): a
+live-but-unrooted object is invisible until something collects, and the first
+collect anyone adds is the one that finds it.
+
+[#38]: https://github.com/jonruttan/x-engine-c/pull/38
+
 ## 0.2.3 — 2026-09-04
 
 **Ask the collector what is reachable** ([#33]). A consumer that needs to know
