@@ -138,3 +138,23 @@ than left to a downstream lang's macro suite.
 ```
 ---
     *** ERROR: ok
+
+### a collect inside a load leaves the includer's frame alive
+
+`include` strips the includer's lexical frames off the env head while the
+file loads, so a closure the file defines does not capture them, and hides
+the save-stack so the file's defs bind globally.  Both right -- but the
+displaced state used to wait in x_eval_load's C locals, which the collector
+cannot see.  A loaded file that collected swept the includer's frames, and
+the includer resumed into freed memory: on glibc a SIGSEGV in symbol lookup
+the moment it touched a local, on macOS usually a stale-but-intact read
+that happened to answer right.  So this case is the SHAPE of the failure as
+a program sees it; the deterministic half is tests/c/src/4.5.x-eval-load.spec.c,
+which asks the allocation chain rather than the cell.
+
+```scheme
+(def %kept ((fn (_ p) (include "tests/bare/load-collects.x") p) 7))
+(match ((eq? %kept 7) (error "kept")) (#t (error "lost")))
+```
+---
+    *** ERROR: kept
