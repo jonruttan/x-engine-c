@@ -24,6 +24,8 @@
  * # Includes
  */
 #include "x-prim.h"
+#include "x-stdlib.h"
+#include "x-sys.h"
 #include "x-eval.h"
 #include "x-type/int.h"
 #include "x-type/prim.h"
@@ -642,6 +644,254 @@ static x_obj_t *x_prim_ptr_ref(x_obj_t *p_base, x_obj_t *p_args)
 	return x_mkint(p_base, val);
 }
 
+
+
+
+/**
+ * @name The engine's own C library, reachable from X
+ * @brief x-stdlib.h and x-sys.h in full.
+ *
+ * The engine carries its own memcpy, memset, strlen, strcmp and allocator, and
+ * its own read/write/open/close, precisely so it need not assume a C library
+ * on the machine that runs it.  None of it was reachable from X, so X code
+ * that wanted any of it reached dlopen/dlsym for libc's -- borrowing exactly
+ * the dependency the engine went to the trouble of avoiding.
+ *
+ * These operate on RAW MEMORY, not on x-lang strings: a char* here is a
+ * pointer object, which is why they are filed under `ptr` rather than `str`.
+ * @{
+ */
+
+/** @brief Length of the NUL-terminated string at @p p. x-lang: (ptr strlen p) */
+static x_obj_t *x_prim_ptr_strlen(x_obj_t *p_base, x_obj_t *p_args)
+{
+	x_obj_t *p_p;
+
+	x_eargs(p_base, p_args, 2, NULL, &p_p);
+
+	return x_mkint(p_base, (x_int_t)x_lib_strlen((const char *)x_ptrval(p_p)));
+}
+
+/** @brief Compare two NUL-terminated strings. x-lang: (ptr strcmp a b) */
+static x_obj_t *x_prim_ptr_strcmp(x_obj_t *p_base, x_obj_t *p_args)
+{
+	x_obj_t *p_a, *p_b;
+
+	x_eargs(p_base, p_args, 3, NULL, &p_a, &p_b);
+
+	return x_mkint(p_base, (x_int_t)x_lib_strcmp(
+		(const char *)x_ptrval(p_a), (const char *)x_ptrval(p_b)));
+}
+
+/** @brief Compare at most @p n bytes. x-lang: (ptr strncmp a b n) */
+static x_obj_t *x_prim_ptr_strncmp(x_obj_t *p_base, x_obj_t *p_args)
+{
+	x_obj_t *p_a, *p_b, *p_n;
+
+	x_eargs(p_base, p_args, 4, NULL, &p_a, &p_b, &p_n);
+
+	return x_mkint(p_base, (x_int_t)x_lib_strncmp(
+		(const char *)x_ptrval(p_a), (const char *)x_ptrval(p_b),
+		(size_t)x_intval(p_n)));
+}
+
+/** @brief First occurrence of byte @p c, or nil. x-lang: (ptr strchr p c) */
+static x_obj_t *x_prim_ptr_strchr(x_obj_t *p_base, x_obj_t *p_args)
+{
+	x_obj_t *p_p, *p_c;
+	char *found;
+
+	x_eargs(p_base, p_args, 3, NULL, &p_p, &p_c);
+	found = x_lib_strchr((const char *)x_ptrval(p_p), (int)x_intval(p_c));
+
+	return found ? x_mkptr(p_base, found) : NULL;
+}
+
+/** @brief Duplicate at most @p n bytes; the caller owns it.
+ *  x-lang: (ptr strndup p n) */
+static x_obj_t *x_prim_ptr_strndup(x_obj_t *p_base, x_obj_t *p_args)
+{
+	x_obj_t *p_p, *p_n;
+	char *dup;
+
+	x_eargs(p_base, p_args, 3, NULL, &p_p, &p_n);
+	dup = x_lib_strndup((const char *)x_ptrval(p_p), (size_t)x_intval(p_n));
+
+	return dup ? x_mkptr(p_base, dup) : NULL;
+}
+
+/** @brief Absolute value. x-lang: (int abs n) */
+static x_obj_t *x_prim_int_abs(x_obj_t *p_base, x_obj_t *p_args)
+{
+	x_obj_t *p_n;
+
+	x_eargs(p_base, p_args, 2, NULL, &p_n);
+
+	return x_mkint(p_base, (x_int_t)x_lib_abs((int)x_intval(p_n)));
+}
+
+/** @brief Read up to @p n bytes into raw memory. x-lang: (sys read fd p n) */
+static x_obj_t *x_prim_sys_read(x_obj_t *p_base, x_obj_t *p_args)
+{
+	x_obj_t *p_fd, *p_p, *p_n;
+
+	x_eargs(p_base, p_args, 4, NULL, &p_fd, &p_p, &p_n);
+
+	return x_mkint(p_base, (x_int_t)x_sys_read((int)x_intval(p_fd),
+		x_ptrval(p_p), (size_t)x_intval(p_n)));
+}
+
+/** @brief Write @p n bytes from raw memory. x-lang: (sys write fd p n)
+ *
+ * The door an image writer needed and did not have: (Sys fd-write) takes a
+ * STRING, and an image is binary, NULs included. */
+static x_obj_t *x_prim_sys_write(x_obj_t *p_base, x_obj_t *p_args)
+{
+	x_obj_t *p_fd, *p_p, *p_n;
+
+	x_eargs(p_base, p_args, 4, NULL, &p_fd, &p_p, &p_n);
+
+	return x_mkint(p_base, (x_int_t)x_sys_write((int)x_intval(p_fd),
+		x_ptrval(p_p), (size_t)x_intval(p_n)));
+}
+
+/** @brief Open @p path with raw flags. x-lang: (sys open path flags) */
+static x_obj_t *x_prim_sys_open(x_obj_t *p_base, x_obj_t *p_args)
+{
+	x_obj_t *p_path, *p_flags;
+
+	x_eargs(p_base, p_args, 3, NULL, &p_path, &p_flags);
+
+	return x_mkint(p_base, (x_int_t)x_sys_open(x_strval(p_path),
+		(int)x_intval(p_flags)));
+}
+
+/** @brief Close a descriptor. x-lang: (sys close fd) */
+static x_obj_t *x_prim_sys_close(x_obj_t *p_base, x_obj_t *p_args)
+{
+	x_obj_t *p_fd;
+
+	x_eargs(p_base, p_args, 2, NULL, &p_fd);
+
+	return x_mkint(p_base, (x_int_t)x_sys_close((int)x_intval(p_fd)));
+}
+
+/** @brief One byte from a descriptor, or -1. x-lang: (sys read-char fd) */
+static x_obj_t *x_prim_sys_read_char(x_obj_t *p_base, x_obj_t *p_args)
+{
+	x_obj_t *p_fd;
+
+	x_eargs(p_base, p_args, 2, NULL, &p_fd);
+
+	return x_mkint(p_base, (x_int_t)x_sys_read_char((int)x_intval(p_fd)));
+}
+
+/** @brief Terminate the process. x-lang: (sys exit status) */
+static x_obj_t *x_prim_sys_exit(x_obj_t *p_base, x_obj_t *p_args)
+{
+	x_obj_t *p_status;
+
+	x_eargs(p_base, p_args, 2, NULL, &p_status);
+	x_sys_exit((int)x_intval(p_status));
+
+	return NULL;
+}
+/** @} */
+
+/**
+ * @brief Allocate @p n bytes of raw memory. x-lang: (ptr alloc n)
+ *
+ * x_sys_malloc is the engine's own allocator -- x-cli.c, callcc.c, buffer.c
+ * and string.c all use it -- and it was not reachable from X, so X code that
+ * wanted a scratch buffer reached dlopen/dlsym for libc's malloc instead.  A
+ * runtime cannot assume a C library is on the machine that runs it.
+ *
+ * The alternative already in X is (obj make), which allocates through the
+ * collector -- right for a value, wrong for a scratch buffer, because such a
+ * buffer is then an object in the heap: a state-image writer's own workspace
+ * would land inside the image it is writing.
+ *
+ * @param p_base  Base (execution context).
+ * @param p_args  Unevaluated: (self n).
+ * @return A pointer object, or nil when the allocation fails.
+ * @note The caller owns it; (ptr free!) releases it.
+ */
+static x_obj_t *x_prim_ptr_alloc(x_obj_t *p_base, x_obj_t *p_args)
+{
+	x_obj_t *p_n;
+	void *mem;
+
+	x_eargs(p_base, p_args, 2, NULL, &p_n);
+	mem = x_sys_malloc((size_t)x_intval(p_n));
+
+	return mem ? x_mkptr(p_base, mem) : NULL;
+}
+
+/**
+ * @brief Release memory from (ptr alloc). x-lang: (ptr free! p)
+ *
+ * @param p_base  Base (execution context).
+ * @param p_args  Unevaluated: (self ptr).
+ * @return nil.
+ * @note Frees what the caller allocated; the collector knows nothing about it.
+ */
+static x_obj_t *x_prim_ptr_free(x_obj_t *p_base, x_obj_t *p_args)
+{
+	x_obj_t *p_ptr;
+
+	x_eargs(p_base, p_args, 2, NULL, &p_ptr);
+	x_sys_free(x_ptrval(p_ptr));
+
+	return NULL;
+}
+
+/**
+ * @brief Copy @p n bytes between raw regions. x-lang: (ptr copy! dst src n)
+ *
+ * The engine has its own memcpy (x_lib_memcpy); reaching dlopen/dlsym for
+ * libc's is borrowing a system library a runtime cannot assume is present.
+ * The alternative in X is a per-byte loop, which costs hundreds of evals a
+ * byte -- so without this coordinate the only options were a hack or a
+ * pathology.
+ *
+ * @param p_base  Base (execution context).
+ * @param p_args  Unevaluated: (self dst src n).
+ * @return The destination pointer object.
+ * @note No bounds checking: the C layer is a CPU.
+ */
+static x_obj_t *x_prim_ptr_copy(x_obj_t *p_base, x_obj_t *p_args)
+{
+	x_obj_t *p_dst, *p_src, *p_n;
+
+	x_eargs(p_base, p_args, 4, NULL, &p_dst, &p_src, &p_n);
+	x_lib_memcpy(x_ptrval(p_dst), x_ptrval(p_src),
+		(size_t)x_intval(p_n));
+
+	return p_dst;
+}
+
+/**
+ * @brief Set @p n bytes to @p byte. x-lang: (ptr fill! p byte n)
+ *
+ * The zeroing half of the same argument: a buffer wanted zeroed had to come
+ * from libc's calloc for want of this.
+ *
+ * @param p_base  Base (execution context).
+ * @param p_args  Unevaluated: (self ptr byte n).
+ * @return The pointer object.
+ * @note No bounds checking: the C layer is a CPU.
+ */
+static x_obj_t *x_prim_ptr_fill(x_obj_t *p_base, x_obj_t *p_args)
+{
+	x_obj_t *p_ptr, *p_byte, *p_n;
+
+	x_eargs(p_base, p_args, 4, NULL, &p_ptr, &p_byte, &p_n);
+	x_lib_memset(x_ptrval(p_ptr), (int)x_intval(p_byte),
+		(size_t)x_intval(p_n));
+
+	return p_ptr;
+}
+
 /**
  * @brief Write a machine-word-sized value into raw memory at ptr+offset.
  *
@@ -849,6 +1099,22 @@ x_obj_t *x_prim_ffi_register(x_obj_t *p_base, x_obj_t *p_args)
 		{ "ptr-ref",         x_prim_ptr_ref,            "ptr", "ref"           },
 		{ "ptr-ref-word",    x_prim_ptr_ref_word,       "ptr", "ref-word"      },
 		{ "ptr-set-word!",   x_prim_ptr_set_word,       "ptr", "set-word!"     },
+		{ "ptr-alloc",       x_prim_ptr_alloc,          "ptr", "alloc"         },
+		{ "ptr-strlen",      x_prim_ptr_strlen,         "ptr", "strlen"        },
+		{ "ptr-strcmp",      x_prim_ptr_strcmp,         "ptr", "strcmp"        },
+		{ "ptr-strncmp",     x_prim_ptr_strncmp,        "ptr", "strncmp"       },
+		{ "ptr-strchr",      x_prim_ptr_strchr,         "ptr", "strchr"        },
+		{ "ptr-strndup",     x_prim_ptr_strndup,        "ptr", "strndup"       },
+		{ "int-abs",         x_prim_int_abs,            "int", "abs"           },
+		{ "sys-read",        x_prim_sys_read,           "sys", "read"          },
+		{ "sys-write",       x_prim_sys_write,          "sys", "write"         },
+		{ "sys-open",        x_prim_sys_open,           "sys", "open"          },
+		{ "sys-close",       x_prim_sys_close,          "sys", "close"         },
+		{ "sys-read-char",   x_prim_sys_read_char,      "sys", "read-char"     },
+		{ "sys-exit",        x_prim_sys_exit,           "sys", "exit"          },
+		{ "ptr-free!",       x_prim_ptr_free,           "ptr", "free!"         },
+		{ "ptr-copy!",       x_prim_ptr_copy,           "ptr", "copy!"         },
+		{ "ptr-fill!",       x_prim_ptr_fill,           "ptr", "fill!"         },
 		{ "obj->ptr",        x_prim_obj_to_ptr,         "obj", "->ptr"         },
 		{ "ptr->obj",        x_prim_ptr_to_obj,         "ptr", "->obj"         },
 		{ "str->ptr",        x_prim_string_to_ptr,      "str", "->ptr"         },

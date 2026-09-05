@@ -89,9 +89,22 @@ x_int_t x_char_utf8_decode(const x_char_t *bytes, x_int_t nbytes)
  * @param p_obj   x_obj_t* -- Unused
  * @return x_obj_t* -- Type descriptor pair list
  */
+/* Image save (docs/state-image-format.md): this type's payload, unit by
+ * unit, by kind. */
+x_obj_t *x_type_char_save(x_obj_t *p_base, x_obj_t *p_args)
+{
+	static const int kinds[] = { X_TYPE_UNIT_WORD };
+	x_obj_t *p_obj = x_firstobj(p_args);
+	x_obj_t *p_buf = x_firstobj(x_restobj(p_args));
+
+	return x_type_save_units(p_obj, (x_int_t *)x_firstptr(p_buf), 1, kinds, 1);
+}
+x_satom_t x_type_char_save_prim = x_obj_set(x_type_atom_obj, X_OBJ_FLAG_NONE, { (x_obj_t *)&x_type_char_save });
+
 x_obj_t *x_type_char_struct(x_obj_t *p_base, x_obj_t *p_obj)
 {
-	struct x_type_t type = { 0 };
+	struct x_type_t type = {
+		.p_save = (x_obj_t *)x_type_char_save_prim, 0 };
 
 	/* Named character constants: '((name . code) ...) */
 	type.p_name = x_type_char_name;

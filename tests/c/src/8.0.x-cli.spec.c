@@ -62,6 +62,7 @@
 #define x_prim_atomic x_prim_atomic_io
 #include "src/x-prim/io.c"
 #include "src/x-prim/heap.c"
+#include "src/x-prim/image.c"
 #include "src/x-prim/type.c"
 #include "src/x-prim/base.c"
 #include "src/x-prim/buffer.c"

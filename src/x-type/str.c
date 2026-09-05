@@ -19,7 +19,6 @@
 #include "x-token/sexp/str.h"
 #include "x-type/char.h"
 #include "x-type/int.h"
-#include "x-prim.h"
 
 x_satom_t x_type_str_name = x_obj_set(x_type_atom_obj, X_OBJ_FLAG_NONE, { .s = (x_char_t *)X_TYPE_STR_NAME }),
 	x_type_str_length_prim = x_obj_set(x_type_atom_obj, X_OBJ_FLAG_NONE, { (x_obj_t *)&x_type_str_length }),
@@ -59,9 +58,22 @@ x_obj_t *x_make_str(x_obj_t *p_base, x_obj_flag_t flags, x_char_t *s)
  * @param p_obj   x_obj_t* -- Unused
  * @return x_obj_t* -- Type descriptor pair list
  */
+/* Image save (docs/state-image-format.md): this type's payload, unit by
+ * unit, by kind. */
+x_obj_t *x_type_str_save(x_obj_t *p_base, x_obj_t *p_args)
+{
+	static const int kinds[] = { X_TYPE_UNIT_BYTES };
+	x_obj_t *p_obj = x_firstobj(p_args);
+	x_obj_t *p_buf = x_firstobj(x_restobj(p_args));
+
+	return x_type_save_units(p_obj, (x_int_t *)x_firstptr(p_buf), 1, kinds, 1);
+}
+x_satom_t x_type_str_save_prim = x_obj_set(x_type_atom_obj, X_OBJ_FLAG_NONE, { (x_obj_t *)&x_type_str_save });
+
 x_obj_t *x_type_str_struct(x_obj_t *p_base, x_obj_t *p_obj)
 {
 	struct x_type_t type = {
+		.p_save = (x_obj_t *)x_type_str_save_prim,
 		.p_name = x_type_str_name,
 		.p_length = x_type_str_length_prim,
 		.p_make = x_type_str_make_prim,

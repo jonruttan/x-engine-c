@@ -160,6 +160,14 @@
 #define x_type_field_ops_group(X)     x_firstobj(x_restobj(x_restobj(x_restobj(x_restobj(x_restobj(x_restobj(x_restobj(X)))))))) /**< Ops handler group. */
 #define x_type_field_ops_stack(X)     x_firstobj(x_type_field_ops_group((X))) /**< Ops alist stack cell. */
 #define x_type_field_ops(X)           x_firstobj(x_type_field_ops_stack((X))) /**< Current ops alist. */
+/** @name Image group: '(save-stack load-stack) -- docs/state-image-format.md
+ *  @{ */
+#define x_type_field_image_group(X)   x_firstobj(x_restobj(x_restobj(x_restobj(x_restobj(x_restobj(x_restobj(x_restobj(x_restobj(X))))))))) /**< Image handler group. */
+#define x_type_field_save_stack(X)    x_firstobj(x_type_field_image_group((X))) /**< Save stack cell. */
+#define x_type_field_save(X)          x_firstobj(x_type_field_save_stack((X))) /**< Current save handler. */
+#define x_type_field_load_stack(X)    x_firstobj(x_restobj(x_type_field_image_group((X)))) /**< Load stack cell. */
+#define x_type_field_load(X)          x_firstobj(x_type_field_load_stack((X))) /**< Current load handler. */
+/** @} */
 /** @} */
 
 /** Extract the type object from a type-dispatch argument list. */
@@ -201,6 +209,17 @@ struct x_type_t
 	x_obj_t *p_display;    /**< Display handler. */
 	x_obj_t *p_iter;       /**< Iterator handler. */
 	x_obj_t *p_ops;        /**< Generic-operator alist ((op-sym . handler) ...). */
+	x_obj_t *p_save;       /**< Image save handler, applied by (image save!)
+	                            with EVALUATED args (obj buf): writes the unit
+	                            count at buf[0] and [kind][word] pairs after
+	                            it, returns obj.  NULL selects
+	                            x_type_save_default -- the units shape.  No
+	                            handler evaluates or allocates: the per-type
+	                            files link without x-eval and x-prim. */
+	x_obj_t *p_load;       /**< Image load handler: (load obj), called once the
+	                            rebuilt object's units are patched; a type whose
+	                            payload is more than its units (BUFFER) fixes
+	                            itself up here.  NULL: nothing to do. */
 };
 
 /** @name Type Functions
@@ -208,6 +227,13 @@ struct x_type_t
 
 /** Build a type pair tree from a C x_type_t struct. */
 x_obj_t *x_type_struct_make(x_obj_t *p_base, struct x_type_t type);
+/** The default save handler: every unit the type's units shape declares. */
+x_obj_t *x_type_save_default(x_obj_t *p_base, x_obj_t *p_args);
+extern x_satom_t x_type_save_default_prim;
+/** Write @p n at @p buf[0] and the units of @p p_obj as [kind][word] pairs
+ *  after it, kinds from @p kinds (the last repeats); every C save handler's
+ *  helper.  Returns @p p_obj. */
+x_obj_t *x_type_save_units(x_obj_t *p_obj, x_int_t *buf, x_int_t n, const int *kinds, int nkinds);
 
 /** Try generic-operator dispatch for a binary op; 1 if dispatched. */
 int x_type_op_try(x_obj_t *p_base, x_char_t *op, x_obj_t *p_a, x_obj_t *p_b,

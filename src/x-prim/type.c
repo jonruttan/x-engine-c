@@ -83,7 +83,9 @@ x_obj_t *x_prim_type_build_struct(x_obj_t *p_base,
 		{ "free",    offsetof(struct x_type_t, p_free) },
 		{ "mark",    offsetof(struct x_type_t, p_mark) },
 		{ "iter",    offsetof(struct x_type_t, p_iter) },
-		{ "ops",     offsetof(struct x_type_t, p_ops) }
+		{ "ops",     offsetof(struct x_type_t, p_ops) },
+		{ "save",    offsetof(struct x_type_t, p_save) },
+		{ "load",    offsetof(struct x_type_t, p_load) }
 	};
 	int i;
 

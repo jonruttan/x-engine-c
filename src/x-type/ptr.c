@@ -50,9 +50,22 @@ x_obj_t *x_make_ptr(x_obj_t *p_base, x_obj_flag_t flags, void *p)
  * @param p_args  Unused.
  * @return Type struct pair-tree for POINTER.
  */
+/* Image save (docs/state-image-format.md): this type's payload, unit by
+ * unit, by kind. */
+x_obj_t *x_type_ptr_save(x_obj_t *p_base, x_obj_t *p_args)
+{
+	static const int kinds[] = { X_TYPE_UNIT_FOREIGN };
+	x_obj_t *p_obj = x_firstobj(p_args);
+	x_obj_t *p_buf = x_firstobj(x_restobj(p_args));
+
+	return x_type_save_units(p_obj, (x_int_t *)x_firstptr(p_buf), 1, kinds, 1);
+}
+x_satom_t x_type_ptr_save_prim = x_obj_set(x_type_atom_obj, X_OBJ_FLAG_NONE, { (x_obj_t *)&x_type_ptr_save });
+
 x_obj_t *x_type_ptr_struct(x_obj_t *p_base, x_obj_t *p_args)
 {
 	struct x_type_t type = {
+		.p_save = (x_obj_t *)x_type_ptr_save_prim,
 		.p_name = x_type_ptr_name,
 		.p_make = x_type_ptr_make_prim
 	};
