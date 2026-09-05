@@ -79,8 +79,8 @@ x_obj_t *x_type_buffer_mark(x_obj_t *p_base, x_obj_t *p_args)
  */
 /* Image save (docs/state-image-format.md 4.3).  The outer is (bytes . inner)
  * and the inner is (read . write), two pointers into those bytes.  An inner
- * is told from an outer by its rest slot, which holds a pointer into the
- * same region rather than an object.  The inner cannot know where the bytes
+ * is told from an outer by X_TYPE_BUFFER_FLAG_INNER, which the make sets on
+ * it; its slots are never read as objects.  The inner cannot know where the bytes
  * begin, so it saves what it can measure alone -- the unread count -- and
  * the outer saves a third unit, the consumed count, which only it knows;
  * the outer's load puts both pointers back from those two counts. */
@@ -88,17 +88,15 @@ x_obj_t *x_type_buffer_save(x_obj_t *p_base, x_obj_t *p_args)
 {
 	x_obj_t *p_obj = x_firstobj(p_args);
 	x_obj_t *p_buf = x_firstobj(x_restobj(p_args));
-	x_obj_t *p_rest;
 	x_int_t *buf;
 	x_char_t *val;
 
 	buf = (x_int_t *)x_firstptr(p_buf);
-	p_rest = x_restobj(p_obj);
-	if (p_rest != NULL && x_obj_type(p_rest) == x_obj_type(p_obj)) {
+	if ((x_obj_flags(p_obj) & X_TYPE_BUFFER_FLAG_INNER) == 0) {
 		/* outer: (val . inner), and the consumed count */
 		buf[0] = 3;
 		buf[1] = X_TYPE_UNIT_BYTES; buf[2] = (x_int_t)x_firststr(p_obj);
-		buf[3] = X_TYPE_UNIT_REF;   buf[4] = (x_int_t)p_rest;
+		buf[3] = X_TYPE_UNIT_REF;   buf[4] = (x_int_t)x_restobj(p_obj);
 		buf[5] = X_TYPE_UNIT_WORD;  buf[6] = (x_int_t)x_bufferlen(p_obj);
 	} else {
 		/* inner: (read . write) as the unread count */
