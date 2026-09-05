@@ -77,9 +77,13 @@ x_obj_t *x_type_buffer_mark(x_obj_t *p_base, x_obj_t *p_args)
  * @param p_args  Unused.
  * @return Type struct pair-tree for BUFFER.
  */
-/* Image save: the outer is (bytes . inner); the inner is (read . write),
- * pointers into those bytes, saved as OFFSETS -- an inner is told apart
- * from an outer by its rest slot pointing back into the same region. */
+/* Image save (docs/state-image-format.md 4.3).  The outer is (bytes . inner)
+ * and the inner is (read . write), two pointers into those bytes.  An inner
+ * is told from an outer by its rest slot, which holds a pointer into the
+ * same region rather than an object.  The inner cannot know where the bytes
+ * begin, so it saves what it can measure alone -- the unread count -- and
+ * the outer saves a third unit, the consumed count, which only it knows;
+ * the outer's load puts both pointers back from those two counts. */
 x_obj_t *x_type_buffer_save(x_obj_t *p_base, x_obj_t *p_args)
 {
 	x_obj_t *p_obj = x_firstobj(p_args);
@@ -91,15 +95,13 @@ x_obj_t *x_type_buffer_save(x_obj_t *p_base, x_obj_t *p_args)
 	buf = (x_int_t *)x_firstptr(p_buf);
 	p_rest = x_restobj(p_obj);
 	if (p_rest != NULL && x_obj_type(p_rest) == x_obj_type(p_obj)) {
-		/* outer: (val . inner) */
-		buf[0] = 2;
+		/* outer: (val . inner), and the consumed count */
+		buf[0] = 3;
 		buf[1] = X_TYPE_UNIT_BYTES; buf[2] = (x_int_t)x_firststr(p_obj);
 		buf[3] = X_TYPE_UNIT_REF;   buf[4] = (x_int_t)p_rest;
+		buf[5] = X_TYPE_UNIT_WORD;  buf[6] = (x_int_t)x_bufferlen(p_obj);
 	} else {
-		/* inner: (read . write) as offsets from the outer's val, which is
-		 * the smaller of the two pointers' region start -- read is never
-		 * below val, so val is recovered as read minus the unread-so-far
-		 * count the outer's load re-adds.  Offsets are what survive. */
+		/* inner: (read . write) as the unread count */
 		val = x_firststr(p_obj);
 		buf[0] = 2;
 		buf[1] = X_TYPE_UNIT_WORD;  buf[2] = 0;
@@ -110,19 +112,24 @@ x_obj_t *x_type_buffer_save(x_obj_t *p_base, x_obj_t *p_args)
 }
 x_satom_t x_type_buffer_save_prim = x_obj_set(x_type_atom_obj, X_OBJ_FLAG_NONE, { (x_obj_t *)&x_type_buffer_save });
 
-/* The inner object saved its read/write pointers as OFFSETS from val (its
- * own save cannot know val is being re-based); the outer re-bases them. */
+/* Image load, on a REBUILT outer only: three units, the third the consumed
+ * count its save wrote (a fresh outer has two).  The inner holds the unread
+ * count where its write pointer was; both pointers come back from the two
+ * counts and the bytes' new address. */
 x_obj_t *x_type_buffer_load(x_obj_t *p_base, x_obj_t *p_args)
 {
 	x_obj_t *p_obj = x_firstobj(p_args);
 	x_obj_t *p_inner;
 	x_char_t *val;
+	x_int_t consumed, unread;
 
 	p_inner = x_restobj(p_obj);
 	val = x_bufferval(p_obj);
 	if (p_inner != NULL && val != NULL) {
-		x_firststr(p_inner) = val + x_firstint(p_inner);
-		x_reststr(p_inner) = val + x_restint(p_inner);
+		consumed = x_obj_data_i(p_obj, 2).i;
+		unread = x_restint(p_inner);
+		x_firststr(p_inner) = val + consumed;
+		x_reststr(p_inner) = val + consumed + unread;
 	}
 
 	return p_obj;
