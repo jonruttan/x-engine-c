@@ -1380,6 +1380,7 @@ x_obj_t *x_eval_load(x_obj_t *p_base, x_obj_t *p_args)
 	x_obj_t *p_exp, *p_result = NULL;
 	x_obj_t *p_saved_stack;
 	x_obj_t *p_saved_env, *p_saved_boundary, *p_env;
+	x_obj_t **pp_root = x_heap_root_slot(p_base);
 	x_satom_t exp_wrap = x_obj_set(NULL, X_OBJ_FLAG_NONE, { NULL });
 	x_spair_t eval_args[1] = {
 		x_obj_set(NULL, X_OBJ_FLAG_NONE, { exp_wrap }, { NULL })
@@ -1387,6 +1388,13 @@ x_obj_t *x_eval_load(x_obj_t *p_base, x_obj_t *p_args)
 	x_spair_t read_args[1] = {
 		x_obj_set(NULL, X_OBJ_FLAG_NONE, { p_buffer }, { p_base })
 	};
+	/* The includer's displaced state, held where the collector can see it
+	 * while the file loads -- see the rooting note below.  Pair-typed, as
+	 * the root chain requires: the mark walk descends only spair pairs. */
+	x_spair_t parked_env = x_obj_set((x_obj_t *)x_type_pair_obj,
+		X_OBJ_FLAG_NONE, { NULL }, { NULL });
+	x_spair_t parked_ctrl = x_obj_set((x_obj_t *)x_type_pair_obj,
+		X_OBJ_FLAG_NONE, { NULL }, { NULL });
 
 	/* Each form read from the file is a TOP-LEVEL form: its top-level `def`s
 	 * must bind globally (BST), not as locals of whatever was being evaluated
@@ -1400,7 +1408,8 @@ x_obj_t *x_eval_load(x_obj_t *p_base, x_obj_t *p_args)
 	 * balances its own pushes, so the stack is back to nil between iterations.
 	 * On error the loaded form longjmps to its guard, which restores the
 	 * interpreter state from guard's own snapshot -- this abandoned C frame's
-	 * saved value is moot -- so a plain save/restore around the loop is safe. */
+	 * saved value is moot -- so a plain save/restore around the loop is safe
+	 * against the ERROR path.  Against a collect it is not; see below. */
 	p_saved_stack = x_eval_field_save_stack(p_base);
 	x_eval_field_save_stack(p_base) = NULL;
 
@@ -1426,6 +1435,35 @@ x_obj_t *x_eval_load(x_obj_t *p_base, x_obj_t *p_args)
 	x_firstobj(x_eval_field_env_alist(p_base)) = p_env;
 	x_eval_field_env_local_boundary(p_base) = NULL;
 
+	/* PARK THE DISPLACED STATE WHERE THE COLLECTOR CAN SEE IT.  Both saves
+	 * above are HEAP objects -- the includer's frame cells and its restore
+	 * compounds -- and for the length of the load nothing on the base tree
+	 * reaches them: the env head now points past the frames, the save-stack
+	 * slot is nil.  A C local is not a root (x-heap.h): the collector marks
+	 * from the base and the root chain and never scans the stack.  So a
+	 * loaded file that collects -- and a library that collects between
+	 * definitions is ordinary -- swept the includer's frames, and when the
+	 * load returned and the head was put back, the includer walked freed
+	 * memory on its next symbol lookup.  glibc reuses a freed cell at once,
+	 * so on x86-64 Linux that was a SIGSEGV in x_type_symbol_eval; macOS
+	 * mostly left the cell intact and answered right by luck.
+	 *
+	 * Register them on the root chain, the mechanism built for exactly a C
+	 * frame holding the only reference (x_prims_add roots a half-built
+	 * catalog entry the same way).  Two nodes, not one node pointing at the
+	 * other: the chain's pre-clear pass strips each REGISTERED node's stale
+	 * mark before marking, and a second stack pair reached only through the
+	 * first would keep the mark from the previous collect and stop the walk
+	 * short of what it holds.  The error path needs nothing more -- the
+	 * guard restores the root chain from its own snapshot along with the
+	 * save-stack, so a longjmp out of a loaded form drops these nodes with
+	 * the C frame that owns them.  Pops are LIFO. */
+	x_firstobj((x_obj_t *)parked_env) = p_saved_env;
+	x_restobj((x_obj_t *)parked_env) = p_saved_boundary;
+	x_firstobj((x_obj_t *)parked_ctrl) = p_saved_stack;
+	x_heap_root_push(pp_root, parked_ctrl);
+	x_heap_root_push(pp_root, parked_env);
+
 	for (;;) {
 		p_exp = x_token_read(p_base, (x_obj_t *)read_args);
 		/* Break on the EOF SENTINEL, not on nil: nil is the value a
@@ -1436,6 +1474,9 @@ x_obj_t *x_eval_load(x_obj_t *p_base, x_obj_t *p_args)
 		x_firstobj((x_obj_t *)exp_wrap) = p_exp;
 		p_result = x_eval(p_base, (x_obj_t *)eval_args);
 	}
+
+	x_heap_root_pop(pp_root);
+	x_heap_root_pop(pp_root);
 
 	x_eval_field_save_stack(p_base) = p_saved_stack;
 	x_firstobj(x_eval_field_env_alist(p_base)) = p_saved_env;
