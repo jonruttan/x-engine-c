@@ -38,13 +38,15 @@
  * x-lang form: @code (base-make-type base name handlers) @endcode
  *
  * Like make-type, but registers the type on @p p_target rather than the
- * calling base. Marks the target base tree as SHARED so the calling
- * base's GC will not sweep handler closures referenced across bases.
+ * calling base. Pins the type struct as SHARED so the calling base's GC
+ * will not sweep the name atom or the handler closures the target now
+ * refers to from its own heap chain.
  *
  * @param p_base  Calling execution context (used for handler closure allocation).
  * @param p_args  Unevaluated: (self target-base name-string handlers-alist).
  * @return The type name atom.
- * @note Sets X_OBJ_FLAG_SHARED on the target base to prevent cross-base GC.
+ * @note Sets X_OBJ_FLAG_SHARED on the target base and on the type struct
+ *       to prevent cross-base GC.
  * @see x_prim_make_type
  */
 static x_obj_t *x_prim_base_make_type(x_obj_t *p_base, x_obj_t *p_args)
@@ -63,10 +65,35 @@ static x_obj_t *x_prim_base_make_type(x_obj_t *p_base, x_obj_t *p_args)
 	p_type = x_prim_type_build_struct(p_base, p_name_atom, p_handlers);
 	x_eval_type_alist_extend(p_target, p_type);
 
-	/* Mark target base and its tree with SHARED so calling base's GC
-	 * won't sweep handler closures referenced cross-base. */
+	/* Pin what this registration built on the CALLING base and then handed
+	 * to the target: the name atom, the type struct around it, and every
+	 * handler closure.  Those objects sit on the calling base's heap chain,
+	 * so the calling base's sweep decides their fate -- while the only thing
+	 * that still refers to them, the target's type alist, sits on the
+	 * TARGET's chain, out of that sweep's reach.
+	 *
+	 * Pin from p_type, not from the target's tree root.  Marking from
+	 * x_atomobj(p_target) marked NOTHING: x_heap_tree_mark stops at any
+	 * object that already carries the flags it is setting, and a base's tree
+	 * root is born SHARED (x-expr's x_base_make allocates every skeleton
+	 * node with X_OBJ_FLAG_SHARED), so the walk short-circuited on its own
+	 * first node.  p_type is an ordinary X_OBJ_FLAG_NONE pair tree
+	 * (x_type_struct_make), so the walk descends it and reaches the name
+	 * atom and the handlers -- which is what the pin was always for.
+	 *
+	 * With the pin doing nothing, the registration survived exactly one
+	 * collect and died on the next (x-lang#599).  The calling base's mark
+	 * walk reaches the target base through whatever binding holds it and
+	 * descends the target's tree, so the first collect marked these objects
+	 * by that route and retained them.  But that walk also set the mark bit
+	 * on the target's OWN skeleton cells, which live on the target's chain
+	 * and so are never visited by the calling base's sweep -- the bit is
+	 * never cleared.  On the second collect the walk hit those still-marked
+	 * cells, took them for already-done and stopped, leaving the name atom
+	 * unmarked and unpinned; the sweep freed it, and the next read
+	 * dereferenced it in x_alist_assoc. */
 	x_obj_flags(p_target) |= X_OBJ_FLAG_SHARED;
-	x_heap_tree_mark(p_base, x_atomobj(p_target), X_OBJ_FLAG_SHARED);
+	x_heap_tree_mark(p_base, p_type, X_OBJ_FLAG_SHARED);
 
 	return p_name_atom;
 }
