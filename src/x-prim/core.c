@@ -206,15 +206,31 @@ static x_obj_t *x_prim_eval(x_obj_t *p_base, x_obj_t *p_args)
  *  @param p_args  Unevaluated argument list (expr).
  *  @return Result of evaluating expr.
  *  @note Fexpr: args unevaluated; x_eargs evaluates expr.
- *  @note No TCO, no env save/restore. Used by the x-lang REPL operative.
+ *  @note No TCO.  Evaluates AS A TOP-LEVEL FORM (x_toplevel_enter): the
+ *        REPL calls this from inside its own frames, and a def the user
+ *        types must bind globally.  Used by the x-lang REPL and the loaders
+ *        a lang writes over it.
  *  @see x_prim_eval
  */
 static x_obj_t *x_prim_eval_immediate(x_obj_t *p_base, x_obj_t *p_args)
 {
-	x_obj_t *p_expr;
+	x_obj_t *p_expr, *p_result;
+	x_toplevel_t top;
+	x_satom_t exp_wrap = x_obj_set(NULL, X_OBJ_FLAG_NONE, { NULL });
+	x_spair_t eval_args[1] = {
+		x_obj_set(NULL, X_OBJ_FLAG_NONE, { exp_wrap }, { NULL })
+	};
 	x_eargs(p_base, p_args, 2, NULL, &p_expr);
 
-	return x_eval_arg(p_base, p_expr);
+	/* The loader's bracket around one form: the REPL loop that calls this
+	 * is itself a closure under the entry's frames, and a def the user
+	 * types must bind for the base. */
+	x_firstobj((x_obj_t *)exp_wrap) = p_expr;
+	x_toplevel_enter(p_base, &top);
+	p_result = x_eval(p_base, (x_obj_t *)eval_args);
+	x_toplevel_leave(p_base, &top);
+
+	return p_result;
 }
 
 /** TCO-compatible eval: set expression and environment for tail-call trampoline.

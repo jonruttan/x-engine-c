@@ -150,6 +150,15 @@ x_obj_t *x_eval_buffer_push(x_obj_t *p_base, x_obj_t *p_buffer);
 x_obj_t *x_eval_env_alist_extend(x_obj_t *p_base, x_obj_t *p_args);
 
 /** Load and evaluate a source file. */
+/** The top-level bracket: what a form evaluated at top level sees, whatever
+ *  frame is live when it is asked for.  One implementation, two doors --
+ *  x_eval_load around a file's forms, eval! around one form. */
+typedef struct x_toplevel_t {
+	x_obj_t *p_saved_stack, *p_saved_env, *p_saved_boundary;
+	x_spair_t parked_env, parked_ctrl;   /* the displaced state, rooted */
+} x_toplevel_t;
+void x_toplevel_enter(x_obj_t *p_base, x_toplevel_t *p_t);
+void x_toplevel_leave(x_obj_t *p_base, x_toplevel_t *p_t);
 x_obj_t *x_eval_load(x_obj_t *p_base, x_obj_t *p_args);
 
 /** Signal an error with the given message and irritant object. */

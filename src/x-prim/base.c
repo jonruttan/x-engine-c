@@ -320,11 +320,14 @@ static x_obj_t *x_prim_base_bind(x_obj_t *p_base, x_obj_t *p_args)
  *
  * x-lang form: @code ((prim-ref 'base 'def-global) name value) @endcode
  *
- * @details `def` chooses global-versus-local by save-stack depth -- "top-level
- *          iff the save-stack is empty" -- which is the settled semantics
- *          include/import and define-sugar rely on, and must not change.
+ * @details `def` chooses global-versus-local by the LIVE FRAME: top-level
+ *          iff the env head is not a FRAME-marked cell (x_prim_define).  It
+ *          chose by save-stack depth before, which made a def in a closure's
+ *          TAIL position global -- the frame is popped before a deferred
+ *          tail runs -- so temporaries def'd inside an if/do tail leaked
+ *          into the base.
  *
- *          The consequence is that an OPERATIVE cannot define for its caller.
+ *          Either way an OPERATIVE cannot define for its caller by plain def.
  *          Every surface language on x (Scheme's `define`, Kernel's `$define!`)
  *          works around it by putting its eval in tail position so TCO pops the
  *          operative's frame first.  That is an accident of frame depth: one
