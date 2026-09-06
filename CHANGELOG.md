@@ -11,6 +11,34 @@ alongside the library changes they landed with.
 [x-lang]: https://github.com/jonruttan/x-lang
 [x-changelog]: https://github.com/jonruttan/x-lang/blob/main/CHANGELOG.md
 
+## Unreleased
+
+**A def scopes by the live frame, not by the save stack.** `def` decided
+top-level by "the save-stack is empty", which is true in a closure body's
+TAIL position: the frame is popped before the deferred tail runs. So
+`(fn (_) (if c (do (def x 1) ...)))` defined `x` for the whole base while the
+same def one form earlier was frame-local -- position-dependent scope, and
+the way every compile in x-lang's asm lane left its buffer, self-cell and
+function in bare globals (`hit`, `cell`, `buf`), which is what kept the JIT
+dialects out of a state image. `x_prim_define` now asks whether the env head
+is a FRAME-marked cell. Two things had leaned on the old rule. `eval!`, the
+REPL's evaluator, runs inside the frames of whatever called the REPL
+(`(unless %batch? (do (%banner) (repl)))`), so it now evaluates its form as a
+top-level form through the loader's own bracket, now one implementation
+with two doors (`x_toplevel_enter`/`x_toplevel_leave`: save-stack hidden,
+the leading FRAME run stripped from the head, the displaced state parked on
+the root chain, all restored after).
+And `x_op_restore` kept an inner operative's formals on the chain whenever
+the caller's head was "reachable" from them, which after any load it always
+is, since every chain ends at the same bottom cells: a `when` or `unless`
+whose `if` took the empty branch left `test then else e` at the head of the
+top-level environment for the rest of the session. The walk now stops at a
+FRAME cell, so a foreign frame restores to the caller and only def cells
+grown onto the caller's env are kept. Code that must bind globally from
+inside a frame says so with `def-global`, which the langs already do.
+Verified: x-lang's suite from source, all six amalgams, and an image of
+`x-base.x` with nothing unnameable.
+
 ## 0.2.7 — 2026-09-05
 
 **A type registered on another base outlives the collector again**

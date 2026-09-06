@@ -61,12 +61,24 @@ static x_obj_t *x_prim_define(x_obj_t *p_base, x_obj_t *p_args)
 	p_val = x_eval_arg(p_base,
 		x_eval_spine_first(p_base, x_11(p_args)));
 
-	/* Top-level iff the save-stack is empty.  This is TRUE for fn-body
-	 * defs in TAIL position (the save frame is popped before the
-	 * deferred tail runs) -- the settled tail-def-binds-globally
-	 * semantics that include/import and define-sugar rely on. */
+	/* Top-level iff the CURRENT ENVIRONMENT is the global chain: its head
+	 * is not a FRAME-marked spine cell.  A closure's params, an operative's
+	 * formals, a guard's error variable and a closure-scope def all mark
+	 * their cells FRAME (x_env_extend, operative.c, control.c, below), so
+	 * a def inside any of them extends that frame -- whatever the save
+	 * stack says.  The save-stack test this replaces made a def global in
+	 * TAIL position (the frame is popped before the deferred tail runs), so
+	 * (fn (_) (if c (do (def x 1) ...))) defined x for the whole base: the
+	 * "TCO tail-def leak", which left every compile's buffer and self-cell
+	 * in bare globals and refused the JIT dialects to the state-image
+	 * writer.  A file's top-level forms are still top-level: x_eval_load
+	 * strips the includer's frames from the head for the duration of the
+	 * load.  Code that must bind globally from inside a frame says so with
+	 * def-global (x_prim_define_global). */
 	toplevel = x_base_isset(p_base)
-		&& x_obj_isnil(p_base, x_eval_field_save_stack(p_base));
+		&& (x_obj_isnil(p_base, x_firstobj(x_eval_field_env_alist(p_base)))
+		|| ! (x_obj_flags(x_firstobj(x_eval_field_env_alist(p_base)))
+			& X_OBJ_FLAG_FRAME));
 
 	/* Top-level REdefinition: update the existing BST binding in place.
 	 * x_alist_bst_insert keeps the OLD pair on a key hit, so consing a

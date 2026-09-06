@@ -153,13 +153,23 @@ void x_op_restore(x_obj_t *p_base, x_obj_t *p_record, int force_caller)
 			 *     frame -- e.g. a nested TCO recursion inside (eval expr e)
 			 *     (the interpolation operative parses holes that way) whose
 			 *     own restore was suppressed as a non-outermost trampoline.
-			 * Distinguish by walking for the caller: reachable -> case (1),
-			 * keep; not reachable -> case (2), the head is foreign, so
-			 * restore to the caller.  Without this an operative in if-tail
-			 * (simple-TCO) position leaks that foreign frame, and the next
-			 * form the caller evaluates sees the wrong scope (Unbound). */
+			 * Distinguish by walking for the caller THROUGH NON-FRAME CELLS
+			 * ONLY: case (1) grew the caller's env with def cells, which
+			 * carry no FRAME mark, so the head reaches the caller across
+			 * plain cells; a FRAME cell on the way is an inner operative's
+			 * formals left where its nil tail put them (a when/unless whose
+			 * if took the empty branch: match sets a nil tail, nothing
+			 * tail-evals into the caller's env, and the inner record was
+			 * dropped as non-outermost), so the head is foreign and the
+			 * caller is restored.  Reachability alone could not tell them
+			 * apart: every chain ends at the same bottom cells, so a caller
+			 * head the loaders have restored to the base of the chain was
+			 * "reachable" from any frame, and the frame stayed -- at the
+			 * TOP LEVEL, where it made every later def frame-local once
+			 * x_prim_define scoped by the live frame. */
 			p_walk = x_firstobj(x_eval_field_env_alist(p_base));
-			while ( ! x_obj_isnil(p_base, p_walk) && p_walk != p_caller) {
+			while ( ! x_obj_isnil(p_base, p_walk) && p_walk != p_caller
+				&& ! (x_obj_flags(p_walk) & X_OBJ_FLAG_FRAME)) {
 				p_walk = x_restobj(p_walk);
 			}
 			if (p_walk != p_caller) {
@@ -1320,10 +1330,11 @@ x_obj_t *x_eval_env_alist_extend(x_obj_t *p_base, x_obj_t *p_args)
 	/* Frame-region invariant (GH #47): symbol lookup's step 1 walks the
 	 * LEADING run of FRAME-marked cells, so an unmarked cell must never
 	 * be consed onto a frame head -- it would hide the frame cells below
-	 * it.  A top-level-classified def CAN run with a frame head current
-	 * (the TCO tail-def leak keeps op/printer frames on the caller's
-	 * chain); it still binds globally through the BST, but its chain
-	 * cell inherits the FRAME mark so the region stays contiguous. */
+	 * it.  A top-level-classified def runs with a non-frame head now
+	 * that x_prim_define classifies by the live frame and x_op_restore
+	 * sheds an inner operative's frame; the inheritance stays as the
+	 * invariant's backstop, so the region is contiguous whatever the
+	 * head. */
 	if ( ! x_obj_isnil(p_base, p_old)
 		&& (x_obj_flags(p_old) & X_OBJ_FLAG_FRAME)) {
 		x_obj_flags(p_new) |= X_OBJ_FLAG_FRAME;
@@ -1345,6 +1356,110 @@ x_obj_t *x_eval_buffer_push(x_obj_t *p_base, x_obj_t *p_buffer)
 		p_buffer, x_base_field_buffer(p_base));
 	return p_buffer;
 }
+
+/**
+ * Enter the top-level bracket: what a form evaluated at top level sees,
+ * whatever frame is live when it is asked for.
+ *
+ * A top-level form's `def`s must bind globally, and the closures it makes
+ * must capture the top-level chain -- not the frames of whatever was being
+ * evaluated when the form was asked for.  Two doors ask: x_eval_load, for
+ * every form of a file (`include` runs under whatever called it, and its
+ * x-level wrapper is a closure), and eval!, for the one form the REPL loop
+ * reads (lib/he.x reaches `(repl)` through `(unless %batch? (do (%banner)
+ * (repl)))`, so every form typed at the prompt sits under those frames).
+ * x_prim_define decides top-level by the live frame, so this is the one
+ * place that says what top level IS:
+ *
+ *  - the save-stack is hidden (nil), so a form sees an empty stack exactly
+ *    as at the true top level; each x_eval balances its own pushes;
+ *  - the leading FRAME run is stripped from the env head -- exactly the
+ *    frame region symbol lookup's step 1 walks -- so each form evaluates
+ *    against, and each closure captures, the true top-level chain (base-bind
+ *    and global cells stay); the boundary is cleared with it.
+ *
+ * The displaced state is HEAP: the caller's frame cells and its restore
+ * compounds, and for the length of the bracket nothing on the base tree
+ * reaches them -- the head points past the frames, the save-stack slot is
+ * nil.  A C local is not a root (x-heap.h), so a form that collects (a
+ * library collecting between definitions is ordinary) would sweep them,
+ * and the caller would walk freed memory on its next lookup: a SIGSEGV in
+ * x_type_symbol_eval on glibc, luck on macOS.  So both are parked on the
+ * root chain, in the caller's own struct -- two nodes, not one pointing at
+ * the other, because the chain's pre-clear pass strips each REGISTERED
+ * node's stale mark and a node reached only through another would keep
+ * its mark from the previous collect and stop the walk short.  Pops are
+ * LIFO, in x_toplevel_leave.  The error path needs nothing more: a guard
+ * restores the root chain and the save-stack from its own snapshot, so a
+ * longjmp out of a bracketed form drops the nodes with the C frame that
+ * owns them, and this struct's saves are moot.
+ *
+ * Bindings made inside persist through the global BST; the alist cells the
+ * forms grew onto the stripped chain are dropped with the head at leave,
+ * which is what the loader has always done.
+ *
+ * @param p_base  x_obj_t* -- Base (execution context)
+ * @param p_t     x_toplevel_t* -- the caller's bracket state, filled here
+ * @see x_toplevel_leave, x_eval_load, x_prim_eval_immediate
+ */
+void x_toplevel_enter(x_obj_t *p_base, x_toplevel_t *p_t)
+{
+	x_obj_t *p_env;
+	int i;
+	x_obj_t **pp_root = x_heap_root_slot(p_base);
+
+	p_t->p_saved_stack = x_eval_field_save_stack(p_base);
+	x_eval_field_save_stack(p_base) = NULL;
+
+	p_t->p_saved_env = x_firstobj(x_eval_field_env_alist(p_base));
+	p_t->p_saved_boundary = x_eval_field_env_local_boundary(p_base);
+	p_env = p_t->p_saved_env;
+	while ( ! x_obj_isnil(p_base, p_env)
+		&& (x_obj_flags(p_env) & X_OBJ_FLAG_FRAME)) {
+		p_env = x_restobj(p_env);
+	}
+	x_firstobj(x_eval_field_env_alist(p_base)) = p_env;
+	x_eval_field_env_local_boundary(p_base) = NULL;
+
+	/* Pair-typed, as the root chain requires: the mark walk descends only
+	 * spair pairs.  Built at run time in the caller's struct -- every unit
+	 * zeroed, then the type and flags words -- where the static form would
+	 * have used the x_obj_set initializer. */
+	for (i = 0; i < (int)(X_OBJ_META_LEN + X_OBJ_UNITS_PAIR); i++) {
+		p_t->parked_env[i].i = 0;
+		p_t->parked_ctrl[i].i = 0;
+	}
+	x_obj_type(p_t->parked_env) = (x_obj_t *)x_type_pair_obj;
+	x_obj_flags(p_t->parked_env) = X_OBJ_FLAG_NONE;
+	x_obj_type(p_t->parked_ctrl) = (x_obj_t *)x_type_pair_obj;
+	x_obj_flags(p_t->parked_ctrl) = X_OBJ_FLAG_NONE;
+	x_firstobj((x_obj_t *)p_t->parked_env) = p_t->p_saved_env;
+	x_restobj((x_obj_t *)p_t->parked_env) = p_t->p_saved_boundary;
+	x_firstobj((x_obj_t *)p_t->parked_ctrl) = p_t->p_saved_stack;
+	x_restobj((x_obj_t *)p_t->parked_ctrl) = NULL;
+	x_heap_root_push(pp_root, p_t->parked_ctrl);
+	x_heap_root_push(pp_root, p_t->parked_env);
+}
+
+/**
+ * Leave the top-level bracket: unroot the parked state and put it back.
+ *
+ * @param p_base  x_obj_t* -- Base (execution context)
+ * @param p_t     x_toplevel_t* -- the state x_toplevel_enter filled
+ * @see x_toplevel_enter
+ */
+void x_toplevel_leave(x_obj_t *p_base, x_toplevel_t *p_t)
+{
+	x_obj_t **pp_root = x_heap_root_slot(p_base);
+
+	x_heap_root_pop(pp_root);
+	x_heap_root_pop(pp_root);
+
+	x_eval_field_save_stack(p_base) = p_t->p_saved_stack;
+	x_firstobj(x_eval_field_env_alist(p_base)) = p_t->p_saved_env;
+	x_eval_field_env_local_boundary(p_base) = p_t->p_saved_boundary;
+}
+
 
 /**
  * Read and evaluate all expressions from the current buffer.
@@ -1378,9 +1493,7 @@ x_obj_t *x_eval_load(x_obj_t *p_base, x_obj_t *p_args)
 {
 	x_obj_t *p_buffer = x_firstobj(x_base_field_buffer(p_base));
 	x_obj_t *p_exp, *p_result = NULL;
-	x_obj_t *p_saved_stack;
-	x_obj_t *p_saved_env, *p_saved_boundary, *p_env;
-	x_obj_t **pp_root = x_heap_root_slot(p_base);
+	x_toplevel_t top;
 	x_satom_t exp_wrap = x_obj_set(NULL, X_OBJ_FLAG_NONE, { NULL });
 	x_spair_t eval_args[1] = {
 		x_obj_set(NULL, X_OBJ_FLAG_NONE, { exp_wrap }, { NULL })
@@ -1388,81 +1501,12 @@ x_obj_t *x_eval_load(x_obj_t *p_base, x_obj_t *p_args)
 	x_spair_t read_args[1] = {
 		x_obj_set(NULL, X_OBJ_FLAG_NONE, { p_buffer }, { p_base })
 	};
-	/* The includer's displaced state, held where the collector can see it
-	 * while the file loads -- see the rooting note below.  Pair-typed, as
-	 * the root chain requires: the mark walk descends only spair pairs. */
-	x_spair_t parked_env = x_obj_set((x_obj_t *)x_type_pair_obj,
-		X_OBJ_FLAG_NONE, { NULL }, { NULL });
-	x_spair_t parked_ctrl = x_obj_set((x_obj_t *)x_type_pair_obj,
-		X_OBJ_FLAG_NONE, { NULL }, { NULL });
 
-	/* Each form read from the file is a TOP-LEVEL form: its top-level `def`s
-	 * must bind globally (BST), not as locals of whatever was being evaluated
-	 * when this load was triggered.  x_prim_define decides global-vs-local by
-	 * testing whether the save-stack is empty, so when `include` runs under a
-	 * (eval form env) -- which leaves a restore compound on the save-stack --
-	 * a loaded file's defs would otherwise land in a transient local scope and
-	 * vanish on restore (e.g. a module whose `def-class` is then Unbound).
-	 * Hide the outer save-stack for the duration of the load so each form sees
-	 * an empty stack, exactly as at the true top level.  Each x_eval call below
-	 * balances its own pushes, so the stack is back to nil between iterations.
-	 * On error the loaded form longjmps to its guard, which restores the
-	 * interpreter state from guard's own snapshot -- this abandoned C frame's
-	 * saved value is moot -- so a plain save/restore around the loop is safe
-	 * against the ERROR path.  Against a collect it is not; see below. */
-	p_saved_stack = x_eval_field_save_stack(p_base);
-	x_eval_field_save_stack(p_base) = NULL;
-
-	/* The same top-level contract, for CLOSURES: a closure a loaded file
-	 * defines captures the env-alist head, so with the includer's lexical
-	 * frames still on the chain it captures them permanently -- the x-level
-	 * loader wrappers' formals (`path`, `name`, ...) then shadow the global
-	 * env inside every loaded fn/op forever (the Logo server read its own
-	 * module path where its request path should have been).  Strip the
-	 * leading FRAME run -- exactly the frame region symbol lookup's step 1
-	 * walks -- so each form evaluates against, and each closure captures,
-	 * the true top-level chain (base-bind and global cells stay).  The
-	 * boundary is cleared with it; both restore after the loop, and on
-	 * error the longjmp target's own snapshot supersedes these saves, the
-	 * same argument as the save-stack above. */
-	p_saved_env = x_firstobj(x_eval_field_env_alist(p_base));
-	p_saved_boundary = x_eval_field_env_local_boundary(p_base);
-	p_env = p_saved_env;
-	while ( ! x_obj_isnil(p_base, p_env)
-		&& (x_obj_flags(p_env) & X_OBJ_FLAG_FRAME)) {
-		p_env = x_restobj(p_env);
-	}
-	x_firstobj(x_eval_field_env_alist(p_base)) = p_env;
-	x_eval_field_env_local_boundary(p_base) = NULL;
-
-	/* PARK THE DISPLACED STATE WHERE THE COLLECTOR CAN SEE IT.  Both saves
-	 * above are HEAP objects -- the includer's frame cells and its restore
-	 * compounds -- and for the length of the load nothing on the base tree
-	 * reaches them: the env head now points past the frames, the save-stack
-	 * slot is nil.  A C local is not a root (x-heap.h): the collector marks
-	 * from the base and the root chain and never scans the stack.  So a
-	 * loaded file that collects -- and a library that collects between
-	 * definitions is ordinary -- swept the includer's frames, and when the
-	 * load returned and the head was put back, the includer walked freed
-	 * memory on its next symbol lookup.  glibc reuses a freed cell at once,
-	 * so on x86-64 Linux that was a SIGSEGV in x_type_symbol_eval; macOS
-	 * mostly left the cell intact and answered right by luck.
-	 *
-	 * Register them on the root chain, the mechanism built for exactly a C
-	 * frame holding the only reference (x_prims_add roots a half-built
-	 * catalog entry the same way).  Two nodes, not one node pointing at the
-	 * other: the chain's pre-clear pass strips each REGISTERED node's stale
-	 * mark before marking, and a second stack pair reached only through the
-	 * first would keep the mark from the previous collect and stop the walk
-	 * short of what it holds.  The error path needs nothing more -- the
-	 * guard restores the root chain from its own snapshot along with the
-	 * save-stack, so a longjmp out of a loaded form drops these nodes with
-	 * the C frame that owns them.  Pops are LIFO. */
-	x_firstobj((x_obj_t *)parked_env) = p_saved_env;
-	x_restobj((x_obj_t *)parked_env) = p_saved_boundary;
-	x_firstobj((x_obj_t *)parked_ctrl) = p_saved_stack;
-	x_heap_root_push(pp_root, parked_ctrl);
-	x_heap_root_push(pp_root, parked_env);
+	/* Each form read from the file is a TOP-LEVEL form -- what that means
+	 * is x_toplevel_enter's to say, once, for this door and for eval!'s.
+	 * One bracket around the whole file, not one per form: a form's defs
+	 * stay on the chain for the forms after it, as they always have. */
+	x_toplevel_enter(p_base, &top);
 
 	for (;;) {
 		p_exp = x_token_read(p_base, (x_obj_t *)read_args);
@@ -1475,12 +1519,7 @@ x_obj_t *x_eval_load(x_obj_t *p_base, x_obj_t *p_args)
 		p_result = x_eval(p_base, (x_obj_t *)eval_args);
 	}
 
-	x_heap_root_pop(pp_root);
-	x_heap_root_pop(pp_root);
-
-	x_eval_field_save_stack(p_base) = p_saved_stack;
-	x_firstobj(x_eval_field_env_alist(p_base)) = p_saved_env;
-	x_eval_field_env_local_boundary(p_base) = p_saved_boundary;
+	x_toplevel_leave(p_base, &top);
 
 	return p_result;
 }
