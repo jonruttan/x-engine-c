@@ -11,7 +11,7 @@ alongside the library changes they landed with.
 [x-lang]: https://github.com/jonruttan/x-lang
 [x-changelog]: https://github.com/jonruttan/x-lang/blob/main/CHANGELOG.md
 
-## Unreleased
+## 0.2.7 — 2026-09-05
 
 **A type registered on another base outlives the collector again**
 ([x-lang#599]). `base-make-type` builds the name atom, the type struct and the
