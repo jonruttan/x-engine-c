@@ -11,7 +11,7 @@ alongside the library changes they landed with.
 [x-lang]: https://github.com/jonruttan/x-lang
 [x-changelog]: https://github.com/jonruttan/x-lang/blob/main/CHANGELOG.md
 
-## Unreleased
+## 0.2.8 — 2026-09-06
 
 **A def scopes by the live frame, not by the save stack.** `def` decided
 top-level by "the save-stack is empty", which is true in a closure body's
