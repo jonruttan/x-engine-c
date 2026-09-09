@@ -17,6 +17,6 @@
 (costume "x-engine-c"
   (logo "the C logo's blue")
   (accent 206 100 31)
-  (rows "., .," "{OvO}" "(   )" " \" \"")
+  (rows "., .," "{O,O}" "(   )" " \" \"")
   (roles "ii ii" "ieifi" "iiiii" " i i ")
   (reference "return x; /* {O,O} */"))
