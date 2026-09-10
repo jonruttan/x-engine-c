@@ -37,7 +37,7 @@
  * SYMBOL", "type: no + for"), repointed in place on each raise -- the
  * literals have static storage, so no copy and no allocation is needed
  * to make one reachable from x-lang.  The language maps the code to
- * whatever kind vocabulary it likes; the engine does not name kinds. */
+ * whatever tag vocabulary it likes; the engine does not name tags. */
 #define x_err_code(X)		x_firstobj((X))
 
 /** The error's SUBJECT: what the raise site was complaining about -- the

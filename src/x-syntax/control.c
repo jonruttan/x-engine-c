@@ -240,7 +240,7 @@ static x_obj_t *x_prim_guard(x_obj_t *p_base, x_obj_t *p_args)
  *
  * @details **The optional second argument is the uncaught report.**  A
  *          guard receives the VALUE -- structured errors want to arrive
- *          as objects, and (Err kind-of e) depends on it -- but an
+ *          as objects, and (Err tag e) depends on it -- but an
  *          uncaught non-string value used to print as the bare literal
  *          "error", because this layer cannot render an arbitrary object
  *          and the object's own fields are the class layer's business
