@@ -526,12 +526,110 @@ static char *test_token_read_ro_eof(void)
 	return NULL;
 }
 
+/* THE VARIANT CHANNEL (x-token.h).  VARIANT accepts one 'K' and declares variant 7
+ * through the cell the analyse loop hangs off the score's rest; NOVARIANT
+ * accepts one 'N' and declares nothing.  Both readers answer the variant
+ * argument itself, so the test sees exactly what a reader is handed. */
+x_obj_t *test_token_variant_read(x_obj_t *p_base, x_obj_t *p_args);
+x_satom_t test_token_variant_read_prim = x_obj_set(x_type_atom_obj, X_OBJ_FLAG_NONE, { .fn = test_token_variant_read });
+
+x_obj_t *test_token_variant_analyse(x_obj_t *p_base, x_obj_t *p_args)
+{
+	x_obj_t *p_buffer = x_token_read_arg_buffer(p_args),
+		*p_score = x_token_read_arg_score(p_args);
+
+	if ('K' == x_bufferlastchar(p_buffer)) {
+		return p_args;
+	}
+
+	x_bufferread(p_buffer)--;
+
+	if (x_bufferlen(p_buffer) < 1) {
+		return NULL;
+	}
+
+	x_firstint(p_score) = x_bufferlen(p_buffer);
+	x_firstint(x_restobj(p_score)) = 7;
+	return p_score;
+}
+x_satom_t test_token_variant_analyse_prim = x_obj_set(x_type_atom_obj, X_OBJ_FLAG_NONE, { .fn = test_token_variant_analyse });
+
+x_obj_t *test_token_novariant_analyse(x_obj_t *p_base, x_obj_t *p_args)
+{
+	x_obj_t *p_buffer = x_token_read_arg_buffer(p_args),
+		*p_score = x_token_read_arg_score(p_args);
+
+	if ('N' != x_bufferlastchar(p_buffer)) {
+		return NULL;
+	}
+
+	x_firstint(p_score) = x_bufferlen(p_buffer);
+	return p_score;
+}
+x_satom_t test_token_novariant_analyse_prim = x_obj_set(x_type_atom_obj, X_OBJ_FLAG_NONE, { .fn = test_token_novariant_analyse });
+
+x_obj_t *test_token_variant_read(x_obj_t *p_base, x_obj_t *p_args)
+{
+	x_obj_t *p_buffer = x_token_read_arg_buffer(p_args);
+
+	return x_mkpair(p_base,
+		x_mksatom(p_base, X_OBJ_FLAG_NONE, x_bufferlen(p_buffer)),
+		x_token_read_arg_variant(p_args));
+}
+
+static char *test_token_read_variant(void)
+{
+	x_obj_t *p_base = x_eval_make(NULL, NULL), *p_type, *p_args, *p_obj;
+	x_char_t buf_k[] = "KKK ", buf_n[] = "N";
+	x_obj_t *p_buffer;
+	struct x_type_t type_variant = {
+		.p_name = x_mkatom(p_base, (void *)"VARIANT"),
+		.p_analyse = (x_obj_t *)test_token_variant_analyse_prim,
+		.p_read = (x_obj_t *)test_token_variant_read_prim
+	}, type_novariant = {
+		.p_name = x_mkatom(p_base, (void *)"NOVARIANT"),
+		.p_analyse = (x_obj_t *)test_token_novariant_analyse_prim,
+		.p_read = (x_obj_t *)test_token_variant_read_prim
+	};
+
+	p_type = x_type_struct_make(p_base, type_variant);
+	x_eval_type_alist_extend(p_base, p_type);
+	p_type = x_type_struct_make(p_base, type_novariant);
+	x_eval_type_alist_extend(p_base, p_type);
+
+	/* A declared variant reaches the reader as a raw atom cell. */
+	p_buffer = x_mkbufferro(p_base, buf_k);
+	x_bufferwrite(p_buffer) = x_bufferval(p_buffer) + 4;
+	p_args = x_mkpair(p_base, p_buffer, p_base);
+	p_obj = x_token_read(p_base, p_args);
+	_it_should("a declared variant reaches the reader as an atom cell, and the span is whole",
+		! x_obj_isnil(p_base, p_obj)
+		&& x_atomint(x_firstobj(p_obj)) == 3
+		&& x_atomint(x_restobj(p_obj)) == 7);
+
+	/* No variant declared: the reader's second argument is nil, as before
+	 * the channel existed. */
+	p_buffer = x_mkbufferro(p_base, buf_n);
+	x_bufferwrite(p_buffer) = x_bufferval(p_buffer) + 1;
+	p_args = x_mkpair(p_base, p_buffer, p_base);
+	p_obj = x_token_read(p_base, p_args);
+	_it_should("no declared variant hands the reader nil",
+		! x_obj_isnil(p_base, p_obj)
+		&& x_atomint(x_firstobj(p_obj)) == 1
+		&& x_obj_isnil(p_base, x_restobj(p_obj)));
+
+	test_cleanup(p_base);
+
+	return NULL;
+}
+
 static char *run_tests() {
 	_run_test(test_token_delimit);
 	_run_test(test_token_read);
 	_run_test(test_token_read_eof);
 	_run_test(test_token_read_null_reader);
 	_run_test(test_token_read_ro_eof);
+	_run_test(test_token_read_variant);
 
 	return NULL;
 }
