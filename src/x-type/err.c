@@ -28,7 +28,7 @@
  * x-type/char.c and lib/x/type/char-io.x in x-lang) -- so the wording
  * belongs to the language, not to this file.  x-lang's err-io.x pushes
  * the default English onto the write/display stacks; a lang pushes its
- * own over that and pops it again.  The engine names no kinds and
+ * own over that and pops it again.  The engine names no tags and
  * spells no prose here.
  *
  * ZERO ALLOCATION ON THE RAISE PATH.  x_eval_error formats in place so
