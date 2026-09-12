@@ -11,6 +11,53 @@ alongside the library changes they landed with.
 [x-lang]: https://github.com/jonruttan/x-lang
 [x-changelog]: https://github.com/jonruttan/x-lang/blob/main/CHANGELOG.md
 
+## 0.2.9 — 2026-09-11
+
+**An analyser tells the reader which of its states accepted** ([#43]). An
+analyser knows things the token text does not say — which state accepted,
+whether a numeric literal ran through a fraction or an exponent — and threw
+that away, so the type's reader rescanned the text it had just read to find
+out again. The score cell an analyser is handed now carries a **variant cell**
+on its rest. A state writes an integer there as it accepts; `x_token_analyse`
+resets both per handler (and puts the cell back on the rest, since an analyser
+may set that slot itself — the C specs do, as a reader side channel), records
+the winning handler's variant through a new out-parameter, and `x_token_read`
+hands it to the type's reader as its **second argument**: the slot in
+`(buffer ())` that always held nil. It stays nil when no state declared one,
+so a type that never heard of the channel reads exactly what it always read,
+and every reader in x-lang and its bundles is variadic, so no arity changes.
+
+**A raw atom cell, not an int.** An int object only means anything in a base
+that registered the int type, and `x_mkint` reaches it through the type's
+`make`, which *registers the type on the base* as a side effect — and a
+tokenizer base (`make-tok`) has no int type on purpose. Measured: the
+registration put a built-in integer analyser into a custom tokenizer mid-read,
+and the next token it read was the built-in's. The atom type is static and
+lives everywhere, so the variant travels the way the score does: a cell whose
+value word is the integer, `x_atomint` in C, `%cell-int` in x-lang.
+
+`jit_score_variant` is the compiled states' door — `jit_score_set`'s
+three-line peer, one export. The channel is a protocol extension of
+`(tok read)` rather than a primitive, so the ISA manifest cannot describe it;
+it is claimed as `tok/variant` in `claims.x`, the way `native/jit` is, and the
+declaration is regenerated in the same commit — the step 0.1.5 and 0.2.1 each
+shipped without. x-lang spells the two ends `%score-variant!` and
+`%read-variant` ([x-lang#671]) and gates its specs on `@requires tok/variant`;
+an engine without the symbol is unaffected, since the binding is optional and
+the compile falls back. Covered by `tests/c/src/7.0.x-token.spec.c`: a
+three-character token whose type declares variant 7 arrives with its span
+whole and its variant delivered, and one whose type declares none hands the
+reader nil.
+
+Also: three comments called an error's classifying symbol its "kind". x-lang
+names it the **tag** ([x-lang#672]), and the engine's prose now follows
+([#44]). Comments only, no code change.
+
+[#43]: https://github.com/jonruttan/x-engine-c/pull/43
+[#44]: https://github.com/jonruttan/x-engine-c/pull/44
+[x-lang#671]: https://github.com/jonruttan/x-lang/pull/671
+[x-lang#672]: https://github.com/jonruttan/x-lang/pull/672
+
 ## 0.2.8 — 2026-09-06
 
 **A def scopes by the live frame, not by the save stack.** `def` decided
