@@ -15,6 +15,7 @@
 #include "x-type/str.h"
 #include "x-alist.h"
 #include "x-eval.h"
+#include "x-env.h"
 #include "x-token/sexp/symbol.h"
 
 x_satom_t x_type_symbol_name = x_obj_set(x_type_atom_obj, X_OBJ_FLAG_NONE, { .s = (x_char_t *)X_TYPE_SYMBOL_NAME }),
@@ -276,63 +277,23 @@ x_obj_t *x_type_symbol_find(x_obj_t *p_base, x_obj_t *p_args)
 }
 
 /**
- * Type-system eval handler -- 3-step environment lookup for symbols.
+ * Evaluate a symbol: the value bound to it in the current environment or
+ * an ancestor.
  *
- * 1. Walk the leading FRAME-marked run of the alist (the lexical frame
- *    region: every enclosing frame's locals, innermost first).
- * 2. BST lookup for globals (O(log n)).
- * 3. Continue the alist walk through the remaining chain (rare fallback).
+ * The environment is a chain of @c (bindings . parent) pairs ending at
+ * the root, whose bindings are a tree; x_env_lookup walks it.  An
+ * unbound symbol is an error naming the symbol.
  *
- * Raises an "Unbound SYMBOL" error if the symbol is not found.
- *
- * @details
- * The 3-step design optimizes for the common case where most lookups
- * hit either a local binding (step 1) or a global (step 2):
- *
- * @code
- *   env alist:  [local0]F -> [local1]F -> [captured]F -> [globals...]
- *                  ^                                        ^
- *                  |                                        |
- *              Step 1: walk the F(RAME) run             Step 3: walk from here
- *              (frame depth = lexical nesting, small)   (rare: base-bind cells)
- *
- *   BST:           [m]
- *                 /   \
- *              [d]     [s]         Step 2: O(log n) global lookup
- *             / \     / \
- *           ...  ... ...  ...
- * @endcode
- *
- * **Step 1** walks the leading run of X_OBJ_FLAG_FRAME-marked spine
- * cells: bindings from @c fn params, @c let, closure-scope @c def, op
- * formals and env-params -- for the CURRENT frame and every enclosing
- * frame on the chain.  Locals therefore always win over globals with
- * correct lexical semantics.  (GH #47: the old walk stopped at the
- * current frame's boundary, so an enclosing-frame capture -- e.g. the
- * dispatch ops' env-param @c e referenced from a nested arg-eval
- * closure -- fell through to a same-named global via step 2, and the
- * compensating SHADOW bit on the interned symbol made one activation's
- * shadowing blind every OTHER chain's global lookup.)
- *
- * **Step 2** performs a BST lookup on the global tree for O(log n)
- * access to top-level definitions.
- *
- * **Step 3** continues the linear walk through the rest of the chain:
- * bindings on the chain that are neither frame-marked nor BST-indexed
- * (base-bind cells; frame cells below a global cell consed onto a frame
- * head by a tail-position top-level def).
- *
- * @param p_base  Base (execution context).
- * @param p_args  Eval argument frame containing the symbol expression.
+ * @param p_base  x_obj_t* -- Base (execution context)
+ * @param p_args  x_obj_t* -- Eval args: (symbol . env)
  * @return The bound value, or NULL on error.
  *
- * @see x_alist_bst_lookup for the BST search used in step 2
- * @see X_OBJ_FLAG_FRAME for the frame marking set by x_env_extend
+ * @see x_env_lookup
  */
 x_obj_t *x_type_symbol_eval(x_obj_t *p_base, x_obj_t *p_args)
 {
 	x_obj_t *p_sym_obj = x_firstobj(x_eval_arg_exp(p_args));
-	x_obj_t *p_alist, *p_entry;
+	x_obj_t *p_entry;
 	/* Error-path name wrapper; filled only when the lookup misses. */
 	x_satom_t sym_name;
 
@@ -340,43 +301,11 @@ x_obj_t *x_type_symbol_eval(x_obj_t *p_base, x_obj_t *p_args)
 		return NULL;
 	}
 
-	p_alist = x_firstobj(x_eval_field_env_alist(p_base));
-
-	/* Step 1: walk the lexical frame region -- the leading run of
-	 * FRAME-marked spine cells (params, let/closure defs, op formals and
-	 * env-params).  This covers ENCLOSING frames too, so a captured local
-	 * always wins over a same-named global; the old head-to-boundary walk
-	 * saw only the current frame and let the BST hijack enclosing-frame
-	 * captures (GH #47: a top-level (def e ...) poisoned every op's
-	 * (eval expr e), and the compensating SHADOW bit on the interned
-	 * symbol blinded OTHER chains' globals -- "Unbound SYMBOL new"). */
-	while ( ! x_obj_isnil(p_base, p_alist)
-		&& (x_obj_flags(p_alist) & X_OBJ_FLAG_FRAME)) {
-		if (x_firstobj(x_firstobj(p_alist)) == p_sym_obj) {
-			return x_restobj(x_firstobj(p_alist));
-		}
-		p_alist = x_restobj(p_alist);
-	}
-
-	/* Step 2: BST lookup (globals; O(log n)) */
-	p_entry = x_alist_bst_lookup(p_base,
-		x_eval_field_env_global_tree(p_base), p_sym_obj);
-	if ( ! x_obj_isnil(p_base, p_entry)) {
+	p_entry = x_env_lookup(p_base, x_eval_field_env(p_base), p_sym_obj);
+	if (p_entry != NULL) {
 		return x_restobj(p_entry);
 	}
 
-	/* Step 3: continue the walk through the remaining chain (bindings
-	 * outside both the frame region and the BST -- base-bind cells, or
-	 * frame cells sitting below a global cell a tail-position top-level
-	 * def consed onto a frame head) */
-	while ( ! x_obj_isnil(p_base, p_alist)) {
-		if (x_firstobj(x_firstobj(p_alist)) == p_sym_obj) {
-			return x_restobj(x_firstobj(p_alist));
-		}
-		p_alist = x_restobj(p_alist);
-	}
-
-	/* Not found: error */
 	sym_name[X_OBJ_META_TYPE].p = (x_obj_t *)x_type_atom_obj;
 	sym_name[X_OBJ_META_FLAGS].i = X_OBJ_FLAG_NONE;
 	x_atomstr((x_obj_t *)sym_name) = x_symbolval(p_sym_obj);

@@ -15,7 +15,7 @@
  * Layout (base = x_base(X)):
  *
  *   first: env + ctrl              (x-expr leaves nil; filled here)
- *     env    env-alist, env-local-boundary, env-global-tree, shadow-list
+ *     env    env (the current environment), env-root
  *     ctrl   save-stack, error-handler, tco-expr, tco-env
  *   rest:  io + meta               (x-expr skeleton)
  *     io     type-alist, line, true, false
@@ -27,11 +27,23 @@
  *
  * Each leaf is a stack cell @c (current . saved); read the current value
  * with @c x_firstobj().  Direct-value exceptions (the slot is the value,
- * no wrapping): save-stack, env-local-boundary, env-global-tree,
- * shadow-list.
+ * no wrapping): save-stack, env, env-root.
+ *
+ * An ENVIRONMENT is a first-class value: one pair, @c (bindings . parent).
+ * The root's parent is nil and its bindings are a tree (x-alist.c's BST,
+ * for the size of a loaded library); every other environment's bindings
+ * are an alist of @c (name . value) cells and its parent is the
+ * environment it was made in.  A procedure call makes a child of the
+ * closure's environment; an operative body runs in a child of its static
+ * environment and receives the caller's environment as a value; `def`
+ * binds in the current environment and `eval` with an environment makes
+ * that one current.  The whole of scope is those four sentences, and
+ * every save/restore in the evaluator is one pointer, the current
+ * environment.  The environment operations are x-env.h; the save and
+ * restore are x-tco.h; the top-level bracket is x-toplevel.h.
  *
  * The error handler is itself a pair tree, navigated by x_error_handler_*:
- *   @c (jmp-ptr (saved-env . saved-boundary) error-value . line)
+ *   @c (jmp-ptr (saved-env . nil) error-value . line)
  *
  * @author Jon Ruttan (jonruttan@gmail.com)
  * @copyright 2021 Jon Ruttan
@@ -51,38 +63,25 @@
  *  execution context.  Serves as the type tag for base/interp objects. */
 extern x_satom_t x_eval_obj;
 
-/** Symbol/expression/env flags.
- *  SHADOW -- retired (GH #47): the bit lived on the INTERNED symbol, so one
- *            activation's local binding blinded every other lexical chain's
- *            BST lookup for that name.  The define remains only for the
- *            dormant clear machinery; nothing sets it anymore.
- *  COV    -- an expression has been evaluated (coverage tracking).
- *  FRAME  -- an env-alist SPINE cons belonging to a local frame (params,
- *            let/closure defs, op formals and env-param, guard binds).
- *            Symbol lookup walks the frame region of the chain BEFORE the
- *            global BST, so enclosing-frame locals shadow globals with the
- *            correct lexical semantics; unmarked spine cells are the global
- *            region, answered by the BST.  See x_type_symbol_eval. */
-/** FNFRAME -- set IN ADDITION to FRAME on spine cells of PROCEDURE (fn)
- *  activations.  Operative frames are transparent to top-levelness by
- *  design (the REPL op, def-class's tail-eval'd defs), so a def with an
- *  empty save-stack is top-level UNLESS the env head carries FNFRAME --
- *  the save-stack alone lies at TCO tails, where a fn-body def used to
- *  classify top-level and leak into the BST (GH #47). */
-#define X_OBJ_FLAG_SHADOW	X_OBJ_FLAG_1
+/** Expression flags.
+ *  COV -- an expression has been evaluated (coverage tracking).
+ *
+ *  Three flags lived beside it and are gone with the environment model
+ *  they served: SHADOW, a bit on the interned symbol that marked a local
+ *  binding; FRAME, a bit on an env spine cell that marked it as part of a
+ *  local frame; and FNFRAME, FRAME's refinement for procedure activations.
+ *  An environment is an object now, so a frame is a value and needs no
+ *  mark.  Flag bits 1, 3 and 4 are free at this layer. */
 #define X_OBJ_FLAG_COV		X_OBJ_FLAG_2
-#define X_OBJ_FLAG_FRAME	X_OBJ_FLAG_3
-#define X_OBJ_FLAG_FNFRAME	X_OBJ_FLAG_4
 
 /**
  * @defgroup error_handler Error Handler Macros
  * @brief Navigate the error handler pair tree
- *        @c (jmp-ptr (saved-env . saved-boundary) error-value . line).
+ *        @c (jmp-ptr (saved-env . nil) error-value . line).
  * @{
  */
 #define x_error_handler_jmp(H)				x_ptrval(x_firstobj(H))
 #define x_error_handler_saved_env(H)		x_001(H)
-#define x_error_handler_saved_boundary(H)	x_101(H)
 #define x_error_handler_error(H)			x_011(H)
 #define x_error_handler_line(H)				x_111(H)
 /** @} */
@@ -146,19 +145,6 @@ x_obj_t *x_eval_type_alist_assoc(x_obj_t *p_base, x_obj_t *p_args);
 /** Push a buffer onto the input buffer stack. */
 x_obj_t *x_eval_buffer_push(x_obj_t *p_base, x_obj_t *p_buffer);
 
-/** Extend the environment alist with new bindings. */
-x_obj_t *x_eval_env_alist_extend(x_obj_t *p_base, x_obj_t *p_args);
-
-/** Load and evaluate a source file. */
-/** The top-level bracket: what a form evaluated at top level sees, whatever
- *  frame is live when it is asked for.  One implementation, two doors --
- *  x_eval_load around a file's forms, eval! around one form. */
-typedef struct x_toplevel_t {
-	x_obj_t *p_saved_stack, *p_saved_env, *p_saved_boundary;
-	x_spair_t parked_env, parked_ctrl;   /* the displaced state, rooted */
-} x_toplevel_t;
-void x_toplevel_enter(x_obj_t *p_base, x_toplevel_t *p_t);
-void x_toplevel_leave(x_obj_t *p_base, x_toplevel_t *p_t);
 x_obj_t *x_eval_load(x_obj_t *p_base, x_obj_t *p_args);
 
 /** Signal an error with the given message and irritant object. */
@@ -187,10 +173,6 @@ void x_eval_spine_guard(x_obj_t *p_base, x_obj_t *p_obj);
 /** Read the argument at a peeked spine position, guarding a dotted tail (#487). */
 x_obj_t *x_eval_spine_first(x_obj_t *p_base, x_obj_t *p_pos);
 
-/** Extend an environment by binding params to vals. */
-x_obj_t *x_env_extend(x_obj_t *p_base, x_obj_t *p_env,
-	x_obj_t *p_params, x_obj_t *p_vals);
-
 /** Evaluate a body (sequence of expressions), returning the last result. */
 x_obj_t *x_eval_body(x_obj_t *p_base, x_obj_t *p_body);
 
@@ -200,32 +182,10 @@ x_obj_t *x_eval_body_tco(x_obj_t *p_base, x_obj_t *p_body);
 /** Execute the TCO trampoline loop until a non-TCO result is produced. */
 x_obj_t *x_eval_tco_trampoline(x_obj_t *p_base, x_obj_t *p_result);
 
-/** Push the current env state as a TCO restore compound onto the save-stack.
- *  The compound shape is @c ((env-alist . local-boundary) . (global-bst .
- *  shadow-head)); returns the pushed compound.  Used by procedure calls and
- *  eval-with-env to snapshot the environment before extending it. */
-x_obj_t *x_tco_compound_save(x_obj_t *p_base);
-
-/** Restore env-alist, local-boundary, global-bst, and shadow list from a TCO
- *  compound previously built by x_tco_compound_save().  Does NOT pop the
- *  save-stack (callers that took the compound from the save-stack pop
- *  separately). */
-void x_tco_restore(x_obj_t *p_base, x_obj_t *p_compound);
-
-/** Discriminator atom whose address tags a tco_env value as an operative
- *  restore record (vs a procedure env compound).  See x_eval_op_body. */
-extern x_satom_t x_tco_op_tag;
-
-/** Restore env-alist, local-boundary, and shadow from an operative record
- *  @c (TAG . ((caller . op_head) . (boundary . shadow))).  Env restore is
- *  conditional on op_head reachability; never touches the BST. */
-void x_op_restore(x_obj_t *p_base, x_obj_t *p_record, int force_caller);
-
-/** Defer an operative body's tail to the outer trampoline: evaluate non-tail
- *  forms, then set tco_expr (tail) and a tagged restore record in tco_env. */
-x_obj_t *x_eval_op_body(x_obj_t *p_base, x_obj_t *p_body,
-	x_obj_t *p_caller, x_obj_t *p_op_head,
-	x_obj_t *p_boundary, x_obj_t *p_shadow);
+/** Defer an operative body's tail to the outer trampoline: evaluate the
+ *  non-tail forms, then set tco_expr to the tail and tco_env to the
+ *  caller's environment, which the trampoline restores after the tail. */
+x_obj_t *x_eval_op_body(x_obj_t *p_base, x_obj_t *p_body, x_obj_t *p_caller);
 
 /** @} */
 

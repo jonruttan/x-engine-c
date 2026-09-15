@@ -15,6 +15,9 @@
  */
 #include "x-prim.h"
 #include "x-eval.h"
+#include "x-env.h"
+#include "x-tco.h"
+#include "x-toplevel.h"
 #include "x-type/int.h"
 #include "x-type/list.h"
 #include "x-type/prim.h"
@@ -116,22 +119,13 @@ static x_obj_t *x_prim_apply(x_obj_t *p_base, x_obj_t *p_args)
 
 	/* Procedure: bind params, eval body with TCO for eval trampoline. */
 	if (x_obj_type_isprocedure(p_base, p_fn)) {
-		/* Push ((env . boundary) . (bst . shadow_head)) onto save-stack --
-		 * the same compound x_tco_compound_save builds for the procedure
-		 * call path; x_prim_eval already routes through it. */
-		x_tco_compound_save(p_base);
-
-		/* Set boundary and BST to closure's captured values.  Skip the
-		 * BST swap if the closure was captured before any top-level def
-		 * existed (captured BST is NULL): use the current live BST so
-		 * lookups can still find anything defined since. */
-		x_eval_field_env_local_boundary(p_base) = x_procenv(p_fn);
-		if (x_procbst(p_fn) != NULL) {
-			x_eval_field_env_global_tree(p_base) = x_procbst(p_fn);
-		}
+		/* Push the caller's environment onto the save-stack -- the same
+		 * save the procedure call path makes; the trampoline makes it
+		 * current again after the body's tail. */
+		x_tco_env_save(p_base);
 
 		p_vals = x_mkspair(p_base, X_OBJ_FLAG_NONE, p_fn, p_vals);
-		x_firstobj(x_eval_field_env_alist(p_base)) = x_env_extend(
+		x_eval_field_env(p_base) = x_env_extend(
 			p_base, x_procenv(p_fn), x_procparams(p_fn), p_vals);
 
 		/* Unroot */
@@ -159,8 +153,10 @@ static x_obj_t *x_prim_apply(x_obj_t *p_base, x_obj_t *p_args)
  *  @param p_args  Unevaluated argument list (expr [env]).
  *  @return Result of evaluation (with env), or NULL (without env, uses TCO).
  *  @note Fexpr: args unevaluated; x_eargs evaluates expr.
- *  @note With env arg: saves/restores env via base save-stack; def inside
- *        does not persist (env is restored after).
+ *  @note With env arg: makes that environment current for the evaluation
+ *        and puts the caller's back after.  A def inside binds in the given
+ *        environment and stays bound: the environment is a value, and the
+ *        binding is in it.
  *  @note Without env arg: sets tco_expr for tail-call optimization trampoline.
  *  @see x_prim_eval_immediate, x_prim_tail_eval
  */
@@ -176,17 +172,15 @@ static x_obj_t *x_prim_eval(x_obj_t *p_base, x_obj_t *p_args)
 	}
 
 	if ( ! x_obj_isnil(p_base, p_env_arg)) {
-		/* eval with env: save/restore via base save-stack */
+		/* eval with env: the caller's environment rides the save-stack
+		 * (a rooted place) while the given one is current. */
 		p_env = x_eval_arg(p_base, x_firstobj(p_env_arg));
 
-		/* Push ((env . boundary) . (bst . shadow_head)) onto save-stack */
-		x_tco_compound_save(p_base);
+		x_tco_env_save(p_base);
 
-		x_firstobj(x_eval_field_env_alist(p_base)) = p_env;
-		/* Don't change boundary or BST — eval-with-env preserves scope context */
+		x_eval_field_env(p_base) = p_env;
 		p_result = x_eval_arg(p_base, p_expr);
 
-		/* Pop save-stack and restore env + boundary + bst + shadow */
 		x_tco_restore(p_base, x_firstobj(x_eval_field_save_stack(p_base)));
 		x_eval_field_save_stack(p_base)
 			= x_restobj(x_eval_field_save_stack(p_base));
@@ -247,7 +241,7 @@ static x_obj_t *x_prim_tail_eval(x_obj_t *p_base, x_obj_t *p_args)
 	x_obj_t *p_expr, *p_env;
 	x_eargs(p_base, p_args, 3, NULL, &p_expr, &p_env);
 
-	x_firstobj(x_eval_field_env_alist(p_base)) = p_env;
+	x_eval_field_env(p_base) = p_env;
 	x_firstobj(x_eval_field_tco_expr(p_base)) = p_expr;
 
 	return NULL;

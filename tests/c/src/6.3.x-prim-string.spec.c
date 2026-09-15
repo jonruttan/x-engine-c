@@ -21,6 +21,9 @@
 #include "src/x-alist.c"
 #include "ext/x-expr/src/x-base.c"
 #include "src/x-eval.c"
+#include "src/x-env.c"
+#include "src/x-tco.c"
+#include "src/x-toplevel.c"
 #include "src/x-type.c"
 #include "src/x-type/atom.c"
 #include "src/x-token/sexp/atom.c"
@@ -150,8 +153,7 @@ static char *test_string_symbol_convert(void)
 	{
 		x_obj_t *p_sym;
 		p_sym = x_mksymbol(p_base, "mysym");
-		x_eval_env_alist_extend(p_base,
-			x_mkspair(p_base, X_OBJ_FLAG_NONE, x_mksymbol(p_base, "mysym"), p_sym));
+		x_env_bind(p_base, x_eval_field_env(p_base), x_mksymbol(p_base, "mysym"), p_sym);
 		p_args = x_mkspair(p_base, X_OBJ_FLAG_NONE, NULL,
 			x_mkspair(p_base, X_OBJ_FLAG_NONE, x_mksymbol(p_base, "mysym"), NULL));
 		p_result = x_prim_symbol_to_string(p_base, p_args);

@@ -22,6 +22,9 @@
 #include "ext/x-expr/src/x.c"
 #include "src/x-alist.c"
 #include "src/x-eval.c"
+#include "src/x-env.c"
+#include "src/x-tco.c"
+#include "src/x-toplevel.c"
 #include "src/x-type.c"
 #include "src/x-type/atom.c"
 #include "src/x-token/sexp/atom.c"
@@ -125,7 +128,7 @@ static char *test_cli_init(void)
 	_it_should("init sets buffer on base",
 		x_firstobj(x_base_field_buffer(p_base)) != NULL);
 	_it_should("init registers primitives (eval is bound)",
-		!x_obj_isnil(p_base, x_firstobj(x_eval_field_env_alist(p_base))));
+		!x_obj_isnil(p_base, x_eval_field_env(p_base)));
 
 	test_cleanup(p_base);
 	return NULL;

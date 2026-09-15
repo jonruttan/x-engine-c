@@ -21,6 +21,9 @@
 #include "src/x-alist.c"
 #include "ext/x-expr/src/x-base.c"
 #include "src/x-eval.c"
+#include "src/x-env.c"
+#include "src/x-tco.c"
+#include "src/x-toplevel.c"
 #include "src/x-type.c"
 #include "src/x-type/atom.c"
 #include "src/x-token/sexp/atom.c"
@@ -153,11 +156,7 @@ static char *test_procedure_make(void)
 
 	p_base = x_eval_make(NULL, NULL);
 
-	p_proc = x_make_procedure(p_base, X_OBJ_FLAG_NONE,
-		x_mksatom(p_base, X_OBJ_FLAG_NONE, "params"),
-		x_mksatom(p_base, X_OBJ_FLAG_NONE, "body"),
-		x_mksatom(p_base, X_OBJ_FLAG_NONE, "env"),
-		NULL);
+	p_proc = x_make_procedure(p_base, X_OBJ_FLAG_NONE, x_mksatom(p_base, X_OBJ_FLAG_NONE, "params"), x_mksatom(p_base, X_OBJ_FLAG_NONE, "body"), x_mksatom(p_base, X_OBJ_FLAG_NONE, "env"));
 
 	_it_should("create a procedure",
 		p_proc != NULL);
@@ -185,11 +184,9 @@ static char *test_procedure_call(void)
 	 * Procedure evaluates args before binding, unlike operative. */
 	p_params = x_mkspair(p_base, X_OBJ_FLAG_NONE, x_mksymbol(p_base, "x"), NULL);
 	p_body = x_mkspair(p_base, X_OBJ_FLAG_NONE, x_mksymbol(p_base, "x"), NULL);
-	p_env = x_firstobj(x_eval_field_env_alist(p_base));
+	p_env = x_eval_field_env(p_base);
 
-	p_proc = x_make_procedure(p_base, X_OBJ_FLAG_NONE,
-		p_params, p_body, p_env,
-		x_eval_field_env_global_tree(p_base));
+	p_proc = x_make_procedure(p_base, X_OBJ_FLAG_NONE, p_params, p_body, p_env);
 
 	/* Call: (proc 42) — procedure evaluates args then binds. */
 	p_args = x_mkspair(p_base, X_OBJ_FLAG_NONE, p_proc,
@@ -217,11 +214,10 @@ static char *test_procedure_call_wrapped(void)
 	/* Create an operative whose body returns 77. */
 	p_body = x_mkspair(p_base, X_OBJ_FLAG_NONE, x_mksatom(p_base, X_OBJ_FLAG_NONE, 77), NULL);
 	p_op = x_make_operative(p_base, X_OBJ_FLAG_NONE,
-		NULL, NULL, p_body, x_firstobj(x_eval_field_env_alist(p_base)));
+		NULL, NULL, p_body, x_eval_field_env(p_base));
 
 	/* Wrap the operative in a procedure (applicative wrapper). */
-	p_proc = x_make_procedure(p_base, X_OBJ_FLAG_WRAP,
-		NULL, NULL, p_op, NULL);
+	p_proc = x_make_procedure(p_base, X_OBJ_FLAG_WRAP, NULL, NULL, p_op);
 
 	/* Call: (proc) — wrapped combiner dispatches to underlying. */
 	p_args = x_mkspair(p_base, X_OBJ_FLAG_NONE, p_proc, NULL);

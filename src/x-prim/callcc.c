@@ -12,6 +12,7 @@
  */
 #include "x-prim.h"
 #include "x-eval.h"
+#include "x-env.h"
 #include "x-heap.h"
 #include <setjmp.h>
 #include <string.h>
@@ -80,11 +81,9 @@ typedef struct {
 	size_t      stack_size;
 	void       *stack_lo;         /* lower address bound of captured stack */
 	x_obj_t    *p_result;         /* value passed when continuation invoked */
-	x_obj_t    *p_env_alist;      /* interpreter state at invocation time */
+	x_obj_t    *p_env;            /* interpreter state at invocation time */
 	x_obj_t    *p_save_stack;
 	x_obj_t    *p_error_handler;
-	x_obj_t    *p_local_boundary;
-	x_obj_t    *p_global_tree;
 	x_obj_t    *p_eval_list_stack;
 	x_obj_t    *p_root_chain;     /* GC root-chain head; points into the
 	                               * captured segment, valid only after
@@ -202,16 +201,14 @@ static x_obj_t *x_prim_cc_invoke(x_obj_t *p_base, x_obj_t *p_args)
 
 	/* Store the return value and interpreter state in cont.
 	 * State is extracted from the GC-visible list:
-	 * (env-alist save-stack error-handler) */
+	 * (env save-stack error-handler eval-list root-chain) */
 	cont->p_result = p_val;
-	cont->p_env_alist = x_firstobj(p_state);
+	cont->p_env = x_firstobj(p_state);
 	cont->p_save_stack = x_firstobj(x_restobj(p_state));
 	cont->p_error_handler = x_firstobj(x_restobj(x_restobj(p_state)));
-	cont->p_local_boundary = x_firstobj(x_restobj(x_restobj(x_restobj(p_state))));
-	cont->p_global_tree = x_firstobj(x_restobj(x_restobj(x_restobj(x_restobj(p_state)))));
-	cont->p_eval_list_stack = x_firstobj(x_restobj(x_restobj(x_restobj(x_restobj(x_restobj(p_state))))));
+	cont->p_eval_list_stack = x_firstobj(x_restobj(x_restobj(x_restobj(p_state))));
 	cont->p_root_chain = (x_obj_t *)x_ptrval(
-		x_firstobj(x_restobj(x_restobj(x_restobj(x_restobj(x_restobj(x_restobj(p_state))))))));
+		x_firstobj(x_restobj(x_restobj(x_restobj(x_restobj(p_state))))));
 
 	/* Grow stack and restore. Does not return. */
 	x_callcc_restore(cont);
@@ -267,9 +264,7 @@ static X_CALLCC_NO_ASAN x_obj_t *x_prim_callcc(x_obj_t *p_base,
 	if (setjmp(cont->jmp) != 0) {
 		/* Continuation was invoked. Restore interpreter state and
 		 * return the value passed to the continuation. */
-		x_firstobj(x_eval_field_env_alist(p_base)) = cont->p_env_alist;
-		x_eval_field_env_local_boundary(p_base) = cont->p_local_boundary;
-		x_eval_field_env_global_tree(p_base) = cont->p_global_tree;
+		x_eval_field_env(p_base) = cont->p_env;
 		x_eval_field_save_stack(p_base) = cont->p_save_stack;
 		x_firstobj(x_eval_field_error_handler(p_base)) = cont->p_error_handler;
 		x_firstobj(x_eval_field_eval_list(p_base)) = cont->p_eval_list_stack;
@@ -289,27 +284,22 @@ static X_CALLCC_NO_ASAN x_obj_t *x_prim_callcc(x_obj_t *p_base,
 	cont->stack_lo = stack_lo;
 
 	/* Build GC-visible interpreter state list:
-	 * (env-alist save-stack error-handler local-boundary global-tree
-	 *  eval-list root-chain).  The root-chain head is wrapped as an
-	 * opaque ptr atom: its nodes are stack memory, dead while the
-	 * continuation is dormant, so tree-marking this state list must
-	 * not traverse them. */
+	 * (env save-stack error-handler eval-list root-chain).  The
+	 * root-chain head is wrapped as an opaque ptr atom: its nodes are
+	 * stack memory, dead while the continuation is dormant, so
+	 * tree-marking this state list must not traverse them. */
 	p_state = x_mklist(p_base,
-		x_firstobj(x_eval_field_env_alist(p_base)),
+		x_eval_field_env(p_base),
 		x_mklist(p_base,
 			x_eval_field_save_stack(p_base),
 			x_mklist(p_base,
 				x_firstobj(x_eval_field_error_handler(p_base)),
 				x_mklist(p_base,
-					x_eval_field_env_local_boundary(p_base),
+					x_firstobj(x_eval_field_eval_list(p_base)),
 					x_mklist(p_base,
-						x_eval_field_env_global_tree(p_base),
-						x_mklist(p_base,
-							x_firstobj(x_eval_field_eval_list(p_base)),
-							x_mklist(p_base,
-								x_mkptr(p_base,
-									(void *)x_heap_root_chain(p_base)),
-								NULL)))))));
+						x_mkptr(p_base,
+							(void *)x_heap_root_chain(p_base)),
+						NULL)))));
 
 	/* Wrap continuation struct as POINTER with OWN flag.
 	 * GC will free the struct (and embedded stack copy). */
@@ -334,16 +324,14 @@ static X_CALLCC_NO_ASAN x_obj_t *x_prim_callcc(x_obj_t *p_base,
 					x_mklist(p_base, p_val_sym, NULL)))),
 		NULL);
 
-	/* env: extend current env with %cc-ptr and %cc-state */
-	p_env = x_mkspair(p_base, X_OBJ_FLAG_NONE,
-		x_mkspair(p_base, X_OBJ_FLAG_NONE, p_ptr_sym, p_ptr),
-		x_mkspair(p_base, X_OBJ_FLAG_NONE,
-			x_mkspair(p_base, X_OBJ_FLAG_NONE, p_state_sym, p_state),
-			x_firstobj(x_eval_field_env_alist(p_base))));
+	/* env: a child of the current environment holding %cc-ptr and
+	 * %cc-state, the closure's own. */
+	p_env = x_env_make(p_base, x_eval_field_env(p_base));
+	x_env_bind(p_base, p_env, p_ptr_sym, p_ptr);
+	x_env_bind(p_base, p_env, p_state_sym, p_state);
 
 	/* Create k as a procedure (fn). */
-	p_k = x_mkproc(p_base, p_params, p_body, p_env,
-		x_eval_field_env_global_tree(p_base));
+	p_k = x_mkproc(p_base, p_params, p_body, p_env);
 
 	/* Call proc(k) using type_prim_apply: (proc k) */
 	call_args[0][X_OBJ_META_TYPE].p = NULL;

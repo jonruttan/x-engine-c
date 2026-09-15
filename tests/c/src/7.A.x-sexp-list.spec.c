@@ -26,6 +26,9 @@
 #include "src/x-alist.c"
 #include "ext/x-expr/src/x-base.c"
 #include "src/x-eval.c"
+#include "src/x-env.c"
+#include "src/x-tco.c"
+#include "src/x-toplevel.c"
 #include "src/x-type.c"
 #include "src/x-type/prim.c"
 #include "src/x-type/atom.c"
@@ -318,13 +321,12 @@ static char *test_sexp_list_read_truncated_one(const char *s)
 	p_buffer = x_mkbufferown(p_base, buffer);
 	p_args = x_mkpair(p_base, p_buffer, p_base);
 
-	/* Handler: (jmp-ptr (saved-env . saved-boundary) (error . line)) */
+	/* Handler: (jmp-ptr (saved-env . nil) (error . line)) */
 	p_handler = x_mkspair(p_base, X_OBJ_FLAG_NONE,
 		x_mkptr(p_base, &jmp),
 		x_mkspair(p_base, X_OBJ_FLAG_NONE,
 			x_mkspair(p_base, X_OBJ_FLAG_NONE,
-				x_firstobj(x_eval_field_env_alist(p_base)),
-				x_eval_field_env_local_boundary(p_base)),
+				x_eval_field_env(p_base), NULL),
 			x_mkspair(p_base, X_OBJ_FLAG_NONE, NULL, NULL)));
 	x_firstobj(x_eval_field_error_handler(p_base)) = p_handler;
 

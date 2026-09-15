@@ -8,7 +8,7 @@
 (engine-name "x-engine-c")
 (binary "x-bin")
 (isa "sha256:c8660df19dcbb1c41b62bd5c67cf6b3536918fe3b18bc619fe4df953dac15da1")
-(layout "sha256:6e40c36fb1be7f2c91b2dc7af2804dcf80e5f520c7de398c1bb245bfecc98e40")
+(layout "sha256:ea4c93863580e4bcd563ed41d208f9ca21bc476d3e4504008559ae8af36421c1")
 (profile core)
 (profile gc)
 (profile posix)

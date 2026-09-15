@@ -9,10 +9,8 @@
 #ifndef X_EVAL_LAYOUT_H
 #define X_EVAL_LAYOUT_H
 #define x_eval_env(X)	x_00(x_base(X))
-#define x_eval_field_env_alist(X)	x_0(x_eval_env(X))	/* cell */
-#define x_eval_field_env_local_boundary(X)	x_01(x_eval_env(X))	/* direct */
-#define x_eval_field_env_global_tree(X)	x_011(x_eval_env(X))	/* direct */
-#define x_eval_field_shadow_list(X)	x_111(x_eval_env(X))	/* direct */
+#define x_eval_field_env(X)	x_0(x_eval_env(X))	/* direct */
+#define x_eval_field_env_root(X)	x_1(x_eval_env(X))	/* direct */
 #define x_eval_ctrl(X)	x_10(x_base(X))
 #define x_eval_field_save_stack(X)	x_00(x_eval_ctrl(X))	/* direct */
 #define x_eval_field_error_handler(X)	x_10(x_eval_ctrl(X))	/* cell */
@@ -45,7 +43,7 @@
 #endif /* X_EVAL_LAYOUT_H */
 
 #ifdef X_EVAL_BUILD_TREE
-	x_0(x_base(p_base)) = pair(pair(pair(nil, nil), pair(nil, pair(nil, nil))), pair(pair(nil, pair(nil, nil)), pair(pair(nil, nil), pair(nil, nil))));
+	x_0(x_base(p_base)) = pair(pair(nil, nil), pair(pair(nil, pair(nil, nil)), pair(pair(nil, nil), pair(nil, nil))));
 	x_00(x_base_field_io_group(p_base)) = pair(nil, nil);
 	x_1(x_base_field_io_group(p_base)) = pair(pair(nil, nil), pair(pair(nil, nil), pair(nil, nil)));
 	x_1(x_base_field_profile(p_base)) = pair(pair(nil, nil), pair(pair(nil, nil), pair(pair(nil, nil), pair(pair(nil, nil), pair(pair(nil, nil), pair(pair(nil, nil), pair(pair(nil, nil), pair(pair(nil, nil), pair(pair(nil, nil), nil)))))))));

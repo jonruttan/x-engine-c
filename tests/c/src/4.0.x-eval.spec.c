@@ -20,6 +20,9 @@
 #include "ext/x-expr/src/x-base.c"
 #include "src/x-type/err.c"
 #include "src/x-eval.c"
+#include "src/x-env.c"
+#include "src/x-tco.c"
+#include "src/x-toplevel.c"
 #include "ext/x-expr/src/x-heap.c"
 #include "src/x-type.c"
 #include "src/x-type/atom.c"
@@ -228,14 +231,9 @@ x_obj_t *test_type_tco_eval_two_bounce(x_obj_t *p_base, x_obj_t *p_args)
 
 	if (tco_eval_calls == 2) {
 		/* Second bounce: set tco_env for env restore.
-		 * tco_env holds compound ((env . boundary) . (bst . shadow)). */
+		 * tco_env holds the environment to make current at exit. */
 		if (test_tco_env_to_set != NULL) {
-			x_firstobj(x_eval_field_tco_env(p_base)) = x_mkspair(p_base, X_OBJ_FLAG_NONE,
-				x_mkspair(p_base, X_OBJ_FLAG_NONE, test_tco_env_to_set,
-					x_eval_field_env_local_boundary(p_base)),
-				x_mkspair(p_base, X_OBJ_FLAG_NONE,
-					x_eval_field_env_global_tree(p_base),
-					x_eval_field_shadow_list(p_base)));
+			x_firstobj(x_eval_field_tco_env(p_base)) = test_tco_env_to_set;
 		}
 		x_firstobj(x_eval_field_tco_expr(p_base)) = p_obj;
 		return p_obj;
@@ -298,12 +296,10 @@ static char *test_eval_tco(void)
 				x_mksatom(p_base, X_OBJ_FLAG_NONE, "val")),
 			NULL);
 
-		x_firstobj(x_eval_field_tco_env(p_base)) = x_mkspair(p_base, X_OBJ_FLAG_NONE,
-			x_mkspair(p_base, X_OBJ_FLAG_NONE, p_saved_env, NULL),
-			NULL);
+		x_firstobj(x_eval_field_tco_env(p_base)) = p_saved_env;
 
 		/* Modify env to something else */
-		x_firstobj(x_eval_field_env_alist(p_base)) = x_mkspair(p_base, X_OBJ_FLAG_NONE,
+		x_eval_field_env(p_base) = x_mkspair(p_base, X_OBJ_FLAG_NONE,
 			x_mkspair(p_base, X_OBJ_FLAG_NONE,
 				x_mksatom(p_base, X_OBJ_FLAG_NONE, "other"),
 				x_mksatom(p_base, X_OBJ_FLAG_NONE, "env")),
@@ -375,7 +371,7 @@ static char *test_eval_tco_env_restore(void)
 	_it_should("called eval fn three times",
 		3 == tco_eval_calls);
 	_it_should("restore env from later tco_env",
-		x_firstobj(x_eval_field_env_alist(p_base)) == p_restore_env);
+		x_eval_field_env(p_base) == p_restore_env);
 
 	test_tco_env_to_set = NULL;
 	test_cleanup(p_base);

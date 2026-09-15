@@ -21,6 +21,9 @@
 #include "src/x-alist.c"
 #include "ext/x-expr/src/x-base.c"
 #include "src/x-eval.c"
+#include "src/x-env.c"
+#include "src/x-tco.c"
+#include "src/x-toplevel.c"
 #include "src/x-type.c"
 #include "src/x-type/atom.c"
 #include "src/x-token/sexp/atom.c"
@@ -433,7 +436,7 @@ static char *test_ffi_register(void)
 	p_base = x_eval_make(NULL, NULL);
 	x_prim_register(p_base, NULL);
 
-	p_env = x_firstobj(x_eval_field_env_alist(p_base));
+	p_env = x_eval_field_env(p_base);
 	_it_should("env is not empty after register",
 		p_env != NULL);
 

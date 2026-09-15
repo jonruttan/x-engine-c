@@ -13,12 +13,11 @@
  * @code
  *   slot 0              slot 1 (state_list)
  *   +-----------------+ +------------------------------------------+
- *   | fn_ptr          | | (params . (body . (env . bst)))          |
+ *   | fn_ptr          | | (params . (body . env))                  |
  *   | (x_type_        | |                                          |
  *   |  procedure_call)| |  params ---- formal parameter tree       |
  *   +-----------------+ |  body ------ list of body expressions    |
- *                       |  env ------- captured lexical env alist  |
- *                       |  bst ------- captured global BST root    |
+ *                       |  env ------- the captured environment    |
  *                       +------------------------------------------+
  * @endcode
  *
@@ -52,25 +51,29 @@
 /** @} */
 
 /** @name State accessors
- *  Procedure state list: (params . (body . (env . bst))).
+ *  Procedure state list: (params . (body . env)).
  *  Stored in x_callable_state (slot 1) of [fn-ptr][state] layout.
  *  GC traverses via the p_units=2 fallback in x_type_heap_mark.
+ *
+ *  The environment is the one the closure was made in, and a call makes a
+ *  child of it.  It reaches the root through its parents, so a closure
+ *  carries no separate copy of the global tree the way it once did; the
+ *  root is an environment like any other.
  */
 /** @{ */
 #define x_procstate(X)				x_callable_state((X))                              /**< Full state list. */
 #define x_procparams(X)				x_firstobj(x_procstate((X)))                        /**< Parameter tree. */
 #define x_procbody(X)				x_firstobj(x_restobj(x_procstate((X))))             /**< Body expression list. */
-#define x_procenv(X)				x_firstobj(x_restobj(x_restobj(x_procstate((X))))) /**< Captured environment. */
-#define x_procbst(X)				x_restobj(x_restobj(x_restobj(x_procstate((X)))))  /**< Captured global BST. */
+#define x_procenv(X)				x_restobj(x_restobj(x_procstate((X))))              /**< Captured environment. */
 /** @} */
 
 #define X_OBJ_FLAG_WRAP				X_OBJ_FLAG_1 /**< Flag marking a wrapped applicative combiner. */
 
 /** @name Convenience constructors */
 /** @{ */
-#define x_mkproc(B,P,BD,E,T)		x_make_procedure((B), X_OBJ_FLAG_NONE, (P), (BD), (E), (T)) /**< Make unwrapped procedure. */
-#define x_mkfproc(B,F,P,BD,E,T)	x_make_procedure((B), (F), (P), (BD), (E), (T))             /**< Make procedure with flags. */
-#define x_mkwrap(B,C)				x_make_procedure((B), X_OBJ_FLAG_WRAP, NULL, NULL, (C), NULL) /**< Wrap a combiner as applicative. */
+#define x_mkproc(B,P,BD,E)			x_make_procedure((B), X_OBJ_FLAG_NONE, (P), (BD), (E)) /**< Make unwrapped procedure. */
+#define x_mkfproc(B,F,P,BD,E)		x_make_procedure((B), (F), (P), (BD), (E))             /**< Make procedure with flags. */
+#define x_mkwrap(B,C)				x_make_procedure((B), X_OBJ_FLAG_WRAP, NULL, NULL, (C)) /**< Wrap a combiner as applicative. */
 /** @} */
 
 /** @name Static primitive atoms for the type struct. */
@@ -83,7 +86,7 @@ extern x_satom_t x_type_procedure_name,
 
 /** Allocate a new procedure object on the heap. */
 x_obj_t *x_make_procedure(x_obj_t *p_base, x_obj_flag_t flags,
-	x_obj_t *p_params, x_obj_t *p_body, x_obj_t *p_env, x_obj_t *p_bst);
+	x_obj_t *p_params, x_obj_t *p_body, x_obj_t *p_env);
 
 /** Register (or retrieve) the PROCEDURE type struct on p_base. */
 x_obj_t *x_type_procedure_register(x_obj_t *p_base, x_obj_t *p_args);

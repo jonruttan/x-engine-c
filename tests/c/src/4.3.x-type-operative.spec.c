@@ -21,6 +21,9 @@
 #include "src/x-alist.c"
 #include "ext/x-expr/src/x-base.c"
 #include "src/x-eval.c"
+#include "src/x-env.c"
+#include "src/x-tco.c"
+#include "src/x-toplevel.c"
 #include "src/x-type.c"
 #include "src/x-type/atom.c"
 #include "src/x-token/sexp/atom.c"
@@ -185,16 +188,16 @@ static char *test_operative_call(void)
 
 	/* Create operative: (op x 99) — variadic param, body is (99).
 	 * Ops are lexically scoped: body runs synchronously via x_eval_body
-	 * in extend(captured_env, formals); return value is the last form's
-	 * value.  After the body the formal frame is shed (op_chain_head
-	 * still reachable from env_alist => restore to caller_env). */
+	 * in a child of captured_env holding the formals; return value is the
+	 * last form's value.  After the body the caller's environment is
+	 * current again. */
 	p_params = x_mksymbol(p_base, "x");
 	p_body = x_mkspair(p_base, X_OBJ_FLAG_NONE, x_mksatom(p_base, X_OBJ_FLAG_NONE, 99), NULL);
 
 	p_op = x_make_operative(p_base, X_OBJ_FLAG_NONE,
-		p_params, NULL, p_body, x_firstobj(x_eval_field_env_alist(p_base)));
+		p_params, NULL, p_body, x_eval_field_env(p_base));
 
-	p_saved_env = x_firstobj(x_eval_field_env_alist(p_base));
+	p_saved_env = x_eval_field_env(p_base);
 
 	/* Call: (op 42) — args: (op . (42 . nil)) */
 	p_args = x_mkspair(p_base, X_OBJ_FLAG_NONE, p_op,
@@ -208,8 +211,8 @@ static char *test_operative_call(void)
 	_it_should("body's tail value is returned",
 		p_result != NULL && x_atomint(p_result) == 99);
 
-	_it_should("env_alist restored to caller (formals shed)",
-		x_firstobj(x_eval_field_env_alist(p_base)) == p_saved_env);
+	_it_should("the caller's environment is current again (formals shed)",
+		x_eval_field_env(p_base) == p_saved_env);
 
 	test_cleanup(p_base);
 
@@ -225,7 +228,7 @@ static char *test_operative_call_envparam(void)
 	p_base = x_eval_make(NULL, NULL);
 	x_prim_register(p_base, NULL);
 
-	p_caller_env = x_firstobj(x_eval_field_env_alist(p_base));
+	p_caller_env = x_eval_field_env(p_base);
 
 	/* Op with env-param 'e', no params, body is (42).  Lexical scope:
 	 * env-param is bound to caller's env during body execution but the
@@ -235,7 +238,7 @@ static char *test_operative_call_envparam(void)
 	p_body = x_mkspair(p_base, X_OBJ_FLAG_NONE, x_mksatom(p_base, X_OBJ_FLAG_NONE, 42), NULL);
 
 	p_op = x_make_operative(p_base, X_OBJ_FLAG_NONE,
-		NULL, p_envparam, p_body, x_firstobj(x_eval_field_env_alist(p_base)));
+		NULL, p_envparam, p_body, x_eval_field_env(p_base));
 
 	p_args = x_mkspair(p_base, X_OBJ_FLAG_NONE, p_op, NULL);
 
@@ -245,8 +248,8 @@ static char *test_operative_call_envparam(void)
 	_it_should("body's tail value is returned",
 		p_result != NULL && x_atomint(p_result) == 42);
 
-	_it_should("env_alist restored to caller (env-param frame shed)",
-		x_firstobj(x_eval_field_env_alist(p_base)) == p_caller_env);
+	_it_should("the caller's environment is current again (env-param shed)",
+		x_eval_field_env(p_base) == p_caller_env);
 
 	test_cleanup(p_base);
 

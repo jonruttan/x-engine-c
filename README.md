@@ -44,6 +44,9 @@ object path and variants rebuild incrementally.
 | path | what |
 |---|---|
 | `src/x-eval.c` | the evaluator |
+| `src/x-env.c` | environments: make, look up, bind, the child a call makes |
+| `src/x-tco.c` | the environment save and restore around a tail call |
+| `src/x-toplevel.c` | the top-level bracket around a file's forms and `eval!` |
 | `src/x-prim/` | the primitive surface (arith, string, io, ffi, heap, …) |
 | `src/x-syntax/` | the special forms (binding, closure, control, quote) |
 | `src/x-token/` | the s-expression reader |

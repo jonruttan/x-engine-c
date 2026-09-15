@@ -13,127 +13,61 @@
 #include "x-prim.h"
 #include "x-alist.h"
 #include "x-eval.h"
+#include "x-env.h"
 #include "x-type/symbol.h"
 
 /**
  * Define form. x-lang: (def name value)
  *
- * Binds name to the evaluated value in the current environment (fexpr --
- * name is not evaluated, value is explicitly evaluated).  At top level the
- * binding is also inserted into the BST index and the local boundary is
- * advanced.  Inside a closure, the new spine cell is marked
- * X_OBJ_FLAG_FRAME so lookup treats it as a local frame binding.
+ * Binds name to the evaluated value in the CURRENT environment (fexpr --
+ * name is not evaluated, value is explicitly evaluated).  That is the
+ * whole rule: at top level the current environment is the root, in a
+ * procedure body it is the call's own environment, in an operative body
+ * the operative's, and under `(eval form e)` it is `e`.  A name the
+ * environment already binds is rebound in place; a parent's binding of
+ * the same name is left alone and shadowed.
  *
  * @param p_base  Base (execution context).
  * @param p_args  Unevaluated argument list; expects (caller name value).
  * @return The evaluated value.
  *
- * @details **Eval-before-extend.**  The value expression is evaluated
- *          BEFORE the name is bound in the environment.  This means the
- *          value expression cannot reference the binding being created
- *          (no implicit self-reference).  For recursive definitions,
- *          x-lang uses a forward-declare pattern: @c (def name ())
- *          followed by @c (set! name (fn ...)).
+ * @details **Eval-before-bind.**  The value expression is evaluated
+ *          BEFORE the name is bound, so the value expression cannot
+ *          reference the binding being created.  A recursive definition
+ *          still works, because a closure body resolves names at call
+ *          time and the binding is in the environment by then.
  *
- * @details **Top-level vs closure scope.**  The save_stack depth
- *          distinguishes the two cases:
- *          - **Empty save_stack (top-level):** The (symbol . value) pair
- *            is inserted into the global BST via x_alist_bst_insert and
- *            the local-boundary is advanced to the new alist head.  This
- *            makes the binding permanently available via O(log n) BST
- *            lookup.
- *          - **Non-empty save_stack (inside closure):** No BST insertion.
- *            The new alist spine cell is marked X_OBJ_FLAG_FRAME, so the
- *            3-step lookup finds the local binding in its frame walk
- *            ahead of any same-named global (GH #47).  The binding's
- *            visibility ends with the frame chain -- no global state to
- *            unwind.
- *
- * @see x_prim_set      -- mutation form (does not create new bindings)
- * @see x_env_extend    -- parameter binding with the same FRAME marking
- * @see x_callable_bind -- C-level equivalent for primitive registration
+ * @see x_prim_set   -- mutation form (does not create bindings)
+ * @see x_env_bind   -- the binder this is a form over
  */
 static x_obj_t *x_prim_define(x_obj_t *p_base, x_obj_t *p_args)
 {
-	x_obj_t *p_name, *p_pair, *p_val, *p_entry;
-	int toplevel;
+	x_obj_t *p_name, *p_val;
+
 	x_args(p_base, p_args, 2, NULL, &p_name);
 	p_val = x_eval_arg(p_base,
 		x_eval_spine_first(p_base, x_11(p_args)));
 
-	/* Top-level iff the CURRENT ENVIRONMENT is the global chain: its head
-	 * is not a FRAME-marked spine cell.  A closure's params, an operative's
-	 * formals, a guard's error variable and a closure-scope def all mark
-	 * their cells FRAME (x_env_extend, operative.c, control.c, below), so
-	 * a def inside any of them extends that frame -- whatever the save
-	 * stack says.  The save-stack test this replaces made a def global in
-	 * TAIL position (the frame is popped before the deferred tail runs), so
-	 * (fn (_) (if c (do (def x 1) ...))) defined x for the whole base: the
-	 * "TCO tail-def leak", which left every compile's buffer and self-cell
-	 * in bare globals and refused the JIT dialects to the state-image
-	 * writer.  A file's top-level forms are still top-level: x_eval_load
-	 * strips the includer's frames from the head for the duration of the
-	 * load.  Code that must bind globally from inside a frame says so with
-	 * def-global (x_prim_define_global). */
-	toplevel = x_base_isset(p_base)
-		&& (x_obj_isnil(p_base, x_firstobj(x_eval_field_env_alist(p_base)))
-		|| ! (x_obj_flags(x_firstobj(x_eval_field_env_alist(p_base)))
-			& X_OBJ_FLAG_FRAME));
-
-	/* Top-level REdefinition: update the existing BST binding in place.
-	 * x_alist_bst_insert keeps the OLD pair on a key hit, so consing a
-	 * fresh (name . value) would leave the BST answering with the stale
-	 * value -- invisible under the old head-first lookup, load-bearing
-	 * now that globals resolve through the BST (GH #47). */
-	if (toplevel) {
-		p_entry = x_alist_bst_lookup(p_base,
-			x_eval_field_env_global_tree(p_base), p_name);
-		if ( ! x_obj_isnil(p_base, p_entry)) {
-			x_restobj(p_entry) = p_val;
-			return p_val;
-		}
-	}
-
-	p_pair = x_mkspair(p_base, X_OBJ_FLAG_NONE, p_name, p_val);
-
-	x_eval_env_alist_extend(p_base, p_pair);
-
-	/* Top-level: insert into BST and advance boundary.
-	 * Inside closure: mark the new spine cell as a frame cell. */
-	if (toplevel) {
-		x_eval_field_env_global_tree(p_base) = x_alist_bst_insert(
-			p_base, x_eval_field_env_global_tree(p_base), p_pair);
-		x_eval_field_env_local_boundary(p_base)
-			= x_firstobj(x_eval_field_env_alist(p_base));
-	} else if (x_base_isset(p_base)) {
-		/* Closure-scope def: mark the new spine cell as a local frame
-		 * cell so lookup prefers it over a same-named global (GH #47). */
-		x_obj_flags(x_firstobj(x_eval_field_env_alist(p_base)))
-			|= X_OBJ_FLAG_FRAME;
-	}
-
-	return p_val;
+	return x_env_bind(p_base, x_eval_field_env(p_base), p_name, p_val);
 }
 
 /**
  * Mutation form. x-lang: (set! name value)
  *
- * Mutates an existing binding for name to the evaluated value (fexpr --
- * name is not evaluated, value is explicitly evaluated).  Uses the same
- * 3-step lookup as x_type_symbol_eval: (1) walk the FRAME-marked frame
- * region, (2) BST lookup for globals, (3) continue the walk through the
- * remaining chain.  Signals an error if the symbol is unbound.
+ * Mutates the existing binding of name to the evaluated value (fexpr --
+ * name is not evaluated, value is explicitly evaluated).  The binding is
+ * the one symbol evaluation would find: the current environment's, or the
+ * nearest ancestor's.  Signals an error if the symbol is unbound.
  *
  * @param p_base  Base (execution context).
  * @param p_args  Unevaluated argument list; expects (caller name value).
  * @return The evaluated value.
- * @note Raises "Unbound symbol" error if name has no existing binding.
+ * @note Raises "Unbound symbol" if name has no existing binding.
  * @see x_prim_define
  */
 static x_obj_t *x_prim_set(x_obj_t *p_base, x_obj_t *p_args)
 {
-	x_obj_t *p_name, *p_val;
-	x_obj_t *p_alist, *p_entry;
+	x_obj_t *p_name, *p_val, *p_entry;
 	/* Error-path name wrapper; filled only when the lookup misses. */
 	x_satom_t sym_name;
 
@@ -141,37 +75,10 @@ static x_obj_t *x_prim_set(x_obj_t *p_base, x_obj_t *p_args)
 	p_val = x_eval_arg(p_base,
 		x_eval_spine_first(p_base, x_11(p_args)));
 
-	p_alist = x_firstobj(x_eval_field_env_alist(p_base));
-
-	/* Step 1: walk the lexical frame region (FRAME-marked spine cells).
-	 * Locals -- including enclosing-frame captures -- must win over
-	 * globals, so the walk covers every frame cell before the BST is
-	 * consulted (GH #47). */
-	while ( ! x_obj_isnil(p_base, p_alist)
-		&& (x_obj_flags(p_alist) & X_OBJ_FLAG_FRAME)) {
-		if (x_firstobj(x_firstobj(p_alist)) == p_name) {
-			x_restobj(x_firstobj(p_alist)) = p_val;
-			return p_val;
-		}
-		p_alist = x_restobj(p_alist);
-	}
-
-	/* Step 2: BST lookup (globals) */
-	p_entry = x_alist_bst_lookup(p_base,
-		x_eval_field_env_global_tree(p_base), p_name);
-	if ( ! x_obj_isnil(p_base, p_entry)) {
+	p_entry = x_env_lookup(p_base, x_eval_field_env(p_base), p_name);
+	if (p_entry != NULL) {
 		x_restobj(p_entry) = p_val;
 		return p_val;
-	}
-
-	/* Step 3: continue the walk through the remaining chain (bindings
-	 * outside both the frame region and the BST, e.g. base-bind cells) */
-	while ( ! x_obj_isnil(p_base, p_alist)) {
-		if (x_firstobj(x_firstobj(p_alist)) == p_name) {
-			x_restobj(x_firstobj(p_alist)) = p_val;
-			return p_val;
-		}
-		p_alist = x_restobj(p_alist);
 	}
 
 	sym_name[X_OBJ_META_TYPE].p = (x_obj_t *)x_type_atom_obj;

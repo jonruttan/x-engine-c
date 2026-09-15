@@ -14,6 +14,7 @@
 #include "x-prim.h"
 #include "x-alist.h"
 #include "x-eval.h"
+#include "x-env.h"
 #include "x-heap.h"
 #include "x-type.h"
 #include <setjmp.h>
@@ -234,19 +235,18 @@ static x_obj_t *x_prim_base_eval(x_obj_t *p_base, x_obj_t *p_args)
 	x_eargs(p_base, p_args, 3, NULL, &p_target, &p_expr);
 
 	/* Build handler pair tree, SAME shape as x_prim_guard's (#253):
-	 * (jmp-ptr . ((saved-env . saved-boundary) . (error-value . line))).
+	 * (jmp-ptr . ((saved-env . nil) . (error-value . line))).
 	 * The x_error_handler_* accessors read saved-env as x_001 -- one
-	 * level below the (env . boundary) cell -- so the env must be
-	 * wrapped in that cell.  The old build put the bare env where the
-	 * (env . boundary) cell belongs, so recovery restored first(env),
-	 * degrading the child's env-alist head on every caught error until
-	 * a lookup walked a non-pair and segfaulted (0x18). */
+	 * level below the (env . nil) cell -- so the env must be wrapped in
+	 * that cell.  The old build put the bare env where the cell belongs,
+	 * so recovery restored first(env), degrading the child's environment
+	 * on every caught error until a lookup walked a non-pair and
+	 * segfaulted (0x18). */
 	p_handler = x_mkspair(p_target, X_OBJ_FLAG_NONE,
 		x_mkptr(p_target, &jmp),
 		x_mkspair(p_target, X_OBJ_FLAG_NONE,
 			x_mkspair(p_target, X_OBJ_FLAG_NONE,
-				x_firstobj(x_eval_field_env_alist(p_target)),
-				x_eval_field_env_local_boundary(p_target)),
+				x_eval_field_env(p_target), NULL),
 			x_mkspair(p_target, X_OBJ_FLAG_NONE, NULL, NULL)));
 
 	/* Push handler onto error_handler_stack */
@@ -258,22 +258,18 @@ static x_obj_t *x_prim_base_eval(x_obj_t *p_base, x_obj_t *p_args)
 	} else {
 		p_err = x_error_handler_error(p_handler);
 
-		/* Error caught from target: pop handler, restore env and
-		 * boundary, propagate. */
+		/* Error caught from target: pop handler, restore its
+		 * environment, propagate. */
 		x_eval_field_error_handler(p_target)
 			= x_restobj(x_eval_field_error_handler(p_target));
-		x_firstobj(x_eval_field_env_alist(p_target))
-			= x_error_handler_saved_env(p_handler);
-		x_eval_field_env_local_boundary(p_target)
-			= x_error_handler_saved_boundary(p_handler);
+		x_eval_field_env(p_target) = x_error_handler_saved_env(p_handler);
 
 		if ( ! x_obj_isnil(p_base, x_firstobj(x_eval_field_error_handler(p_base)))) {
 			p_parent = x_firstobj(x_eval_field_error_handler(p_base));
 
 			x_error_handler_error(p_parent) = p_err;
 			x_error_handler_line(p_parent) = x_error_handler_line(p_handler);
-			x_firstobj(x_eval_field_env_alist(p_base))
-				= x_error_handler_saved_env(p_parent);
+			x_eval_field_env(p_base) = x_error_handler_saved_env(p_parent);
 			longjmp(*(jmp_buf *)x_error_handler_jmp(p_parent), 1);
 		}
 
@@ -294,8 +290,9 @@ static x_obj_t *x_prim_base_eval(x_obj_t *p_base, x_obj_t *p_args)
  *
  * x-lang form: @code (base-bind base name value) @endcode
  *
- * Creates a (name . value) pair and prepends it to the target base's
- * environment alist, making it visible to subsequent evaluations.
+ * Binds name to value in the target base's ROOT environment, where every
+ * environment in that base reaches it: the door for handing a child base
+ * a capability.
  *
  * @param p_base  Calling execution context.
  * @param p_args  Unevaluated: (self target-base name value).
@@ -304,91 +301,40 @@ static x_obj_t *x_prim_base_eval(x_obj_t *p_base, x_obj_t *p_args)
 static x_obj_t *x_prim_base_bind(x_obj_t *p_base, x_obj_t *p_args)
 {
 	x_obj_t *p_target, *p_name, *p_val;
-	x_obj_t *p_pair;
 
 	x_eargs(p_base, p_args, 4, NULL, &p_target, &p_name, &p_val);
 
-	p_pair = x_mkspair(p_target, X_OBJ_FLAG_NONE, p_name, p_val);
-	x_eval_env_alist_extend(p_target, p_pair);
-
-	return p_val;
+	return x_env_bind(p_target, x_eval_field_env_root(p_target),
+		p_name, p_val);
 }
 
 
 /**
- * @brief Bind a name in the base's GLOBAL environment, whatever the frame depth.
+ * @brief Bind a name in the base's ROOT environment, whatever environment
+ *        is current.
  *
  * x-lang form: @code ((prim-ref 'base 'def-global) name value) @endcode
  *
- * @details `def` chooses global-versus-local by the LIVE FRAME: top-level
- *          iff the env head is not a FRAME-marked cell (x_prim_define).  It
- *          chose by save-stack depth before, which made a def in a closure's
- *          TAIL position global -- the frame is popped before a deferred
- *          tail runs -- so temporaries def'd inside an if/do tail leaked
- *          into the base.
- *
- *          Either way an OPERATIVE cannot define for its caller by plain def.
- *          Every surface language on x (Scheme's `define`, Kernel's `$define!`)
- *          works around it by putting its eval in tail position so TCO pops the
- *          operative's frame first.  That is an accident of frame depth: one
- *          extra wrapper frame and the binding silently lands nowhere -- not
- *          shadowed, gone -- and a definition in BODY position never worked at
- *          all.  See x-lang#527.
- *
- *          This takes the global path unconditionally: redefinition updates the
- *          existing BST entry in place, a fresh name is inserted into the BST.
- *          The env ALIST is extended only at top level, deliberately: inside a
- *          frame that spine unwinds when the frame pops, so extending it would
- *          leave the local-boundary pointing into reclaimed structure.  Globals
- *          resolve through the BST (GH #47), so the BST insert is what makes
- *          the binding findable afterwards.
+ * @details This is `def` with the root named instead of the current
+ *          environment, and it is expressible without a primitive now
+ *          that environments are values: a `def` evaluated with the root
+ *          as its environment binds there.  It stays for one release so
+ *          the langs that call it through the catalog keep working until
+ *          they move to that spelling; its manifest row goes with it.
  *
  * @param p_base  Base (execution context).
- * @param p_args  Unevaluated: (self name value); value IS evaluated.
+ * @param p_args  Unevaluated: (self name value); both are evaluated.
  * @return The bound value.
- * @see x_prim_define  -- the depth-sensitive form this complements
+ * @see x_env_bind
  */
 static x_obj_t *x_prim_define_global(x_obj_t *p_base, x_obj_t *p_args)
 {
-	x_obj_t *p_name, *p_val, *p_pair, *p_entry;
+	x_obj_t *p_name, *p_val;
 
 	x_eargs(p_base, p_args, 3, NULL, &p_name, &p_val);
 
-	p_entry = x_alist_bst_lookup(p_base,
-		x_eval_field_env_global_tree(p_base), p_name);
-	if ( ! x_obj_isnil(p_base, p_entry)) {
-		x_restobj(p_entry) = p_val;
-		return p_val;
-	}
-
-	p_pair = x_mkspair(p_base, X_OBJ_FLAG_NONE, p_name, p_val);
-
-	/* Extend the alist ALWAYS, advance the boundary only at top level.
-	 *
-	 * Skipping the extension inside a frame left the binding in the BST but
-	 * not on the spine, and anything that walks the env alist rather than
-	 * resolving through the BST could not see it -- syntax-rules' hygiene
-	 * lookup is one such walker, and a macro expanding to a lambda bound its
-	 * parameter to a stale entry.  A half-present binding is worse than
-	 * either alternative.
-	 *
-	 * The boundary is the part that must not move under a frame: it marks
-	 * where globals end, and the spine it would point into unwinds when the
-	 * frame pops. */
-	x_eval_env_alist_extend(p_base, p_pair);
-
-	if (x_base_isset(p_base)
-		&& x_obj_isnil(p_base, x_eval_field_save_stack(p_base))) {
-		x_eval_field_env_local_boundary(p_base)
-			= x_firstobj(x_eval_field_env_alist(p_base));
-	}
-
-	x_eval_field_env_global_tree(p_base) = x_alist_bst_insert(
-		p_base, x_eval_field_env_global_tree(p_base), p_pair);
-
-	return p_val;
+	return x_env_bind(p_base, x_eval_field_env_root(p_base), p_name, p_val);
 }
-
 
 /** Register the sandbox base primitives. */
 x_obj_t *x_prim_base_register(x_obj_t *p_base, x_obj_t *p_args)

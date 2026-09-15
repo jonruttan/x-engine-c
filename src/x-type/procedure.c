@@ -13,6 +13,8 @@
  */
 #include "x-type/procedure.h"
 #include "x-eval.h"
+#include "x-env.h"
+#include "x-tco.h"
 #include "x-heap.h"
 #include "x-obj/prim.h"
 #include "x-prim.h"
@@ -58,15 +60,14 @@ x_satom_t x_type_procedure_name = x_obj_set(x_type_atom_obj, X_OBJ_FLAG_NONE, { 
 /**
  * Allocate a new procedure (closure) on the heap.
  *
- * Builds the state list (params . (body . (env . bst))) and stores
- * it in slot 1 of the two-unit callable layout.
+ * Builds the state list (params . (body . env)) and stores it in slot 1
+ * of the two-unit callable layout.
  *
  * @param p_base   x_obj_t*    -- Base (execution context)
  * @param flags    x_obj_flag_t -- Object flags (e.g. X_OBJ_FLAG_WRAP)
  * @param p_params x_obj_t*    -- Formal parameter tree
  * @param p_body   x_obj_t*    -- Body expression list
  * @param p_env    x_obj_t*    -- Captured lexical environment
- * @param p_bst    x_obj_t*    -- Captured global BST
  * @return Heap-allocated procedure object
  *
  * @note Constructor direction is DELIBERATELY the reverse of the simple
@@ -77,11 +78,10 @@ x_satom_t x_type_procedure_name = x_obj_set(x_type_atom_obj, X_OBJ_FLAG_NONE, { 
  *       adapts an arg list to it.
  */
 x_obj_t *x_make_procedure(x_obj_t *p_base, x_obj_flag_t flags,
-	x_obj_t *p_params, x_obj_t *p_body, x_obj_t *p_env, x_obj_t *p_bst)
+	x_obj_t *p_params, x_obj_t *p_body, x_obj_t *p_env)
 {
 	x_obj_t *p_type = x_type_procedure_register(p_base, p_base),
-		*p_s3 = x_mkspair(p_base, X_OBJ_FLAG_NONE, p_env, p_bst),
-		*p_s2 = x_mkspair(p_base, X_OBJ_FLAG_NONE, p_body, p_s3),
+		*p_s2 = x_mkspair(p_base, X_OBJ_FLAG_NONE, p_body, p_env),
 		*p_state = x_mkspair(p_base, X_OBJ_FLAG_NONE, p_params, p_s2);
 
 	return x_obj_make(p_base, p_type, flags, X_OBJ_LENGTH_PAIR,
@@ -141,7 +141,7 @@ x_obj_t *x_type_procedure_register(x_obj_t *p_base, x_obj_t *p_args)
 /**
  * Type-dispatch make callback: construct a procedure from x-lang args.
  *
- * Expects args: (params body env bst [flags]).
+ * Expects args: (params body env [flags]).
  *
  * @param p_base  x_obj_t* -- Base (execution context)
  * @param p_args  x_obj_t* -- Construction arguments
@@ -151,14 +151,12 @@ x_obj_t *x_type_procedure_make(x_obj_t *p_base, x_obj_t *p_args)
 {
 	x_obj_t *p_params = x_0(p_args),
 		*p_body = x_01(p_args),
-		*p_env = x_011(p_args),
-		*p_bst = x_0111(p_args);
-	x_obj_flag_t flags = x_obj_isnil(p_base, x_1111(p_args))
-		? 0 : x_firstint(x_0(x_1111(p_args)));
+		*p_env = x_011(p_args);
+	x_obj_flag_t flags = x_obj_isnil(p_base, x_111(p_args))
+		? 0 : x_firstint(x_0(x_111(p_args)));
 
 	return x_make_procedure(p_base, flags,
-		x_firstobj(p_params), x_firstobj(p_body),
-		x_firstobj(p_env), x_firstobj(p_bst));
+		x_firstobj(p_params), x_firstobj(p_body), x_firstobj(p_env));
 }
 
 /**
@@ -176,21 +174,11 @@ x_obj_t *x_type_procedure_make(x_obj_t *p_base, x_obj_t *p_args)
  * evaluated, then the underlying combiner is called via x_obj_prim_call.
  * This is how @c (wrap op) creates an applicative from an operative.
  *
- * **Plain closure** (no WRAP flag): Pushes a compound save-stack tuple
- * and enters the body via TCO trampoline.
- * @code
- *   save_stack entry = ((env . boundary) . (bst . shadow_head))
- *                          |       |          |        |
- *                          |       |          |        +-- shadow list head
- *                          |       |          +-- global BST root
- *                          |       +-- local env boundary pointer
- *                          +-- current env alist
- * @endcode
- * After pushing, the closure's captured env becomes the local boundary,
- * the closure's BST becomes the global tree, and env is extended with
- * param bindings.  Body is entered via x_eval_body_tco for tail-call
- * optimization -- the trampoline loop in x_eval restores the save-stack
- * frame when the TCO chain completes.
+ * **Plain closure** (no WRAP flag): Pushes the caller's environment onto
+ * the save-stack, makes a child of the closure's environment with the
+ * parameters bound current, and enters the body via x_eval_body_tco for
+ * tail-call optimization -- the trampoline loop in x_eval makes the saved
+ * environment current again when the TCO chain completes.
  *
  * @param p_base  x_obj_t* -- Base (execution context)
  * @param p_args  x_obj_t* -- (procedure . unevaluated-args)
@@ -218,15 +206,9 @@ x_obj_t *x_type_procedure_call(x_obj_t *p_base, x_obj_t *p_args)
 		return x_obj_prim_call(p_base, p_call_args);
 	}
 
-	/* Push ((env . boundary) . (bst . shadow_head)) onto save-stack */
-	x_tco_compound_save(p_base);
-
-	/* Set boundary to closure env and BST to closure's captured BST.
-	 * Skip BST swap if captured is NULL -- see x_obj_prim_call. */
-	x_eval_field_env_local_boundary(p_base) = x_procenv(p_proc);
-	if (x_procbst(p_proc) != NULL) {
-		x_eval_field_env_global_tree(p_base) = x_procbst(p_proc);
-	}
+	/* Push the caller's environment onto the save-stack; the trampoline
+	 * makes it current again after the body's tail. */
+	x_tco_env_save(p_base);
 
 	/* Self-passing via stack pair (zero allocation).  Safe across the
 	 * TCO deferral below because x_env_extend materializes this head
@@ -237,7 +219,8 @@ x_obj_t *x_type_procedure_call(x_obj_t *p_base, x_obj_t *p_args)
 	x_restobj((x_obj_t *)sp) = p_evaled_args;
 	p_evaled_args = (x_obj_t *)&sp;
 
-	x_firstobj(x_eval_field_env_alist(p_base)) = x_env_extend(
+	/* The body runs in a child of the closure's environment. */
+	x_eval_field_env(p_base) = x_env_extend(
 		p_base, x_procenv(p_proc), x_procparams(p_proc),
 		p_evaled_args);
 
@@ -257,17 +240,8 @@ x_obj_t *x_type_procedure_call(x_obj_t *p_base, x_obj_t *p_args)
  * necessary because @c apply is called from contexts where the
  * caller needs the result immediately (e.g. map, fold, for-each).
  *
- * The four environment components are saved to local variables
- * before body evaluation and explicitly restored afterward:
- * - env alist (current bindings)
- * - local boundary (closure env pointer)
- * - global BST root
- * - shadow list (cleared back via x_prim_clear_shadows_to)
- *
- * @note Shadow list cleanup uses x_prim_clear_shadows_to which
- *       walks the shadow list and clears X_OBJ_FLAG_SHADOW from
- *       each symbol back to the saved head, ensuring BST lookups
- *       are not incorrectly bypassed after the apply returns.
+ * The current environment is saved to a local before body evaluation
+ * and made current again afterward.
  *
  * @param p_base  x_obj_t* -- Base (execution context)
  * @param p_args  x_obj_t* -- (procedure . evaluated-args)
@@ -278,34 +252,21 @@ x_obj_t *x_type_procedure_apply(x_obj_t *p_base, x_obj_t *p_args)
 {
 	x_obj_t *p_proc = x_firstobj(p_args),
 		*p_result,
-		*p_saved_alist = x_firstobj(x_eval_field_env_alist(p_base)),
-		*p_saved_boundary = x_eval_field_env_local_boundary(p_base),
-		*p_saved_bst = x_eval_field_env_global_tree(p_base),
-		*p_saved_shadow = x_eval_field_shadow_list(p_base);
+		*p_saved_env = x_eval_field_env(p_base);
 
-	/* Set boundary and BST from closure.  Skip BST swap if captured is
-	 * NULL -- see x_obj_prim_call. */
-	x_eval_field_env_local_boundary(p_base) = x_procenv(p_proc);
-	if (x_procbst(p_proc) != NULL) {
-		x_eval_field_env_global_tree(p_base) = x_procbst(p_proc);
-	}
-
-	/* Self-passing + extend env */
+	/* Self-passing, then the body's own environment: a child of the
+	 * closure's. */
 	{
 	x_spair_t sp = x_obj_set(NULL, X_OBJ_FLAG_NONE,
 		{ p_proc }, { x_restobj(p_args) });
-	x_firstobj(x_eval_field_env_alist(p_base)) = x_env_extend(
+	x_eval_field_env(p_base) = x_env_extend(
 		p_base, x_procenv(p_proc), x_procparams(p_proc),
 		(x_obj_t *)&sp);
 	}
 
 	p_result = x_eval_body(p_base, x_procbody(p_proc));
 
-	/* Restore env, boundary, BST, and shadow */
-	x_firstobj(x_eval_field_env_alist(p_base)) = p_saved_alist;
-	x_eval_field_env_local_boundary(p_base) = p_saved_boundary;
-	x_eval_field_env_global_tree(p_base) = p_saved_bst;
-	x_prim_clear_shadows_to(p_base, p_saved_shadow);
+	x_eval_field_env(p_base) = p_saved_env;
 
 	return p_result;
 }
