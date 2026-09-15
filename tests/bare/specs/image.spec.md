@@ -156,6 +156,27 @@ is on any fresh object here, never the record's.
 ---
     *** ERROR: round trip
 
+### write! asks the callable once per outside word, past the naming cache's starting room
+
+```scheme
+(include "tests/bare/image-prelude.x")
+(def h (make-type "IMGT" ()))
+(def SP (w (obj->ptr (%newest-struct)) %obj-slot-type))
+(def flag! (fn (_ o) (s (obj->ptr o) %obj-slot-flags (| (w (obj->ptr o) %obj-slot-flags) 1024))))
+(def node (fn (_ a b) ((fn (_ p) ((fn (_ x y) p) (flag! p) (s (obj->ptr p) %obj-slot-type SP))) (pair a b))))
+(def elems (fn (self n) (match ((= n 0) ()) (#t (pair (pair n n) (self (- n 1)))))))
+(def pass (fn (self l r) (match ((eq? l ()) r) (#t (node (first l) (self (rest l) r))))))
+(def L (elems 300))
+(def S (pass L (pass L ())))
+(def cur (pair () ()))
+(def T (ptr-alloc 160000)) (def BL (ptr-alloc 800)) (def R (ptr-alloc 64))
+(s R 0 20000) (s R 1 800)
+(def N (image-write! cur 1024 T BL (fn (_ word kind obj) ()) (pair S ()) R))
+(error (match ((= (w R 3) 300) (match ((= N 600) "300 asked once") (#t "count"))) (#t "asked")))
+```
+---
+    *** ERROR: 300 asked once
+
 ### write! refuses an object whose type struct is not in the image
 
 ```scheme
