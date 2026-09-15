@@ -417,6 +417,44 @@ static x_obj_t *x_prim_image_save(x_obj_t *p_base, x_obj_t *p_args)
 #define X_IMAGE_SAVE_UNITS   200000
 
 /**
+ * @brief The naming cache's starting room, in keys.
+ *
+ * A guess at how many words an image refers to outside itself; the table
+ * grows past it.
+ */
+#define X_IMAGE_EXTERN_KEYS   256
+
+/**
+ * @brief The smallest object table, in slots.
+ *
+ * A power of two: a slot index is an address masked by the slot count less
+ * one, and doubling keeps it one.
+ */
+#define X_IMAGE_TABLE_MIN_SLOTS   16
+
+/** Compile-time assertion that the smallest table is a power of two. */
+typedef char x_assert_image_table_min_slots[
+	(X_IMAGE_TABLE_MIN_SLOTS & (X_IMAGE_TABLE_MIN_SLOTS - 1)) == 0 ? 1 : -1];
+
+/**
+ * @brief Slots kept per key: two, so at most half are ever taken.
+ *
+ * A lookup probes from a key's slot until it meets the key or an empty
+ * slot.  Half the slots empty is what guarantees it meets one, and keeps
+ * the runs short.
+ */
+#define X_IMAGE_TABLE_SLOTS_PER_KEY   2
+
+/**
+ * @brief Low bits dropped from an address before it is masked to a slot.
+ *
+ * The allocator places objects on sixteen-byte boundaries, so an address's
+ * low four bits are always zero and would pick one slot in sixteen.  An
+ * allocator that aligns less costs longer probes, nothing else.
+ */
+#define X_IMAGE_TABLE_KEY_SHIFT   4
+
+/**
  * @brief An address-to-integer table: open addressing over a power of two.
  *
  * The object index while an image is written, and the cache of the words
@@ -431,15 +469,15 @@ typedef struct {
 } x_image_table_t;
 
 /**
- * @brief Give @p t room for @p n keys at half occupancy or better.
+ * @brief Give @p t room for @p n keys at the table's occupancy.
  */
 static void x_image_table_init(x_image_table_t *t, x_int_t n)
 {
 	x_int_t size, i;
 
-	size = 16;
+	size = X_IMAGE_TABLE_MIN_SLOTS;
 
-	while (size < 2 * n) {
+	while (size < X_IMAGE_TABLE_SLOTS_PER_KEY * n) {
 		size *= 2;
 	}
 
@@ -465,12 +503,14 @@ static void x_image_table_free(x_image_table_t *t)
 
 /**
  * @brief The slot holding @p key, or the empty slot it would take.
+ *
+ * Meets one or the other because at most half the slots are ever taken.
  */
 static x_int_t x_image_table_slot(const x_image_table_t *t, x_int_t key)
 {
 	x_int_t i;
 
-	i = (key >> 4) & t->mask;
+	i = (key >> X_IMAGE_TABLE_KEY_SHIFT) & t->mask;
 
 	while (t->keys[i] != 0 && t->keys[i] != key) {
 		i = (i + 1) & t->mask;
@@ -492,15 +532,19 @@ static x_int_t x_image_table_get(const x_image_table_t *t, x_int_t key)
 }
 
 /**
- * @brief Store @p val for @p key, doubling the table past half occupancy.
+ * @brief Store @p val for @p key, doubling the table when another key
+ * would take it past its occupancy.
+ *
+ * The bigger table is given the old slot count as its key room, which is
+ * twice the slots.
  */
 static void x_image_table_put(x_image_table_t *t, x_int_t key, x_int_t val)
 {
 	x_image_table_t bigger;
 	x_int_t i;
 
-	if (2 * (t->count + 1) > t->mask + 1) {
-		x_image_table_init(&bigger, 2 * (t->mask + 1));
+	if (X_IMAGE_TABLE_SLOTS_PER_KEY * (t->count + 1) > t->mask + 1) {
+		x_image_table_init(&bigger, t->mask + 1);
 
 		for (i = 0; i <= t->mask; i++) {
 			if (t->keys[i] != 0) {
@@ -587,8 +631,9 @@ static void x_image_count_pass(x_image_writer_t *w)
  *
  * Applied as (name word kind obj) with evaluated arguments; an integer
  * answer is the index, anything else means the word has no name and is
- * written as the sentinel.  Every answer is cached, so a word is asked
- * about once however often it occurs.
+ * written as the sentinel.  Every answer is cached, one up since the table
+ * reads 0 as no entry, so a word is asked about once however often it
+ * occurs.
  */
 static x_int_t x_image_extern(x_image_writer_t *w, x_int_t word, x_int_t kind,
 	x_obj_t *p_obj)
@@ -834,7 +879,7 @@ static x_obj_t *x_prim_image_write(x_obj_t *p_base, x_obj_t *p_args)
 	w.buf = (x_int_t *)x_sys_malloc((1 + X_IMAGE_UNIT_WORDS * X_IMAGE_SAVE_UNITS) * sizeof(x_int_t));
 	w.p_buf = x_mkptr(p_base, w.buf);
 	w.sent = 0;
-	x_image_table_init(&w.externs, 256);
+	x_image_table_init(&w.externs, X_IMAGE_EXTERN_KEYS);
 
 	x_image_count_pass(&w);
 	x_image_emit_pass(&w);
