@@ -47,6 +47,7 @@
 #define STUB_X_OBJ_OBJ
 #define STUB_X_PRIM_SHADOW
 #define STUB_X_PROCEDURE_APPLY
+#define STUB_X_SYMBOL_FIND
 #include "helper-stubs.c"
 
 /*

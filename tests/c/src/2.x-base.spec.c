@@ -33,6 +33,7 @@
 #define STUB_X_OBJ_OBJ
 #define STUB_X_STR
 #define STUB_X_TYPE_PRIM
+#define STUB_X_SYMBOL_FIND
 #include "helper-stubs.c"
 
 x_obj_t *x_type_heap_mark(x_obj_t *p_base, x_obj_t *p_obj, x_obj_flag_t flags) { return NULL; }

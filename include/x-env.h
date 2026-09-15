@@ -40,7 +40,9 @@
 x_obj_t *x_env_make(x_obj_t *p_base, x_obj_t *p_parent);
 
 /** The @c (name . value) cell binding @p p_sym in @p p_env or an ancestor,
- *  or NULL when no environment on the chain binds it. */
+ *  or NULL when no environment on the chain binds it.  Names are found by
+ *  identity; a symbol interned in another base stands for this base's own
+ *  symbol of its spelling. */
 x_obj_t *x_env_lookup(x_obj_t *p_base, x_obj_t *p_env, x_obj_t *p_sym);
 
 /** Bind @p p_sym to @p p_val in @p p_env itself: an existing binding there
