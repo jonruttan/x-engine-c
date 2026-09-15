@@ -11,6 +11,31 @@ alongside the library changes they landed with.
 [x-lang]: https://github.com/jonruttan/x-lang
 [x-changelog]: https://github.com/jonruttan/x-lang/blob/main/CHANGELOG.md
 
+## 0.2.11 — 2026-09-15
+
+**A name is found by identity, and a foreign symbol stands for the base's
+own** ([#52]). 0.2.10's root tree took an equal spelling for a hit, so a
+child's own symbol found a name the host had bound into it under the host's
+symbol, which x-lang's conformance suite says it must not: names are found by
+identity, and symbols intern per base. The old engine met that law by
+accident, keeping a base-bound name on the alist where the walk compared
+objects while the tree matched by spelling underneath; with every root
+binding in the tree the accident was gone, and the first CI run of the pin
+bump found it.
+
+The tree now hits by identity only. An equal spelling that is not the same
+object sorts to the right, so two bases' symbols of one spelling keep two
+nodes and a rebinding updates its own. A symbol interned in another base has
+no identity here, so lookup lets it stand for this base's own symbol of its
+spelling, which is what lets `(base eval B (lit (+ 2 3)))` hand a child the
+host's `+` and reach the child's binding of its own; the retry runs only when
+the identity lookup at the root missed. Covered by the root-environment C
+spec, which binds one spelling from three bases, and two bare cases. x-lang's
+conformance suite passes against this release, 133 checks, and its spec suite
+from source.
+
+[#52]: https://github.com/jonruttan/x-engine-c/pull/52
+
 ## 0.2.10 — 2026-09-15
 
 **An environment is a value** ([#49], closing [#46]; design note
