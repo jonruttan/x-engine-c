@@ -13,10 +13,10 @@ alongside the library changes they landed with.
 
 ## 0.2.10 — 2026-09-15
 
-**An environment is a value** ([#49], closing [#46]; design note [x-lang#718]). It is one pair,
-bindings and parent: the root's bindings are a tree and its parent is nil;
-every other environment's bindings are an alist and its parent is the
-environment it was made in. A procedure call makes a child of the
+**An environment is a value** ([#49], closing [#46]; design note
+[x-lang#718]). It is one pair, bindings and parent: the root's bindings are
+a tree and its parent is nil; every other environment's bindings are an
+alist and its parent is the environment it was made in. A procedure call makes a child of the
 closure's environment, a parameterless one too. An operative body runs in
 a child of its static environment and receives the caller's environment as
 a value. `def` binds in the current environment, rebinding in place when
