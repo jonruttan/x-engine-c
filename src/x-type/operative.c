@@ -13,6 +13,7 @@
  */
 #include "x-type/operative.h"
 #include "x-eval.h"
+#include "x-env.h"
 #include "x-heap.h"
 
 /**

@@ -13,6 +13,8 @@
  */
 #include "x-type/procedure.h"
 #include "x-eval.h"
+#include "x-env.h"
+#include "x-tco.h"
 #include "x-heap.h"
 #include "x-obj/prim.h"
 #include "x-prim.h"

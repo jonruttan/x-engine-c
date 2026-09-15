@@ -45,6 +45,10 @@ procedure state is `(params . (body . env))`. Both descriptors and the
 declaration are regenerated in the same change; x-lang's readers of the
 old rows move with the pin bump.
 
+The environment operations live in `src/x-env.c`, the save and restore
+around a tail call in `src/x-tco.c`, and the top-level bracket in
+`src/x-toplevel.c`, one prefix per file; x-eval.c keeps the evaluator.
+
 Covered by the C specs, which build environments the new way throughout,
 a base spec of the environment operations, a root-environment spec with
 real symbols, and `tests/bare/specs/env.spec.md`: a `define` built on

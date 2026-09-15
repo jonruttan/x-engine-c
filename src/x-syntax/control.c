@@ -12,6 +12,7 @@
  */
 #include "x-prim.h"
 #include "x-eval.h"
+#include "x-env.h"
 #include "x-heap.h"
 #include "x-type/ptr.h"
 #include "x-type/str.h"

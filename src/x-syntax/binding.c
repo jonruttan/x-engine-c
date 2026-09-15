@@ -13,6 +13,7 @@
 #include "x-prim.h"
 #include "x-alist.h"
 #include "x-eval.h"
+#include "x-env.h"
 #include "x-type/symbol.h"
 
 /**

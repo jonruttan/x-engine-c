@@ -39,7 +39,8 @@
  * binds in the current environment and `eval` with an environment makes
  * that one current.  The whole of scope is those four sentences, and
  * every save/restore in the evaluator is one pointer, the current
- * environment.  See x_env_lookup, x_env_bind, x_env_extend.
+ * environment.  The environment operations are x-env.h; the save and
+ * restore are x-tco.h; the top-level bracket is x-toplevel.h.
  *
  * The error handler is itself a pair tree, navigated by x_error_handler_*:
  *   @c (jmp-ptr (saved-env . nil) error-value . line)
@@ -144,36 +145,6 @@ x_obj_t *x_eval_type_alist_assoc(x_obj_t *p_base, x_obj_t *p_args);
 /** Push a buffer onto the input buffer stack. */
 x_obj_t *x_eval_buffer_push(x_obj_t *p_base, x_obj_t *p_buffer);
 
-/** @name Environments
- *  An environment is @c (bindings . parent); see the file comment.
- *  @{ */
-#define x_env_bindings(E)		x_firstobj(E)	/**< The alist, or the root's tree. */
-#define x_env_parent(E)			x_restobj(E)	/**< The enclosing environment, nil at the root. */
-#define x_env_isroot(B,E)		x_obj_isnil((B), x_restobj(E))	/**< A root has no parent. */
-
-/** Make an empty environment whose parent is @p p_parent (nil for a root). */
-x_obj_t *x_env_make(x_obj_t *p_base, x_obj_t *p_parent);
-
-/** The @c (name . value) cell binding @p p_sym in @p p_env or an ancestor,
- *  or NULL when no environment on the chain binds it. */
-x_obj_t *x_env_lookup(x_obj_t *p_base, x_obj_t *p_env, x_obj_t *p_sym);
-
-/** Bind @p p_sym to @p p_val in @p p_env itself: an existing binding there
- *  is updated in place, otherwise one is added.  Never touches a parent.
- *  Returns @p p_val. */
-x_obj_t *x_env_bind(x_obj_t *p_base, x_obj_t *p_env,
-	x_obj_t *p_sym, x_obj_t *p_val);
-/** @} */
-
-/** The top-level bracket: what a form evaluated at top level sees, whatever
- *  environment is current when it is asked for.  One implementation, two
- *  doors -- x_eval_load around a file's forms, eval! around one form. */
-typedef struct x_toplevel_t {
-	x_obj_t *p_saved_stack, *p_saved_env;
-	x_spair_t parked;   /* the displaced state, rooted for the bracket's length */
-} x_toplevel_t;
-void x_toplevel_enter(x_obj_t *p_base, x_toplevel_t *p_t);
-void x_toplevel_leave(x_obj_t *p_base, x_toplevel_t *p_t);
 x_obj_t *x_eval_load(x_obj_t *p_base, x_obj_t *p_args);
 
 /** Signal an error with the given message and irritant object. */
@@ -202,11 +173,6 @@ void x_eval_spine_guard(x_obj_t *p_base, x_obj_t *p_obj);
 /** Read the argument at a peeked spine position, guarding a dotted tail (#487). */
 x_obj_t *x_eval_spine_first(x_obj_t *p_base, x_obj_t *p_pos);
 
-/** Make a child of @p p_parent with @p p_params bound to @p p_vals: the
- *  environment a procedure body or an operative body runs in. */
-x_obj_t *x_env_extend(x_obj_t *p_base, x_obj_t *p_parent,
-	x_obj_t *p_params, x_obj_t *p_vals);
-
 /** Evaluate a body (sequence of expressions), returning the last result. */
 x_obj_t *x_eval_body(x_obj_t *p_base, x_obj_t *p_body);
 
@@ -215,17 +181,6 @@ x_obj_t *x_eval_body_tco(x_obj_t *p_base, x_obj_t *p_body);
 
 /** Execute the TCO trampoline loop until a non-TCO result is produced. */
 x_obj_t *x_eval_tco_trampoline(x_obj_t *p_base, x_obj_t *p_result);
-
-/** Push the current environment onto the save-stack and return it.  A
- *  procedure call and eval-with-env snapshot the environment this way
- *  before making another one current; the trampoline, or x_eval_body_tco's
- *  early exits, restore it with x_tco_restore(). */
-x_obj_t *x_tco_env_save(x_obj_t *p_base);
-
-/** Make @p p_env the current environment.  Does NOT pop the save-stack;
- *  a caller that took the environment from the save-stack top pops it
- *  separately. */
-void x_tco_restore(x_obj_t *p_base, x_obj_t *p_env);
 
 /** Defer an operative body's tail to the outer trampoline: evaluate the
  *  non-tail forms, then set tco_expr to the tail and tco_env to the

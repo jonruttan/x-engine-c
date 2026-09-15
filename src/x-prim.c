@@ -17,6 +17,7 @@
 #include "x-syntax.h"
 #include "x-alist.h"
 #include "x-eval.h"
+#include "x-env.h"
 #include "x-type.h"
 #include "x-type/list.h"
 #include "x-type/prim.h"

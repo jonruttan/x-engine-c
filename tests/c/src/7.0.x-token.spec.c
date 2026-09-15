@@ -39,6 +39,9 @@ x_satom_t x_sexp_list_analyse_prim = x_obj_set(x_type_atom_obj, X_OBJ_FLAG_NONE,
 
 #include "src/x-type/err.c"
 #include "src/x-eval.c"
+#include "src/x-env.c"
+#include "src/x-tco.c"
+#include "src/x-toplevel.c"
 #include "src/x-type/list.c"
 #include "src/x-token.c"
 

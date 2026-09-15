@@ -20,6 +20,9 @@
 #include "ext/x-expr/src/x-base.c"
 #define X_EVAL_OWN
 #include "src/x-eval.c"
+#include "src/x-env.c"
+#include "src/x-tco.c"
+#include "src/x-toplevel.c"
 
 #define STUB_X_PRIM
 #define STUB_X_LIST

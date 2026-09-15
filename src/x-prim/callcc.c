@@ -12,6 +12,7 @@
  */
 #include "x-prim.h"
 #include "x-eval.h"
+#include "x-env.h"
 #include "x-heap.h"
 #include <setjmp.h>
 #include <string.h>

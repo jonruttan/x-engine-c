@@ -14,6 +14,7 @@
 #include "x-prim.h"
 #include "x-alist.h"
 #include "x-eval.h"
+#include "x-env.h"
 #include "x-heap.h"
 #include "x-type.h"
 #include <setjmp.h>

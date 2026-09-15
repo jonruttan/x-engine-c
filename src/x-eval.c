@@ -14,6 +14,9 @@
  * # Includes
  */
 #include "x-eval.h"
+#include "x-env.h"
+#include "x-tco.h"
+#include "x-toplevel.h"
 #include "x-obj.h"
 #include "x-prim.h"
 #include "x-type.h"
@@ -33,47 +36,6 @@
  * x_eval from helper-stubs) or X_EVAL_OWN (provide their own double) before
  * #including this file -- the base construction/IO/error code below stays. */
 #if !defined(STUB_X_EVAL) && !defined(X_EVAL_OWN)
-
-/**
- * Push the current environment onto the save-stack and return it.
- *
- * A procedure call and eval-with-env snapshot the environment this way
- * before making another one current; the trampoline, or x_eval_body_tco's
- * early exits, put it back with x_tco_restore().  The environment is a
- * value, so the snapshot is the pointer and nothing else -- there is no
- * boundary, tree or shadow list to carry beside it.
- *
- * @param p_base  x_obj_t* -- Base (execution context)
- * @return x_obj_t* -- The environment pushed
- * @see x_tco_restore
- */
-x_obj_t *x_tco_env_save(x_obj_t *p_base)
-{
-	x_obj_t *p_env = x_eval_field_env(p_base);
-
-	x_eval_field_save_stack(p_base) = x_mkspair(p_base, X_OBJ_FLAG_NONE,
-		p_env, x_eval_field_save_stack(p_base));
-
-	return p_env;
-}
-
-/**
- * Make @p p_env the current environment.
- *
- * Does NOT touch the save-stack -- a caller that took the environment from
- * the save-stack top pops it separately.  This is the single restore used
- * by both trampoline exit points (x_eval, x_eval_tco_trampoline),
- * x_eval_body_tco's early-exit paths, eval-with-env, and the operative
- * return.
- *
- * @param p_base  x_obj_t* -- Base (execution context)
- * @param p_env   x_obj_t* -- The environment to make current
- * @see x_tco_env_save
- */
-void x_tco_restore(x_obj_t *p_base, x_obj_t *p_env)
-{
-	x_eval_field_env(p_base) = p_env;
-}
 
 /**
  * Defer an operative body's tail to the outer trampoline (TCO).
@@ -150,7 +112,7 @@ x_obj_t *x_eval_op_body(x_obj_t *p_base, x_obj_t *p_body, x_obj_t *p_caller)
  * environment is also stored into @p p_tco_root's slot so the GC roots it
  * across the arbitrary evaluation between capture and restore (#243 -- a C
  * local is not a root; the environment is already off the save-stack). */
-static void x_tco_keep(x_obj_t *p_base, x_obj_t *p_te, x_obj_t *p_tco_root,
+static void x_eval_tco_keep(x_obj_t *p_base, x_obj_t *p_te, x_obj_t *p_tco_root,
 	x_obj_t **pp_save)
 {
 	if (x_obj_isnil(p_base, p_te))
@@ -165,7 +127,7 @@ static void x_tco_keep(x_obj_t *p_base, x_obj_t *p_te, x_obj_t *p_tco_root,
 /* Make the kept environment current, if one was kept.  The outermost is the
  * one kept, so an inner call's environment never survives its caller's
  * return whatever the tail chain did in between. */
-static void x_tco_apply(x_obj_t *p_base, x_obj_t *p_save)
+static void x_eval_tco_apply(x_obj_t *p_base, x_obj_t *p_save)
 {
 	if (p_save != NULL && ! x_obj_isnil(p_base, p_save))
 		x_tco_restore(p_base, p_save);
@@ -313,7 +275,7 @@ eval_start:
 		/* Keep the first (outermost) environment: a procedure hands over
 		 * its caller's, an operative its caller's.  if/do/match/and/or set
 		 * none (tco_env nil) -- an inner fn/let/op fills it later. */
-		x_tco_keep(p_base, p_te, (x_obj_t *)tco_root, &p_tco_env_save);
+		x_eval_tco_keep(p_base, p_te, (x_obj_t *)tco_root, &p_tco_env_save);
 
 		x_firstobj(x_eval_field_tco_env(p_base)) = NULL;
 		x_firstobj(x_eval_arg_exp(p_args)) = x_firstobj(x_eval_field_tco_expr(p_base));
@@ -326,7 +288,7 @@ eval_start:
 	/* TCO env restore: only the x_eval that trampolined restores env. */
 	if (trampolining && x_base_isset(p_base)) {
 		x_firstobj(x_eval_field_tco_env(p_base)) = NULL;
-		x_tco_apply(p_base, p_tco_env_save);
+		x_eval_tco_apply(p_base, p_tco_env_save);
 	}
 
 	x_heap_root_pop(p_cell);
@@ -494,82 +456,6 @@ x_obj_t *x_eval_list(x_obj_t *p_base, x_obj_t *p_args)
 	x_heap_root_pop(p_cell);
 
 	return x_mklist(p_base, p_val, p_rest);
-}
-
-/**
- * Make a child environment with parameters bound to values.
- *
- * The environment a procedure body or an operative body runs in: a fresh
- * @c (bindings . parent) pair whose parent is @p p_parent, the closure's
- * or the operative's static environment, and whose bindings are the
- * parameters.  Handles three cases: (1) variadic -- a bare symbol binds to
- * the entire remaining value list, (2) base -- no more params, (3) one
- * parameter to one value, then the rest.
- *
- * @param p_base   x_obj_t* -- Base (execution context)
- * @param p_parent x_obj_t* -- The environment the new one is a child of
- * @param p_params x_obj_t* -- Parameter list (or single symbol for variadic)
- * @param p_vals   x_obj_t* -- Value list
- * @return x_obj_t* -- The new environment
- *
- * @details **The parent is never modified.**  The bindings are new cells
- *          in the new environment; @p p_parent is only pointed at.  Fewer
- *          values than parameters binds the remainder to nil, symmetric
- *          with surplus values, which are ignored once the parameters run
- *          out.
- *
- * @note The variadic case (bare symbol for p_params) binds the ENTIRE
- *       remaining value list, not just one value.  This implements
- *       rest-parameter semantics: @c (fn (a . rest) ...).
- *
- * @see x_env_bind        -- `def`, the same binder one name at a time
- * @see x_eval_body_tco   -- saves/restores env around a body
- */
-x_obj_t *x_env_extend(x_obj_t *p_base, x_obj_t *p_parent,
-	x_obj_t *p_params, x_obj_t *p_vals)
-{
-	x_obj_t *p_env = x_env_make(p_base, p_parent);
-	x_obj_t *p_pair;
-	x_obj_t *p_val;
-	x_obj_t **pp_spine;
-
-	while ( ! x_obj_isnil(p_base, p_params)) {
-		/* Variadic: single symbol binds to entire remaining arg list. */
-		if (x_obj_type_issymbol(p_base, p_params)) {
-			/* Callers self-pass via transient stack pairs (NULL type
-			 * slot) at the head of p_vals -- x_type_procedure_call's sp,
-			 * x_callable_apply sites' stack-built arg lists.  A bare-
-			 * variadic binding captures the spine itself, and the binding
-			 * outlives those frames (TCO defers the body to the
-			 * trampoline; apply-path closures can escape with the env),
-			 * so materialize every leading stack pair on the heap.  Heap
-			 * spines carry x_type_pair_obj and pass through untouched. */
-			for (pp_spine = &p_vals;
-				*pp_spine != NULL && x_obj_type(*pp_spine) == NULL;
-				pp_spine = &x_restobj(*pp_spine)) {
-				*pp_spine = x_mklist(p_base,
-					x_firstobj(*pp_spine), x_restobj(*pp_spine));
-			}
-
-			p_pair = x_mkspair(p_base, X_OBJ_FLAG_NONE, p_params, p_vals);
-			x_env_bindings(p_env) = x_mkspair(p_base, X_OBJ_FLAG_NONE,
-				p_pair, x_env_bindings(p_env));
-
-			return p_env;
-		}
-
-		/* One parameter to one value; a missing value is nil. */
-		p_val = x_obj_isnil(p_base, p_vals) ? NULL : x_firstobj(p_vals);
-		p_pair = x_mkspair(p_base, X_OBJ_FLAG_NONE,
-			x_firstobj(p_params), p_val);
-		x_env_bindings(p_env) = x_mkspair(p_base, X_OBJ_FLAG_NONE,
-			p_pair, x_env_bindings(p_env));
-
-		p_params = x_restobj(p_params);
-		p_vals = x_obj_isnil(p_base, p_vals) ? NULL : x_restobj(p_vals);
-	}
-
-	return p_env;
 }
 
 /**
@@ -755,14 +641,14 @@ x_obj_t *x_eval_tco_trampoline(x_obj_t *p_base, x_obj_t *p_result)
 
 		/* Keep the outermost environment (mirrors x_eval). */
 		p_te = x_firstobj(x_eval_field_tco_env(p_base));
-		x_tco_keep(p_base, p_te, (x_obj_t *)tco_root, &p_tco_env);
+		x_eval_tco_keep(p_base, p_te, (x_obj_t *)tco_root, &p_tco_env);
 
 		x_firstobj(x_eval_field_tco_expr(p_base)) = NULL;
 		x_firstobj(x_eval_field_tco_env(p_base)) = NULL;
 		p_result = x_eval_arg(p_base, p_tco);
 	}
 
-	x_tco_apply(p_base, p_tco_env);
+	x_eval_tco_apply(p_base, p_tco_env);
 
 	x_heap_root_pop(p_cell);
 
@@ -1131,120 +1017,6 @@ x_obj_t *x_eval_type_alist_assoc(x_obj_t *p_base, x_obj_t *p_args)
 }
 
 /**
- * Make an empty environment whose parent is @p p_parent.
- *
- * An environment is one pair, @c (bindings . parent).  A nil parent makes
- * a root, whose bindings are kept as a tree; any other environment keeps
- * an alist.  x_eval_make builds the base's root this way; procedure and
- * operative calls make children through x_env_extend; `guard` makes one
- * for its error variable.
- *
- * @param p_base    x_obj_t* -- Base (execution context)
- * @param p_parent  x_obj_t* -- The enclosing environment, or nil for a root
- * @return x_obj_t* -- The new, empty environment
- */
-x_obj_t *x_env_make(x_obj_t *p_base, x_obj_t *p_parent)
-{
-	return x_mkspair(p_base, X_OBJ_FLAG_NONE, NULL, p_parent);
-}
-
-/**
- * The cell binding @p p_sym in @p p_env or an ancestor.
- *
- * Walks from @p p_env to the root: an environment with a parent searches
- * its alist of @c (name . value) cells by symbol identity (symbols are
- * interned per base); the root searches its tree.  The first hit wins,
- * so a child's binding shadows a parent's.  This is the whole of symbol
- * lookup -- x_type_symbol_eval and `set!` call nothing else.
- *
- * @param p_base  x_obj_t* -- Base (execution context)
- * @param p_env   x_obj_t* -- The environment to start from
- * @param p_sym   x_obj_t* -- The symbol
- * @return x_obj_t* -- The @c (name . value) cell, or NULL when unbound
- */
-x_obj_t *x_env_lookup(x_obj_t *p_base, x_obj_t *p_env, x_obj_t *p_sym)
-{
-	x_obj_t *p_cell, *p_entry;
-
-	for (; ! x_obj_isnil(p_base, p_env); p_env = x_env_parent(p_env)) {
-		if (x_env_isroot(p_base, p_env)) {
-			p_entry = x_alist_bst_lookup(p_base,
-				x_env_bindings(p_env), p_sym);
-			if ( ! x_obj_isnil(p_base, p_entry)) {
-				return p_entry;
-			}
-			continue;
-		}
-
-		for (p_cell = x_env_bindings(p_env);
-			! x_obj_isnil(p_base, p_cell);
-			p_cell = x_restobj(p_cell)) {
-			if (x_firstobj(x_firstobj(p_cell)) == p_sym) {
-				return x_firstobj(p_cell);
-			}
-		}
-	}
-
-	return NULL;
-}
-
-/**
- * Bind @p p_sym to @p p_val in @p p_env itself.
- *
- * A binding the environment already holds is updated in place; otherwise
- * one is added -- to the root's tree, or in front of another
- * environment's alist.  A parent's binding of the same name is never
- * touched: it is shadowed, which is what a definition in a child means.
- * `def` is this on the current environment; the C binding doors and
- * `base bind` are this on a root.
- *
- * @param p_base  x_obj_t* -- Base (execution context)
- * @param p_env   x_obj_t* -- The environment to bind in
- * @param p_sym   x_obj_t* -- The symbol
- * @param p_val   x_obj_t* -- The value
- * @return x_obj_t* -- @p p_val
- *
- * @note The tree insert mutates in place (x_alist_bst_insert), so every
- *       closure whose chain reaches this root sees the new binding at its
- *       next lookup -- a top-level definition made after a closure was
- *       created is visible to it, as it must be.
- */
-x_obj_t *x_env_bind(x_obj_t *p_base, x_obj_t *p_env,
-	x_obj_t *p_sym, x_obj_t *p_val)
-{
-	x_obj_t *p_cell, *p_pair;
-
-	if (x_env_isroot(p_base, p_env)) {
-		p_cell = x_alist_bst_lookup(p_base, x_env_bindings(p_env), p_sym);
-		if ( ! x_obj_isnil(p_base, p_cell)) {
-			x_restobj(p_cell) = p_val;
-			return p_val;
-		}
-
-		p_pair = x_mkspair(p_base, X_OBJ_FLAG_NONE, p_sym, p_val);
-		x_env_bindings(p_env) = x_alist_bst_insert(p_base,
-			x_env_bindings(p_env), p_pair);
-
-		return p_val;
-	}
-
-	for (p_cell = x_env_bindings(p_env);
-		! x_obj_isnil(p_base, p_cell);
-		p_cell = x_restobj(p_cell)) {
-		if (x_firstobj(x_firstobj(p_cell)) == p_sym) {
-			x_restobj(x_firstobj(p_cell)) = p_val;
-			return p_val;
-		}
-	}
-
-	p_pair = x_mkspair(p_base, X_OBJ_FLAG_NONE, p_sym, p_val);
-	x_env_bindings(p_env) = x_mkspair(p_base, X_OBJ_FLAG_NONE,
-		p_pair, x_env_bindings(p_env));
-
-	return p_val;
-}
-
-/**
  * Push a buffer onto the buffer stack.
  *
  * @param p_base   x_obj_t* -- Base (execution context)
@@ -1257,79 +1029,6 @@ x_obj_t *x_eval_buffer_push(x_obj_t *p_base, x_obj_t *p_buffer)
 		p_buffer, x_base_field_buffer(p_base));
 	return p_buffer;
 }
-
-/**
- * Enter the top-level bracket: what a form evaluated at top level sees,
- * whatever environment is current when it is asked for.
- *
- * A top-level form's `def`s must bind in the root, and the closures it
- * makes must capture the root -- not the environment of whatever was being
- * evaluated when the form was asked for.  Two doors ask: x_eval_load, for
- * every form of a file (`include` runs under whatever called it, and its
- * x-level wrapper is a closure), and eval!, for the one form the REPL loop
- * reads (lib/he.x reaches `(repl)` through `(unless %batch? (do (%banner)
- * (repl)))`, so every form typed at the prompt sits under those frames).
- * The bracket is two moves: the save-stack is hidden (nil), so a form sees
- * an empty stack exactly as at the true top level and each x_eval balances
- * its own pushes; and the root is made current.
- *
- * The displaced state is HEAP: the caller's environment and its save-stack,
- * and for the length of the bracket nothing on the base tree reaches them.
- * A C local is not a root (x-heap.h), so a form that collects (a library
- * collecting between definitions is ordinary) would sweep them, and the
- * caller would walk freed memory on its next lookup.  So both are parked
- * on the root chain in the caller's own struct, one registered node
- * holding the two pointers; the pop is in x_toplevel_leave.  The error
- * path needs nothing more: a guard restores the root chain and the
- * save-stack from its own snapshot, so a longjmp out of a bracketed form
- * drops the node with the C frame that owns it.
- *
- * @param p_base  x_obj_t* -- Base (execution context)
- * @param p_t     x_toplevel_t* -- the caller's bracket state, filled here
- * @see x_toplevel_leave, x_eval_load, x_prim_eval_immediate
- */
-void x_toplevel_enter(x_obj_t *p_base, x_toplevel_t *p_t)
-{
-	int i;
-	x_obj_t **pp_root = x_heap_root_slot(p_base);
-
-	p_t->p_saved_stack = x_eval_field_save_stack(p_base);
-	x_eval_field_save_stack(p_base) = NULL;
-
-	p_t->p_saved_env = x_eval_field_env(p_base);
-	x_eval_field_env(p_base) = x_eval_field_env_root(p_base);
-
-	/* Pair-typed, as the root chain requires: the mark walk descends only
-	 * spair pairs.  Built at run time in the caller's struct -- every unit
-	 * zeroed, then the type and flags words -- where the static form would
-	 * have used the x_obj_set initializer. */
-	for (i = 0; i < (int)(X_OBJ_META_LEN + X_OBJ_UNITS_PAIR); i++) {
-		p_t->parked[i].i = 0;
-	}
-	x_obj_type(p_t->parked) = (x_obj_t *)x_type_pair_obj;
-	x_obj_flags(p_t->parked) = X_OBJ_FLAG_NONE;
-	x_firstobj((x_obj_t *)p_t->parked) = p_t->p_saved_env;
-	x_restobj((x_obj_t *)p_t->parked) = p_t->p_saved_stack;
-	x_heap_root_push(pp_root, p_t->parked);
-}
-
-/**
- * Leave the top-level bracket: unroot the parked state and put it back.
- *
- * @param p_base  x_obj_t* -- Base (execution context)
- * @param p_t     x_toplevel_t* -- the state x_toplevel_enter filled
- * @see x_toplevel_enter
- */
-void x_toplevel_leave(x_obj_t *p_base, x_toplevel_t *p_t)
-{
-	x_obj_t **pp_root = x_heap_root_slot(p_base);
-
-	x_heap_root_pop(pp_root);
-
-	x_eval_field_save_stack(p_base) = p_t->p_saved_stack;
-	x_eval_field_env(p_base) = p_t->p_saved_env;
-}
-
 
 /**
  * Read and evaluate all expressions from the current buffer.
