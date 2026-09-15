@@ -25,11 +25,13 @@
 (node base
   (build
     (pair
+      ; An environment is a first-class value: one pair, (bindings . parent),
+      ; with the root's bindings a tree and its parent nil.  `env` is the
+      ; environment evaluation is currently inside; `env-root` is the base's
+      ; root, where top-level forms, eval! and the C binding doors bind.
       (node env
-        (cell env-alist)
-        (pair (slot env-local-boundary)
-              (pair (slot env-global-tree)
-                    (slot shadow-list))))
+        (slot env)
+        (slot env-root))
       (node ctrl
         (pair (slot save-stack)
               (cell error-handler))

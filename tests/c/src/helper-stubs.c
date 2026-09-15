@@ -109,12 +109,10 @@ x_obj_t *x_syntax_quote_register(x_obj_t *p_base, x_obj_t *p_args) { return p_ba
 #endif
 
 #ifdef STUB_X_PRIM_SHADOW
-void x_prim_clear_shadows_to(x_obj_t *p_base, x_obj_t *p_to) {}
 #endif
 
 /* Legacy alias */
 #ifdef STUB_X_PRIM_FLAG1
-void x_prim_clear_shadows_to(x_obj_t *p_base, x_obj_t *p_to) {}
 #endif
 
 #ifdef STUB_X_TYPE_PRIM

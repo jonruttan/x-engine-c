@@ -35,190 +35,73 @@
 #if !defined(STUB_X_EVAL) && !defined(X_EVAL_OWN)
 
 /**
- * Push the current environment state as a TCO restore compound.
+ * Push the current environment onto the save-stack and return it.
  *
- * Snapshots env-alist, local-boundary, global tree (a BST), and shadow-head into a
- * compound @c ((env . boundary) . (bst . shadow)) and pushes it onto the
- * save-stack.  Procedure calls and eval-with-env use this to capture the
- * environment before extending it; the trampoline (or x_eval_body_tco's
- * early-exit paths) restores from it via x_tco_restore().
+ * A procedure call and eval-with-env snapshot the environment this way
+ * before making another one current; the trampoline, or x_eval_body_tco's
+ * early exits, put it back with x_tco_restore().  The environment is a
+ * value, so the snapshot is the pointer and nothing else -- there is no
+ * boundary, tree or shadow list to carry beside it.
  *
  * @param p_base  x_obj_t* -- Base (execution context)
- * @return x_obj_t* -- The pushed compound
+ * @return x_obj_t* -- The environment pushed
  * @see x_tco_restore
  */
-x_obj_t *x_tco_compound_save(x_obj_t *p_base)
+x_obj_t *x_tco_env_save(x_obj_t *p_base)
 {
-	x_obj_t *p_compound = x_mkspair(p_base, X_OBJ_FLAG_NONE,
-		x_mkspair(p_base, X_OBJ_FLAG_NONE,
-			x_firstobj(x_eval_field_env_alist(p_base)),
-			x_eval_field_env_local_boundary(p_base)),
-		x_mkspair(p_base, X_OBJ_FLAG_NONE,
-			x_eval_field_env_global_tree(p_base),
-			x_eval_field_shadow_list(p_base)));
+	x_obj_t *p_env = x_eval_field_env(p_base);
 
 	x_eval_field_save_stack(p_base) = x_mkspair(p_base, X_OBJ_FLAG_NONE,
-		p_compound, x_eval_field_save_stack(p_base));
+		p_env, x_eval_field_save_stack(p_base));
 
-	return p_compound;
+	return p_env;
 }
 
 /**
- * Restore env-alist, local-boundary, global tree (a BST), and shadow list from a TCO
- * compound @c ((env . boundary) . (bst . shadow)).
+ * Make @p p_env the current environment.
  *
- * Does NOT touch the save-stack -- callers that took the compound from the
- * save-stack top pop it separately.  This is the single restore used by both
- * trampoline exit points (x_eval, x_eval_tco_trampoline), x_eval_body_tco's
- * early-exit paths, and eval-with-env.
+ * Does NOT touch the save-stack -- a caller that took the environment from
+ * the save-stack top pops it separately.  This is the single restore used
+ * by both trampoline exit points (x_eval, x_eval_tco_trampoline),
+ * x_eval_body_tco's early-exit paths, eval-with-env, and the operative
+ * return.
  *
- * @param p_base      x_obj_t* -- Base (execution context)
- * @param p_compound  x_obj_t* -- Compound built by x_tco_compound_save()
- * @see x_tco_compound_save
+ * @param p_base  x_obj_t* -- Base (execution context)
+ * @param p_env   x_obj_t* -- The environment to make current
+ * @see x_tco_env_save
  */
-void x_tco_restore(x_obj_t *p_base, x_obj_t *p_compound)
+void x_tco_restore(x_obj_t *p_base, x_obj_t *p_env)
 {
-	x_firstobj(x_eval_field_env_alist(p_base))
-		= x_firstobj(x_firstobj(p_compound));
-	x_eval_field_env_local_boundary(p_base)
-		= x_restobj(x_firstobj(p_compound));
-	x_eval_field_env_global_tree(p_base)
-		= x_firstobj(x_restobj(p_compound));
-	x_prim_clear_shadows_to(p_base, x_restobj(x_restobj(p_compound)));
-}
-
-/** Discriminator whose address tags a tco_env value as an operative restore
- *  record @c (TAG . ((caller . op_head) . (boundary . shadow))) rather than a
- *  procedure env compound.  The trampolines route a tco_env by testing
- *  @c x_firstobj(tco_env) == &x_tco_op_tag. */
-x_satom_t x_tco_op_tag = x_obj_set(x_type_atom_obj, X_OBJ_FLAG_NONE, { NULL });
-
-/**
- * Restore env-alist, local-boundary, and shadow from an operative record
- * @c (TAG . ((caller . op_head) . (boundary . shadow))).
- *
- * The env-alist restore is CONDITIONAL on whether the op's formal frame
- * (op_head) is still reachable from the current head (see the body).  Boundary
- * and shadow always restore; the global BST is never touched (procedures own
- * it, and the trampoline applies the proc compound around this call).
- *
- * @param p_base        x_obj_t* -- Base (execution context)
- * @param p_record      x_obj_t* -- Operative record built by x_eval_op_body()
- * @param force_caller  int -- Non-zero when a procedure compound was also
- *                      captured here (the op's tail resolved to an applied
- *                      procedure, e.g. let): restore env to the caller
- *                      unconditionally rather than walking to the formal
- *                      frame.  See the body.
- * @see x_eval_op_body
- */
-void x_op_restore(x_obj_t *p_base, x_obj_t *p_record, int force_caller)
-{
-	x_obj_t *p_rest = x_restobj(p_record),
-		*p_caller = x_firstobj(x_firstobj(p_rest)),
-		*p_head = x_restobj(x_firstobj(p_rest)),
-		*p_boundary = x_firstobj(x_restobj(p_rest)),
-		*p_shadow = x_restobj(x_restobj(p_rest)),
-		*p_walk;
-
-	/* Env-alist restore.  @p force_caller (set by the trampoline iff a procedure
-	 * compound was ALSO captured here) means the op's tail resolved to an
-	 * APPLIED procedure -- e.g. let, which expands to (apply (fn ...) ...).  That
-	 * tail leaves env on a branched closure frame that must be shed, so restore
-	 * to the caller unconditionally.
-	 *
-	 * Otherwise the op tail-eval'd into the caller's `e`.  Walk toward the op's
-	 * formal frame: still on the chain -> the body computed a value in the
-	 * formals without tail-eval'ing away, restore to caller to shed them; gone
-	 * -> the body tail-eval'd and may have grown `e` with a (def ...) the caller
-	 * must keep seeing (define-sugar, do-sequenced defs), so keep the head.
-	 *
-	 * Boundary and shadow always restore; the BST is never touched (procedures
-	 * own it, and the trampoline applies the proc compound around this call). */
-	if (force_caller) {
-		x_firstobj(x_eval_field_env_alist(p_base)) = p_caller;
-	} else {
-		p_walk = x_firstobj(x_eval_field_env_alist(p_base));
-		while ( ! x_obj_isnil(p_base, p_walk) && p_walk != p_head) {
-			p_walk = x_restobj(p_walk);
-		}
-		if (p_walk == p_head) {
-			x_firstobj(x_eval_field_env_alist(p_base)) = p_caller;
-		} else {
-			/* op_head is gone from the chain.  Two ways that happens:
-			 * (1) the body tail-eval'd a top-level (def ...) into the
-			 *     caller, growing the caller's env in place -- the head now
-			 *     chains DOWN TO the caller, and we must keep it so the new
-			 *     binding survives (define-sugar, do-sequenced defs);
-			 * (2) the body's tail left the env-alist head on an unrelated
-			 *     frame -- e.g. a nested TCO recursion inside (eval expr e)
-			 *     (the interpolation operative parses holes that way) whose
-			 *     own restore was suppressed as a non-outermost trampoline.
-			 * Distinguish by walking for the caller THROUGH NON-FRAME CELLS
-			 * ONLY: case (1) grew the caller's env with def cells, which
-			 * carry no FRAME mark, so the head reaches the caller across
-			 * plain cells; a FRAME cell on the way is an inner operative's
-			 * formals left where its nil tail put them (a when/unless whose
-			 * if took the empty branch: match sets a nil tail, nothing
-			 * tail-evals into the caller's env, and the inner record was
-			 * dropped as non-outermost), so the head is foreign and the
-			 * caller is restored.  Reachability alone could not tell them
-			 * apart: every chain ends at the same bottom cells, so a caller
-			 * head the loaders have restored to the base of the chain was
-			 * "reachable" from any frame, and the frame stayed -- at the
-			 * TOP LEVEL, where it made every later def frame-local once
-			 * x_prim_define scoped by the live frame. */
-			p_walk = x_firstobj(x_eval_field_env_alist(p_base));
-			while ( ! x_obj_isnil(p_base, p_walk) && p_walk != p_caller
-				&& ! (x_obj_flags(p_walk) & X_OBJ_FLAG_FRAME)) {
-				p_walk = x_restobj(p_walk);
-			}
-			if (p_walk != p_caller) {
-				x_firstobj(x_eval_field_env_alist(p_base)) = p_caller;
-			}
-		}
-	}
-
-	x_eval_field_env_local_boundary(p_base) = p_boundary;
-	x_prim_clear_shadows_to(p_base, p_shadow);
+	x_eval_field_env(p_base) = p_env;
 }
 
 /**
  * Defer an operative body's tail to the outer trampoline (TCO).
  *
- * Evaluates the non-tail body forms synchronously, then stores the tail form in
- * tco_expr and a tagged operative restore record in tco_env.  Deliberately does
- * NOT push the save-stack -- operatives stay invisible to it, so a top-level
- * (def ...) run by tail-eval'd body code still classifies as top-level (BST),
- * and the operative does not block the procedure env channel.  The trampoline
- * keeps the first procedure compound and the first operative record separately,
- * applying x_tco_restore then x_op_restore at exit.
+ * Evaluates the non-tail body forms synchronously, then stores the tail form
+ * in tco_expr and the caller's environment in tco_env.  Deliberately does NOT
+ * push the save-stack -- operatives stay invisible to it, so a procedure
+ * whose tail is an operative call still owns its own restore.  The
+ * trampoline keeps the outermost environment it is handed and makes it
+ * current at exit, which for an operative is the caller's: a `def` the body
+ * evaluated in the caller's environment is IN that environment, so there is
+ * nothing to decide about keeping or shedding a chain head.
  *
- * @param p_base      x_obj_t* -- Base (execution context)
- * @param p_body      x_obj_t* -- Operative body (sequence of forms)
- * @param p_caller    x_obj_t* -- env-alist head before the op extended it
- * @param p_op_head   x_obj_t* -- the op's installed formal-frame head
- * @param p_boundary  x_obj_t* -- local-boundary to restore
- * @param p_shadow    x_obj_t* -- shadow-list head to clear back to
+ * @param p_base    x_obj_t* -- Base (execution context)
+ * @param p_body    x_obj_t* -- Operative body (sequence of forms)
+ * @param p_caller  x_obj_t* -- The caller's environment, current on return
  * @return x_obj_t* -- NULL (result delivered via the trampoline)
- * @see x_op_restore
  */
-x_obj_t *x_eval_op_body(x_obj_t *p_base, x_obj_t *p_body,
-	x_obj_t *p_caller, x_obj_t *p_op_head,
-	x_obj_t *p_boundary, x_obj_t *p_shadow)
+x_obj_t *x_eval_op_body(x_obj_t *p_base, x_obj_t *p_body, x_obj_t *p_caller)
 {
-	x_obj_t *p_record = x_mkspair(p_base, X_OBJ_FLAG_NONE,
-		(x_obj_t *)&x_tco_op_tag,
-		x_mkspair(p_base, X_OBJ_FLAG_NONE,
-			x_mkspair(p_base, X_OBJ_FLAG_NONE, p_caller, p_op_head),
-			x_mkspair(p_base, X_OBJ_FLAG_NONE, p_boundary, p_shadow)));
 	x_obj_t **p_cell = x_heap_root_slot(p_base);
 	x_spair_t root = x_obj_set((x_obj_t *)x_type_pair_obj, X_OBJ_FLAG_NONE,
 		{ NULL }, { NULL });
 
-	/* Root the restore record -- held only by this frame across every
-	 * body eval until it reaches the tco-env field -- and the advancing
-	 * body (one registered cell; popped on every exit path). */
-	x_firstobj((x_obj_t *)root) = p_record;
+	/* Root the caller's environment -- held only by this frame across
+	 * every body eval until it reaches the tco-env field -- and the
+	 * advancing body (one registered cell; popped on every exit path). */
+	x_firstobj((x_obj_t *)root) = p_caller;
 	x_heap_root_push(p_cell, root);
 
 	while ( ! x_obj_isnil(p_base, p_body)) {
@@ -231,12 +114,12 @@ x_obj_t *x_eval_op_body(x_obj_t *p_base, x_obj_t *p_body,
 			/* Nil tail: no trampoline will run -- restore synchronously. */
 			if (x_obj_isnil(p_base,
 				x_firstobj(x_eval_field_tco_expr(p_base)))) {
-				x_op_restore(p_base, p_record, 0);
+				x_tco_restore(p_base, p_caller);
 				x_heap_root_pop(p_cell);
 				return NULL;
 			}
 
-			x_firstobj(x_eval_field_tco_env(p_base)) = p_record;
+			x_firstobj(x_eval_field_tco_env(p_base)) = p_caller;
 
 			x_heap_root_pop(p_cell);
 			return NULL;
@@ -249,7 +132,7 @@ x_obj_t *x_eval_op_body(x_obj_t *p_base, x_obj_t *p_body,
 	}
 
 	/* Empty body: restore synchronously. */
-	x_op_restore(p_base, p_record, 0);
+	x_tco_restore(p_base, p_caller);
 
 	x_heap_root_pop(p_cell);
 
@@ -258,65 +141,34 @@ x_obj_t *x_eval_op_body(x_obj_t *p_base, x_obj_t *p_body,
 
 /*
  * Shared TCO keep/restore for the two trampoline loops -- x_eval's inline
- * loop and x_eval_tco_trampoline.  Both keep the first (outermost) proc env
- * compound and first operative record from the tco_env channel, then on exit
- * apply them in reverse capture order.  Extracted so the two copies cannot
- * drift (they were line-for-line duplicates).
+ * loop and x_eval_tco_trampoline.  Both keep the first (outermost)
+ * environment the tco_env channel hands them and make it current on exit.
+ * Extracted so the two copies cannot drift.
  */
 
-/* Keep the outermost record of each channel from a tco_env value.  The kept
- * records are also stored into @p p_tco_root's slots so the GC roots them
+/* Keep the outermost environment from a tco_env value.  The kept
+ * environment is also stored into @p p_tco_root's slot so the GC roots it
  * across the arbitrary evaluation between capture and restore (#243 -- a C
- * local is not a root; the records are already off the save-stack). */
+ * local is not a root; the environment is already off the save-stack). */
 static void x_tco_keep(x_obj_t *p_base, x_obj_t *p_te, x_obj_t *p_tco_root,
-	x_obj_t **pp_op_save, x_obj_t **pp_proc_save,
-	int *p_op_outermost, int *p_kept_any)
+	x_obj_t **pp_save)
 {
-	int is_op;
-
 	if (x_obj_isnil(p_base, p_te))
 		return;
 
-	is_op = (x_firstobj(p_te) == (x_obj_t *)&x_tco_op_tag);
-
-	if ( ! *p_kept_any) {
-		*p_op_outermost = is_op;
-		*p_kept_any = 1;
-	}
-
-	if (is_op) {
-		if (*pp_op_save == NULL || x_obj_isnil(p_base, *pp_op_save)) {
-			*pp_op_save = p_te;
-			x_restobj(p_tco_root) = p_te;
-		}
-	} else if (*pp_proc_save == NULL || x_obj_isnil(p_base, *pp_proc_save)) {
-		*pp_proc_save = p_te;
+	if (*pp_save == NULL || x_obj_isnil(p_base, *pp_save)) {
+		*pp_save = p_te;
 		x_firstobj(p_tco_root) = p_te;
 	}
 }
 
-/* Apply the kept records in REVERSE capture order so the OUTERMOST frame wins
- * env-alist (inner applied first, then overridden).  A proc compound present
- * alongside an op record means the op's tail resolved to an applied procedure
- * (let), whose closure frame must be shed -- force_caller carries that.  The
- * proc compound always restores the BST; ops leave it alone. */
-static void x_tco_apply(x_obj_t *p_base, x_obj_t *p_op_save,
-	x_obj_t *p_proc_save, int op_outermost)
+/* Make the kept environment current, if one was kept.  The outermost is the
+ * one kept, so an inner call's environment never survives its caller's
+ * return whatever the tail chain did in between. */
+static void x_tco_apply(x_obj_t *p_base, x_obj_t *p_save)
 {
-	int has_proc = (p_proc_save != NULL && ! x_obj_isnil(p_base, p_proc_save));
-	int has_op = (p_op_save != NULL && ! x_obj_isnil(p_base, p_op_save));
-
-	if (op_outermost) {
-		if (has_proc)
-			x_tco_restore(p_base, p_proc_save);
-		if (has_op)
-			x_op_restore(p_base, p_op_save, has_proc);
-	} else {
-		if (has_op)
-			x_op_restore(p_base, p_op_save, has_proc);
-		if (has_proc)
-			x_tco_restore(p_base, p_proc_save);
-	}
+	if (p_save != NULL && ! x_obj_isnil(p_base, p_save))
+		x_tco_restore(p_base, p_save);
 }
 
 /**
@@ -342,7 +194,7 @@ static void x_tco_apply(x_obj_t *p_base, x_obj_t *p_op_save,
  *
  * @details **tco_expr / tco_env lifecycle.**
  *          - **Set by:** x_eval_body_tco (full TCO) stores the tail
- *            expression in tco_expr and the compound env snapshot in
+ *            expression in tco_expr and the environment to restore in
  *            tco_env.  x_prim_match stores
  *            only tco_expr (tco_env stays nil -- no env change needed).
  *          - **Consumed by:** This function's trampoline loop.  On each
@@ -355,11 +207,9 @@ static void x_tco_apply(x_obj_t *p_base, x_obj_t *p_op_save,
  * @details **p_tco_env_save snapshot.**
  *          - Captured on first trampoline entry from tco_env on p_base.
  *          - On later iterations, if the initial snapshot was nil (set by
- *            simple forms like if/do/match) but an inner form (fn/let)
+ *            simple forms like if/do/match) but an inner form (fn/let/op)
  *            now provides a non-nil tco_env, the snapshot is upgraded.
- *          - Used only at exit: the outermost x_eval restores env-alist,
- *            local-boundary, global-BST, and shadow-list from the
- *            compound pair ((env . boundary) . (bst . shadow_head)).
+ *          - Used only at exit: the outermost x_eval makes it current.
  *
  * @details **Nested x_eval calls do NOT restore env.**  Only the
  *          instance where @c trampolining == 1 executes the env restore
@@ -372,25 +222,21 @@ static void x_tco_apply(x_obj_t *p_base, x_obj_t *p_op_save,
  *
  * @see x_eval_body_tco      -- full TCO body evaluator (sets tco_expr + tco_env)
  * @see x_eval_tco_trampoline -- standalone trampoline used by closure call paths
- * @see x_prim_clear_shadows_to -- called during env restore to unwind shadow flags
  */
 x_obj_t *x_eval(x_obj_t *p_base, x_obj_t *p_args)
 {
 	x_obj_t *p_exp;
-	x_obj_t *p_tco_env_save = NULL;   /* first procedure env compound */
-	x_obj_t *p_op_save = NULL;        /* first operative restore record */
+	x_obj_t *p_tco_env_save = NULL;   /* the outermost environment kept */
 	x_obj_t *p_te;                    /* tco_env fetched per trampoline pass */
 	x_spair_t prim_args = x_obj_set(NULL, X_OBJ_FLAG_NONE, { NULL }, { NULL });
-	/* Roots for the kept TCO restore records: they are popped off the
-	 * save-stack, the tco-env field is cleared, and the records live only
-	 * in the two locals above across every trampoline iteration --
-	 * arbitrary evaluation -- until the exit restores apply them. */
+	/* Root for the kept environment: it is popped off the save-stack, the
+	 * tco-env field is cleared, and it lives only in the local above across
+	 * every trampoline iteration -- arbitrary evaluation -- until the exit
+	 * restore makes it current. */
 	x_obj_t **p_cell = x_heap_root_slot(p_base);
 	x_spair_t tco_root = x_obj_set((x_obj_t *)x_type_pair_obj,
 		X_OBJ_FLAG_NONE, { NULL }, { NULL });
 	int trampolining = 0;
-	int op_outermost = 0;             /* the first record kept is an op record */
-	int kept_any = 0;                 /* a tco_env (either channel) was kept */
 #ifdef X_SIGNAL
 	/* Interrupt-flag pointer, resolved once from the base (signal-register
 	 * publishes signal.c's static atom here).  Cached so the trampoline pays
@@ -464,11 +310,10 @@ eval_start:
 
 		trampolining = 1;
 
-		/* Keep the first (outermost) of each channel: procedures provide an
-		 * env compound, operatives a tagged restore record.  if/do/match/and/or
-		 * set neither (tco_env nil) -- an inner fn/let/op fills it later. */
-		x_tco_keep(p_base, p_te, (x_obj_t *)tco_root,
-			&p_op_save, &p_tco_env_save, &op_outermost, &kept_any);
+		/* Keep the first (outermost) environment: a procedure hands over
+		 * its caller's, an operative its caller's.  if/do/match/and/or set
+		 * none (tco_env nil) -- an inner fn/let/op fills it later. */
+		x_tco_keep(p_base, p_te, (x_obj_t *)tco_root, &p_tco_env_save);
 
 		x_firstobj(x_eval_field_tco_env(p_base)) = NULL;
 		x_firstobj(x_eval_arg_exp(p_args)) = x_firstobj(x_eval_field_tco_expr(p_base));
@@ -478,11 +323,10 @@ eval_start:
 		goto eval_start;
 	}
 
-	/* TCO env restore: only the x_eval that trampolined restores env
-	 * (see x_tco_apply for the reverse-capture-order rationale). */
+	/* TCO env restore: only the x_eval that trampolined restores env. */
 	if (trampolining && x_base_isset(p_base)) {
 		x_firstobj(x_eval_field_tco_env(p_base)) = NULL;
-		x_tco_apply(p_base, p_op_save, p_tco_env_save, op_outermost);
+		x_tco_apply(p_base, p_tco_env_save);
 	}
 
 	x_heap_root_pop(p_cell);
@@ -653,91 +497,79 @@ x_obj_t *x_eval_list(x_obj_t *p_base, x_obj_t *p_args)
 }
 
 /**
- * Extend an environment by binding parameters to values.
+ * Make a child environment with parameters bound to values.
  *
- * Handles three cases: (1) variadic -- a bare symbol binds to the
- * entire remaining value list, (2) base -- no more params returns
- * the environment unchanged, (3) recursive -- binds first param to
- * first value, then recurses on the rest.
- *
- * The new spine cells carry X_OBJ_FLAG_FRAME, marking them as local
- * frame bindings: symbol lookup walks the frame region of the chain
- * before consulting the global BST, so locals -- including enclosing-
- * frame captures -- shadow globals with correct lexical semantics
- * (GH #47).
+ * The environment a procedure body or an operative body runs in: a fresh
+ * @c (bindings . parent) pair whose parent is @p p_parent, the closure's
+ * or the operative's static environment, and whose bindings are the
+ * parameters.  Handles three cases: (1) variadic -- a bare symbol binds to
+ * the entire remaining value list, (2) base -- no more params, (3) one
+ * parameter to one value, then the rest.
  *
  * @param p_base   x_obj_t* -- Base (execution context)
- * @param p_env    x_obj_t* -- Current environment alist
+ * @param p_parent x_obj_t* -- The environment the new one is a child of
  * @param p_params x_obj_t* -- Parameter list (or single symbol for variadic)
  * @param p_vals   x_obj_t* -- Value list
- * @return x_obj_t* -- Extended environment alist (newly consed pairs)
+ * @return x_obj_t* -- The new environment
  *
- * @details **No in-place mutation.**  Each binding creates a new
- *          (symbol . value) pair and a new alist cons cell prepended
- *          to @p p_env.  The original environment is never modified,
- *          which is essential for the TCO env-restore protocol: the
- *          saved env snapshot remains valid even after extension.
+ * @details **The parent is never modified.**  The bindings are new cells
+ *          in the new environment; @p p_parent is only pointed at.  Fewer
+ *          values than parameters binds the remainder to nil, symmetric
+ *          with surplus values, which are ignored once the parameters run
+ *          out.
  *
  * @note The variadic case (bare symbol for p_params) binds the ENTIRE
  *       remaining value list, not just one value.  This implements
  *       rest-parameter semantics: @c (fn (a . rest) ...).
  *
- * @see x_type_symbol_eval -- the 3-step lookup that honours FRAME cells
- * @see x_prim_define      -- marks closure-scope def cells the same way
- * @see x_eval_body_tco    -- saves/restores env around extended scopes
+ * @see x_env_bind        -- `def`, the same binder one name at a time
+ * @see x_eval_body_tco   -- saves/restores env around a body
  */
-x_obj_t *x_env_extend(x_obj_t *p_base, x_obj_t *p_env,
+x_obj_t *x_env_extend(x_obj_t *p_base, x_obj_t *p_parent,
 	x_obj_t *p_params, x_obj_t *p_vals)
 {
+	x_obj_t *p_env = x_env_make(p_base, p_parent);
 	x_obj_t *p_pair;
 	x_obj_t *p_val;
-	x_obj_t *p_rest;
 	x_obj_t **pp_spine;
 
-	/* Variadic: single symbol binds to entire remaining arg list. */
-	if ( ! x_obj_isnil(p_base, p_params)
-		&& x_obj_type_issymbol(p_base, p_params)) {
-		/* Callers self-pass via transient stack pairs (NULL type
-		 * slot) at the head of p_vals -- x_type_procedure_call's sp,
-		 * x_callable_apply sites' stack-built arg lists.  A bare-
-		 * variadic binding captures the spine itself, and the binding
-		 * outlives those frames (TCO defers the body to the
-		 * trampoline; apply-path closures can escape with the env),
-		 * so materialize every leading stack pair on the heap.  Heap
-		 * spines carry x_type_pair_obj and pass through untouched. */
-		for (pp_spine = &p_vals;
-			*pp_spine != NULL && x_obj_type(*pp_spine) == NULL;
-			pp_spine = &x_restobj(*pp_spine)) {
-			*pp_spine = x_mklist(p_base,
-				x_firstobj(*pp_spine), x_restobj(*pp_spine));
+	while ( ! x_obj_isnil(p_base, p_params)) {
+		/* Variadic: single symbol binds to entire remaining arg list. */
+		if (x_obj_type_issymbol(p_base, p_params)) {
+			/* Callers self-pass via transient stack pairs (NULL type
+			 * slot) at the head of p_vals -- x_type_procedure_call's sp,
+			 * x_callable_apply sites' stack-built arg lists.  A bare-
+			 * variadic binding captures the spine itself, and the binding
+			 * outlives those frames (TCO defers the body to the
+			 * trampoline; apply-path closures can escape with the env),
+			 * so materialize every leading stack pair on the heap.  Heap
+			 * spines carry x_type_pair_obj and pass through untouched. */
+			for (pp_spine = &p_vals;
+				*pp_spine != NULL && x_obj_type(*pp_spine) == NULL;
+				pp_spine = &x_restobj(*pp_spine)) {
+				*pp_spine = x_mklist(p_base,
+					x_firstobj(*pp_spine), x_restobj(*pp_spine));
+			}
+
+			p_pair = x_mkspair(p_base, X_OBJ_FLAG_NONE, p_params, p_vals);
+			x_env_bindings(p_env) = x_mkspair(p_base, X_OBJ_FLAG_NONE,
+				p_pair, x_env_bindings(p_env));
+
+			return p_env;
 		}
 
-		p_pair = x_mkspair(p_base, X_OBJ_FLAG_NONE, p_params, p_vals);
+		/* One parameter to one value; a missing value is nil. */
+		p_val = x_obj_isnil(p_base, p_vals) ? NULL : x_firstobj(p_vals);
+		p_pair = x_mkspair(p_base, X_OBJ_FLAG_NONE,
+			x_firstobj(p_params), p_val);
+		x_env_bindings(p_env) = x_mkspair(p_base, X_OBJ_FLAG_NONE,
+			p_pair, x_env_bindings(p_env));
 
-		return x_mkspair(p_base, X_OBJ_FLAG_FRAME, p_pair, p_env);
+		p_params = x_restobj(p_params);
+		p_vals = x_obj_isnil(p_base, p_vals) ? NULL : x_restobj(p_vals);
 	}
 
-	/* Base case: no more params. */
-	if (x_obj_isnil(p_base, p_params)) {
-		return p_env;
-	}
-
-	/* Recursive case: bind first param to first val, continue.
-	 * When the args run out before the params do (fewer args than params),
-	 * bind the remaining params to nil -- symmetric with surplus args, which
-	 * are ignored once params run out.  Without this guard x_firstobj/
-	 * x_restobj would dereference a nil p_vals and crash. */
-	p_val  = x_obj_isnil(p_base, p_vals)
-		? NULL : x_firstobj(p_vals);
-	p_rest = x_obj_isnil(p_base, p_vals)
-		? NULL : x_restobj(p_vals);
-	p_pair = x_mkspair(p_base, X_OBJ_FLAG_NONE,
-		x_firstobj(p_params), p_val);
-
-	return x_env_extend(p_base,
-		x_mkspair(p_base, X_OBJ_FLAG_FRAME, p_pair, p_env),
-		x_restobj(p_params),
-		p_rest);
+	return p_env;
 }
 
 /**
@@ -791,8 +623,8 @@ x_obj_t *x_eval_body(x_obj_t *p_base, x_obj_t *p_body)
  * directly, and the caller's saved environment is captured in
  * tco-env so the trampoline can restore it after the tail call.
  *
- * On early exit (nil tail) or empty body, pops and restores the
- * compound save-stack frame (env, boundary, BST, shadow list).
+ * On early exit (nil tail) or empty body, pops the save-stack and makes
+ * the environment it held current again.
  *
  * @param p_base  x_obj_t* -- Base (execution context)
  * @param p_body  x_obj_t* -- List of body expressions
@@ -800,13 +632,9 @@ x_obj_t *x_eval_body(x_obj_t *p_base, x_obj_t *p_body)
  *                      tail expression is deferred to the trampoline
  *
  * @details **Save-stack protocol.**  The caller (fn/let dispatch)
- *          pushes a compound pair onto save_stack BEFORE calling this
- *          function.  The compound has the shape:
- *          @code
- *          ((env-alist . local-boundary) . (global tree (a BST) . shadow-head))
- *          @endcode
- *          This captures the full env state prior to extension so it
- *          can be restored after the tail call completes.
+ *          pushes the environment it is leaving onto save_stack BEFORE
+ *          calling this function (x_tco_env_save), so it can be made
+ *          current again after the tail call completes.
  *
  * @details **tco_env capture.**  When the tail expression is reached
  *          (last element of body), this function checks whether
@@ -826,7 +654,6 @@ x_obj_t *x_eval_body(x_obj_t *p_base, x_obj_t *p_body)
  *
  * @see x_eval                  -- outermost trampoline that consumes tco_expr/tco_env
  * @see x_eval_tco_trampoline   -- standalone trampoline for closure call paths
- * @see x_prim_clear_shadows_to -- called during early-exit restore
  */
 x_obj_t *x_eval_body_tco(x_obj_t *p_base, x_obj_t *p_body)
 {
@@ -862,7 +689,7 @@ x_obj_t *x_eval_body_tco(x_obj_t *p_base, x_obj_t *p_body)
 
 			if (x_obj_isnil(p_base,
 				x_firstobj(x_eval_field_tco_env(p_base)))) {
-				/* Save compound (env . boundary) for TCO restore */
+				/* Hand the trampoline the environment to restore. */
 				x_firstobj(x_eval_field_tco_env(p_base))
 					= x_firstobj(x_eval_field_save_stack(p_base));
 			}
@@ -900,8 +727,7 @@ x_obj_t *x_eval_body_tco(x_obj_t *p_base, x_obj_t *p_body)
  * evaluates it. If that evaluation itself defers another tail call,
  * the loop continues until no more TCO expressions remain.
  *
- * On exit, restores the environment, local boundary, global BST, and
- * shadow list from the compound saved in tco-env.
+ * On exit, makes the environment saved in tco-env current again.
  *
  * @param p_base   x_obj_t* -- Base (execution context)
  * @param p_result x_obj_t* -- Initial result (from non-tail evaluation)
@@ -911,14 +737,13 @@ x_obj_t *x_eval_body_tco(x_obj_t *p_base, x_obj_t *p_body)
  */
 x_obj_t *x_eval_tco_trampoline(x_obj_t *p_base, x_obj_t *p_result)
 {
-	x_obj_t *p_tco, *p_te, *p_tco_env = NULL, *p_op_save = NULL;
-	int op_outermost = 0, kept_any = 0;
-	/* Roots for the kept restore records (#243, mirrors x_eval): they
-	 * are popped off the save-stack and the tco-env field is cleared,
-	 * so across the arbitrary evaluation below these locals hold the
-	 * only references -- and a C local is not a root (x-heap.h).  An
-	 * argument eval that triggers (heap-collect) would otherwise sweep
-	 * the records the exit restores then read. */
+	x_obj_t *p_tco, *p_te, *p_tco_env = NULL;
+	/* Root for the kept environment (#243, mirrors x_eval): it is popped
+	 * off the save-stack and the tco-env field is cleared, so across the
+	 * arbitrary evaluation below this local holds the only reference --
+	 * and a C local is not a root (x-heap.h).  An argument eval that
+	 * triggers (heap-collect) would otherwise sweep the environment the
+	 * exit restore then reads. */
 	x_obj_t **p_cell = x_heap_root_slot(p_base);
 	x_spair_t tco_root = x_obj_set((x_obj_t *)x_type_pair_obj,
 		X_OBJ_FLAG_NONE, { NULL }, { NULL });
@@ -928,17 +753,16 @@ x_obj_t *x_eval_tco_trampoline(x_obj_t *p_base, x_obj_t *p_result)
 	while ( ! x_obj_isnil(p_base, x_firstobj(x_eval_field_tco_expr(p_base)))) {
 		p_tco = x_firstobj(x_eval_field_tco_expr(p_base));
 
-		/* Keep the outermost record of each channel (mirrors x_eval). */
+		/* Keep the outermost environment (mirrors x_eval). */
 		p_te = x_firstobj(x_eval_field_tco_env(p_base));
-		x_tco_keep(p_base, p_te, (x_obj_t *)tco_root,
-			&p_op_save, &p_tco_env, &op_outermost, &kept_any);
+		x_tco_keep(p_base, p_te, (x_obj_t *)tco_root, &p_tco_env);
 
 		x_firstobj(x_eval_field_tco_expr(p_base)) = NULL;
 		x_firstobj(x_eval_field_tco_env(p_base)) = NULL;
 		p_result = x_eval_arg(p_base, p_tco);
 	}
 
-	x_tco_apply(p_base, p_op_save, p_tco_env, op_outermost);
+	x_tco_apply(p_base, p_tco_env);
 
 	x_heap_root_pop(p_cell);
 
@@ -978,7 +802,7 @@ static x_satom_t x_type_heap_free_hook =
  *
  * Calls x_base_make (x-expr layer) with default file descriptors and
  * hooks, then fills in the type-system-specific slots: env-group
- * (alist, local-boundary, global-tree, shadow-list), ctrl-group
+ * (the current environment and the root), ctrl-group
  * (save-stack, error-handler, TCO slots), io-state (line counter,
  * boolean caches), extended profile counters, and project extras
  * (eval-list, token-cache, mark/free hooks, mark-roots).
@@ -1002,12 +826,11 @@ static x_satom_t x_type_heap_free_hook =
  *
  * @details **Env-group layout:**
  *          @code
- *          (env-alist . (local-boundary . (global-tree . shadow-list)))
+ *          (env . env-root)
  *          @endcode
- *          - env-alist: linear list of (symbol . value) bindings
- *          - local-boundary: pointer into alist separating locals from globals
- *          - global-tree: BST index over global bindings for O(log n) lookup
- *          - shadow-list: symbols with X_OBJ_FLAG_SHADOW for scope unwinding
+ *          - env: the current environment, a (bindings . parent) pair
+ *          - env-root: the base's root environment, whose bindings are
+ *            a tree and whose parent is nil
  *
  * @details **Ctrl-group layout:**
  *          @code
@@ -1053,6 +876,12 @@ x_obj_t *x_eval_make(x_obj_t *p_base, x_obj_t *p_args)
 #define X_EVAL_BUILD_TREE
 #include "x-eval-layout.h"
 #undef X_EVAL_BUILD_TREE
+
+	/* The root environment: an empty tree with no parent.  It is both the
+	 * base's root and the environment evaluation starts in; every child
+	 * environment made later reaches it through its parents. */
+	x_eval_field_env_root(p_base) = pair(nil, nil);
+	x_eval_field_env(p_base) = x_eval_field_env_root(p_base);
 
 	/* Initial values (the skeleton leaves every cell's car nil). */
 	x_firstobj(x_eval_field_line(p_base)) = atom(1);
@@ -1118,9 +947,8 @@ x_obj_t *x_eval_make(x_obj_t *p_base, x_obj_t *p_args)
  *          via (%base) if needed.
  *
  * @details **longjmp protocol.**  The error value is stored in the
- *          handler's error slot, then the env-alist and local-boundary
- *          are restored from the handler's saved copies (captured at
- *          guard installation time).  Finally, longjmp transfers control
+ *          handler's error slot, then the environment the handler saved
+ *          at guard installation time is made current again.  Finally, longjmp transfers control
  *          to the setjmp site in x_prim_guard.  This unwinds all C
  *          frames between the error site and the guard -- any local
  *          state in those frames is lost.
@@ -1224,10 +1052,7 @@ void x_eval_error(x_obj_t *p_base, x_char_t *message, x_obj_t *p_obj)
 		x_error_handler_line(p_handler)
 			= (x_obj_t *)(x_int_t)x_atomint(x_firstobj(x_eval_field_line(p_base)));
 
-		x_firstobj(x_eval_field_env_alist(p_base))
-			= x_error_handler_saved_env(p_handler);
-		x_eval_field_env_local_boundary(p_base)
-			= x_error_handler_saved_boundary(p_handler);
+		x_eval_field_env(p_base) = x_error_handler_saved_env(p_handler);
 		longjmp(*(jmp_buf *)x_error_handler_jmp(p_handler), 1);
 	}
 
@@ -1306,41 +1131,117 @@ x_obj_t *x_eval_type_alist_assoc(x_obj_t *p_base, x_obj_t *p_args)
 }
 
 /**
- * Prepend a binding pair to the base's environment alist.
+ * Make an empty environment whose parent is @p p_parent.
+ *
+ * An environment is one pair, @c (bindings . parent).  A nil parent makes
+ * a root, whose bindings are kept as a tree; any other environment keeps
+ * an alist.  x_eval_make builds the base's root this way; procedure and
+ * operative calls make children through x_env_extend; `guard` makes one
+ * for its error variable.
+ *
+ * @param p_base    x_obj_t* -- Base (execution context)
+ * @param p_parent  x_obj_t* -- The enclosing environment, or nil for a root
+ * @return x_obj_t* -- The new, empty environment
+ */
+x_obj_t *x_env_make(x_obj_t *p_base, x_obj_t *p_parent)
+{
+	return x_mkspair(p_base, X_OBJ_FLAG_NONE, NULL, p_parent);
+}
+
+/**
+ * The cell binding @p p_sym in @p p_env or an ancestor.
+ *
+ * Walks from @p p_env to the root: an environment with a parent searches
+ * its alist of @c (name . value) cells by symbol identity (symbols are
+ * interned per base); the root searches its tree.  The first hit wins,
+ * so a child's binding shadows a parent's.  This is the whole of symbol
+ * lookup -- x_type_symbol_eval and `set!` call nothing else.
  *
  * @param p_base  x_obj_t* -- Base (execution context)
- * @param p_args  x_obj_t* -- (symbol . value) pair to prepend
- * @return x_obj_t* -- The new env alist head, or NULL if base is unset
+ * @param p_env   x_obj_t* -- The environment to start from
+ * @param p_sym   x_obj_t* -- The symbol
+ * @return x_obj_t* -- The @c (name . value) cell, or NULL when unbound
  */
-x_obj_t *x_eval_env_alist_extend(x_obj_t *p_base, x_obj_t *p_args)
+x_obj_t *x_env_lookup(x_obj_t *p_base, x_obj_t *p_env, x_obj_t *p_sym)
 {
-	x_spair_t args = x_obj_set(NULL, X_OBJ_FLAG_NONE, { p_args }, { NULL });
-	x_obj_t *p_old, *p_new;
+	x_obj_t *p_cell, *p_entry;
 
-	if ( ! x_base_isset(p_base)) {
-		return NULL;
+	for (; ! x_obj_isnil(p_base, p_env); p_env = x_env_parent(p_env)) {
+		if (x_env_isroot(p_base, p_env)) {
+			p_entry = x_alist_bst_lookup(p_base,
+				x_env_bindings(p_env), p_sym);
+			if ( ! x_obj_isnil(p_base, p_entry)) {
+				return p_entry;
+			}
+			continue;
+		}
+
+		for (p_cell = x_env_bindings(p_env);
+			! x_obj_isnil(p_base, p_cell);
+			p_cell = x_restobj(p_cell)) {
+			if (x_firstobj(x_firstobj(p_cell)) == p_sym) {
+				return x_firstobj(p_cell);
+			}
+		}
 	}
 
-	p_old = x_firstobj(x_eval_field_env_alist(p_base));
-	x_restobj((x_obj_t *)args) = p_old;
+	return NULL;
+}
 
-	p_new = x_firstobj(x_eval_field_env_alist(p_base))
-		= x_alist_extend(p_base, (x_obj_t *)args);
+/**
+ * Bind @p p_sym to @p p_val in @p p_env itself.
+ *
+ * A binding the environment already holds is updated in place; otherwise
+ * one is added -- to the root's tree, or in front of another
+ * environment's alist.  A parent's binding of the same name is never
+ * touched: it is shadowed, which is what a definition in a child means.
+ * `def` is this on the current environment; the C binding doors and
+ * `base bind` are this on a root.
+ *
+ * @param p_base  x_obj_t* -- Base (execution context)
+ * @param p_env   x_obj_t* -- The environment to bind in
+ * @param p_sym   x_obj_t* -- The symbol
+ * @param p_val   x_obj_t* -- The value
+ * @return x_obj_t* -- @p p_val
+ *
+ * @note The tree insert mutates in place (x_alist_bst_insert), so every
+ *       closure whose chain reaches this root sees the new binding at its
+ *       next lookup -- a top-level definition made after a closure was
+ *       created is visible to it, as it must be.
+ */
+x_obj_t *x_env_bind(x_obj_t *p_base, x_obj_t *p_env,
+	x_obj_t *p_sym, x_obj_t *p_val)
+{
+	x_obj_t *p_cell, *p_pair;
 
-	/* Frame-region invariant (GH #47): symbol lookup's step 1 walks the
-	 * LEADING run of FRAME-marked cells, so an unmarked cell must never
-	 * be consed onto a frame head -- it would hide the frame cells below
-	 * it.  A top-level-classified def runs with a non-frame head now
-	 * that x_prim_define classifies by the live frame and x_op_restore
-	 * sheds an inner operative's frame; the inheritance stays as the
-	 * invariant's backstop, so the region is contiguous whatever the
-	 * head. */
-	if ( ! x_obj_isnil(p_base, p_old)
-		&& (x_obj_flags(p_old) & X_OBJ_FLAG_FRAME)) {
-		x_obj_flags(p_new) |= X_OBJ_FLAG_FRAME;
+	if (x_env_isroot(p_base, p_env)) {
+		p_cell = x_alist_bst_lookup(p_base, x_env_bindings(p_env), p_sym);
+		if ( ! x_obj_isnil(p_base, p_cell)) {
+			x_restobj(p_cell) = p_val;
+			return p_val;
+		}
+
+		p_pair = x_mkspair(p_base, X_OBJ_FLAG_NONE, p_sym, p_val);
+		x_env_bindings(p_env) = x_alist_bst_insert(p_base,
+			x_env_bindings(p_env), p_pair);
+
+		return p_val;
 	}
 
-	return p_new;
+	for (p_cell = x_env_bindings(p_env);
+		! x_obj_isnil(p_base, p_cell);
+		p_cell = x_restobj(p_cell)) {
+		if (x_firstobj(x_firstobj(p_cell)) == p_sym) {
+			x_restobj(x_firstobj(p_cell)) = p_val;
+			return p_val;
+		}
+	}
+
+	p_pair = x_mkspair(p_base, X_OBJ_FLAG_NONE, p_sym, p_val);
+	x_env_bindings(p_env) = x_mkspair(p_base, X_OBJ_FLAG_NONE,
+		p_pair, x_env_bindings(p_env));
+
+	return p_val;
 }
 
 /**
@@ -1359,44 +1260,29 @@ x_obj_t *x_eval_buffer_push(x_obj_t *p_base, x_obj_t *p_buffer)
 
 /**
  * Enter the top-level bracket: what a form evaluated at top level sees,
- * whatever frame is live when it is asked for.
+ * whatever environment is current when it is asked for.
  *
- * A top-level form's `def`s must bind globally, and the closures it makes
- * must capture the top-level chain -- not the frames of whatever was being
+ * A top-level form's `def`s must bind in the root, and the closures it
+ * makes must capture the root -- not the environment of whatever was being
  * evaluated when the form was asked for.  Two doors ask: x_eval_load, for
  * every form of a file (`include` runs under whatever called it, and its
  * x-level wrapper is a closure), and eval!, for the one form the REPL loop
  * reads (lib/he.x reaches `(repl)` through `(unless %batch? (do (%banner)
  * (repl)))`, so every form typed at the prompt sits under those frames).
- * x_prim_define decides top-level by the live frame, so this is the one
- * place that says what top level IS:
+ * The bracket is two moves: the save-stack is hidden (nil), so a form sees
+ * an empty stack exactly as at the true top level and each x_eval balances
+ * its own pushes; and the root is made current.
  *
- *  - the save-stack is hidden (nil), so a form sees an empty stack exactly
- *    as at the true top level; each x_eval balances its own pushes;
- *  - the leading FRAME run is stripped from the env head -- exactly the
- *    frame region symbol lookup's step 1 walks -- so each form evaluates
- *    against, and each closure captures, the true top-level chain (base-bind
- *    and global cells stay); the boundary is cleared with it.
- *
- * The displaced state is HEAP: the caller's frame cells and its restore
- * compounds, and for the length of the bracket nothing on the base tree
- * reaches them -- the head points past the frames, the save-stack slot is
- * nil.  A C local is not a root (x-heap.h), so a form that collects (a
- * library collecting between definitions is ordinary) would sweep them,
- * and the caller would walk freed memory on its next lookup: a SIGSEGV in
- * x_type_symbol_eval on glibc, luck on macOS.  So both are parked on the
- * root chain, in the caller's own struct -- two nodes, not one pointing at
- * the other, because the chain's pre-clear pass strips each REGISTERED
- * node's stale mark and a node reached only through another would keep
- * its mark from the previous collect and stop the walk short.  Pops are
- * LIFO, in x_toplevel_leave.  The error path needs nothing more: a guard
- * restores the root chain and the save-stack from its own snapshot, so a
- * longjmp out of a bracketed form drops the nodes with the C frame that
- * owns them, and this struct's saves are moot.
- *
- * Bindings made inside persist through the global BST; the alist cells the
- * forms grew onto the stripped chain are dropped with the head at leave,
- * which is what the loader has always done.
+ * The displaced state is HEAP: the caller's environment and its save-stack,
+ * and for the length of the bracket nothing on the base tree reaches them.
+ * A C local is not a root (x-heap.h), so a form that collects (a library
+ * collecting between definitions is ordinary) would sweep them, and the
+ * caller would walk freed memory on its next lookup.  So both are parked
+ * on the root chain in the caller's own struct, one registered node
+ * holding the two pointers; the pop is in x_toplevel_leave.  The error
+ * path needs nothing more: a guard restores the root chain and the
+ * save-stack from its own snapshot, so a longjmp out of a bracketed form
+ * drops the node with the C frame that owns it.
  *
  * @param p_base  x_obj_t* -- Base (execution context)
  * @param p_t     x_toplevel_t* -- the caller's bracket state, filled here
@@ -1404,41 +1290,27 @@ x_obj_t *x_eval_buffer_push(x_obj_t *p_base, x_obj_t *p_buffer)
  */
 void x_toplevel_enter(x_obj_t *p_base, x_toplevel_t *p_t)
 {
-	x_obj_t *p_env;
 	int i;
 	x_obj_t **pp_root = x_heap_root_slot(p_base);
 
 	p_t->p_saved_stack = x_eval_field_save_stack(p_base);
 	x_eval_field_save_stack(p_base) = NULL;
 
-	p_t->p_saved_env = x_firstobj(x_eval_field_env_alist(p_base));
-	p_t->p_saved_boundary = x_eval_field_env_local_boundary(p_base);
-	p_env = p_t->p_saved_env;
-	while ( ! x_obj_isnil(p_base, p_env)
-		&& (x_obj_flags(p_env) & X_OBJ_FLAG_FRAME)) {
-		p_env = x_restobj(p_env);
-	}
-	x_firstobj(x_eval_field_env_alist(p_base)) = p_env;
-	x_eval_field_env_local_boundary(p_base) = NULL;
+	p_t->p_saved_env = x_eval_field_env(p_base);
+	x_eval_field_env(p_base) = x_eval_field_env_root(p_base);
 
 	/* Pair-typed, as the root chain requires: the mark walk descends only
 	 * spair pairs.  Built at run time in the caller's struct -- every unit
 	 * zeroed, then the type and flags words -- where the static form would
 	 * have used the x_obj_set initializer. */
 	for (i = 0; i < (int)(X_OBJ_META_LEN + X_OBJ_UNITS_PAIR); i++) {
-		p_t->parked_env[i].i = 0;
-		p_t->parked_ctrl[i].i = 0;
+		p_t->parked[i].i = 0;
 	}
-	x_obj_type(p_t->parked_env) = (x_obj_t *)x_type_pair_obj;
-	x_obj_flags(p_t->parked_env) = X_OBJ_FLAG_NONE;
-	x_obj_type(p_t->parked_ctrl) = (x_obj_t *)x_type_pair_obj;
-	x_obj_flags(p_t->parked_ctrl) = X_OBJ_FLAG_NONE;
-	x_firstobj((x_obj_t *)p_t->parked_env) = p_t->p_saved_env;
-	x_restobj((x_obj_t *)p_t->parked_env) = p_t->p_saved_boundary;
-	x_firstobj((x_obj_t *)p_t->parked_ctrl) = p_t->p_saved_stack;
-	x_restobj((x_obj_t *)p_t->parked_ctrl) = NULL;
-	x_heap_root_push(pp_root, p_t->parked_ctrl);
-	x_heap_root_push(pp_root, p_t->parked_env);
+	x_obj_type(p_t->parked) = (x_obj_t *)x_type_pair_obj;
+	x_obj_flags(p_t->parked) = X_OBJ_FLAG_NONE;
+	x_firstobj((x_obj_t *)p_t->parked) = p_t->p_saved_env;
+	x_restobj((x_obj_t *)p_t->parked) = p_t->p_saved_stack;
+	x_heap_root_push(pp_root, p_t->parked);
 }
 
 /**
@@ -1453,11 +1325,9 @@ void x_toplevel_leave(x_obj_t *p_base, x_toplevel_t *p_t)
 	x_obj_t **pp_root = x_heap_root_slot(p_base);
 
 	x_heap_root_pop(pp_root);
-	x_heap_root_pop(pp_root);
 
 	x_eval_field_save_stack(p_base) = p_t->p_saved_stack;
-	x_firstobj(x_eval_field_env_alist(p_base)) = p_t->p_saved_env;
-	x_eval_field_env_local_boundary(p_base) = p_t->p_saved_boundary;
+	x_eval_field_env(p_base) = p_t->p_saved_env;
 }
 
 

@@ -23,68 +23,10 @@
 #include "x-type/symbol.h"
 
 /**
- * Clear all shadow flags from symbols on the shadow list.
+ * Bind a C primitive function in the base's root environment.
  *
- * Walks the entire shadow list, removing X_OBJ_FLAG_SHADOW from each
- * symbol, then resets the list to nil.
- *
- * @param p_base  x_obj_t* -- Base (execution context)
- *
- * @see x_prim_clear_shadows_to
- */
-void x_prim_clear_shadows(x_obj_t *p_base)
-{
-	x_obj_t *p_list = x_eval_field_shadow_list(p_base);
-
-	while ( ! x_obj_isnil(p_base, p_list)) {
-		x_obj_flags(x_firstobj(p_list)) &= ~X_OBJ_FLAG_SHADOW;
-		p_list = x_restobj(p_list);
-	}
-	x_eval_field_shadow_list(p_base) = NULL;
-}
-
-/**
- * Clear shadow flags back to a saved shadow-list head.
- *
- * Unflags symbols added since @p p_old, then restores the shadow list
- * to that earlier state. Used by TCO and closure restore paths.
- *
- * @param p_base  x_obj_t* -- Base (execution context)
- * @param p_old   x_obj_t* -- Previous shadow-list head to restore to
- *
- * @details DORMANT since GH #47: nothing pushes to the shadow list
- *          anymore -- lookup honours X_OBJ_FLAG_FRAME on env spine cells
- *          instead of shadow bits on interned symbols (which were
- *          process-global and blinded other chains' BST lookups).  The
- *          restore paths still call this so the plumbing (save compounds,
- *          op records) keeps its shape; the list is always nil, so the
- *          walk is a no-op.
- *
- * @note The walk stops when it reaches @p p_old by pointer identity.
- *       If @p p_old is NULL, all shadow entries are cleared (equivalent
- *       to x_prim_clear_shadows).
- *
- * @see x_prim_clear_shadows
- * @see x_eval                -- calls this during outermost env restore
- * @see x_eval_body_tco       -- calls this on early-exit restore
- */
-void x_prim_clear_shadows_to(x_obj_t *p_base, x_obj_t *p_old)
-{
-	x_obj_t *p_list = x_eval_field_shadow_list(p_base);
-
-	while (p_list != p_old && ! x_obj_isnil(p_base, p_list)) {
-		x_obj_flags(x_firstobj(p_list)) &= ~X_OBJ_FLAG_SHADOW;
-		p_list = x_restobj(p_list);
-	}
-	x_eval_field_shadow_list(p_base) = p_old;
-}
-
-/**
- * Bind a C primitive function into the global environment.
- *
- * Creates a symbol, wraps the C function as a prim object, pairs
- * them, extends the env alist, and inserts into the global BST.
- * Updates the local boundary to mark the new binding as global.
+ * Creates a symbol, wraps the C function as a prim object, and binds the
+ * pair in the root, where every environment in the base reaches it.
  *
  * @param p_base  x_obj_t* -- Base (execution context)
  * @param name    x_char_t* -- Symbol name to bind
@@ -93,14 +35,7 @@ void x_prim_clear_shadows_to(x_obj_t *p_base, x_obj_t *p_old)
  * @details **Symbol interning.**  x_make_symbol interns the name so
  *          that all references to the same name share a single symbol
  *          object.  This enables O(1) pointer-identity comparison in
- *          alist and BST lookups.
- *
- * @details **Dual-index insertion.**  The (symbol . prim) pair is
- *          prepended to the env alist AND inserted into the global BST.
- *          The BST provides O(log n) lookup for global bindings; the
- *          alist provides the authoritative ordered list.  The
- *          local-boundary pointer is advanced to the new alist head,
- *          marking all prior entries as global (below the boundary).
+ *          the environment lookups.
  *
  * @note Called during interpreter bootstrap (x_prim_register) and
  *       by FFI registration.  All bindings created here are permanent
@@ -108,27 +43,18 @@ void x_prim_clear_shadows_to(x_obj_t *p_base, x_obj_t *p_old)
  *
  * @see x_value_bind          -- lower-level helper that binds any value
  * @see x_callable_bind_table -- batch registration of multiple primitives
- * @see x_prim_define         -- x-lang-level def with similar BST insertion
+ * @see x_env_bind            -- the binder, which `def` shares
  */
 void x_callable_bind(x_obj_t *p_base, x_char_t *name, x_fn_t fn)
 {
 	x_obj_t *p_sym = x_make_symbol(p_base, X_OBJ_FLAG_NONE, name),
-		*p_prim = x_mkprim(p_base, fn),
-		*p_pair = x_mkspair(p_base, X_OBJ_FLAG_NONE, p_sym, p_prim);
+		*p_prim = x_mkprim(p_base, fn);
 
-	x_eval_env_alist_extend(p_base, p_pair);
-
-	x_eval_field_env_global_tree(p_base) = x_alist_bst_insert(
-		p_base, x_eval_field_env_global_tree(p_base), p_pair);
-	x_eval_field_env_local_boundary(p_base)
-		= x_firstobj(x_eval_field_env_alist(p_base));
+	x_env_bind(p_base, x_eval_field_env_root(p_base), p_sym, p_prim);
 }
 
 /**
- * Bind a named symbol to an arbitrary value in the global environment.
- *
- * Creates a (symbol . value) pair, prepends it to the env alist,
- * inserts it into the global BST, and advances the local boundary.
+ * Bind a named symbol to an arbitrary value in the base's root environment.
  *
  * @param p_base  x_obj_t* -- Base (execution context)
  * @param name    x_char_t* -- Symbol name to bind
@@ -138,28 +64,20 @@ void x_callable_bind(x_obj_t *p_base, x_char_t *name, x_fn_t fn)
  */
 void x_value_bind(x_obj_t *p_base, x_char_t *name, x_obj_t *p_val)
 {
-	x_obj_t *p_sym, *p_pair;
+	x_obj_t *p_sym;
 	x_obj_t **p_cell = x_heap_root_slot(p_base);
 	x_spair_t root = x_obj_set((x_obj_t *)x_type_pair_obj, X_OBJ_FLAG_NONE,
 		{ NULL }, { NULL });
 
-	/* Root p_val while x_make_symbol / x_mkspair allocate.  Allocation
-	 * itself cannot collect (the trigger is explicit-only), but the
-	 * registered cell keeps this frame correct should that policy ever
-	 * change -- at two stores instead of the eval-list cons it replaced. */
+	/* Root p_val while x_make_symbol allocates.  Allocation itself cannot
+	 * collect (the trigger is explicit-only), but the registered cell keeps
+	 * this frame correct should that policy ever change. */
 	x_firstobj((x_obj_t *)root) = p_val;
 	x_heap_root_push(p_cell, root);
 	p_sym = x_make_symbol(p_base, X_OBJ_FLAG_NONE, name);
-	p_pair = x_mkspair(p_base, X_OBJ_FLAG_NONE, p_sym, p_val);
 	x_heap_root_pop(p_cell);
 
-	x_eval_env_alist_extend(p_base, p_pair);
-
-	/* Insert into global BST and update boundary */
-	x_eval_field_env_global_tree(p_base) = x_alist_bst_insert(
-		p_base, x_eval_field_env_global_tree(p_base), p_pair);
-	x_eval_field_env_local_boundary(p_base)
-		= x_firstobj(x_eval_field_env_alist(p_base));
+	x_env_bind(p_base, x_eval_field_env_root(p_base), p_sym, p_val);
 }
 
 /**

@@ -23,10 +23,8 @@
 
 (def %base-paths (lit (
   (env base f f f)
-  (env-alist base f f f f)
-  (env-local-boundary base f f f r f)
-  (env-global-tree base f f f r r f)
-  (shadow-list base f f f r r r)
+  (env base f f f f)
+  (env-root base f f f r)
   (ctrl base f f r)
   (save-stack base f f r f f)
   (error-handler base f f r f r)
@@ -85,7 +83,6 @@
   (alloc-limit base f r r r r f r f)
   (alloc-error base f r r r r f r r f)
   (error-handler-saved-env handler r f f)
-  (error-handler-saved-boundary handler r f r)
   (error-handler-error handler r r f)
   (error-handler-line handler r r r)
   (arg-exp base f)

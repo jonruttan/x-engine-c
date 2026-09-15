@@ -73,8 +73,8 @@ static x_obj_t *x_prim_match(x_obj_t *p_base, x_obj_t *p_args)
  *
  * Installs an error handler, evaluates body, and catches errors (fexpr --
  * clause and body forms are not evaluated up front).  On error, restores
- * the save stack and environment boundary to the guard point, binds the
- * error value to var, and evaluates handler-body.
+ * the save stack to the guard point, binds the error value to var in a
+ * child of the guard's environment, and evaluates handler-body there.
  *
  * @param p_base  Base (execution context).
  * @param p_args  Unevaluated argument list; expects (caller (var handler-body ...) body ...).
@@ -83,11 +83,10 @@ static x_obj_t *x_prim_match(x_obj_t *p_base, x_obj_t *p_args)
  * @details **Handler pair tree structure.**  The handler object is a
  *          nested pair tree:
  *          @code
- *          (jmp-ptr . ((saved-env . saved-boundary) . (error-value . nil)))
+ *          (jmp-ptr . ((saved-env . nil) . (error-value . nil)))
  *          @endcode
  *          - jmp-ptr: x_ptr wrapping a jmp_buf on the C stack
- *          - saved-env: env-alist snapshot at guard installation
- *          - saved-boundary: local-boundary snapshot at guard installation
+ *          - saved-env: the environment current at guard installation
  *          - error-value: initially nil, filled by x_eval_error or
  *            x_prim_error before longjmp
  *
@@ -103,11 +102,11 @@ static x_obj_t *x_prim_match(x_obj_t *p_base, x_obj_t *p_args)
  *          non-zero (error path).  On the error path:
  *          1. save_stack is restored to the guard point (unwinding
  *             any fn/let frames entered since guard)
- *          2. error value is bound to var in the current env
+ *          2. error value is bound to var in a child of the saved
+ *             environment, which is made current
  *          3. handler-body is evaluated via x_eval_body (no TCO --
  *             the guard frame must remain on the C stack)
- *          4. env-alist and local-boundary are restored from the
- *             handler's saved copies
+ *          4. the saved environment is made current again
  *
  * @note Uses setjmp/longjmp for non-local error transfer.  The jmp_buf
  *       lives on this C frame, so the handler is only valid while this
@@ -133,19 +132,18 @@ static x_obj_t *x_prim_guard(x_obj_t *p_base, x_obj_t *p_args)
 		*p_saved_buffer = x_base_field_buffer(p_base),
 		*p_saved_line = x_eval_field_line(p_base),
 		*p_handler, *p_result = NULL;
-	x_obj_t *p_err, *p_pair;
+	x_obj_t *p_err, *p_env;
 	x_int_t unwind_fd;
 	x_args(p_base, p_args, 2, NULL, &p_clause);
 	p_var = x_firstobj(p_clause);
 	p_handler_body = x_restobj(p_clause);
 	p_body = x_11(p_args);
 
-	/* Build handler: (jmp-ptr (saved-env . saved-boundary) error-value) */
+	/* Build handler: (jmp-ptr (saved-env . nil) error-value) */
 	p_handler = x_mkspair(p_base, X_OBJ_FLAG_NONE,
 		x_mkptr(p_base, &jmp),
 		x_mkspair(p_base, X_OBJ_FLAG_NONE,
-			x_mkspair(p_base, X_OBJ_FLAG_NONE, x_firstobj(x_eval_field_env_alist(p_base)),
-			                   x_eval_field_env_local_boundary(p_base)),
+			x_mkspair(p_base, X_OBJ_FLAG_NONE, x_eval_field_env(p_base), NULL),
 			x_mkspair(p_base, X_OBJ_FLAG_NONE, NULL, NULL)));
 	x_firstobj(x_eval_field_error_handler(p_base)) = p_handler;
 
@@ -153,9 +151,8 @@ static x_obj_t *x_prim_guard(x_obj_t *p_base, x_obj_t *p_args)
 		/* Normal execution: evaluate body. */
 		p_result = x_eval_body(p_base, p_body);
 	} else {
-		/* Error caught: restore save-stack and boundary to guard point. */
+		/* Error caught: restore save-stack to the guard point. */
 		p_err = x_error_handler_error(p_handler);
-		p_pair = x_mkspair(p_base, X_OBJ_FLAG_NONE, p_var, p_err);
 
 		x_eval_field_save_stack(p_base) = p_saved_save_stack;
 		/* Drop the eval-list entries whose push windows the longjmp
@@ -209,15 +206,14 @@ static x_obj_t *x_prim_guard(x_obj_t *p_base, x_obj_t *p_args)
 		 * installed, the re-raise would longjmp back into its own
 		 * setjmp and re-run the body forever, allocating every pass. */
 		x_firstobj(x_eval_field_error_handler(p_base)) = p_prev_handler;
-		x_eval_env_alist_extend(p_base, p_pair);
-		/* The error-var binding is a local frame cell (GH #47). */
-		x_obj_flags(x_firstobj(x_eval_field_env_alist(p_base)))
-			|= X_OBJ_FLAG_FRAME;
+		/* The handler body runs in a child of the guard's environment
+		 * holding the error variable, so the binding is the body's own
+		 * and a `def` there stays there. */
+		p_env = x_env_make(p_base, x_error_handler_saved_env(p_handler));
+		x_env_bind(p_base, p_env, p_var, p_err);
+		x_eval_field_env(p_base) = p_env;
 		p_result = x_eval_body(p_base, p_handler_body);
-		x_firstobj(x_eval_field_env_alist(p_base))
-			= x_error_handler_saved_env(p_handler);
-		x_eval_field_env_local_boundary(p_base)
-			= x_error_handler_saved_boundary(p_handler);
+		x_eval_field_env(p_base) = x_error_handler_saved_env(p_handler);
 	}
 
 	/* Pop handler. */
@@ -271,10 +267,7 @@ static x_obj_t *x_prim_error(x_obj_t *p_base, x_obj_t *p_args)
 			= x_atomint(x_firstobj(x_eval_field_line(p_base)));
 		x_atomint(x_firstobj(x_eval_field_err_file(p_base)))
 			= x_atomint(x_firstobj(x_eval_field_file(p_base)));
-		x_firstobj(x_eval_field_env_alist(p_base))
-			= x_error_handler_saved_env(p_handler);
-		x_eval_field_env_local_boundary(p_base)
-			= x_error_handler_saved_boundary(p_handler);
+		x_eval_field_env(p_base) = x_error_handler_saved_env(p_handler);
 		longjmp(*(jmp_buf *)x_error_handler_jmp(p_handler), 1);
 	}
 

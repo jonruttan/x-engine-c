@@ -142,7 +142,6 @@ static x_obj_t *x_prim_clock(x_obj_t *p_base, x_obj_t *p_args)
  *  @return NULL on EOF.
  *  @note No output, no prompt, no hooks. Used for C-level bootstrapping;
  *        the x-lang REPL operative in x-core.x provides the full experience.
- *  @note Clears shadows after each evaluation.
  */
 x_obj_t *x_prim_repl(x_obj_t *p_base, x_obj_t *p_args)
 {
@@ -164,7 +163,6 @@ x_obj_t *x_prim_repl(x_obj_t *p_base, x_obj_t *p_args)
 		/* The freshly read form is this frame's only reference. */
 		x_firstobj((x_obj_t *)root) = p_exp;
 		x_eval_arg(p_base, p_exp);
-		x_prim_clear_shadows(p_base);
 	}
 
 	x_heap_root_pop(p_cell);

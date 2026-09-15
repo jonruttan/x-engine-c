@@ -11,6 +11,58 @@ alongside the library changes they landed with.
 [x-lang]: https://github.com/jonruttan/x-lang
 [x-changelog]: https://github.com/jonruttan/x-lang/blob/main/CHANGELOG.md
 
+## Unreleased
+
+**An environment is a value** ([#46], [x-lang#718]). It is one pair,
+bindings and parent: the root's bindings are a tree and its parent is nil;
+every other environment's bindings are an alist and its parent is the
+environment it was made in. A procedure call makes a child of the
+closure's environment, a parameterless one too. An operative body runs in
+a child of its static environment and receives the caller's environment as
+a value. `def` binds in the current environment, rebinding in place when
+the name is already there and never touching a parent. `eval` with an
+environment makes that one current, and a `def` inside stays bound,
+because the binding is in the object. `eval!` and the loader evaluate in
+the root. Every save and restore in the evaluator is one pointer.
+
+That retires what compensated for a frame having no identity of its own:
+the frame and function-frame flag bits, the shadow list, the local
+boundary, the tree a closure carried and reinstalled on each call, the
+operative restore's walk to decide whether the body had grown the caller's
+chain, and the top-level bracket's stripping of a frame run. An operative
+can now define for its caller with `(eval (list 'def n v) e)`, which is
+the form every lang already wrote and which used to bind nothing inside a
+frame ([x-lang#527]); `eval!` no longer binds a form's `def` somewhere
+other than where evaluation said ([x-lang#644]). `def-global` is kept for
+this release as `def` in the root, for the langs that reach it through the
+catalog; it is expressible without a primitive now and its row goes when
+they have moved.
+
+The base layout changes with it: the env group is `env`, the current
+environment, and `env-root`, in place of the alist, boundary, tree and
+shadow slots, and the error handler's saved-boundary slot is nil. The
+procedure state is `(params . (body . env))`. Both descriptors and the
+declaration are regenerated in the same change; x-lang's readers of the
+old rows move with the pin bump.
+
+Covered by the C specs, which build environments the new way throughout,
+a base spec of the environment operations, a root-environment spec with
+real symbols, and `tests/bare/specs/env.spec.md`: a `define` built on
+`eval` binds in the caller's frame, in body position, through a wrapper
+operative, privately, in place on redefinition, visibly to a closure
+captured earlier and globally at top level; a parameterless body keeps
+its own definitions; a parameter named after a global shadows it for that
+body only; a top-level name shared with an env parameter does not hijack
+it; `set!` through two frames mutates the local; and an error handler runs
+in a child of the guard's environment. x-lang's suite booted from source
+against this engine passes but for the one spec that reads the retired
+`env-alist` cell by name.
+
+[#46]: https://github.com/jonruttan/x-engine-c/issues/46
+[x-lang#527]: https://github.com/jonruttan/x-lang/issues/527
+[x-lang#644]: https://github.com/jonruttan/x-lang/issues/644
+[x-lang#718]: https://github.com/jonruttan/x-lang/pull/718
+
 ## 0.2.9 — 2026-09-11
 
 **An analyser tells the reader which of its states accepted** ([#43]). An

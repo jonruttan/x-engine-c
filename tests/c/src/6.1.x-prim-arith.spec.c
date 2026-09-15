@@ -287,7 +287,7 @@ static char *test_arith_register(void)
 	p_base = x_eval_make(NULL, NULL);
 	x_prim_register(p_base, NULL);
 
-	p_env = x_firstobj(x_eval_field_env_alist(p_base));
+	p_env = x_eval_field_env(p_base);
 	_it_should("env is not empty after register",
 		p_env != NULL);
 

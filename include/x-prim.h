@@ -7,7 +7,7 @@
  *
  * Declares the callable binding mechanism used to register C primitives
  * into the x-lang environment, argument unpacking helpers, body/TCO
- * evaluation entry points, shadow-list management, and the per-module
+ * evaluation entry points, and the per-module
  * register functions.
  *
  * @author Jon Ruttan (jonruttan@gmail.com)
@@ -261,15 +261,6 @@ x_obj_t *x_prim_signal_register(x_obj_t *p_base, x_obj_t *p_args);
 
 /** Initialize the call/cc subsystem. */
 void x_callcc_init(void);
-/** @} */
-
-/** @name Shadow List Management
- * @{ */
-/** Clear all shadow-list entries from the environment. */
-void x_prim_clear_shadows(x_obj_t *p_base);
-
-/** Clear shadow-list entries back to a saved checkpoint. */
-void x_prim_clear_shadows_to(x_obj_t *p_base, x_obj_t *p_old);
 /** @} */
 
 /** Register all primitive modules into the base environment. */

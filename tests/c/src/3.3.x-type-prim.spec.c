@@ -503,7 +503,7 @@ static char *test_type_prim_apply_procedure(void)
 	helper_alloc_reset();
 
 	p_base = x_eval_make(NULL, NULL);
-	p_env = x_firstobj(x_eval_field_env_alist(p_base));
+	p_env = x_eval_field_env(p_base);
 
 	/* Build state list: (params . (body . (env . bst))) */
 	p_s3 = x_mkspair(p_base, X_OBJ_FLAG_NONE, NULL, NULL);       /* (env . bst) */
@@ -527,7 +527,7 @@ static char *test_type_prim_apply_procedure(void)
 	_it_should("apply procedure via stub and return NULL",
 		NULL == p_ret);
 	_it_should("restore the environment after apply",
-		p_env == x_firstobj(x_eval_field_env_alist(p_base)));
+		p_env == x_eval_field_env(p_base));
 
 	return NULL;
 }

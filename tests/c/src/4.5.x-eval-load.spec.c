@@ -173,7 +173,7 @@ static x_obj_t *_load(x_obj_t *p_base, x_char_t *src, size_t len)
 
 /*
  * The includer is a procedure mid-call: its formal is a FRAME cell at the
- * env head and its restore compound is the save-stack top -- exactly what
+ * environment and the save-stack top holds its caller's -- exactly what
  * x_type_procedure_call leaves behind while a body runs.  The file it loads
  * does one thing, collect, so the only question is reachability.
  */
@@ -190,24 +190,24 @@ static char *test_load_keeps_the_includer_across_a_collect(void)
 
 	p_sym = x_make_symbol(p_base, X_OBJ_FLAG_NONE, (x_char_t *)"includer-local");
 	p_frame = x_env_extend(p_base,
-		x_firstobj(x_eval_field_env_alist(p_base)),
+		x_eval_field_env(p_base),
 		x_mklist(p_base, p_sym, NULL),
 		x_mklist(p_base, x_mkint(p_base, 7), NULL));
-	x_firstobj(x_eval_field_env_alist(p_base)) = p_frame;
-	p_binding = x_firstobj(p_frame);
+	x_eval_field_env(p_base) = p_frame;
+	p_binding = x_firstobj(x_env_bindings(p_frame));
 
-	x_tco_compound_save(p_base);
+	x_tco_env_save(p_base);
 	p_stack = x_eval_field_save_stack(p_base);
 	p_compound = x_firstobj(p_stack);
 
-	_it_should("the includer's formal is a FRAME cell at the env head",
-		(x_obj_flags(p_frame) & X_OBJ_FLAG_FRAME) != 0
+	_it_should("the includer's environment is a child of the root binding the formal",
+		x_env_parent(p_frame) == x_eval_field_env_root(p_base)
 		&& x_firstobj(p_binding) == p_sym);
 
 	_load(p_base, src, sizeof(src) - 1);
 
 	_it_should("the env head is the includer's frame again",
-		x_firstobj(x_eval_field_env_alist(p_base)) == p_frame);
+		x_eval_field_env(p_base) == p_frame);
 	_it_should("the save-stack is the includer's again",
 		x_eval_field_save_stack(p_base) == p_stack);
 
@@ -217,7 +217,7 @@ static char *test_load_keeps_the_includer_across_a_collect(void)
 		_on_heap_chain(p_base, p_binding));
 	_it_should("the includer's save-stack cell survived the collect",
 		_on_heap_chain(p_base, p_stack));
-	_it_should("the includer's restore compound survived the collect",
+	_it_should("the environment the save-stack holds survived the collect",
 		_on_heap_chain(p_base, p_compound));
 
 	/* Only read what the chain says is alive. */
@@ -233,8 +233,8 @@ static char *test_load_keeps_the_includer_across_a_collect(void)
 
 /*
  * The other half of the contract, unchanged: with the includer's state
- * parked, a loaded file's top-level def still lands in the GLOBAL scope,
- * not in the includer's frame -- the reason the state is displaced at all.
+ * parked, a loaded file's top-level def still lands in the ROOT, not in
+ * the includer's environment -- the reason the state is displaced at all.
  */
 static char *test_load_still_binds_top_level_defs_globally(void)
 {
@@ -246,24 +246,24 @@ static char *test_load_still_binds_top_level_defs_globally(void)
 
 	p_sym = x_make_symbol(p_base, X_OBJ_FLAG_NONE, (x_char_t *)"includer-local");
 	p_frame = x_env_extend(p_base,
-		x_firstobj(x_eval_field_env_alist(p_base)),
+		x_eval_field_env(p_base),
 		x_mklist(p_base, p_sym, NULL),
 		x_mklist(p_base, x_mkint(p_base, 7), NULL));
-	x_firstobj(x_eval_field_env_alist(p_base)) = p_frame;
-	x_tco_compound_save(p_base);
+	x_eval_field_env(p_base) = p_frame;
+	x_tco_env_save(p_base);
 
 	_load(p_base, src, sizeof(src) - 1);
 
-	_it_should("the includer's frame is still the env head",
-		x_firstobj(x_eval_field_env_alist(p_base)) == p_frame);
-	_it_should("the loaded def did not extend the includer's frame",
-		x_firstobj(x_firstobj(p_frame)) == p_sym);
+	_it_should("the includer's environment is current again",
+		x_eval_field_env(p_base) == p_frame);
+	_it_should("the loaded def did not bind in the includer's environment",
+		x_firstobj(x_firstobj(x_env_bindings(p_frame))) == p_sym
+		&& x_obj_isnil(p_base, x_restobj(x_env_bindings(p_frame))));
 
-	p_entry = x_alist_bst_lookup(p_base,
-		x_eval_field_env_global_tree(p_base),
+	p_entry = x_env_lookup(p_base, x_eval_field_env_root(p_base),
 		x_make_symbol(p_base, X_OBJ_FLAG_NONE, (x_char_t *)"loaded-global"));
-	_it_should("the loaded def is in the global tree",
-		!x_obj_isnil(p_base, p_entry)
+	_it_should("the loaded def is in the root",
+		p_entry != NULL
 		&& x_intval(x_restobj(p_entry)) == 42);
 
 	test_cleanup(p_base);

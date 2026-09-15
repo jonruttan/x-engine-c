@@ -147,9 +147,10 @@ static char *test_base_make(void)
 	);
 
 
-	p_obj = x_firstobj(x_eval_field_env_alist(p_base));
-	_it_should("return the Base object environment list (initially nil)",
-		x_obj_isnil(p_base, p_obj)
+	p_obj = x_eval_field_env(p_base);
+	_it_should("the current environment is the root, whose parent is nil",
+		p_obj == x_eval_field_env_root(p_base)
+		&& x_obj_isnil(p_base, x_env_parent(p_obj))
 	);
 
 	p_obj = x_firstobj(x_eval_field_eval_list(p_base));
@@ -310,60 +311,62 @@ static char *test_base_type_alist_assoc(void)
 	return NULL;
 }
 
-static char *test_base_env_alist_extend(void)
+/* An environment is (bindings . parent).  The root keeps a tree keyed by
+ * symbol name, and this spec has no symbol type, so the root path is
+ * covered where symbols exist (6.4.x-prim-core.spec.c); here the keys are
+ * atoms and the environments are children, whose alists compare keys by
+ * identity.  x_env_bind binds in the environment it is given and never in
+ * a parent; x_env_lookup walks the chain nearest first. */
+static char *test_base_env(void)
 {
-	x_obj_t *p_base, *p_alist, *p_atoms[3], *p_args;
+	x_obj_t *p_base, *p_root, *p_child, *p_grand, *p_atoms[3], *p_syms[2];
 
-	p_base = x_mksatom(NULL, X_OBJ_FLAG_NONE, 0);
+	p_base = x_eval_make(NULL, NULL);
+	p_root = x_eval_field_env_root(p_base);
 
 	p_atoms[0] = x_mksatom(p_base, X_OBJ_FLAG_NONE, 1);
 	p_atoms[1] = x_mksatom(p_base, X_OBJ_FLAG_NONE, 2);
 	p_atoms[2] = x_mksatom(p_base, X_OBJ_FLAG_NONE, 3);
+	p_syms[0] = x_mksatom(p_base, X_OBJ_FLAG_NONE, 10);
+	p_syms[1] = x_mksatom(p_base, X_OBJ_FLAG_NONE, 11);
 
+	_it_should("the base starts in its root, which has no parent and no bindings",
+		x_eval_field_env(p_base) == p_root
+		&& x_env_isroot(p_base, p_root)
+		&& x_obj_isnil(p_base, x_env_bindings(p_root)));
 
-	p_alist = p_base;
-	p_args = x_mkspair(NULL, X_OBJ_FLAG_NONE, p_atoms[0], p_atoms[1]);
-	p_alist = x_eval_env_alist_extend(NULL, p_args);
-	_it_should("return NULL when base is NULL",
-		NULL == p_alist
-	);
+	p_child = x_env_make(p_base, p_root);
+	_it_should("a child is empty and knows its parent",
+		x_obj_isnil(p_base, x_env_bindings(p_child))
+		&& x_env_parent(p_child) == p_root
+		&& ! x_env_isroot(p_base, p_child));
+	_it_should("an unbound name is NULL, not an error",
+		x_env_lookup(p_base, p_child, p_syms[1]) == NULL);
 
+	x_env_bind(p_base, p_child, p_syms[1], p_atoms[1]);
+	_it_should("a child binding is an alist cell in the child",
+		x_obj_type_isspair(x_env_bindings(p_child))
+		&& x_firstobj(x_firstobj(x_env_bindings(p_child))) == p_syms[1]
+		&& x_restobj(x_firstobj(x_env_bindings(p_child))) == p_atoms[1]);
+	_it_should("the binding is found from the child",
+		x_restobj(x_env_lookup(p_base, p_child, p_syms[1])) == p_atoms[1]);
 
-	p_base = x_mksatom(NULL, X_OBJ_FLAG_NONE, 0);
-	p_args = x_mkspair(NULL, X_OBJ_FLAG_NONE, p_atoms[0], p_atoms[1]);
-	p_alist = x_eval_env_alist_extend(p_base, p_args);
-	_it_should("return nil when base is a bare atom (not set)",
-		NULL == p_alist
-	);
+	x_env_bind(p_base, p_child, p_syms[0], p_atoms[2]);
+	x_env_bind(p_base, p_child, p_syms[0], p_atoms[1]);
+	_it_should("rebinding in the same environment updates in place",
+		x_restobj(x_env_lookup(p_base, p_child, p_syms[0])) == p_atoms[1]
+		&& x_restobj(x_env_bindings(p_child)) != NULL
+		&& x_obj_isnil(p_base, x_restobj(x_restobj(x_env_bindings(p_child)))));
 
-	x_obj_free(NULL, p_base);
-
-
-	p_base = x_eval_make(NULL, NULL);
-	p_args = x_mkspair(p_base, X_OBJ_FLAG_NONE, p_atoms[0], p_atoms[1]);
-	p_alist = x_eval_env_alist_extend(p_base, p_args);
-	_it_should("extend alist with (#<0x1:0x0> . #<0x1:0x1>)",
-		x_obj_type_isspair(p_alist)
-		&& x_obj_type_isspair(x_firstobj(p_alist))
-		&& x_firstobj(x_firstobj(p_alist)) == p_atoms[0]
-		&& x_restobj(x_firstobj(p_alist)) == p_atoms[1]
-	);
-
-
-	p_args = x_mkspair(p_base, X_OBJ_FLAG_NONE, p_atoms[1], p_atoms[2]);
-	p_alist = x_eval_env_alist_extend(p_base, p_args);
-	_it_should("extend alist with (#<0x1:0x2> . #<0x1:0x3>)",
-		x_obj_type_isspair(p_alist)
-		&& x_obj_type_isspair(x_firstobj(p_alist))
-		&& x_firstobj(x_firstobj(p_alist)) == p_atoms[1]
-		&& x_restobj(x_firstobj(p_alist)) == p_atoms[2]
-		&& x_obj_type_isspair(x_firstobj(x_restobj(p_alist)))
-		&& x_firstobj(x_firstobj(x_restobj(p_alist))) == p_atoms[0]
-		&& x_restobj(x_firstobj(x_restobj(p_alist))) == p_atoms[1]
-	);
+	p_grand = x_env_make(p_base, p_child);
+	x_env_bind(p_base, p_grand, p_syms[0], p_atoms[2]);
+	_it_should("a grandchild's binding shadows the child's without touching it",
+		x_restobj(x_env_lookup(p_base, p_grand, p_syms[0])) == p_atoms[2]
+		&& x_restobj(x_env_lookup(p_base, p_child, p_syms[0])) == p_atoms[1]);
+	_it_should("a grandchild sees the child's other binding through the parent",
+		x_restobj(x_env_lookup(p_base, p_grand, p_syms[1])) == p_atoms[1]);
 
 	x_sys_free(p_base);
-
 	return NULL;
 }
 
@@ -515,13 +518,12 @@ static char *test_base_error_with_handler(void)
 
 	p_base = x_eval_make(NULL, NULL);
 
-	/* Build handler: (jmp-ptr (saved-env . saved-boundary) error-value) */
+	/* Build handler: (jmp-ptr (saved-env . nil) error-value) */
 	p_handler = x_mkspair(p_base, X_OBJ_FLAG_NONE,
 		x_mksatom(p_base, X_OBJ_FLAG_NONE, &jmp),
 		x_mkspair(p_base, X_OBJ_FLAG_NONE,
 			x_mkspair(p_base, X_OBJ_FLAG_NONE,
-				x_firstobj(x_eval_field_env_alist(p_base)),
-				x_eval_field_env_local_boundary(p_base)),
+				x_eval_field_env(p_base), NULL),
 			x_mkspair(p_base, X_OBJ_FLAG_NONE, NULL, NULL)));
 	x_firstobj(x_eval_field_error_handler(p_base)) = p_handler;
 
@@ -658,7 +660,7 @@ static char *run_tests() {
 	_run_test(test_base_make);
 	_run_test(test_base_type_alist_extend);
 	_run_test(test_base_type_alist_assoc);
-	_run_test(test_base_env_alist_extend);
+	_run_test(test_base_env);
 
 	_run_test(test_base_read);
 	_run_test(test_base_write);

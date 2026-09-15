@@ -163,14 +163,10 @@ x_obj_t *x_type_operative_make(x_obj_t *p_base, x_obj_t *p_args)
  *
  * Implementation:
  *
- * - env_alist is set to extend(captured_env, formals).  The new chain
- *   branches off the captured-env head; caller's locals are not on
- *   this chain, so they are invisible to the body by construction.
- * - The formal and env-param spine cells carry X_OBJ_FLAG_FRAME, so
- *   symbol lookup resolves them (and the captured chain's frame cells)
- *   ahead of same-named globals (GH #47).
- * - local_boundary is still set to captured_env for the restore
- *   protocol; lookup no longer consults it.
+ * - The body's environment is a child of the captured environment with
+ *   the formals bound in it, and the env-param bound to the caller's
+ *   environment as a value.  The caller's locals are not on this chain,
+ *   so they are invisible to the body by construction.
  *
  * Body is run via x_eval_body (NOT a TCO body evaluator).  Each body
  * form is evaluated synchronously to completion -- tail-eval inside a
@@ -180,13 +176,9 @@ x_obj_t *x_type_operative_make(x_obj_t *p_base, x_obj_t *p_args)
  * heavy work via tail-eval into the caller's env, so the op frame
  * isn't on the recursion path.
  *
- * After the body returns, env/boundary/shadow are restored with one
- * subtlety: top-level (def ...) forms run by tail-eval'd code legitimately
- * grow the caller's env_alist chain.  If env_alist's current head reaches
- * the saved head by walking rest pointers, the chain has grown along
- * the saved branch -- keep current to preserve the new defs.  If the
- * saved head isn't on the current chain, the body branched off (op's
- * own formals frame); restore to saved.
+ * After the body returns, the caller's environment is made current
+ * again, unconditionally.  A (def ...) the body evaluated in the caller's
+ * environment is IN that environment, so restoring the pointer keeps it.
  *
  * @param p_base  x_obj_t* -- Base (execution context)
  * @param p_args  x_obj_t* -- (operative . unevaluated-args)
@@ -201,43 +193,30 @@ x_obj_t *x_type_operative_call(x_obj_t *p_base, x_obj_t *p_args)
 		*p_body = x_opbody(p_op),
 		*p_captured_env = x_openv(p_op),
 		*p_caller_env,
-		*p_env,
-		*p_saved_boundary,
-		*p_saved_shadow;
+		*p_env;
 
-	/* Capture caller's env (the head the operative restores to on exit). */
-	p_caller_env = x_firstobj(x_eval_field_env_alist(p_base));
-	p_saved_boundary = x_eval_field_env_local_boundary(p_base);
-	p_saved_shadow = x_eval_field_shadow_list(p_base);
+	/* The caller's environment: the value the env-param binds, and what
+	 * is current again when the body is done. */
+	p_caller_env = x_eval_field_env(p_base);
 
-	/* Extend captured env with formals bound to unevaluated args. */
+	/* The body's environment: a child of the captured one, with the
+	 * formals bound to the unevaluated args. */
 	p_env = x_env_extend(
 		p_base, p_captured_env, p_params, p_unevaluated_args);
 
 	/* Bind the env-param to the caller's env.  Only route from body
 	 * back into caller's scope (via eval/tail-eval). */
 	if ( ! x_obj_isnil(p_base, p_envparam)) {
-		/* FRAME on the spine cons: the env-param is a local frame binding,
-		 * so symbol lookup finds it ahead of any global of the same name
-		 * (GH #47 -- a top-level (def e ...) used to hijack every op's
-		 * (eval expr e) and install the global's VALUE as the env). */
-		p_env = x_mkspair(p_base, X_OBJ_FLAG_FRAME,
-			x_mkspair(p_base, X_OBJ_FLAG_NONE, p_envparam, p_caller_env), p_env);
+		x_env_bind(p_base, p_env, p_envparam, p_caller_env);
 	}
 
-	/* Install op's chain.  Boundary at captured_env makes caller's
-	 * locals invisible to symbol lookup. */
-	x_firstobj(x_eval_field_env_alist(p_base)) = p_env;
-	x_eval_field_env_local_boundary(p_base) = p_captured_env;
+	x_eval_field_env(p_base) = p_env;
 
 	/* Defer the body's tail to the outer trampoline (TCO) instead of
 	 * resolving it synchronously, so operative calls stay O(1) on the C
 	 * stack: deep tail recursion through operatives (if/let/cond, all built
 	 * on op) no longer accumulates a frame per level.  x_eval_op_body sets
-	 * tco_expr and a tagged operative record in tco_env; the trampoline runs
-	 * x_op_restore after the tail (unconditional env + boundary + shadow
-	 * restore to the caller, BST untouched), after any procedure env restore
-	 * the tail's own evaluation left behind. */
-	return x_eval_op_body(p_base, p_body, p_caller_env, p_env,
-		p_saved_boundary, p_saved_shadow);
+	 * tco_expr and the caller's environment in tco_env; the trampoline
+	 * makes it current again after the tail. */
+	return x_eval_op_body(p_base, p_body, p_caller_env);
 }
