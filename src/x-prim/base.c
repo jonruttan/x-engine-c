@@ -1,6 +1,7 @@
 /** @file x-prim/base.c
  *  @brief Sandbox-base primitives -- make-base, base-eval (setjmp cross-base
- *         eval), base-bind, make-token-base, base-make-type.
+ *         eval), base-bind, make-token-base, base-make-type, and the two
+ *         binders that name their environment: def-global and def-in.
  *  @author Jon Ruttan (jonruttan@gmail.com)
  *  @copyright 2026 Jon Ruttan
  *  @license MIT No Attribution (MIT-0)
@@ -316,6 +317,61 @@ static x_obj_t *x_prim_base_bind(x_obj_t *p_base, x_obj_t *p_args)
 
 
 /**
+ * @brief Bind a name in the base's GLOBAL environment: the body shared by
+ *        def-global and by def-in's top-level path.
+ *
+ * @details Redefinition updates the existing BST entry in place; a fresh
+ *          name is inserted into the BST.  Globals resolve through the BST
+ *          (GH #47), so the insert is what makes the binding findable
+ *          afterwards.
+ *
+ *          The env alist is extended ALWAYS, and the boundary advanced only
+ *          at top level.  Skipping the extension inside a frame left the
+ *          binding in the BST but not on the spine, and anything that walks
+ *          the env alist rather than resolving through the BST could not see
+ *          it -- syntax-rules' hygiene lookup is one such walker, and a macro
+ *          expanding to a lambda bound its parameter to a stale entry.  A
+ *          half-present binding is worse than either alternative.
+ *
+ *          The boundary is the part that must not move under a frame: it
+ *          marks where globals end, and the spine it would point into unwinds
+ *          when the frame pops.
+ *
+ * @param p_base  Base (execution context).
+ * @param p_name  The symbol to bind.
+ * @param p_val   The value, already evaluated.
+ * @return The bound value.
+ * @see x_prim_define_global, x_prim_define_in
+ */
+static x_obj_t *x_define_global(x_obj_t *p_base, x_obj_t *p_name, x_obj_t *p_val)
+{
+	x_obj_t *p_pair, *p_entry;
+
+	p_entry = x_alist_bst_lookup(p_base,
+		x_eval_field_env_global_tree(p_base), p_name);
+	if ( ! x_obj_isnil(p_base, p_entry)) {
+		x_restobj(p_entry) = p_val;
+		return p_val;
+	}
+
+	p_pair = x_mkspair(p_base, X_OBJ_FLAG_NONE, p_name, p_val);
+
+	x_eval_env_alist_extend(p_base, p_pair);
+
+	if (x_base_isset(p_base)
+		&& x_obj_isnil(p_base, x_eval_field_save_stack(p_base))) {
+		x_eval_field_env_local_boundary(p_base)
+			= x_firstobj(x_eval_field_env_alist(p_base));
+	}
+
+	x_eval_field_env_global_tree(p_base) = x_alist_bst_insert(
+		p_base, x_eval_field_env_global_tree(p_base), p_pair);
+
+	return p_val;
+}
+
+
+/**
  * @brief Bind a name in the base's GLOBAL environment, whatever the frame depth.
  *
  * x-lang form: @code ((prim-ref 'base 'def-global) name value) @endcode
@@ -335,60 +391,101 @@ static x_obj_t *x_prim_base_bind(x_obj_t *p_base, x_obj_t *p_args)
  *          shadowed, gone -- and a definition in BODY position never worked at
  *          all.  See x-lang#527.
  *
- *          This takes the global path unconditionally: redefinition updates the
- *          existing BST entry in place, a fresh name is inserted into the BST.
- *          The env ALIST is extended only at top level, deliberately: inside a
- *          frame that spine unwinds when the frame pops, so extending it would
- *          leave the local-boundary pointing into reclaimed structure.  Globals
- *          resolve through the BST (GH #47), so the BST insert is what makes
- *          the binding findable afterwards.
+ *          This takes the global path unconditionally.  The door that binds
+ *          in the frame the caller names is def-in, below.
  *
  * @param p_base  Base (execution context).
- * @param p_args  Unevaluated: (self name value); value IS evaluated.
+ * @param p_args  Unevaluated: (self name value); both are evaluated.
  * @return The bound value.
  * @see x_prim_define  -- the depth-sensitive form this complements
+ * @see x_prim_define_in
  */
 static x_obj_t *x_prim_define_global(x_obj_t *p_base, x_obj_t *p_args)
 {
-	x_obj_t *p_name, *p_val, *p_pair, *p_entry;
+	x_obj_t *p_name, *p_val;
 
 	x_eargs(p_base, p_args, 3, NULL, &p_name, &p_val);
 
-	p_entry = x_alist_bst_lookup(p_base,
-		x_eval_field_env_global_tree(p_base), p_name);
-	if ( ! x_obj_isnil(p_base, p_entry)) {
-		x_restobj(p_entry) = p_val;
-		return p_val;
+	return x_define_global(p_base, p_name, p_val);
+}
+
+
+/**
+ * @brief Bind a name in a GIVEN environment: the frame at its head, or the
+ *        global tree when the head is not a frame cell.
+ *
+ * x-lang form: @code ((prim-ref 'base 'def-in) env name value) @endcode
+ *
+ * @details An operative cannot define for its caller with a plain def.  The
+ *          def extends the operative's own frame, and the restore that ends
+ *          the operative puts the caller's head back, so the cell is gone; a
+ *          tail-eval'd def runs after that restore and grows the caller's
+ *          chain in front of a head the caller's own saved compound still
+ *          points at, so the next restore drops it.  At top level the same
+ *          def went into the BST, which is why the pattern looked like it
+ *          worked, and why every definer written as an operative -- x-lang's
+ *          doc, def-class, def-record, a lang's define -- binds nothing
+ *          inside a frame.  See x-engine-c#46 and x-lang#527.
+ *
+ *          This binds where the CALLER says.  @p env is an environment head
+ *          as an operative receives it in its env parameter.  When that head
+ *          is a FRAME-marked cell the binding goes into the frame.  An
+ *          existing binding for the name in the leading frame run -- the
+ *          region symbol lookup walks first -- is updated in place, the way a
+ *          top-level redefinition updates its BST entry: a cell spliced
+ *          behind the head could never be seen past a same-named cell in
+ *          front of it.  Otherwise a FRAME-marked cell is spliced AFTER the
+ *          head, and after rather than before for three reasons.  Every
+ *          saved restore compound holds a pointer to a head cell and stays
+ *          valid.  A closure that captured the frame earlier sees the new
+ *          binding, because lookup walks from the head through the rests,
+ *          which is what mutually recursive definitions in one frame need.
+ *          And the frame run stays contiguous, so lookup's step 1 and the
+ *          loader's strip both see one region.
+ *
+ *          When the head is not a frame cell -- nil, a global cell, or not a
+ *          spine pair at all -- the environment is the global chain, and
+ *          the binding takes the path def-global takes.
+ *
+ * @param p_base  Base (execution context).
+ * @param p_args  Unevaluated: (self env name value); all three are evaluated.
+ * @return The bound value.
+ * @see x_prim_define_global  -- the global-only door this generalises
+ * @see x_prim_define         -- the frame-or-global decision this makes explicit
+ * @see x_type_symbol_eval    -- the frame run this searches
+ */
+static x_obj_t *x_prim_define_in(x_obj_t *p_base, x_obj_t *p_args)
+{
+	x_obj_t *p_env, *p_name, *p_val, *p_walk, *p_pair, *p_cell;
+
+	x_eargs(p_base, p_args, 4, NULL, &p_env, &p_name, &p_val);
+
+	/* A frame head is a spine pair carrying the FRAME mark.  The mark is a
+	 * flag bit, and flag bits mean different things on other types, so
+	 * the type is asked first: anything that is not a spine pair is not
+	 * an environment, and the binding goes global rather than into it. */
+	if (x_obj_isnil(p_base, p_env)
+		|| ! x_obj_type_isspair(p_env)
+		|| ! (x_obj_flags(p_env) & X_OBJ_FLAG_FRAME)) {
+		return x_define_global(p_base, p_name, p_val);
+	}
+
+	p_walk = p_env;
+	while ( ! x_obj_isnil(p_base, p_walk)
+		&& (x_obj_flags(p_walk) & X_OBJ_FLAG_FRAME)) {
+		if (x_firstobj(x_firstobj(p_walk)) == p_name) {
+			x_restobj(x_firstobj(p_walk)) = p_val;
+			return p_val;
+		}
+		p_walk = x_restobj(p_walk);
 	}
 
 	p_pair = x_mkspair(p_base, X_OBJ_FLAG_NONE, p_name, p_val);
-
-	/* Extend the alist ALWAYS, advance the boundary only at top level.
-	 *
-	 * Skipping the extension inside a frame left the binding in the BST but
-	 * not on the spine, and anything that walks the env alist rather than
-	 * resolving through the BST could not see it -- syntax-rules' hygiene
-	 * lookup is one such walker, and a macro expanding to a lambda bound its
-	 * parameter to a stale entry.  A half-present binding is worse than
-	 * either alternative.
-	 *
-	 * The boundary is the part that must not move under a frame: it marks
-	 * where globals end, and the spine it would point into unwinds when the
-	 * frame pops. */
-	x_eval_env_alist_extend(p_base, p_pair);
-
-	if (x_base_isset(p_base)
-		&& x_obj_isnil(p_base, x_eval_field_save_stack(p_base))) {
-		x_eval_field_env_local_boundary(p_base)
-			= x_firstobj(x_eval_field_env_alist(p_base));
-	}
-
-	x_eval_field_env_global_tree(p_base) = x_alist_bst_insert(
-		p_base, x_eval_field_env_global_tree(p_base), p_pair);
+	p_cell = x_mkspair(p_base, X_OBJ_FLAG_FRAME, p_pair, x_restobj(p_env));
+	x_restobj(p_env) = p_cell;
 
 	return p_val;
 }
-
 
 /** Register the sandbox base primitives. */
 x_obj_t *x_prim_base_register(x_obj_t *p_base, x_obj_t *p_args)
@@ -399,7 +496,8 @@ x_obj_t *x_prim_base_register(x_obj_t *p_base, x_obj_t *p_args)
 		{ "make-base",         x_prim_make_base,         "base",   "make"          },
 		{ "base-eval",         x_prim_base_eval,         "base",   "eval"          },
 		{ "base-bind",         x_prim_base_bind,         "base",   "bind"          },
-		{ "base-def-global",   x_prim_define_global,     "base",   "def-global"    }
+		{ "base-def-global",   x_prim_define_global,     "base",   "def-global"    },
+		{ "base-def-in",       x_prim_define_in,         "base",   "def-in"        }
 	};
 
 	x_prims_bind_table(p_base, entries,

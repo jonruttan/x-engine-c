@@ -560,6 +560,151 @@ static char *test_type_base_bind(void)
 	return NULL;
 }
 
+static char *test_type_base_def_global(void)
+{
+	x_obj_t *p_base, *p_args, *p_result, *p_entry;
+
+	p_base = x_eval_make(NULL, NULL);
+	x_prim_register(p_base, NULL);
+
+	x_eval_env_alist_extend(p_base,
+		x_mkspair(p_base, X_OBJ_FLAG_NONE, x_mksymbol(p_base, "nm"),
+			x_mksymbol(p_base, "hello")));
+	x_eval_env_alist_extend(p_base,
+		x_mkspair(p_base, X_OBJ_FLAG_NONE, x_mksymbol(p_base, "val"),
+			x_mksatom(p_base, X_OBJ_FLAG_NONE, (x_int_t)55)));
+
+	/* (def-global nm val) -- prepend NULL self */
+	p_args = x_mkspair(p_base, X_OBJ_FLAG_NONE, NULL,
+		x_mkspair(p_base, X_OBJ_FLAG_NONE, x_mksymbol(p_base, "nm"),
+		x_mkspair(p_base, X_OBJ_FLAG_NONE, x_mksymbol(p_base, "val"), NULL)));
+	p_result = x_prim_define_global(p_base, p_args);
+	_it_should("def-global returns the value",
+		x_atomint(p_result) == 55);
+
+	p_entry = x_alist_bst_lookup(p_base,
+		x_eval_field_env_global_tree(p_base), x_mksymbol(p_base, "hello"));
+	_it_should("def-global inserts the name into the global tree",
+		! x_obj_isnil(p_base, p_entry) && x_atomint(x_restobj(p_entry)) == 55);
+	_it_should("the name resolves through lookup",
+		x_atomint(x_eval_arg(p_base, x_mksymbol(p_base, "hello"))) == 55);
+
+	test_cleanup(p_base);
+	return NULL;
+}
+
+/* def-in with a frame head: the binding lands in the frame, spliced after
+ * the head cell, marked FRAME, visible from the head a closure captured
+ * before the definition, and absent from the global tree. */
+static char *test_type_base_def_in_frame(void)
+{
+	x_obj_t *p_base, *p_args, *p_result, *p_frame, *p_below, *p_cell;
+
+	p_base = x_eval_make(NULL, NULL);
+	x_prim_register(p_base, NULL);
+
+	/* A frame: one FRAME-marked cell at the head, as a closure body has. */
+	x_eval_env_alist_extend(p_base,
+		x_mkspair(p_base, X_OBJ_FLAG_NONE, x_mksymbol(p_base, "param"),
+			x_mksatom(p_base, X_OBJ_FLAG_NONE, (x_int_t)1)));
+	p_frame = x_firstobj(x_eval_field_env_alist(p_base));
+	x_obj_flags(p_frame) |= X_OBJ_FLAG_FRAME;
+	p_below = x_restobj(p_frame);
+
+	/* The arguments, bound in the frame the way an operative's are. */
+	x_eval_env_alist_extend(p_base,
+		x_mkspair(p_base, X_OBJ_FLAG_NONE, x_mksymbol(p_base, "env"), p_frame));
+	x_eval_env_alist_extend(p_base,
+		x_mkspair(p_base, X_OBJ_FLAG_NONE, x_mksymbol(p_base, "nm"),
+			x_mksymbol(p_base, "hello")));
+	x_eval_env_alist_extend(p_base,
+		x_mkspair(p_base, X_OBJ_FLAG_NONE, x_mksymbol(p_base, "val"),
+			x_mksatom(p_base, X_OBJ_FLAG_NONE, (x_int_t)55)));
+
+	/* (def-in env nm val) -- prepend NULL self */
+	p_args = x_mkspair(p_base, X_OBJ_FLAG_NONE, NULL,
+		x_mkspair(p_base, X_OBJ_FLAG_NONE, x_mksymbol(p_base, "env"),
+		x_mkspair(p_base, X_OBJ_FLAG_NONE, x_mksymbol(p_base, "nm"),
+		x_mkspair(p_base, X_OBJ_FLAG_NONE, x_mksymbol(p_base, "val"), NULL))));
+	p_result = x_prim_define_in(p_base, p_args);
+	_it_should("def-in returns the value",
+		x_atomint(p_result) == 55);
+
+	p_cell = x_restobj(p_frame);
+	_it_should("the new cell is spliced after the head",
+		p_cell != p_below
+		&& x_firstobj(x_firstobj(p_cell)) == x_mksymbol(p_base, "hello"));
+	_it_should("the new cell keeps the rest of the chain",
+		x_restobj(p_cell) == p_below);
+	_it_should("the new cell is a frame cell",
+		(x_obj_flags(p_cell) & X_OBJ_FLAG_FRAME) != 0);
+	_it_should("the name resolves through the frame run",
+		x_atomint(x_eval_arg(p_base, x_mksymbol(p_base, "hello"))) == 55);
+	_it_should("the name is not in the global tree",
+		x_obj_isnil(p_base, x_alist_bst_lookup(p_base,
+			x_eval_field_env_global_tree(p_base), x_mksymbol(p_base, "hello"))));
+
+	/* A second def-in of the same name updates in place: no new cell. */
+	x_eval_env_alist_extend(p_base,
+		x_mkspair(p_base, X_OBJ_FLAG_NONE, x_mksymbol(p_base, "val2"),
+			x_mksatom(p_base, X_OBJ_FLAG_NONE, (x_int_t)56)));
+	p_args = x_mkspair(p_base, X_OBJ_FLAG_NONE, NULL,
+		x_mkspair(p_base, X_OBJ_FLAG_NONE, x_mksymbol(p_base, "env"),
+		x_mkspair(p_base, X_OBJ_FLAG_NONE, x_mksymbol(p_base, "nm"),
+		x_mkspair(p_base, X_OBJ_FLAG_NONE, x_mksymbol(p_base, "val2"), NULL))));
+	p_result = x_prim_define_in(p_base, p_args);
+	_it_should("a redefinition returns the new value",
+		x_atomint(p_result) == 56);
+	_it_should("a redefinition updates the existing cell",
+		x_restobj(p_frame) == p_cell && x_restobj(p_cell) == p_below);
+	_it_should("the name now resolves to the new value",
+		x_atomint(x_eval_arg(p_base, x_mksymbol(p_base, "hello"))) == 56);
+
+	test_cleanup(p_base);
+	return NULL;
+}
+
+/* def-in with a non-frame head takes def-global's path: the global tree. */
+static char *test_type_base_def_in_global(void)
+{
+	x_obj_t *p_base, *p_args, *p_result, *p_global, *p_entry;
+
+	p_base = x_eval_make(NULL, NULL);
+	x_prim_register(p_base, NULL);
+
+	p_global = x_firstobj(x_eval_field_env_alist(p_base));
+	_it_should("the fresh base's head is not a frame cell",
+		x_obj_isnil(p_base, p_global)
+		|| (x_obj_flags(p_global) & X_OBJ_FLAG_FRAME) == 0);
+
+	x_eval_env_alist_extend(p_base,
+		x_mkspair(p_base, X_OBJ_FLAG_NONE, x_mksymbol(p_base, "env"), p_global));
+	x_eval_env_alist_extend(p_base,
+		x_mkspair(p_base, X_OBJ_FLAG_NONE, x_mksymbol(p_base, "nm"),
+			x_mksymbol(p_base, "hello")));
+	x_eval_env_alist_extend(p_base,
+		x_mkspair(p_base, X_OBJ_FLAG_NONE, x_mksymbol(p_base, "val"),
+			x_mksatom(p_base, X_OBJ_FLAG_NONE, (x_int_t)55)));
+
+	p_args = x_mkspair(p_base, X_OBJ_FLAG_NONE, NULL,
+		x_mkspair(p_base, X_OBJ_FLAG_NONE, x_mksymbol(p_base, "env"),
+		x_mkspair(p_base, X_OBJ_FLAG_NONE, x_mksymbol(p_base, "nm"),
+		x_mkspair(p_base, X_OBJ_FLAG_NONE, x_mksymbol(p_base, "val"), NULL))));
+	p_result = x_prim_define_in(p_base, p_args);
+	_it_should("def-in returns the value",
+		x_atomint(p_result) == 55);
+
+	p_entry = x_alist_bst_lookup(p_base,
+		x_eval_field_env_global_tree(p_base), x_mksymbol(p_base, "hello"));
+	_it_should("a non-frame head binds in the global tree",
+		! x_obj_isnil(p_base, p_entry) && x_atomint(x_restobj(p_entry)) == 55);
+	_it_should("the name resolves through lookup",
+		x_atomint(x_eval_arg(p_base, x_mksymbol(p_base, "hello"))) == 55);
+
+	test_cleanup(p_base);
+	return NULL;
+}
+
 static char *test_type_buffer_token(void)
 {
 	x_obj_t *p_base, *p_args, *p_result, *p_buffer;
@@ -1063,6 +1208,9 @@ static char *run_tests() {
 	_run_test(test_type_base_eval);
 	_run_test(test_type_base_eval_error);
 	_run_test(test_type_base_bind);
+	_run_test(test_type_base_def_global);
+	_run_test(test_type_base_def_in_frame);
+	_run_test(test_type_base_def_in_global);
 	_run_test(test_type_buffer_token);
 	_run_test(test_type_token_read_string);
 	/* convert tests disabled — primitive moved to x-lang */

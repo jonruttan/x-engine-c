@@ -11,6 +11,41 @@ alongside the library changes they landed with.
 [x-lang]: https://github.com/jonruttan/x-lang
 [x-changelog]: https://github.com/jonruttan/x-lang/blob/main/CHANGELOG.md
 
+## Unreleased
+
+**A define directed at a given environment** ([#46]). An operative could not
+define for its caller inside a frame: its `def` extended the operative's own
+frame, and the restore that ends the operative put the caller's head back,
+so the binding was gone; a tail-evaluated `def` ran after that restore and
+grew the caller's chain in front of a head the caller's own saved compound
+still pointed at, so the next restore dropped it. At top level the same
+`def` went into the global tree, which is why the pattern looked like it
+worked. Every definer written as an operative was bound to the accident:
+x-lang's `doc`, `def-class`, `def-record`, and every lang's `define`
+([x-lang#527]).
+
+`(base def-in env name value)` binds where the caller says. `env` is an
+environment head as an operative receives it in its env parameter. When the
+head is a frame cell the binding goes into the frame: an existing binding for
+the name in the leading frame run is updated in place, otherwise a
+frame-marked cell is spliced after the head, so every saved restore pointer
+stays valid, a closure that captured the frame earlier sees the definition,
+and the frame run stays one region. When the head is not a frame cell the
+binding takes the path `def-global` takes, and the two now share that body.
+It is what x-lang's module scope needs ([x-lang#718], [x-lang#719]).
+
+Covered by `tests/c/src/6.5.x-prim-type.spec.c` (the frame path, the
+in-place update, the global path, and `def-global` itself, which had no C
+spec) and `tests/bare/specs/def-in.spec.md`: a `define` built on the
+primitive binds in the caller's frame, in body position, through a wrapper
+operative, privately to the frame, in place on redefinition, visibly to a
+closure captured earlier, and globally at top level.
+
+[#46]: https://github.com/jonruttan/x-engine-c/issues/46
+[x-lang#527]: https://github.com/jonruttan/x-lang/issues/527
+[x-lang#718]: https://github.com/jonruttan/x-lang/pull/718
+[x-lang#719]: https://github.com/jonruttan/x-lang/issues/719
+
 ## 0.2.9 — 2026-09-11
 
 **An analyser tells the reader which of its states accepted** ([#43]). An

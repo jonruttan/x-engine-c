@@ -55,6 +55,7 @@
                               ;   must exist in a bare env -- C by necessity (derived otherwise)
   (base bind spine)           ; SURVIVES the reflective test: allocates a STRUCTURAL spair for the env spine, which X pair cannot make
   (base def-global spine)    ; binds in the GLOBAL env whatever the frame depth: `def` decides that by
+  (base def-in spine)        ; binds in the env the CALLER names: its frame when the head is a frame cell, else the global tree (#46)
   (base eval spine)
   (base make spine)
   (base make-tok spine)
