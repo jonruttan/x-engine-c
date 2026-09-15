@@ -11,12 +11,12 @@ alongside the library changes they landed with.
 [x-lang]: https://github.com/jonruttan/x-lang
 [x-changelog]: https://github.com/jonruttan/x-lang/blob/main/CHANGELOG.md
 
-## Unreleased
+## 0.2.10 — 2026-09-15
 
-**An environment is a value** ([#46], [x-lang#718]). It is one pair,
-bindings and parent: the root's bindings are a tree and its parent is nil;
-every other environment's bindings are an alist and its parent is the
-environment it was made in. A procedure call makes a child of the
+**An environment is a value** ([#49], closing [#46]; design note
+[x-lang#718]). It is one pair, bindings and parent: the root's bindings are
+a tree and its parent is nil; every other environment's bindings are an
+alist and its parent is the environment it was made in. A procedure call makes a child of the
 closure's environment, a parameterless one too. An operative body runs in
 a child of its static environment and receives the caller's environment as
 a value. `def` binds in the current environment, rebinding in place when
@@ -62,7 +62,21 @@ in a child of the guard's environment. x-lang's suite booted from source
 against this engine passes but for the one spec that reads the retired
 `env-alist` cell by name.
 
+Also: the address table under `image write!` held its choices as bare
+numbers ([#50]). The smallest slot count, the occupancy it keeps, the
+address bits it shifts off and the naming cache's starting room are each a
+named constant with its reason beside it, and the smallest slot count is
+asserted a power of two at compile time, since the slot mask is that count
+less one. Growth was quadrupling, the bigger table asked for twice the old
+slot count in keys when room for n keys is 2n slots; it now asks for the
+old slot count, which is twice the slots, as its comment said. A bare spec
+writes an image whose spine refers to 300 objects outside it twice over,
+past the cache's starting room, so the cache is shown to answer after it
+grew.
+
 [#46]: https://github.com/jonruttan/x-engine-c/issues/46
+[#49]: https://github.com/jonruttan/x-engine-c/pull/49
+[#50]: https://github.com/jonruttan/x-engine-c/pull/50
 [x-lang#527]: https://github.com/jonruttan/x-lang/issues/527
 [x-lang#644]: https://github.com/jonruttan/x-lang/issues/644
 [x-lang#718]: https://github.com/jonruttan/x-lang/pull/718
