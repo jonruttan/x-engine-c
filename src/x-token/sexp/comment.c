@@ -46,7 +46,9 @@ x_obj_t *x_sexp_comment_analyse1(x_obj_t *p_base, x_obj_t *p_args)
  * Analyse state 2: consume characters until end-of-line.
  *
  * Continues reading until @ref X_SEXP_COMMENT_POST_STR is found,
- * then scores the full comment length.
+ * then scores the full comment length.  The score is kept current on
+ * the way, so a comment the input ends on is claimed without its
+ * newline.
  *
  * @param p_base  Base (execution context).
  * @param p_args  Read-args containing the token buffer and score.
@@ -57,8 +59,9 @@ x_obj_t *x_sexp_comment_analyse2(x_obj_t *p_base, x_obj_t *p_args)
 	x_obj_t *p_buffer = x_token_read_arg_buffer(p_args),
 		*p_score = x_token_read_arg_score(p_args);
 
+	x_firstint(p_score) = x_bufferlen(p_buffer);
+
 	if (0 == x_lib_strncmp(X_SEXP_COMMENT_POST_STR, x_bufferread(p_buffer) - X_SEXP_COMMENT_PRE_STR_LEN, X_SEXP_COMMENT_POST_STR_LEN)) {
-		x_firstint(p_score) = x_bufferlen(p_buffer);
 		return p_score;
 	}
 

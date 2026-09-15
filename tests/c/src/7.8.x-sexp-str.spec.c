@@ -104,30 +104,37 @@ static char *test_sexp_str_analyse1(void)
 
 	p_base = x_eval_make(NULL, NULL);
 	p_buffer = x_mkbuffer(p_base, buffer);
-	p_args = x_mkspair(p_base, X_OBJ_FLAG_NONE, p_buffer, p_base);
-	p_obj = x_type_buffer_read(p_base, p_args);
 	{
-	x_spair_t sp = x_obj_set(NULL, X_OBJ_FLAG_NONE,
-		{ (x_obj_t *)&x_sexp_str_analyse1_prim }, { p_args });
-	p_obj = x_sexp_str_analyse1(p_base, (x_obj_t *)&sp);
+		/* What the analyse loop hands a state: (buffer score char), with
+		 * the variant cell on the score's rest (x-token.h). */
+		x_spair_t variant = x_obj_set(NULL, X_OBJ_FLAG_NONE, { .i = 0 }, { NULL });
+		x_spair_t score = x_obj_set(NULL, X_OBJ_FLAG_NONE, { .i = 0 }, { (x_obj_t *)variant });
+		x_spair_t buffer_args[3] = {
+			x_obj_set(NULL, X_OBJ_FLAG_NONE, { p_buffer }, { (x_obj_t *)(buffer_args + 1) }),
+			x_obj_set(NULL, X_OBJ_FLAG_NONE, { score }, { (x_obj_t *)(buffer_args + 2) }),
+			x_obj_set(NULL, X_OBJ_FLAG_NONE, { NULL }, { NULL }),
+		};
+		x_spair_t self_args = x_obj_set(NULL, X_OBJ_FLAG_NONE,
+			{ (x_obj_t *)&x_sexp_str_analyse1_prim }, { (x_obj_t *)buffer_args });
+
+		p_args = (x_obj_t *)buffer_args;
+		p_obj = x_type_buffer_read(p_base, p_args);
+		p_obj = x_sexp_str_analyse1(p_base, (x_obj_t *)&self_args);
+		_it_should("return the analyse2 primitive object",
+			(x_obj_t *)&x_sexp_str_analyse2_prim == p_obj);
+		_it_should("keep the score current and declare the literal open",
+			x_firstint((x_obj_t *)score) == 1
+			&& x_firstint((x_obj_t *)variant) == X_SEXP_STR_VARIANT_OPEN);
+
+		s = " ";
+		helper_file_buffer_ptr[TEST_HELPER_FILE_STDIN] = s;
+		helper_file_reset();
+		x_type_buffer_reset(p_base, p_args);
+
+		p_obj = x_type_buffer_read(p_base, p_args);
+		p_obj = x_sexp_str_analyse1(p_base, (x_obj_t *)&self_args);
+		_it_should("return NULL", NULL == p_obj);
 	}
-	_it_should("return the analyse2 primitive object",
-		(x_obj_t *)&x_sexp_str_analyse2_prim == p_obj
-	);
-
-
-	s = " ";
-	helper_file_buffer_ptr[TEST_HELPER_FILE_STDIN] = s;
-	helper_file_reset();
-	x_type_buffer_reset(p_base, p_args);
-
-	p_obj = x_type_buffer_read(p_base, p_args);
-	{
-	x_spair_t sp2 = x_obj_set(NULL, X_OBJ_FLAG_NONE,
-		{ (x_obj_t *)&x_sexp_str_analyse1_prim }, { p_args });
-	p_obj = x_sexp_str_analyse1(p_base, (x_obj_t *)&sp2);
-	}
-	_it_should("return NULL", NULL == p_obj);
 
 
 	test_cleanup(p_base);
@@ -148,7 +155,9 @@ static char *test_sexp_str_analyse2(void)
 	p_base = x_eval_make(NULL, NULL);
 	p_buffer = x_mkbuffer(p_base, buffer);
 	{
-		x_spair_t score = x_obj_set(NULL, X_OBJ_FLAG_NONE, {});
+		/* Mid-literal, as analyse1 leaves the cells: the variant says open. */
+		x_spair_t variant = x_obj_set(NULL, X_OBJ_FLAG_NONE, { .i = X_SEXP_STR_VARIANT_OPEN }, { NULL });
+		x_spair_t score = x_obj_set(NULL, X_OBJ_FLAG_NONE, { .i = 0 }, { (x_obj_t *)variant });
 		x_spair_t buffer_args[3] = {
 			x_obj_set(NULL, X_OBJ_FLAG_NONE, { p_buffer }, { (x_obj_t *)(buffer_args + 1) }),
 			x_obj_set(NULL, X_OBJ_FLAG_NONE, { score }, { (x_obj_t *)(buffer_args + 2) }),
@@ -162,6 +171,8 @@ static char *test_sexp_str_analyse2(void)
 		p_obj = x_type_buffer_read(p_base, p_args);
 		p_obj = x_sexp_str_analyse2(p_base, (x_obj_t *)&self_args);
 		_it_should("return the score", p_score == p_obj);
+		_it_should("the closer clears the open variant",
+			x_firstint((x_obj_t *)variant) == 0);
 
 
 		s = " ";
@@ -174,6 +185,8 @@ static char *test_sexp_str_analyse2(void)
 		_it_should("return the analyse2 primitive object",
 			(x_obj_t *)&x_sexp_str_analyse2_prim == p_obj
 		);
+		_it_should("keep the score current on a body character",
+			x_firstint(p_score) == 1);
 	}
 
 
@@ -309,7 +322,9 @@ static char *test_sexp_str_analyse2_escape(void)
 	p_base = x_eval_make(NULL, NULL);
 	p_buffer = x_mkbuffer(p_base, buffer);
 	{
-		x_spair_t score = x_obj_set(NULL, X_OBJ_FLAG_NONE, {});
+		/* Mid-literal, as analyse1 leaves the cells: the variant says open. */
+		x_spair_t variant = x_obj_set(NULL, X_OBJ_FLAG_NONE, { .i = X_SEXP_STR_VARIANT_OPEN }, { NULL });
+		x_spair_t score = x_obj_set(NULL, X_OBJ_FLAG_NONE, { .i = 0 }, { (x_obj_t *)variant });
 		x_spair_t buffer_args[3] = {
 			x_obj_set(NULL, X_OBJ_FLAG_NONE, { p_buffer }, { (x_obj_t *)(buffer_args + 1) }),
 			x_obj_set(NULL, X_OBJ_FLAG_NONE, { score }, { (x_obj_t *)(buffer_args + 2) }),
@@ -331,16 +346,35 @@ static char *test_sexp_str_analyse2_escape(void)
 
 static char *test_sexp_str_analyse3_return(void)
 {
-	x_obj_t *p_base, *p_obj;
+	x_obj_t *p_base, *p_args, *p_buffer, *p_obj;
+	x_char_t *s, buffer[32];
+
+	/* The escaped character, whatever it is, and analyse3 goes back to
+	 * the body state with the score current. */
+	s = "n";
+	helper_file_buffer_ptr[TEST_HELPER_FILE_STDIN] = s;
+	helper_file_reset();
 
 	p_base = x_eval_make(NULL, NULL);
+	p_buffer = x_mkbuffer(p_base, buffer);
 	{
-		/* analyse3 always returns analyse2 (go back to normal reading) */
+		x_spair_t variant = x_obj_set(NULL, X_OBJ_FLAG_NONE, { .i = X_SEXP_STR_VARIANT_OPEN }, { NULL });
+		x_spair_t score = x_obj_set(NULL, X_OBJ_FLAG_NONE, { .i = 0 }, { (x_obj_t *)variant });
+		x_spair_t buffer_args[3] = {
+			x_obj_set(NULL, X_OBJ_FLAG_NONE, { p_buffer }, { (x_obj_t *)(buffer_args + 1) }),
+			x_obj_set(NULL, X_OBJ_FLAG_NONE, { score }, { (x_obj_t *)(buffer_args + 2) }),
+			x_obj_set(NULL, X_OBJ_FLAG_NONE, { NULL }, { NULL }),
+		};
 		x_spair_t self_args = x_obj_set(NULL, X_OBJ_FLAG_NONE,
-			{ (x_obj_t *)&x_sexp_str_analyse3_prim }, { NULL });
+			{ (x_obj_t *)&x_sexp_str_analyse3_prim }, { (x_obj_t *)buffer_args });
+
+		p_args = (x_obj_t *)buffer_args;
+		p_obj = x_type_buffer_read(p_base, p_args);
 		p_obj = x_sexp_str_analyse3(p_base, (x_obj_t *)&self_args);
 		_it_should("analyse3 returns analyse2",
 			(x_obj_t *)&x_sexp_str_analyse2_prim == p_obj);
+		_it_should("and keeps the score current",
+			x_firstint((x_obj_t *)score) == 1);
 	}
 
 	test_cleanup(p_base);

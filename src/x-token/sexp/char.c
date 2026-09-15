@@ -77,11 +77,18 @@ x_obj_t *x_sexp_char_analyse1(x_obj_t *p_base, x_obj_t *p_args)
 x_obj_t *x_sexp_char_analyse2(x_obj_t *p_base, x_obj_t *p_args)
 {
 	x_obj_t *p_self = x_0(p_args),
-		*p_buffer = x_token_read_arg_buffer(x_1(p_args));
+		*p_buffer = x_token_read_arg_buffer(x_1(p_args)),
+		*p_score = x_token_read_arg_score(x_1(p_args));
 
 	if (X_SEXP_CHAR_PRE_STR[1] != x_bufferlastchar(p_buffer)) {
 		return NULL;
 	}
+
+	/* From here the span is a character literal, whole or cut short, so
+	 * the score is kept current: input ending on a bare prefix is
+	 * claimed and the reader raises, rather than the prefix reading as
+	 * a symbol. */
+	x_firstint(p_score) = x_bufferlen(p_buffer);
 
 	return x_next_state(p_self, &x_sexp_char_analyse3_prim);
 }
@@ -102,6 +109,8 @@ x_obj_t *x_sexp_char_analyse3(x_obj_t *p_base, x_obj_t *p_args)
 		*p_buffer = x_token_read_arg_buffer(x_1(p_args)),
 		*p_score = x_token_read_arg_score(x_1(p_args));
 
+	x_firstint(p_score) = x_bufferlen(p_buffer);
+
 	/* Lowercase letter: may be start of a named character */
 	if (is_lower(x_bufferlastchar(p_buffer))) {
 		return x_next_state(p_self, &x_sexp_char_analyse4_prim);
@@ -113,7 +122,6 @@ x_obj_t *x_sexp_char_analyse3(x_obj_t *p_base, x_obj_t *p_args)
 	}
 
 	/* Non-letter: single character literal, score immediately */
-	x_firstint(p_score) = x_bufferlen(p_buffer);
 	return p_score;
 }
 
@@ -134,6 +142,7 @@ static x_obj_t *x_sexp_char_analyse4(x_obj_t *p_base, x_obj_t *p_args)
 		*p_score = x_token_read_arg_score(x_1(p_args));
 
 	if (is_lower(x_bufferlastchar(p_buffer))) {
+		x_firstint(p_score) = x_bufferlen(p_buffer);
 		return p_self;
 	}
 
@@ -163,6 +172,7 @@ static x_obj_t *x_sexp_char_analyse_utf8(x_obj_t *p_base, x_obj_t *p_args)
 
 	/* Continuation byte 10xxxxxx: keep consuming */
 	if (((unsigned char)x_bufferlastchar(p_buffer) & 0xC0) == 0x80) {
+		x_firstint(p_score) = x_bufferlen(p_buffer);
 		return p_self;
 	}
 
@@ -192,6 +202,11 @@ x_obj_t *x_sexp_char_read(x_obj_t *p_base, x_obj_t *p_args)
 	x_obj_t *p_type, *p_data, *p_entry;
 	x_char_t *buf_name, *sym_name;
 	x_int_t name_len;
+
+	/* The bare prefix: the input ended before the character. */
+	if (len < 3) {
+		x_eval_error(p_base, (x_char_t *)"Unterminated input", NULL);
+	}
 
 	/* UTF-8 multi-byte literal: #\<lead><continuation...> */
 	if (len > 3 && (unsigned char)*(x_bufferval(p_buffer) + 2) >= 0x80) {

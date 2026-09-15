@@ -37,6 +37,11 @@
 #define X_SEXP_STR_CHARS_STR			X_SEXP_STR_PRE_STR /**< Characters that delimit other tokens. */
 #endif /* X_SEXP_STR_CHARS_STR */
 
+/** The variant the analyser declares while the literal is still open.  It
+ *  reaches the reader only when the input ended before the closing quote,
+ *  and the reader raises on it. */
+#define X_SEXP_STR_VARIANT_OPEN			1
+
 /** @name Analyser state primitives (spair -- composable state machines). */
 /** @{ */
 extern x_spair_t x_sexp_str_analyse1_prim,

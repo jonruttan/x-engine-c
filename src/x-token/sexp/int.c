@@ -43,6 +43,10 @@ x_satom_t x_sexp_int_read_prim = x_obj_set(x_type_atom_obj, X_OBJ_FLAG_NONE, { .
  * the read pointer and scores the buffer length (or returns NULL if
  * no digits were consumed).
  *
+ * The score is kept current as digits arrive: the span so far is a
+ * whole integer, so a number the input ends on is claimed.  The other
+ * states that consume a character do the same.
+ *
  * @param p_base  Base (execution context).
  * @param p_args  Pair of (self, read-args).
  * @return Self, score, or NULL.
@@ -54,6 +58,7 @@ x_obj_t *x_sexp_int_analyse_digits(x_obj_t *p_base, x_obj_t *p_args)
 		*p_score = x_token_read_arg_score(x_1(p_args));
 
 	if (isdigit(x_bufferlastchar(p_buffer))) {
+		x_firstint(p_score) = x_bufferlen(p_buffer);
 		return p_self;
 	}
 
@@ -83,6 +88,7 @@ x_obj_t *x_sexp_int_analyse_xdigits(x_obj_t *p_base, x_obj_t *p_args)
 		*p_score = x_token_read_arg_score(x_1(p_args));
 
 	if (isxdigit(x_bufferlastchar(p_buffer))) {
+		x_firstint(p_score) = x_bufferlen(p_buffer);
 		return p_self;
 	}
 
@@ -109,9 +115,11 @@ x_obj_t *x_sexp_int_analyse_xdigits(x_obj_t *p_base, x_obj_t *p_args)
 x_obj_t *x_sexp_int_analyse_base(x_obj_t *p_base, x_obj_t *p_args)
 {
 	x_obj_t *p_self = x_0(p_args),
-		*p_buffer = x_token_read_arg_buffer(x_1(p_args));
+		*p_buffer = x_token_read_arg_buffer(x_1(p_args)),
+		*p_score = x_token_read_arg_score(x_1(p_args));
 
 	if (x_lib_strchr("Xx", x_bufferlastchar(p_buffer))) {
+		x_firstint(p_score) = x_bufferlen(p_buffer);
 		return x_next_state(p_self, &x_sexp_int_analyse_xdigits_prim);
 	}
 
@@ -132,9 +140,11 @@ x_obj_t *x_sexp_int_analyse_base(x_obj_t *p_base, x_obj_t *p_args)
 x_obj_t *x_sexp_int_analyse_prefix(x_obj_t *p_base, x_obj_t *p_args)
 {
 	x_obj_t *p_self = x_0(p_args),
-		*p_buffer = x_token_read_arg_buffer(x_1(p_args));
+		*p_buffer = x_token_read_arg_buffer(x_1(p_args)),
+		*p_score = x_token_read_arg_score(x_1(p_args));
 
 	if ('0' == x_bufferlastchar(p_buffer)) {
+		x_firstint(p_score) = x_bufferlen(p_buffer);
 		return x_next_state(p_self, &x_sexp_int_analyse_base_prim);
 	}
 

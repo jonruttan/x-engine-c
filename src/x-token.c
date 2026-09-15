@@ -191,20 +191,16 @@ x_obj_t *x_token_analyse(x_obj_t *p_base, x_obj_t *p_args, x_int_t *p_variant)
 			x_restobj(p_score) = (x_obj_t *)variant;
 
 			for (;;) {
-
-				/* EOF for readonly buffers — don't reset,
-				 * let auto-score compute from bufferlen. */
-				if ((x_obj_flags(p_buffer) & X_OBJ_FLAG_RO) && x_buffereof(p_buffer)) {
-					break;
-				}
-
 				p_bw = x_bufferwrite(p_buffer);
 
+				/* End of input: nothing arrived.  The read mark stays
+				 * where the handler left it, so the claim below can
+				 * see what it consumed.  A read-only buffer ends the
+				 * moment it is exhausted; a stream ends when its
+				 * source does, which the buffer latches. */
 				if (x_obj_isnil(p_base, x_type_buffer_read_text(p_base, (x_obj_t *)read_args))
 					&& x_bufferwrite(p_buffer) == p_bw)
 				{
-					x_bufferread(p_buffer) = x_bufferval(p_buffer);
-
 					break;
 				}
 
@@ -241,10 +237,12 @@ x_obj_t *x_token_analyse(x_obj_t *p_base, x_obj_t *p_args, x_int_t *p_variant)
 				x_firstobj((x_obj_t *)analyse_root) = p_analyse;
 			}
 
-			/* EOF auto-score: if chars were consumed and a score
-			 * was set (via set-cell-int! side effect on first
-			 * match), use the sign from the partial score to
-			 * compute final score from total consumed. */
+			/* The claim at end of input.  A handler that set the score
+			 * while still consuming has said the span so far is a whole
+			 * token, so when the input ends under it that span is its
+			 * claim, with the sign it gave.  A handler that scores only
+			 * on its terminator claims nothing here: a type that needs
+			 * its closer stays unclaimed at the end of a source. */
 			i_consumed = x_bufferlen(p_buffer);
 
 			if (i_consumed > 0 && x_firstint(p_score) != 0) {

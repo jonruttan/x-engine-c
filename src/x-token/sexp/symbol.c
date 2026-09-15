@@ -30,6 +30,9 @@ x_satom_t x_sexp_symbol_analyse_prim = x_obj_set(x_type_atom_obj, X_OBJ_FLAG_NON
  * the buffer length is scored as a negative value so that more
  * specific types (which score positively) always win ties.
  *
+ * The score is kept current while reading: every non-delimiter run is a
+ * symbol as it stands, so a name the input ends on is claimed as one.
+ *
  * @param p_base  Base (execution context).
  * @param p_args  Read-args containing the token buffer and score.
  * @return The args (keep reading), score (on delimiter), or NULL (empty).
@@ -40,6 +43,7 @@ x_obj_t *x_sexp_symbol_analyse(x_obj_t *p_base, x_obj_t *p_args)
 		*p_score = x_token_read_arg_score(p_args);
 
 	if (x_obj_isnil(p_base, x_token_delimit(p_base, p_args))) {
+		x_firstint(p_score) = -x_bufferlen(p_buffer);
 		return p_args;
 	}
 

@@ -526,6 +526,43 @@ static char *test_token_read_ro_eof(void)
 	return NULL;
 }
 
+/* A STREAM that ends under a running score yields the token, as a
+ * read-only buffer does: the analyse loop keeps the consumed span at end
+ * of input for both.  The sentinel is what the old loop answered, having
+ * rewound the span away. */
+static char *test_token_read_stream_eof(void)
+{
+	x_obj_t *p_base = x_eval_make(NULL, NULL),
+		*p_base2 = x_eval_make(NULL, NULL),
+		*p_type, *p_args, *p_buffer, *p_obj;
+	x_char_t buffer[32];
+	struct x_type_t type_autoscore = {
+		.p_name = x_mkatom(p_base, (void *)"AUTOSCORE"),
+		.p_analyse = (x_obj_t *)analyse_autoscore_prim,
+		.p_read = (x_obj_t *)read_catchall_prim
+	};
+
+	p_type = x_type_struct_make(p_base, type_autoscore);
+	x_eval_type_alist_extend(p_base2, p_type);
+
+	helper_file_buffer_ptr[TEST_HELPER_FILE_STDIN] = "AB";
+	helper_file_buffer_remaining[TEST_HELPER_FILE_STDIN] = 2;
+	helper_file_reset();
+
+	p_buffer = x_mkbufferown(p_base, buffer);
+	p_args = x_mkpair(p_base, p_buffer, p_base);
+
+	p_obj = x_token_read(p_base2, p_args);
+	_it_should("a stream ending under a running score yields the token",
+		p_obj != (x_obj_t *)x_token_eof_prim && ! x_obj_isnil(p_base, p_obj));
+
+	helper_file_buffer_remaining[TEST_HELPER_FILE_STDIN] = TEST_HELPER_FILE_UNDEFINED;
+	test_cleanup(p_base);
+	test_cleanup(p_base2);
+
+	return NULL;
+}
+
 /* THE VARIANT CHANNEL (x-token.h).  VARIANT accepts one 'K' and declares variant 7
  * through the cell the analyse loop hangs off the score's rest; NOVARIANT
  * accepts one 'N' and declares nothing.  Both readers answer the variant
@@ -629,6 +666,7 @@ static char *run_tests() {
 	_run_test(test_token_read_eof);
 	_run_test(test_token_read_null_reader);
 	_run_test(test_token_read_ro_eof);
+	_run_test(test_token_read_stream_eof);
 	_run_test(test_token_read_variant);
 
 	return NULL;

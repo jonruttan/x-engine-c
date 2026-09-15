@@ -44,6 +44,9 @@ static int hex_digit(x_char_t c)
 	(x_obj_isnil(p_base, x_callable_state(self)) \
 		? (x_obj_t *)(dflt) : x_callable_state(self))
 
+/** The variant cell on the score's rest (x-token.h). */
+#define x_str_variant(score)		x_firstint(x_restobj(score))
+
 /**
  * Analyse state 1: match the opening double-quote.
  *
@@ -54,9 +57,16 @@ static int hex_digit(x_char_t c)
 x_obj_t *x_sexp_str_analyse1(x_obj_t *p_base, x_obj_t *p_args)
 {
 	x_obj_t *p_self = x_0(p_args),
-		*p_buffer = x_token_read_arg_buffer(x_1(p_args));
+		*p_buffer = x_token_read_arg_buffer(x_1(p_args)),
+		*p_score = x_token_read_arg_score(x_1(p_args));
 
 	if (0 == x_lib_strncmp(X_SEXP_STR_PRE_STR, x_bufferval(p_buffer), X_SEXP_STR_PRE_STR_LEN)) {
+		/* The literal is open.  The score is kept current from here and
+		 * the variant says the closer has not arrived, so input ending
+		 * inside the literal is claimed and the reader raises on it,
+		 * rather than the text vanishing. */
+		x_firstint(p_score) = x_bufferlen(p_buffer);
+		x_str_variant(p_score) = X_SEXP_STR_VARIANT_OPEN;
 		return x_next_state(p_self, &x_sexp_str_analyse2_prim);
 	}
 
@@ -79,6 +89,8 @@ x_obj_t *x_sexp_str_analyse2(x_obj_t *p_base, x_obj_t *p_args)
 		*p_buffer = x_token_read_arg_buffer(x_1(p_args)),
 		*p_score = x_token_read_arg_score(x_1(p_args));
 
+	x_firstint(p_score) = x_bufferlen(p_buffer);
+
 	/* Backslash: enter escape state — next char consumed unconditionally */
 	if (*(x_bufferread(p_buffer) - 1) == '\\') {
 		return x_next_state(p_self, &x_sexp_str_analyse3_prim);
@@ -88,7 +100,7 @@ x_obj_t *x_sexp_str_analyse2(x_obj_t *p_base, x_obj_t *p_args)
 	if (0 == x_lib_strncmp(X_SEXP_STR_POST_STR,
 			x_bufferread(p_buffer) - X_SEXP_STR_PRE_STR_LEN,
 			X_SEXP_STR_POST_STR_LEN)) {
-		x_firstint(p_score) = x_bufferlen(p_buffer);
+		x_str_variant(p_score) = 0;
 		return p_score;
 	}
 
@@ -107,8 +119,10 @@ x_obj_t *x_sexp_str_analyse2(x_obj_t *p_base, x_obj_t *p_args)
  */
 x_obj_t *x_sexp_str_analyse3(x_obj_t *p_base, x_obj_t *p_args)
 {
-	x_obj_t *p_self = x_0(p_args);
-	(void)p_self;
+	x_obj_t *p_buffer = x_token_read_arg_buffer(x_1(p_args)),
+		*p_score = x_token_read_arg_score(x_1(p_args));
+
+	x_firstint(p_score) = x_bufferlen(p_buffer);
 	return (x_obj_t *)&x_sexp_str_analyse2_prim;
 }
 
@@ -125,12 +139,22 @@ x_obj_t *x_sexp_str_analyse3(x_obj_t *p_base, x_obj_t *p_args)
  */
 x_obj_t *x_sexp_str_read(x_obj_t *p_base, x_obj_t *p_args)
 {
-	x_obj_t *p_buffer = x_token_read_arg_buffer(p_args);
+	x_obj_t *p_buffer = x_token_read_arg_buffer(p_args),
+		*p_variant = x_token_read_arg_variant(p_args);
 	x_char_t *raw = x_bufferval(p_buffer) + X_SEXP_STR_PRE_STR_LEN;
-	size_t len = x_bufferlen(p_buffer) - X_SEXP_STR_PRE_STR_LEN
+	size_t len, i, j;
+	x_char_t *s;
+
+	/* The analyser hands over an open literal only when the input ended
+	 * inside it. */
+	if ( ! x_obj_isnil(p_base, p_variant)
+		&& x_atomint(p_variant) == X_SEXP_STR_VARIANT_OPEN) {
+		x_eval_error(p_base, (x_char_t *)"Unterminated input", NULL);
+	}
+
+	len = x_bufferlen(p_buffer) - X_SEXP_STR_PRE_STR_LEN
 		- X_SEXP_STR_POST_STR_LEN;
-	x_char_t *s = x_lib_strndup(raw, len);
-	size_t i, j;
+	s = x_lib_strndup(raw, len);
 
 	/* Unescape in-place (result is always <= source length) */
 	for (i = 0, j = 0; i < len; i++, j++) {
