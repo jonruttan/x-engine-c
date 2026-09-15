@@ -34,13 +34,46 @@ x_obj_t *x_env_make(x_obj_t *p_base, x_obj_t *p_parent)
 }
 
 /**
+ * The base's own symbol spelled like @p p_sym, or NULL.
+ *
+ * Symbols intern per base, so a symbol read or made in another base is a
+ * different object from this base's symbol of the same spelling.  The
+ * intern table answers which object this base uses for the spelling.
+ *
+ * @param p_base  x_obj_t* -- Base (execution context)
+ * @param p_sym   x_obj_t* -- A symbol, this base's or another's
+ * @return x_obj_t* -- This base's symbol for the spelling, or NULL when
+ *                     it has none
+ */
+static x_obj_t *x_env_own_symbol(x_obj_t *p_base, x_obj_t *p_sym)
+{
+	/* x_type_symbol_find reads the name through the first argument's
+	 * string slot, which a symbol has. */
+	x_spair_t args = x_obj_set(NULL, X_OBJ_FLAG_NONE, { p_sym }, { NULL });
+	x_obj_t *p_node = x_type_symbol_find(p_base, (x_obj_t *)args);
+
+	return x_obj_isnil(p_base, p_node) ? NULL : x_firstobj(p_node);
+}
+
+/**
  * The cell binding @p p_sym in @p p_env or an ancestor.
  *
  * Walks from @p p_env to the root: an environment with a parent searches
- * its alist of @c (name . value) cells by symbol identity (symbols are
- * interned per base); the root searches its tree.  The first hit wins,
- * so a child's binding shadows a parent's.  This is the whole of symbol
- * lookup -- x_type_symbol_eval and `set!` call nothing else.
+ * its alist of @c (name . value) cells by symbol identity; the root
+ * searches its tree, also by identity.  The first hit wins, so a child's
+ * binding shadows a parent's.  This is the whole of symbol lookup --
+ * x_type_symbol_eval and `set!` call nothing else.
+ *
+ * Symbols intern per base, and a name is found by identity, not by
+ * spelling: a base's own symbol finds only what was bound under it, so a
+ * name the host bound into a child under the host's symbol is not found
+ * by the child's symbol of the same spelling.  A FOREIGN symbol -- one
+ * interned in another base, as every symbol of a form the host read and
+ * evaluates in a child is -- has no identity here, so it stands for this
+ * base's own symbol of its spelling, and that is what is looked up.  That
+ * is what lets `(base eval B (lit (+ 2 3)))` hand a child the host's `+`
+ * and reach the child's binding of its own `+`.  The retry runs only when
+ * the identity lookup at the root missed.
  *
  * @param p_base  x_obj_t* -- Base (execution context)
  * @param p_env   x_obj_t* -- The environment to start from
@@ -49,7 +82,7 @@ x_obj_t *x_env_make(x_obj_t *p_base, x_obj_t *p_parent)
  */
 x_obj_t *x_env_lookup(x_obj_t *p_base, x_obj_t *p_env, x_obj_t *p_sym)
 {
-	x_obj_t *p_cell, *p_entry;
+	x_obj_t *p_cell, *p_entry, *p_own;
 
 	for (; ! x_obj_isnil(p_base, p_env); p_env = x_env_parent(p_env)) {
 		if (x_env_isroot(p_base, p_env)) {
@@ -57,6 +90,15 @@ x_obj_t *x_env_lookup(x_obj_t *p_base, x_obj_t *p_env, x_obj_t *p_sym)
 				x_env_bindings(p_env), p_sym);
 			if ( ! x_obj_isnil(p_base, p_entry)) {
 				return p_entry;
+			}
+
+			p_own = x_env_own_symbol(p_base, p_sym);
+			if (p_own != NULL && p_own != p_sym) {
+				p_entry = x_alist_bst_lookup(p_base,
+					x_env_bindings(p_env), p_own);
+				if ( ! x_obj_isnil(p_base, p_entry)) {
+					return p_entry;
+				}
 			}
 			continue;
 		}

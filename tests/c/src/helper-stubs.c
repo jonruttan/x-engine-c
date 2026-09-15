@@ -86,6 +86,13 @@ x_obj_t *x_make_symbol(x_obj_t *p_base, x_obj_flag_t flags,
 	x_char_t *s) { return NULL; }
 #endif
 
+/* x_env_lookup asks the intern table for a base's own symbol when an
+ * identity lookup at the root misses (x-env.c).  A spec without the symbol
+ * type never gets that far and links this instead. */
+#if defined(STUB_X_SYMBOL) || defined(STUB_X_SYMBOL_FIND)
+x_obj_t *x_type_symbol_find(x_obj_t *p_base, x_obj_t *p_args) { return NULL; }
+#endif
+
 #ifdef STUB_X_PRIM_REGISTER
 x_obj_t *x_prim_core_register(x_obj_t *p_base, x_obj_t *p_args) { return p_base; }
 x_obj_t *x_prim_arith_register(x_obj_t *p_base, x_obj_t *p_args) { return p_base; }

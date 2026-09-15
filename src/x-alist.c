@@ -69,11 +69,15 @@ x_obj_t *x_alist_assoc(x_obj_t *p_base, x_obj_t *p_args)
 }
 
 /**
- * BST lookup by symbol pointer.
+ * BST lookup by symbol identity.
  *
- * Searches the persistent BST for an entry matching p_sym. Tries
- * pointer equality first (fast path), then falls back to strcmp
- * for traversal direction. Node structure: (entry . (left . right)).
+ * Searches the tree for the entry whose key IS p_sym.  A hit is pointer
+ * equality and nothing else: names are found by identity, not by
+ * spelling, so a same-spelled symbol interned in another base is another
+ * name and misses.  The spelling only steers the walk -- smaller to the
+ * left, greater to the right, and an equal spelling that is not the same
+ * object counts as greater, which is where x_alist_bst_insert put it.
+ * Node structure: (entry . (left . right)).
  *
  * @param p_base  x_obj_t* -- Base (execution context)
  * @param p_tree  x_obj_t* -- BST root node, or NULL
@@ -99,13 +103,6 @@ x_obj_t *x_alist_bst_lookup(x_obj_t *p_base, x_obj_t *p_tree,
 		}
 		cmp = x_lib_strcmp(x_symbolval(p_sym),
 			x_symbolval(x_firstobj(p_entry)));
-		if (cmp == 0) {
-#ifdef X_PROFILE
-			if (x_base_isset(p_base))
-				x_atomint(x_firstobj(x_eval_field_profile_bst_hits(p_base)))++;
-#endif
-			return p_entry;
-		}
 		p_children = x_restobj(p_tree);
 		p_tree = (cmp < 0)
 			? x_firstobj(p_children)
@@ -141,11 +138,14 @@ static x_obj_t *bst_pair(x_obj_t *p_base, x_obj_t *a, x_obj_t *b)
 /**
  * In-place BST insert into the global env tree.
  *
- * MUTATES the tree in place; every captured snapshot of the root (a
- * closure's env) sees the new entry, which is required: a top-level
- * (def ...) must become visible to fn closures created before it.
- * On a duplicate key the existing node's value is overwritten.  The
- * returned root equals the input root except when the tree was empty
+ * MUTATES the tree in place; every environment whose chain reaches the
+ * root sees the new entry, which is required: a top-level (def ...) must
+ * become visible to fn closures created before it.  The key is the symbol
+ * object: an entry for the SAME object replaces the old one, and an entry
+ * for a same-spelled but different object -- one interned in another base
+ * -- is another name and gets its own node, to the right of the first, the
+ * side lookup takes for an equal spelling that is not the same object.
+ * The returned root equals the input root except when the tree was empty
  * (the caller must then store the returned first node).
  *
  * @note NOT path-copying.  The previous implementation returned a new
@@ -162,7 +162,7 @@ static x_obj_t *bst_pair(x_obj_t *p_base, x_obj_t *a, x_obj_t *b)
  *                     was empty)
  *
  * @see x_alist_bst_lookup
- * @see x_eval_field_env_global_tree
+ * @see x_env_bind
  */
 x_obj_t *x_alist_bst_insert(x_obj_t *p_base, x_obj_t *p_tree,
 	x_obj_t *p_entry)
@@ -193,13 +193,9 @@ x_obj_t *x_alist_bst_insert(x_obj_t *p_base, x_obj_t *p_tree,
 	cmp = x_lib_strcmp(x_symbolval(x_firstobj(p_entry)),
 		x_symbolval(x_firstobj(x_firstobj(p_tree))));
 
-	if (cmp == 0) {
-		x_firstobj(p_tree) = p_entry;
-		return p_tree;
-	}
-
 	/* Walk into the appropriate child; either recurse (mutates the
-	 * subtree in place) or attach a new leaf directly. */
+	 * subtree in place) or attach a new leaf directly.  An equal spelling
+	 * that was not the same object above goes right. */
 	if (cmp < 0) {
 		if (x_obj_isnil(p_base, x_firstobj(p_children))) {
 			x_firstobj(p_children) = bst_pair(p_base, p_entry,

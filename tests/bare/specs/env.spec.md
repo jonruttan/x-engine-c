@@ -129,3 +129,56 @@ needs:
 ```
 ---
     *** ERROR: kept
+
+### a name is found by identity, not by spelling
+
+Symbols intern per base. A name the host binds in a child under its own
+symbol is not found by the child's symbol of the same spelling: the
+lookup compares objects, and the same-spelled symbol is another name.
+The conformance suite in x-lang states this law; the engine's own smoke
+keeps a copy, because the root's bindings are a tree that steers by
+spelling, and a spelling hit would satisfy every other test.
+
+```scheme
+(include "tools/contract/base-paths.x")
+(def %assoc (fn (self k l)
+  (match ((eq? l ()) ())
+         ((eq? (first (first l)) k) (first l))
+         (#t (self k (rest l))))))
+(def %walk (fn (self steps o)
+  (match ((eq? steps ()) o)
+         ((eq? (first steps) (lit f)) (self (rest steps) (first o)))
+         (#t (self (rest steps) (rest o))))))
+(def %cat (first (%walk (rest (rest (%assoc (lit prims) %base-paths))) (%base))))
+(def %coord (fn (_ ns nm) (rest (%assoc nm (rest (%assoc ns %cat))))))
+(def b ((%coord (lit base) (lit make))))
+((%coord (lit base) (lit bind)) b (lit answer) 42)
+((%coord (lit base) (lit bind)) b (lit mk) (%coord (lit str) (lit ->sym)))
+(match ((guard (e #f) ((%coord (lit base) (lit eval)) b (lit (eval! (mk "answer"))))) (error "found by spelling")) (#t (error "ok")))
+```
+---
+    *** ERROR: ok
+
+### a form the host read evaluates in a child: its symbols stand for the child's own
+
+The host's `+` is not the child's `+` object, and the child's binding is
+keyed by the child's. A foreign symbol has no identity in the child, so it
+stands for the child's own symbol of its spelling, and the form runs.
+
+```scheme
+(include "tools/contract/base-paths.x")
+(def %assoc (fn (self k l)
+  (match ((eq? l ()) ())
+         ((eq? (first (first l)) k) (first l))
+         (#t (self k (rest l))))))
+(def %walk (fn (self steps o)
+  (match ((eq? steps ()) o)
+         ((eq? (first steps) (lit f)) (self (rest steps) (first o)))
+         (#t (self (rest steps) (rest o))))))
+(def %cat (first (%walk (rest (rest (%assoc (lit prims) %base-paths))) (%base))))
+(def %coord (fn (_ ns nm) (rest (%assoc nm (rest (%assoc ns %cat))))))
+(def b ((%coord (lit base) (lit make))))
+(match ((eq? ((%coord (lit base) (lit eval)) b (lit (+ 2 3))) 5) (error "ok")) (#t (error "no")))
+```
+---
+    *** ERROR: ok

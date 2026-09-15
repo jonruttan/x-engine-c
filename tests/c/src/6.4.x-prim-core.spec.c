@@ -262,6 +262,63 @@ static char *test_core_env_root(void)
 	return NULL;
 }
 
+/* A name is found by identity, not by spelling.  Symbols intern per base,
+ * so a host's symbol bound into a child under the host's own symbol is not
+ * found by the child's symbol of that spelling; and a foreign symbol, one
+ * interned elsewhere, stands for the base's own symbol of its spelling,
+ * which is what lets a form the host read evaluate in a child. */
+static char *test_core_env_root_identity(void)
+{
+	x_obj_t *p_base, *p_host, *p_third, *p_root, *p_own, *p_foreign, *p_other;
+	x_obj_t *p_entry_foreign, *p_entry_own;
+
+	p_base = x_eval_make(NULL, NULL);
+	x_prim_register(p_base, NULL);
+	p_host = x_eval_make(NULL, NULL);
+	x_prim_register(p_host, NULL);
+	p_third = x_eval_make(NULL, NULL);
+	x_prim_register(p_third, NULL);
+	p_root = x_eval_field_env_root(p_base);
+	p_own = x_mksymbol(p_base, "twin");
+	p_foreign = x_mksymbol(p_host, "twin");
+	p_other = x_mksymbol(p_third, "twin");
+	_it_should("three bases intern three objects for one spelling",
+		p_own != p_foreign && p_foreign != p_other && p_own != p_other);
+
+	/* The host binds into the child under the host's symbol. */
+	x_env_bind(p_base, p_root, p_foreign,
+		x_mksatom(p_base, X_OBJ_FLAG_NONE, (x_int_t)1));
+	p_entry_foreign = x_env_lookup(p_base, p_root, p_foreign);
+	_it_should("the host's symbol finds what it bound",
+		p_entry_foreign != NULL && x_atomint(x_restobj(p_entry_foreign)) == 1);
+	_it_should("the base's own symbol does not find the host-bound name",
+		x_env_lookup(p_base, p_root, p_own) == NULL);
+
+	/* The base binds under its own symbol: a second node beside the first. */
+	x_env_bind(p_base, p_root, p_own,
+		x_mksatom(p_base, X_OBJ_FLAG_NONE, (x_int_t)2));
+	p_entry_own = x_env_lookup(p_base, p_root, p_own);
+	_it_should("the own symbol gets its own binding beside the foreign one",
+		p_entry_own != NULL && p_entry_own != p_entry_foreign
+		&& x_atomint(x_restobj(p_entry_own)) == 2
+		&& x_env_lookup(p_base, p_root, p_foreign) == p_entry_foreign);
+	_it_should("a symbol from a third base stands for the base's own",
+		x_env_lookup(p_base, p_root, p_other) == p_entry_own);
+	_it_should("a symbol the base has no spelling for is unbound",
+		x_env_lookup(p_base, p_root, x_mksymbol(p_host, "elsewhere")) == NULL);
+
+	x_env_bind(p_base, p_root, p_own,
+		x_mksatom(p_base, X_OBJ_FLAG_NONE, (x_int_t)3));
+	_it_should("rebinding the own symbol updates its node only",
+		x_atomint(x_restobj(x_env_lookup(p_base, p_root, p_own))) == 3
+		&& x_atomint(x_restobj(x_env_lookup(p_base, p_root, p_foreign))) == 1);
+
+	test_cleanup(p_third);
+	test_cleanup(p_host);
+	test_cleanup(p_base);
+	return NULL;
+}
+
 static char *test_core_fn(void)
 {
 	x_obj_t *p_base, *p_args, *p_result;
@@ -929,6 +986,7 @@ static char *run_tests() {
 	_run_test(test_core_pair_first_rest);
 	_run_test(test_core_def_set);
 	_run_test(test_core_env_root);
+	_run_test(test_core_env_root_identity);
 	_run_test(test_core_fn);
 	_run_test(test_core_op);
 	_run_test(test_core_eval);
