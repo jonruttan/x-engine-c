@@ -11,6 +11,30 @@ alongside the library changes they landed with.
 [x-lang]: https://github.com/jonruttan/x-lang
 [x-changelog]: https://github.com/jonruttan/x-lang/blob/main/CHANGELOG.md
 
+## 0.2.12 — 2026-09-16
+
+**A guard's handler carries the handler it displaced** ([#54]). Installing a
+guard's handler took the previous handler out of the error-handler slot and
+kept it in a C local, which the collector cannot see. A collect inside the
+body swept the enclosing guard's handler, and the base-eval handler under it
+when the guard ran inside `(base eval ...)`; the pop on the way out wrote the
+freed pair back into the slot, and the next raise longjmp'd through freed
+memory. The handler's saved-environment cell had a nil slot beside the
+environment, and it now holds the displaced handler, so every installed
+handler stays reachable from the slot for as long as the innermost one is. A
+base-eval handler leaves the slot nil, since it is consed onto the target's
+stack and the one under it is reachable through the stack cell. The shortest
+program that showed it is a nested guard whose body collects and then raises
+to the outer guard, a segfault on 0.2.11. Found through [x-lang#728], whose
+sweep after each module load during an image write ran inside the tower's
+guard around its JIT probe and segfaulted the x-base, xe and rn writers on
+macOS CI. Covered by a C spec beside the collect-in-load case, which asks the
+allocation chain whether the enclosing handler and its saved-environment cell
+survived a collect inside a guard body.
+
+[#54]: https://github.com/jonruttan/x-engine-c/pull/54
+[x-lang#728]: https://github.com/jonruttan/x-lang/pull/728
+
 ## 0.2.11 — 2026-09-15
 
 **A name is found by identity, and a foreign symbol stands for the base's
