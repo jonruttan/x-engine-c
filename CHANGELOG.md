@@ -11,6 +11,22 @@ alongside the library changes they landed with.
 [x-lang]: https://github.com/jonruttan/x-lang
 [x-changelog]: https://github.com/jonruttan/x-lang/blob/main/CHANGELOG.md
 
+## 0.2.13 — 2026-09-16
+
+**`read` answers the EOF sentinel at end of input** ([#57]). The primitive
+converted the reader's sentinel to nil before returning it, and nil is also
+what a top-level `()` reads as, so a loop that read until nil could not tell
+end of input from a `()` in its input and stopped at the first one. `read`
+now answers the sentinel, the value x-lang binds as `%token-eof`, as
+`repl-read` already did. x-lang's `(Io read)` answers nil at end of input
+for the callers that loop until nil; the library's other callers of the
+primitive, and x-sweet's two readers ([x-sweet#15]), stop at the sentinel.
+Covered by a C case: a literal `()` reads as nil, and the read after it, at
+end of input, answers the sentinel.
+
+[#57]: https://github.com/jonruttan/x-engine-c/pull/57
+[x-sweet#15]: https://github.com/jonruttan/x-sweet/pull/15
+
 ## 0.2.12 — 2026-09-16
 
 **A guard's handler carries the handler it displaced** ([#54]). Installing a
