@@ -76,22 +76,24 @@ static x_obj_t *x_prim_read_expr_raw(x_obj_t *p_base)
 
 /** Read one s-expression from stdin.
  *  x-lang: (read)
- *  The EOF sentinel is mapped to nil at this boundary: `(Io read)`
- *  consumers loop on (null? ...) as the EOF test, and for them `()`
- *  and end-of-input may stay conflated as before.
+ *
+ *  Answers the EOF sentinel at end of input, the value x-lang binds as
+ *  %token-eof.  A top-level `()` reads as nil, so end of input has to be
+ *  a value of its own for a loop to tell the two apart: a loop that stopped
+ *  at nil stopped at the first `()` in its input.  Callers that want nil at
+ *  end of input read through x-lang's `(Io read)`, which answers it.
+ *
  *  @param p_base  Base (execution context).
  *  @param p_args  Unused.
- *  @return Parsed s-expression, or NULL on EOF.
- *  @see x_prim_read_char
+ *  @return Parsed s-expression, NULL for a nil value, or the EOF sentinel
+ *          at end of input.
+ *  @see x_prim_repl_read, x_prim_read_char
  */
 static x_obj_t *x_prim_read_expr(x_obj_t *p_base, x_obj_t *p_args)
 {
-	x_obj_t *p_obj;
 	(void)p_args;
 
-	p_obj = x_prim_read_expr_raw(p_base);
-
-	return p_obj == (x_obj_t *)x_token_eof_prim ? NULL : p_obj;
+	return x_prim_read_expr_raw(p_base);
 }
 
 /** Read one character from stdin.

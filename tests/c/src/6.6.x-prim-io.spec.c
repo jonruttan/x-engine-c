@@ -152,6 +152,40 @@ static char *test_io_read_char(void)
 	return NULL;
 }
 
+/*
+ * End of input is a value of its own.  A literal () reads as nil, and the
+ * read after it, at end of input, answers the EOF sentinel -- so a loop can
+ * read a () and keep going, and still stop where the input ends.
+ */
+static char *test_io_read_expr_eof(void)
+{
+	x_obj_t *p_base, *p_result;
+	x_char_t buffer[32];
+
+	p_base = x_eval_make(NULL, NULL);
+	x_prim_register(p_base, NULL);
+
+	x_type_whitespace_register(p_base, p_base);
+	x_type_list_register(p_base, p_base);
+
+	helper_file_buffer_ptr[TEST_HELPER_FILE_STDIN] = "()\n";
+	helper_file_buffer_remaining[TEST_HELPER_FILE_STDIN] = 3;
+	helper_file_reset();
+	x_eval_buffer_push(p_base, x_mkbuffer(p_base, buffer));
+
+	p_result = x_prim_read_expr(p_base, NULL);
+	_it_should("a literal () reads as nil",
+		p_result == NULL);
+
+	p_result = x_prim_read_expr(p_base, NULL);
+	_it_should("the read at end of input answers the EOF sentinel",
+		p_result == (x_obj_t *)x_token_eof_prim);
+
+	helper_file_buffer_remaining[TEST_HELPER_FILE_STDIN] = TEST_HELPER_FILE_UNDEFINED;
+	test_cleanup(p_base);
+	return NULL;
+}
+
 static char *test_io_read_expr(void)
 {
 	x_obj_t *p_base, *p_result;
@@ -291,6 +325,7 @@ static char *run_tests() {
 	_run_test(test_io_clock);
 	_run_test(test_io_heap_mark_sweep_collect);
 	_run_test(test_io_read_expr);
+	_run_test(test_io_read_expr_eof);
 	_run_test(test_io_repl);
 
 	return NULL;
