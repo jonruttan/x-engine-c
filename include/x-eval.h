@@ -149,7 +149,9 @@ x_obj_t *x_eval_type_alist_assoc(x_obj_t *p_base, x_obj_t *p_args);
 /** Push a buffer onto the input buffer stack. */
 x_obj_t *x_eval_buffer_push(x_obj_t *p_base, x_obj_t *p_buffer);
 
-x_obj_t *x_eval_load(x_obj_t *p_base, x_obj_t *p_args);
+/** Evaluate every form read from the input buffer's head in @p p_env,
+ *  nil for the root. */
+x_obj_t *x_eval_load(x_obj_t *p_base, x_obj_t *p_env);
 
 /** Signal an error with the given message and irritant object. */
 void x_eval_error(x_obj_t *p_base, x_char_t *message, x_obj_t *p_obj);

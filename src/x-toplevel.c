@@ -18,16 +18,19 @@
  * Enter the top-level bracket: what a form evaluated at top level sees,
  * whatever environment is current when it is asked for.
  *
- * A top-level form's `def`s must bind in the root, and the closures it
- * makes must capture the root -- not the environment of whatever was being
- * evaluated when the form was asked for.  Two doors ask: x_eval_load, for
+ * A top-level form's `def`s must bind in the environment its file or form
+ * belongs to, and the closures it makes must capture that environment --
+ * not the environment of whatever was being evaluated when the form was
+ * asked for.  That environment is the caller's to name: the root for eval!
+ * and for a plain load, and a module's own environment when a file is
+ * loaded into one.  Two doors ask: x_eval_load, for
  * every form of a file (`include` runs under whatever called it, and its
  * x-level wrapper is a closure), and eval!, for the one form the REPL loop
  * reads (lib/he.x reaches `(repl)` through `(unless %batch? (do (%banner)
  * (repl)))`, so every form typed at the prompt sits under those frames).
  * The bracket is two moves: the save-stack is hidden (nil), so a form sees
  * an empty stack exactly as at the true top level and each x_eval balances
- * its own pushes; and the root is made current.
+ * its own pushes; and the named environment is made current.
  *
  * The displaced state is HEAP: the caller's environment and its save-stack,
  * and for the length of the bracket nothing on the base tree reaches them.
@@ -42,9 +45,10 @@
  *
  * @param p_base  x_obj_t* -- Base (execution context)
  * @param p_t     x_toplevel_t* -- the caller's bracket state, filled here
+ * @param p_env   x_obj_t* -- the environment the bracketed forms evaluate in
  * @see x_toplevel_leave, x_eval_load, x_prim_eval_immediate
  */
-void x_toplevel_enter(x_obj_t *p_base, x_toplevel_t *p_t)
+void x_toplevel_enter(x_obj_t *p_base, x_toplevel_t *p_t, x_obj_t *p_env)
 {
 	int i;
 	x_obj_t **pp_root = x_heap_root_slot(p_base);
@@ -53,7 +57,7 @@ void x_toplevel_enter(x_obj_t *p_base, x_toplevel_t *p_t)
 	x_eval_field_save_stack(p_base) = NULL;
 
 	p_t->p_saved_env = x_eval_field_env(p_base);
-	x_eval_field_env(p_base) = x_eval_field_env_root(p_base);
+	x_eval_field_env(p_base) = p_env;
 
 	/* Pair-typed, as the root chain requires: the mark walk descends only
 	 * spair pairs.  Built at run time in the caller's struct -- every unit

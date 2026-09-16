@@ -1037,7 +1037,8 @@ x_obj_t *x_eval_buffer_push(x_obj_t *p_base, x_obj_t *p_buffer)
  * via x_eval. Returns the result of the last expression.
  *
  * @param p_base  x_obj_t* -- Base (execution context)
- * @param p_args  x_obj_t* -- Unused
+ * @param p_env   x_obj_t* -- The environment the file's forms evaluate in,
+ *                or nil for the root
  * @return x_obj_t* -- Result of the last evaluated expression, or NULL
  *
  * @details Reads from the buffer at the top of the buffer stack
@@ -1049,6 +1050,13 @@ x_obj_t *x_eval_buffer_push(x_obj_t *p_base, x_obj_t *p_buffer)
  *          evaluator including the TCO trampoline.  The result of each
  *          expression is discarded except the last.
  *
+ * @details **The environment.**  A form's `def`s bind in @p p_env and its
+ *          closures capture it, for every form of the file; the caller's
+ *          environment is current again when the load returns.  Nil is
+ *          the root, which is what a library file has always loaded into.
+ *          A module loaded into an environment of its own passes that
+ *          environment, and its names stay there.
+ *
  * @note This is the primary entry point for loading library files.
  *       The shell driver pipes library source via stdin
  *       (@c cat lib/x.x - | ./x-bin).  The core loop reads through the
@@ -1058,7 +1066,7 @@ x_obj_t *x_eval_buffer_push(x_obj_t *p_base, x_obj_t *p_buffer)
  *
  * @see x_eval  -- evaluator called for each expression
  */
-x_obj_t *x_eval_load(x_obj_t *p_base, x_obj_t *p_args)
+x_obj_t *x_eval_load(x_obj_t *p_base, x_obj_t *p_env)
 {
 	x_obj_t *p_buffer = x_firstobj(x_base_field_buffer(p_base));
 	x_obj_t *p_exp, *p_result = NULL;
@@ -1075,7 +1083,8 @@ x_obj_t *x_eval_load(x_obj_t *p_base, x_obj_t *p_args)
 	 * is x_toplevel_enter's to say, once, for this door and for eval!'s.
 	 * One bracket around the whole file, not one per form: a form's defs
 	 * stay on the chain for the forms after it, as they always have. */
-	x_toplevel_enter(p_base, &top);
+	x_toplevel_enter(p_base, &top, x_obj_isnil(p_base, p_env)
+		? x_eval_field_env_root(p_base) : p_env);
 
 	for (;;) {
 		p_exp = x_token_read(p_base, (x_obj_t *)read_args);

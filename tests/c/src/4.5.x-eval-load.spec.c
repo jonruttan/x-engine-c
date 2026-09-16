@@ -152,9 +152,10 @@ static int _on_heap_chain(x_obj_t *p_base, x_obj_t *p_obj)
 }
 
 /*
- * Feed @p src as the file being loaded and run x_eval_load over it.
+ * Feed @p src as the file being loaded and run x_eval_load over it, loading
+ * into @p p_env, nil for the root.
  */
-static x_obj_t *_load(x_obj_t *p_base, x_char_t *src, size_t len)
+static x_obj_t *_load(x_obj_t *p_base, x_char_t *src, size_t len, x_obj_t *p_env)
 {
 	x_obj_t *p_result;
 
@@ -162,7 +163,7 @@ static x_obj_t *_load(x_obj_t *p_base, x_char_t *src, size_t len)
 	helper_file_buffer_remaining[TEST_HELPER_FILE_STDIN] = len;
 	helper_file_reset();
 
-	p_result = x_eval_load(p_base, p_base);
+	p_result = x_eval_load(p_base, p_env);
 
 	helper_file_buffer_remaining[TEST_HELPER_FILE_STDIN] = TEST_HELPER_FILE_UNDEFINED;
 
@@ -207,7 +208,7 @@ static char *test_load_keeps_the_includer_across_a_collect(void)
 		x_env_parent(p_frame) == x_eval_field_env_root(p_base)
 		&& x_firstobj(p_binding) == p_sym);
 
-	_load(p_base, src, sizeof(src) - 1);
+	_load(p_base, src, sizeof(src) - 1, NULL);
 
 	_it_should("the env head is the includer's frame again",
 		x_eval_field_env(p_base) == p_frame);
@@ -263,7 +264,7 @@ static char *test_guard_keeps_the_enclosing_handler_across_a_collect(void)
 			x_mkspair(p_base, X_OBJ_FLAG_NONE, NULL, NULL)));
 	x_firstobj(x_eval_field_error_handler(p_base)) = p_outer;
 
-	_load(p_base, src, sizeof(src) - 1);
+	_load(p_base, src, sizeof(src) - 1, NULL);
 
 	_it_should("the slot holds the enclosing handler again",
 		x_firstobj(x_eval_field_error_handler(p_base)) == p_outer);
@@ -298,7 +299,7 @@ static char *test_load_still_binds_top_level_defs_globally(void)
 	x_eval_field_env(p_base) = p_frame;
 	x_tco_env_save(p_base);
 
-	_load(p_base, src, sizeof(src) - 1);
+	_load(p_base, src, sizeof(src) - 1, NULL);
 
 	_it_should("the includer's environment is current again",
 		x_eval_field_env(p_base) == p_frame);
@@ -316,10 +317,47 @@ static char *test_load_still_binds_top_level_defs_globally(void)
 	return NULL;
 }
 
+/*
+ * A load into a given environment: the file's def binds there, the root
+ * gains nothing, and the caller's environment is current again when the
+ * load returns.  This is how a module is loaded into an environment of its
+ * own.
+ */
+static char *test_load_into_an_environment_binds_there(void)
+{
+	x_obj_t *p_base, *p_caller, *p_module, *p_sym, *p_entry;
+	x_char_t buffer[256];
+	static x_char_t src[] = "(def module-local 42)\n";
+
+	p_base = init(NULL, buffer);
+
+	p_caller = x_eval_field_env(p_base);
+	p_module = x_env_make(p_base, x_eval_field_env_root(p_base));
+
+	_load(p_base, src, sizeof(src) - 1, p_module);
+
+	_it_should("the caller's environment is current again",
+		x_eval_field_env(p_base) == p_caller);
+
+	p_sym = x_make_symbol(p_base, X_OBJ_FLAG_NONE, (x_char_t *)"module-local");
+	p_entry = x_env_lookup(p_base, p_module, p_sym);
+	_it_should("the loaded def is bound in the given environment",
+		p_entry != NULL
+		&& ! x_obj_isnil(p_base, x_env_bindings(p_module))
+		&& x_firstobj(x_env_bindings(p_module)) == p_entry
+		&& x_intval(x_restobj(p_entry)) == 42);
+	_it_should("the root does not have it",
+		x_env_lookup(p_base, x_eval_field_env_root(p_base), p_sym) == NULL);
+
+	test_cleanup(p_base);
+	return NULL;
+}
+
 static char *run_tests() {
 	_run_test(test_load_keeps_the_includer_across_a_collect);
 	_run_test(test_guard_keeps_the_enclosing_handler_across_a_collect);
 	_run_test(test_load_still_binds_top_level_defs_globally);
+	_run_test(test_load_into_an_environment_binds_there);
 
 	return NULL;
 }

@@ -220,7 +220,7 @@ static x_obj_t *x_prim_eval_immediate(x_obj_t *p_base, x_obj_t *p_args)
 	 * is itself a closure under the entry's frames, and a def the user
 	 * types must bind for the base. */
 	x_firstobj((x_obj_t *)exp_wrap) = p_expr;
-	x_toplevel_enter(p_base, &top);
+	x_toplevel_enter(p_base, &top, x_eval_field_env_root(p_base));
 	p_result = x_eval(p_base, (x_obj_t *)eval_args);
 	x_toplevel_leave(p_base, &top);
 

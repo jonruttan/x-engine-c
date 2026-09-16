@@ -115,21 +115,31 @@ static x_obj_t *x_prim_syscall(x_obj_t *p_base, x_obj_t *p_args)
 
 #ifdef X_INCLUDE
 /**
- * Load and evaluate a file. x-lang: (include path)
+ * Load and evaluate a file. x-lang: (include path [env])
  *
  * Opens the file at path, pushes a new input state (fd, line counter,
  * read buffer) onto the base stacks, evaluates all expressions via
  * x_eval_load, then pops and restores the previous input state.
  *
+ * With an environment, the file's forms evaluate in it: their defs bind
+ * there and their closures capture it, which is how a module is loaded
+ * into an environment of its own.  Without one they evaluate in the root.
+ * Either way the file is read by the reader, form by form, so its forms
+ * carry the file's id and lines, and reader syntax a form defines applies
+ * to the forms after it.
+ *
  * @param p_base  x_obj_t* -- Base (execution context)
- * @param p_args  x_obj_t* -- Unevaluated args; path is a string
+ * @param p_args  x_obj_t* -- Unevaluated args (path [env]); path is a string
  * @return x_obj_t* -- Result of the last expression in the file
  *
  * @note Emits timing info to stderr when X_PROFILE is defined.
  */
 static x_obj_t *x_prim_include(x_obj_t *p_base, x_obj_t *p_args)
 {
-	x_obj_t *p_path, *p_buffer, *p_result, *p_reg;
+	x_obj_t *p_path, *p_env_arg, *p_env = NULL, *p_buffer, *p_result, *p_reg;
+	x_obj_t **p_cell = x_heap_root_slot(p_base);
+	x_spair_t root = x_obj_set((x_obj_t *)x_type_pair_obj, X_OBJ_FLAG_NONE,
+		{ NULL }, { NULL });
 	int fd;
 	x_int_t file_id;
 	x_char_t *buf;
@@ -140,6 +150,23 @@ static x_obj_t *x_prim_include(x_obj_t *p_base, x_obj_t *p_args)
 #endif
 
 	x_eargs(p_base, p_args, 2, NULL, &p_path);
+
+	/* The environment to load into, when one is given.  It is evaluated
+	 * before anything is pushed, so an error in it leaves the input stacks
+	 * as they were.  The path is rooted across that evaluation: it may be a
+	 * fresh string with no other reference, and the expression may run code
+	 * that collects.  Nothing between here and the load collects, and the
+	 * load makes the environment current, so it needs no root of its own. */
+	p_env_arg = x_11(p_args);
+	if ( ! x_obj_isnil(p_base, p_env_arg)) {
+		x_eval_spine_guard(p_base, p_env_arg);	/* dotted tail (#487) */
+
+		x_restobj((x_obj_t *)root) = p_path;
+		x_heap_root_push(p_cell, root);
+		p_env = x_eval_arg(p_base, x_firstobj(p_env_arg));
+		x_heap_root_pop(p_cell);
+	}
+
 	fd = x_sys_open(x_strval(p_path), 0 /* O_RDONLY */);
 
 	if (fd < 0) {
@@ -191,7 +218,7 @@ static x_obj_t *x_prim_include(x_obj_t *p_base, x_obj_t *p_args)
 #ifdef X_PROFILE
 	t0 = x_sys_clock();
 #endif
-	p_result = x_eval_load(p_base, p_base);
+	p_result = x_eval_load(p_base, p_env);
 #ifdef X_PROFILE
 	t1 = x_sys_clock();
 	err_fd = x_atomint(x_firstobj(x_base_field_fileerr(p_base)));

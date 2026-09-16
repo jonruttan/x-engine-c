@@ -182,3 +182,20 @@ stands for the child's own symbol of its spelling, and the form runs.
 ```
 ---
     *** ERROR: ok
+
+### include with an environment binds the file's definitions there
+
+A file loaded into an environment evaluates every form in it: its defs bind
+there, its closures capture it, and the root gains nothing. That is how a
+module is loaded into an environment of its own.
+
+```scheme
+(def root ((op () e e)))
+(def m (pair () root))
+(include "tests/bare/load-into.x" m)
+(match ((guard (x #f) loaded-into) (error "leaked into the root"))
+       ((= ((eval (lit loaded-reader) m)) 7) (error "bound in the environment"))
+       (#t (error "no")))
+```
+---
+    *** ERROR: bound in the environment
