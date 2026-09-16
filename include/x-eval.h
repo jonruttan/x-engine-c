@@ -77,7 +77,11 @@ extern x_satom_t x_eval_obj;
 /**
  * @defgroup error_handler Error Handler Macros
  * @brief Navigate the error handler pair tree
- *        @c (jmp-ptr (saved-env . nil) error-value . line).
+ *        @c (jmp-ptr (saved-env . previous) error-value . line).
+ *        A guard's handler carries the handler it displaced in the
+ *        previous slot, so every installed handler stays reachable from
+ *        the error_handler slot while the innermost is; a base-eval
+ *        handler leaves it nil and is consed onto the target's stack.
  * @{
  */
 #define x_error_handler_jmp(H)				x_ptrval(x_firstobj(H))

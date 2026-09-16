@@ -235,6 +235,49 @@ static char *test_load_keeps_the_includer_across_a_collect(void)
 }
 
 /*
+ * The same question of a guard.  Installing a guard's handler takes the
+ * enclosing handler out of the error_handler slot, and it used to wait in
+ * a C local -- invisible to the collector -- until the guard's own exit put
+ * it back.  A body that collected swept it, and the pop wrote a freed pair
+ * into the slot for the next raise to longjmp through.  The handler now
+ * carries the handler it displaced, so the enclosing one stays reachable
+ * from the slot for as long as the inner one is.  The enclosing handler
+ * here is built the way guard and base-eval build theirs, with no jump
+ * target: nothing raises, so it is only ever asked whether it survived.
+ */
+static char *test_guard_keeps_the_enclosing_handler_across_a_collect(void)
+{
+	x_obj_t *p_base, *p_outer, *p_saved_env_cell;
+	x_char_t buffer[256];
+	static x_char_t src[] = "(guard (e 1) (heap-collect))\n";
+
+	p_base = init(NULL, buffer);
+	x_callable_bind(p_base, (x_char_t *)"heap-collect", x_prim_heap_collect);
+
+	p_saved_env_cell = x_mkspair(p_base, X_OBJ_FLAG_NONE,
+		x_eval_field_env(p_base), NULL);
+	p_outer = x_mkspair(p_base, X_OBJ_FLAG_NONE,
+		x_mkptr(p_base, NULL),
+		x_mkspair(p_base, X_OBJ_FLAG_NONE,
+			p_saved_env_cell,
+			x_mkspair(p_base, X_OBJ_FLAG_NONE, NULL, NULL)));
+	x_firstobj(x_eval_field_error_handler(p_base)) = p_outer;
+
+	_load(p_base, src, sizeof(src) - 1);
+
+	_it_should("the slot holds the enclosing handler again",
+		x_firstobj(x_eval_field_error_handler(p_base)) == p_outer);
+	_it_should("the enclosing handler survived the collect",
+		_on_heap_chain(p_base, p_outer));
+	_it_should("its saved-environment cell survived the collect",
+		_on_heap_chain(p_base, p_saved_env_cell));
+
+	x_firstobj(x_eval_field_error_handler(p_base)) = NULL;
+	test_cleanup(p_base);
+	return NULL;
+}
+
+/*
  * The other half of the contract, unchanged: with the includer's state
  * parked, a loaded file's top-level def still lands in the ROOT, not in
  * the includer's environment -- the reason the state is displaced at all.
@@ -275,6 +318,7 @@ static char *test_load_still_binds_top_level_defs_globally(void)
 
 static char *run_tests() {
 	_run_test(test_load_keeps_the_includer_across_a_collect);
+	_run_test(test_guard_keeps_the_enclosing_handler_across_a_collect);
 	_run_test(test_load_still_binds_top_level_defs_globally);
 
 	return NULL;
