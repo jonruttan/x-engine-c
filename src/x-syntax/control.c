@@ -140,11 +140,22 @@ static x_obj_t *x_prim_guard(x_obj_t *p_base, x_obj_t *p_args)
 	p_handler_body = x_restobj(p_clause);
 	p_body = x_11(p_args);
 
-	/* Build handler: (jmp-ptr (saved-env . nil) error-value) */
+	/* Build handler: (jmp-ptr (saved-env . previous-handler) error-value).
+	 *
+	 * The previous handler rides in the handler itself, not only in
+	 * p_prev_handler.  Installing this handler takes the previous one
+	 * out of the error_handler slot, and a C local is invisible to the
+	 * collector: a collect inside the body -- a load that sweeps, or a
+	 * program that asks for one -- swept the enclosing guard's handler
+	 * and the base-eval handler under it, and the pop below wrote the
+	 * freed pair back into the slot.  The next raise, or the next mark
+	 * walk from the base's tree, read freed memory.  Kept in the pair,
+	 * the whole chain of installed handlers is reachable from the slot
+	 * for as long as the innermost one is. */
 	p_handler = x_mkspair(p_base, X_OBJ_FLAG_NONE,
 		x_mkptr(p_base, &jmp),
 		x_mkspair(p_base, X_OBJ_FLAG_NONE,
-			x_mkspair(p_base, X_OBJ_FLAG_NONE, x_eval_field_env(p_base), NULL),
+			x_mkspair(p_base, X_OBJ_FLAG_NONE, x_eval_field_env(p_base), p_prev_handler),
 			x_mkspair(p_base, X_OBJ_FLAG_NONE, NULL, NULL)));
 	x_firstobj(x_eval_field_error_handler(p_base)) = p_handler;
 

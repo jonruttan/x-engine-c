@@ -235,7 +235,10 @@ static x_obj_t *x_prim_base_eval(x_obj_t *p_base, x_obj_t *p_args)
 	x_eargs(p_base, p_args, 3, NULL, &p_target, &p_expr);
 
 	/* Build handler pair tree, SAME shape as x_prim_guard's (#253):
-	 * (jmp-ptr . ((saved-env . nil) . (error-value . line))).
+	 * (jmp-ptr . ((saved-env . previous) . (error-value . line))).
+	 * The previous slot is nil here: this handler is consed onto the
+	 * target's stack below, so the one under it stays reachable through
+	 * the stack cell rather than through the handler.
 	 * The x_error_handler_* accessors read saved-env as x_001 -- one
 	 * level below the (env . nil) cell -- so the env must be wrapped in
 	 * that cell.  The old build put the bare env where the cell belongs,
