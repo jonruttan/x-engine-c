@@ -780,6 +780,7 @@ x_obj_t *x_eval_make(x_obj_t *p_base, x_obj_t *p_args)
 	x_firstobj(x_eval_field_profile_gc_runs(p_base)) = atom(0);
 	x_firstobj(x_eval_field_profile_bst_hits(p_base)) = atom(0);
 	x_firstobj(x_eval_field_profile_bst_misses(p_base)) = atom(0);
+	x_firstobj(x_eval_field_profile_env_steps(p_base)) = atom(0);
 	/* The err cell stays NIL here.  The ERR the raise path fills is built
 	 * by x_type_err_register, because building it needs the type registry
 	 * and this function runs before there is one -- x-eval must not depend

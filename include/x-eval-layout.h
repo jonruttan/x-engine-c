@@ -30,6 +30,7 @@
 #define x_eval_field_profile_gc_runs(X)	x_0111(x_1111(x_base_field_profile(X)))	/* cell */
 #define x_eval_field_profile_bst_hits(X)	x_0111(x_1111(x_1(x_base_field_profile(X))))	/* cell */
 #define x_eval_field_profile_bst_misses(X)	x_0111(x_1111(x_11(x_base_field_profile(X))))	/* cell */
+#define x_eval_field_profile_env_steps(X)	x_0111(x_1111(x_111(x_base_field_profile(X))))	/* cell */
 #define x_eval_state(X)	x_111(x_base_field_meta_group(X))
 #define x_eval_field_eval_list(X)	x_0(x_eval_state(X))	/* cell */
 #define x_eval_field_token_cache(X)	x_01(x_eval_state(X))	/* cell */
@@ -46,6 +47,6 @@
 	x_0(x_base(p_base)) = pair(pair(nil, nil), pair(pair(nil, pair(nil, nil)), pair(pair(nil, nil), pair(nil, nil))));
 	x_00(x_base_field_io_group(p_base)) = pair(nil, nil);
 	x_1(x_base_field_io_group(p_base)) = pair(pair(nil, nil), pair(pair(nil, nil), pair(nil, nil)));
-	x_1(x_base_field_profile(p_base)) = pair(pair(nil, nil), pair(pair(nil, nil), pair(pair(nil, nil), pair(pair(nil, nil), pair(pair(nil, nil), pair(pair(nil, nil), pair(pair(nil, nil), pair(pair(nil, nil), pair(pair(nil, nil), nil)))))))));
+	x_1(x_base_field_profile(p_base)) = pair(pair(nil, nil), pair(pair(nil, nil), pair(pair(nil, nil), pair(pair(nil, nil), pair(pair(nil, nil), pair(pair(nil, nil), pair(pair(nil, nil), pair(pair(nil, nil), pair(pair(nil, nil), pair(pair(nil, nil), nil))))))))));
 	x_111(x_base_field_meta_group(p_base)) = pair(pair(nil, nil), pair(pair(nil, nil), pair(pair(nil, nil), pair(pair(nil, nil), pair(pair(nil, nil), pair(pair(nil, nil), pair(pair(nil, nil), pair(pair(nil, nil), pair(nil, nil)))))))));
 #endif /* X_EVAL_BUILD_TREE */

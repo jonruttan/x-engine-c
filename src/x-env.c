@@ -75,6 +75,12 @@ static x_obj_t *x_env_own_symbol(x_obj_t *p_base, x_obj_t *p_sym)
  * and reach the child's binding of its own `+`.  The retry runs only when
  * the identity lookup at the root missed.
  *
+ * Under X_PROFILE, each binding compared in an environment with a parent --
+ * a frame, or a module's environment -- counts one in the base's
+ * profile-env-steps cell.  The root's tree counts its own lookups, in
+ * profile-bst-hits and profile-bst-misses, so the walk to the root is what
+ * this one cell adds.
+ *
  * @param p_base  x_obj_t* -- Base (execution context)
  * @param p_env   x_obj_t* -- The environment to start from
  * @param p_sym   x_obj_t* -- The symbol
@@ -106,6 +112,10 @@ x_obj_t *x_env_lookup(x_obj_t *p_base, x_obj_t *p_env, x_obj_t *p_sym)
 		for (p_cell = x_env_bindings(p_env);
 			! x_obj_isnil(p_base, p_cell);
 			p_cell = x_restobj(p_cell)) {
+#ifdef X_PROFILE
+			if (x_base_isset(p_base))
+				x_atomint(x_firstobj(x_eval_field_profile_env_steps(p_base)))++;
+#endif
 			if (x_firstobj(x_firstobj(p_cell)) == p_sym) {
 				return x_firstobj(p_cell);
 			}
