@@ -44,6 +44,7 @@
   (profile-gc-runs base f r r f f r r r r r r r f)
   (profile-bst-hits base f r r f f r r r r r r r r f)
   (profile-bst-misses base f r r f f r r r r r r r r r f)
+  (profile-env-steps base f r r f f r r r r r r r r r r f)
   (state base f r r r r r)
   (eval-list base f r r r r r f)
   (token-cache base f r r r r r r f)

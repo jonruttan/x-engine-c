@@ -50,7 +50,10 @@
       (pair (cell true)
             (cell false)))))
 
-; --- profile: x-eval's 9 counters appended after x-expr's allocs ---
+; --- profile: x-eval's 10 counters appended after x-expr's allocs ---
+; profile-env-steps counts the bindings x_env_lookup compares on its way to
+; the root: a frame's, and a module environment's.  The root's own lookup is
+; the tree, which bst-hits and bst-misses count.
 (node profile
   (todo allocs)
   (build
@@ -63,7 +66,8 @@
                 (pair (cell profile-gc-runs)
                   (pair (cell profile-bst-hits)
                     (pair (cell profile-bst-misses)
-                          (nil))))))))))))
+                      (pair (cell profile-env-steps)
+                            (nil)))))))))))))
 
 ; --- meta group: x-expr's alloc group, then the state group (was 'extras') ---
 (node meta-group
