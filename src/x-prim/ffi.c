@@ -34,8 +34,19 @@
 #include "x-type/symbol.h"
 
 #include <string.h>  /* memcpy */
-#include <stdio.h>   /* sprintf */
+#include <stdio.h>   /* snprintf, sprintf */
 #include <dlfcn.h>   /* dlopen, dlsym */
+
+/*
+ * snprintf is C99, but Darwin declares it even under -ansi -- and deprecates
+ * sprintf. Strict C89 elsewhere keeps sprintf; "%.15g" fits the buffer.
+ */
+#if defined(__APPLE__) || \
+	(defined(__STDC_VERSION__) && __STDC_VERSION__ >= 199901L)
+#define X_FFI_FMT_DOUBLE(buf, d) snprintf((char *)(buf), sizeof(buf), "%.15g", (d))
+#else
+#define X_FFI_FMT_DOUBLE(buf, d) sprintf((char *)(buf), "%.15g", (d))
+#endif
 
 /**
  * @name Double Bit-Pattern Helpers
@@ -361,7 +372,7 @@ static x_obj_t *x_prim_ffi_call(x_obj_t *p_base, x_obj_t *p_args)
 	if (x_lib_strcmp(conv, "d->s") == 0) {
 		p_a = x_eval_arg(p_base, x_firstobj(p_rest));
 		x_ffi_to_double(p_base, p_a, &a);
-		len = sprintf((char *)buf, "%.15g", a);
+		len = X_FFI_FMT_DOUBLE(buf, a);
 		return x_mkstrown(p_base, x_lib_strndup(buf, len));
 	}
 
