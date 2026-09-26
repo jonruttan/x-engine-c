@@ -96,23 +96,40 @@ the v0.5.0 release run died on it).  The raise is catchable; the crash was
 not.
 
 ```scheme
-(guard (e (error "raised")) ((prim-ref (lit ffi) (lit call)) "d->d" () 0))
+(include "tests/bare/prim-ref.x")
+(def %call (%prim-ref (lit ffi) (lit call)))
+(match ((eq? %call ()) (error "no ffi call"))
+       (#t (guard (e (error "raised")) (%call "d->d" () 0))))
 ```
 ---
     *** ERROR: raised
 
 ### a nil double operand raises the same way
 
+The arithmetic conventions ignore the fptr, but the call still has the seat:
+the operands follow it, so the unused fptr is passed as 0.
+
 ```scheme
-(guard (e (error "raised")) ((prim-ref (lit ffi) (lit call)) "d+d" 0 ()))
+(include "tests/bare/prim-ref.x")
+(def %call (%prim-ref (lit ffi) (lit call)))
+(match ((eq? %call ()) (error "no ffi call"))
+       (#t (guard (e (error "raised")) (%call "d+d" 0 0 ()))))
 ```
 ---
     *** ERROR: raised
 
 ### ptr-call refuses a nil function pointer too
 
+The catalog protocol is x-lang, so a bare engine has no `prim-ref`; the
+primitive is looked up by hand through tests/bare/prim-ref.x, and asserted
+present before the guard -- an unbound name raised inside it would pass the
+case without ever reaching the call.
+
 ```scheme
-(guard (e (error "raised")) ((prim-ref (lit ptr) (lit call)) () 1))
+(include "tests/bare/prim-ref.x")
+(def %call (%prim-ref (lit ptr) (lit call)))
+(match ((eq? %call ()) (error "no ptr call"))
+       (#t (guard (e (error "raised")) (%call () 1))))
 ```
 ---
     *** ERROR: raised
