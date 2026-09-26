@@ -134,7 +134,7 @@ EXECUTABLE=x-bin
 OUTPUT=$(EXECUTABLE)
 
 # Options to be added to $(DEFS)
-DEFS?=$(OSDEF) -DX_MACHINE="$(X_MACHINE)" -DX_SYSCALL -DX_INCLUDE -DSYMBOL_FIND_REORDER
+DEFS?=$(OSDEF) -DX_MACHINE="$(X_MACHINE)" -DX_SYSCALL -DX_DL -DX_INCLUDE -DSYMBOL_FIND_REORDER
 
 # SIGINT (Ctrl-C) handling, on by default (X_SIGNAL carries the -DX_SIGNAL
 # flag).  The signal module lives under opt/ and is built only when enabled;
@@ -147,12 +147,10 @@ DEFS+=$(X_SIGNAL)
 SOURCES+=$(OPTDIR)/x-prim/signal.c
 endif
 
-# -ldl is the FFI/JIT layer's (dlopen/dlsym in src/x-prim/ffi.c and
-# src/x-obj/jit.c) -- the expression engine ext/x-expr needs no libraries
-# beyond libc.  Darwin and glibc >= 2.34 fold dl into libc, so the flag is
-# a compat no-op there.  There is deliberately NO -lm: the one C fmod call
-# was retired (float % goes through float.x's dlsym'd %libm handle, which
-# dlopens libm at runtime like every other math function).
+# -ldl is the CLI's: dlopen/dlsym live in src/x-cli.c (X_DL), never in the
+# engine proper, which loads no libraries and calls no C library of its own.
+# Darwin and glibc >= 2.34 fold dl into libc, so the flag is a compat no-op
+# there.  There is deliberately NO -lm: the engine deals in no floats.
 EXTRA_LIBS+=-ldl
 
 # Where to install the stuff.  The user-facing command is the WRAPPER,
@@ -400,7 +398,7 @@ test-c: ## Run C unit tests
 # library, so the honest answer needs both spec suites at once and only the
 # repo holding both trees can ask it.  It runs in x-lang, over this
 # submodule's sources and both suites.
-gates: check-isa check-obj-layout check-base-paths ## Run the contract gates
+gates: check-isa check-obj-layout check-base-paths check-libc ## Run the contract gates
 .PHONY: gates
 
 # The C-surface ratchet: every binding site in the C source must appear in
@@ -410,6 +408,14 @@ gates: check-isa check-obj-layout check-base-paths ## Run the contract gates
 check-isa: ## Diff the C source's binding surface against tools/contract/isa.x
 	sh tools/check/isa.sh
 .PHONY: check-isa
+
+# The host boundary: libc is reached only through x-expr's x_sys_* and
+# x_lib_* doors.  src/x-cli.c (the host doors), the optional host modules
+# under opt/, ctype.h, setjmp.h, the freestanding headers and DEBUG-only
+# code are exempt.  `--self-test` proves each rule still bites.
+check-libc: ## Refuse a raw libc call in the engine proper (only the CLI may)
+	sh tools/check/libc.sh
+.PHONY: check-libc
 
 # The object-layout contract: the header-word layout parsed out of
 # ext/x-expr/include/x-obj.h must match tools/contract/obj-layout.x, which

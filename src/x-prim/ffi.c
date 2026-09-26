@@ -2,11 +2,13 @@
  * @file ffi.c
  * @brief Foreign Function Interface primitives for x-lang.
  *
- * Provides dynamic library loading (dlopen, dlsym), typed foreign calls
- * (ffi-call with convention strings), raw pointer calls (ptr-call),
- * pointer/integer/string/object conversions (int->ptr, ptr->int, str->ptr,
- * ptr->str, obj->ptr, ptr->obj), raw memory access (ptr-ref, ptr-set!,
- * ptr-ref-word, ptr-set-word!), and callable construction (make-callable).
+ * Provides raw pointer calls (ptr-call), pointer/integer/string/object
+ * conversions (int->ptr, ptr->int, str->ptr, ptr->str, obj->ptr, ptr->obj),
+ * raw memory access (ptr-ref, ptr-set!, ptr-ref-word, ptr-set-word!), and
+ * callable construction (make-callable).
+ *
+ * The engine proper deals in no floats and loads no libraries: dlopen and
+ * dlsym are the CLI's (x-cli.c), bound only where a host provides them.
  * (The obj-meta-* accessors are pure x-lang now: boot/reflect.x files
  * reflective implementations into the catalog over the layout contracts.)
  *
@@ -33,141 +35,6 @@
 #include "x-type/str.h"
 #include "x-type/symbol.h"
 
-#include <string.h>  /* memcpy */
-#include <stdio.h>   /* sprintf */
-#include <dlfcn.h>   /* dlopen, dlsym */
-
-/**
- * @name Double Bit-Pattern Helpers
- *
- * IEEE 754 doubles are passed through the FFI as raw bit patterns stored in
- * integers. On 64-bit platforms a single x_int_t holds the full 8-byte
- * pattern; on 32-bit platforms two integers (a pair) carry the low and high
- * halves.
- * @{
- */
-#if defined(__LP64__) || defined(_LP64) || defined(_WIN64)
-
-/**
- * @brief Convert an integer bit-pattern to a C double (64-bit path).
- *
- * @param p_base  Unused.
- * @param p_bits  Integer object whose value is the raw IEEE 754 bits.
- * @param[out] out  Destination double.
- */
-static void x_ffi_to_double(x_obj_t *p_base, x_obj_t *p_bits, double *out)
-{
-	/* A nil operand used to be read as an object -- x_intval derefs a
-	 * field off NULL -- which is the #171 crash class (a library-level
-	 * nil reaching an unchecked FFI seat).  Raise catchably instead. */
-	if (x_obj_isnil(p_base, p_bits))
-		x_obj_error(p_base,
-			(x_char_t *)"ffi-call: nil operand (expected double bits)",
-			NULL);
-	memcpy(out, &x_intval(p_bits), sizeof(double));
-}
-
-/**
- * @brief Convert a C double to an integer bit-pattern (64-bit path).
- *
- * @param p_base  Base (execution context) for allocation.
- * @param[in] in  Pointer to the source double.
- * @return Integer object holding the raw IEEE 754 bits.
- */
-static x_obj_t *x_ffi_from_double(x_obj_t *p_base, double *in)
-{
-	x_int_t bits;
-	memcpy(&bits, in, sizeof(double));
-	return x_mkint(p_base, bits);
-}
-
-#else /* 32-bit */
-
-/**
- * @brief Convert a pair of integers to a C double (32-bit path).
- *
- * @param p_base  Unused.
- * @param p_bits  Pair whose first/rest are the low/high 32-bit halves.
- * @param[out] out  Destination double.
- */
-static void x_ffi_to_double(x_obj_t *p_base, x_obj_t *p_bits, double *out)
-{
-	x_int_t parts[2];
-	if (x_obj_isnil(p_base, p_bits))
-		x_obj_error(p_base,
-			(x_char_t *)"ffi-call: nil operand (expected double bits)",
-			NULL);
-	parts[0] = x_intval(x_firstobj(p_bits));
-	parts[1] = x_intval(x_restobj(p_bits));
-	memcpy(out, parts, sizeof(double));
-}
-
-/**
- * @brief Convert a C double to a pair of integers (32-bit path).
- *
- * @param p_base  Base (execution context) for allocation.
- * @param[in] in  Pointer to the source double.
- * @return Pair of two integers (low . high) holding the raw bits.
- */
-static x_obj_t *x_ffi_from_double(x_obj_t *p_base, double *in)
-{
-	x_int_t parts[2];
-	memcpy(parts, in, sizeof(double));
-	return x_mkspair(p_base, X_OBJ_FLAG_NONE,
-		x_mkint(p_base, parts[0]),
-		x_mkint(p_base, parts[1]));
-}
-
-#endif /* 64-bit vs 32-bit */
-/** @} */
-
-/**
- * @brief Open a dynamic shared library.
- *
- * x-lang form: @code (dlopen path flags) @endcode
- *
- * Wraps POSIX dlopen(3). If @p path is nil, opens the main program handle.
- *
- * @param p_base  Base (execution context).
- * @param p_args  Unevaluated: (self path-string flags-int).
- * @return Pointer object wrapping the library handle, or NULL on failure.
- * @note FFI: calls dlopen(3) directly.
- */
-static x_obj_t *x_prim_dlopen(x_obj_t *p_base, x_obj_t *p_args)
-{
-	x_obj_t *p_path, *p_flags;
-	void *h;
-
-	x_eargs(p_base, p_args, 3, NULL, &p_path, &p_flags);
-	h = dlopen(x_obj_isnil(p_base, p_path) ? NULL : x_strval(p_path),
-		(int)x_intval(p_flags));
-
-	return h ? x_mkptr(p_base, h) : NULL;
-}
-
-/**
- * @brief Look up a symbol in a dynamic library.
- *
- * x-lang form: @code (dlsym handle name) @endcode
- *
- * Wraps POSIX dlsym(3).
- *
- * @param p_base  Base (execution context).
- * @param p_args  Unevaluated: (self handle-ptr name-string).
- * @return Pointer object wrapping the symbol address, or NULL if not found.
- * @note FFI: calls dlsym(3) directly.
- */
-static x_obj_t *x_prim_dlsym(x_obj_t *p_base, x_obj_t *p_args)
-{
-	x_obj_t *p_handle, *p_name;
-	void *sym;
-
-	x_eargs(p_base, p_args, 3, NULL, &p_handle, &p_name);
-	sym = dlsym(x_ptrval(p_handle), x_strval(p_name));
-
-	return sym ? x_mkptr(p_base, sym) : NULL;
-}
-
 /**
  * @brief Unwrap a function pointer, raising on nil.
  *
@@ -189,183 +56,6 @@ static void *x_ffi_fptr(x_obj_t *p_base, x_obj_t *p_fptr, const char *who)
 		x_obj_error(p_base, (x_char_t *)who, NULL);
 
 	return x_ptrval(p_fptr);
-}
-
-/**
- * @brief Call a foreign function using a convention string.
- *
- * x-lang form: @code (ffi-call convention fptr args...) @endcode
- *
- * The convention string selects the calling convention and type coercions:
- * - Function calls: "d->d" (double->double), "dd->d" (double,double->double)
- * - Arithmetic: "d+d", "d-d", "d*d", "d/d" (inline double ops; no fptr
- *   needed).  Float %% is NOT here: fmod goes through "dd->d" with a
- *   dlsym'd pointer (float.x's %%libm handle), keeping this binary free
- *   of any link-time libm reference.
- * - Comparisons: "d<d", "d>d", "d=d", "d<=d", "d>=d" (return t/f)
- * - Casts: "i->d" (int to double bits), "d->i" (double bits to int)
- * - String: "s0->d" (string,NULL->double via fptr), "d->s" (double to string)
- *
- * Doubles are represented as raw IEEE 754 bit patterns in integers.
- *
- * @param p_base  Base (execution context).
- * @param p_args  Unevaluated: (self convention-string fptr args...).
- * @return Result of the foreign call, or NULL for unknown convention.
- * @note FFI: double bit-patterns are platform-dependent (64-bit vs 32-bit pair).
- * @see x_ffi_to_double, x_ffi_from_double
- */
-static x_obj_t *x_prim_ffi_call(x_obj_t *p_base, x_obj_t *p_args)
-{
-	x_obj_t *p_conv, *p_fptr, *p_rest, *p_a, *p_b;
-	x_char_t *conv;
-	void *fptr;
-	double a, b, r;
-	x_char_t buf[32];
-	int len;
-
-	x_eargs(p_base, p_args, 3, NULL, &p_conv, &p_fptr);
-	p_rest = x_111(p_args);
-	conv = x_strval(p_conv);
-
-	/* Function call conventions */
-	if (x_lib_strcmp(conv, "d->d") == 0) {
-		fptr = x_ffi_fptr(p_base, p_fptr,
-			"ffi-call d->d: nil function pointer (dlsym miss?)");
-		p_a = x_eval_arg(p_base, x_firstobj(p_rest));
-		x_ffi_to_double(p_base, p_a, &a);
-		r = ((double (*)(double))fptr)(a);
-		return x_ffi_from_double(p_base, &r);
-	}
-
-	if (x_lib_strcmp(conv, "dd->d") == 0) {
-		fptr = x_ffi_fptr(p_base, p_fptr,
-			"ffi-call dd->d: nil function pointer (dlsym miss?)");
-		p_a = x_eval_arg(p_base, x_firstobj(p_rest));
-		p_b = x_eval_arg(p_base,
-			x_firstobj(x_restobj(p_rest)));
-		x_ffi_to_double(p_base, p_a, &a);
-		x_ffi_to_double(p_base, p_b, &b);
-		r = ((double (*)(double, double))fptr)(a, b);
-		return x_ffi_from_double(p_base, &r);
-	}
-
-	/* Arithmetic conventions */
-	if (x_lib_strcmp(conv, "d+d") == 0) {
-		p_a = x_eval_arg(p_base, x_firstobj(p_rest));
-		p_b = x_eval_arg(p_base, x_firstobj(x_restobj(p_rest)));
-		x_ffi_to_double(p_base, p_a, &a);
-		x_ffi_to_double(p_base, p_b, &b);
-		r = a + b;
-		return x_ffi_from_double(p_base, &r);
-	}
-
-	if (x_lib_strcmp(conv, "d-d") == 0) {
-		p_a = x_eval_arg(p_base, x_firstobj(p_rest));
-		p_b = x_eval_arg(p_base, x_firstobj(x_restobj(p_rest)));
-		x_ffi_to_double(p_base, p_a, &a);
-		x_ffi_to_double(p_base, p_b, &b);
-		r = a - b;
-		return x_ffi_from_double(p_base, &r);
-	}
-
-	if (x_lib_strcmp(conv, "d*d") == 0) {
-		p_a = x_eval_arg(p_base, x_firstobj(p_rest));
-		p_b = x_eval_arg(p_base, x_firstobj(x_restobj(p_rest)));
-		x_ffi_to_double(p_base, p_a, &a);
-		x_ffi_to_double(p_base, p_b, &b);
-		r = a * b;
-		return x_ffi_from_double(p_base, &r);
-	}
-
-	if (x_lib_strcmp(conv, "d/d") == 0) {
-		p_a = x_eval_arg(p_base, x_firstobj(p_rest));
-		p_b = x_eval_arg(p_base, x_firstobj(x_restobj(p_rest)));
-		x_ffi_to_double(p_base, p_a, &a);
-		x_ffi_to_double(p_base, p_b, &b);
-		r = a / b;
-		return x_ffi_from_double(p_base, &r);
-	}
-
-	/* Comparison conventions */
-	if (x_lib_strcmp(conv, "d<d") == 0) {
-		p_a = x_eval_arg(p_base, x_firstobj(p_rest));
-		p_b = x_eval_arg(p_base, x_firstobj(x_restobj(p_rest)));
-		x_ffi_to_double(p_base, p_a, &a);
-		x_ffi_to_double(p_base, p_b, &b);
-		return a < b ? x_firstobj(x_eval_field_true(p_base)) : x_firstobj(x_eval_field_false(p_base));
-	}
-
-	if (x_lib_strcmp(conv, "d>d") == 0) {
-		p_a = x_eval_arg(p_base, x_firstobj(p_rest));
-		p_b = x_eval_arg(p_base, x_firstobj(x_restobj(p_rest)));
-		x_ffi_to_double(p_base, p_a, &a);
-		x_ffi_to_double(p_base, p_b, &b);
-		return a > b ? x_firstobj(x_eval_field_true(p_base)) : x_firstobj(x_eval_field_false(p_base));
-	}
-
-	if (x_lib_strcmp(conv, "d=d") == 0) {
-		p_a = x_eval_arg(p_base, x_firstobj(p_rest));
-		p_b = x_eval_arg(p_base, x_firstobj(x_restobj(p_rest)));
-		x_ffi_to_double(p_base, p_a, &a);
-		x_ffi_to_double(p_base, p_b, &b);
-		return a == b ? x_firstobj(x_eval_field_true(p_base)) : x_firstobj(x_eval_field_false(p_base));
-	}
-
-	if (x_lib_strcmp(conv, "d<=d") == 0) {
-		p_a = x_eval_arg(p_base, x_firstobj(p_rest));
-		p_b = x_eval_arg(p_base, x_firstobj(x_restobj(p_rest)));
-		x_ffi_to_double(p_base, p_a, &a);
-		x_ffi_to_double(p_base, p_b, &b);
-		return a <= b ? x_firstobj(x_eval_field_true(p_base)) : x_firstobj(x_eval_field_false(p_base));
-	}
-
-	if (x_lib_strcmp(conv, "d>=d") == 0) {
-		p_a = x_eval_arg(p_base, x_firstobj(p_rest));
-		p_b = x_eval_arg(p_base, x_firstobj(x_restobj(p_rest)));
-		x_ffi_to_double(p_base, p_a, &a);
-		x_ffi_to_double(p_base, p_b, &b);
-		return a >= b ? x_firstobj(x_eval_field_true(p_base)) : x_firstobj(x_eval_field_false(p_base));
-	}
-
-	/* Cast conventions */
-	if (x_lib_strcmp(conv, "i->d") == 0) {
-		p_a = x_eval_arg(p_base, x_firstobj(p_rest));
-		if (x_obj_isnil(p_base, p_a))
-			x_obj_error(p_base,
-				(x_char_t *)"ffi-call i->d: nil operand",
-				NULL);
-		a = (double)x_intval(p_a);
-		return x_ffi_from_double(p_base, &a);
-	}
-
-	if (x_lib_strcmp(conv, "d->i") == 0) {
-		p_a = x_eval_arg(p_base, x_firstobj(p_rest));
-		x_ffi_to_double(p_base, p_a, &a);
-		return x_mkint(p_base, (x_int_t)a);
-	}
-
-	/* String/double conversions */
-	if (x_lib_strcmp(conv, "s0->d") == 0) {
-		fptr = x_ffi_fptr(p_base, p_fptr,
-			"ffi-call s0->d: nil function pointer (dlsym miss?)");
-		p_a = x_eval_arg(p_base, x_firstobj(p_rest));
-		if (x_obj_isnil(p_base, p_a))
-			x_obj_error(p_base,
-				(x_char_t *)"ffi-call s0->d: nil operand (expected string)",
-				NULL);
-		r = ((double (*)(const char *, void *))fptr)(
-			x_firststr(p_a), NULL);
-		return x_ffi_from_double(p_base, &r);
-	}
-
-	if (x_lib_strcmp(conv, "d->s") == 0) {
-		p_a = x_eval_arg(p_base, x_firstobj(p_rest));
-		x_ffi_to_double(p_base, p_a, &a);
-		len = sprintf((char *)buf, "%.15g", a);
-		return x_mkstrown(p_base, x_lib_strndup(buf, len));
-	}
-
-	return NULL;
 }
 
 /**
@@ -594,7 +284,7 @@ static x_obj_t *x_prim_mem_free(x_obj_t *p_base, x_obj_t *p_args)
  *
  * x-lang form: @code (ptr-set! ptr offset value nbytes) @endcode
  *
- * Copies the low @p nbytes of @p value via memcpy into the memory at
+ * Copies the low @p nbytes of @p value via x_lib_memcpy into the memory at
  * the given pointer plus byte offset.
  *
  * @param p_base  Base (execution context).
@@ -612,7 +302,7 @@ static x_obj_t *x_prim_ptr_set(x_obj_t *p_base, x_obj_t *p_args)
 	mem = (unsigned char *)x_ptrval(p_ptr);
 	val = x_intval(p_val);
 
-	memcpy(mem + x_intval(p_offset), &val, x_intval(p_size));
+	x_lib_memcpy(mem + x_intval(p_offset), &val, x_intval(p_size));
 
 	return p_ptr;
 }
@@ -623,7 +313,7 @@ static x_obj_t *x_prim_ptr_set(x_obj_t *p_base, x_obj_t *p_args)
  * x-lang form: @code (ptr-ref ptr offset nbytes) @endcode
  *
  * Copies @p nbytes from the memory at the pointer plus byte offset into
- * a zero-initialized integer value via memcpy.
+ * a zero-initialized integer value via x_lib_memcpy.
  *
  * @param p_base  Base (execution context).
  * @param p_args  Unevaluated: (self ptr offset nbytes).
@@ -639,7 +329,7 @@ static x_obj_t *x_prim_ptr_ref(x_obj_t *p_base, x_obj_t *p_args)
 	x_eargs(p_base, p_args, 4, NULL, &p_ptr, &p_offset, &p_size);
 	mem = (unsigned char *)x_ptrval(p_ptr);
 
-	memcpy(&val, mem + x_intval(p_offset), x_intval(p_size));
+	x_lib_memcpy(&val, mem + x_intval(p_offset), x_intval(p_size));
 
 	return x_mkint(p_base, val);
 }
@@ -914,7 +604,7 @@ static x_obj_t *x_prim_ptr_set_word(x_obj_t *p_base, x_obj_t *p_args)
 	mem = (unsigned char *)x_ptrval(p_ptr);
 	val = (long)x_intval(p_val);
 
-	memcpy(mem + x_intval(p_offset), &val, sizeof(long));
+	x_lib_memcpy(mem + x_intval(p_offset), &val, sizeof(long));
 
 	return p_ptr;
 }
@@ -1018,7 +708,7 @@ static x_obj_t *x_prim_ptr_to_obj(x_obj_t *p_base, x_obj_t *p_args)
  *
  * x-lang form: @code (ptr-ref-word ptr offset) @endcode
  *
- * Reads sizeof(long) bytes from memory at ptr+offset via memcpy.
+ * Reads sizeof(long) bytes from memory at ptr+offset via x_lib_memcpy.
  *
  * @param p_base  Base (execution context).
  * @param p_args  Unevaluated: (self ptr offset).
@@ -1034,7 +724,7 @@ static x_obj_t *x_prim_ptr_ref_word(x_obj_t *p_base, x_obj_t *p_args)
 	x_eargs(p_base, p_args, 3, NULL, &p_ptr, &p_offset);
 	mem = (unsigned char *)x_ptrval(p_ptr);
 
-	memcpy(&val, mem + x_intval(p_offset), sizeof(long));
+	x_lib_memcpy(&val, mem + x_intval(p_offset), sizeof(long));
 
 	return x_mkint(p_base, (x_int_t)val);
 }
@@ -1066,7 +756,7 @@ static x_obj_t *x_prim_make_callable(x_obj_t *p_base, x_obj_t *p_args)
 /**
  * @brief Register all FFI primitives and platform constants.
  *
- * Binds: dlopen, dlsym, ffi-call, ptr-call, int->ptr, ptr->int, ptr->obj,
+ * Binds: ptr-call, int->ptr, ptr->int, ptr->obj,
  * ptr-set!, ptr-ref, ptr-ref-word, ptr-set-word!, obj->ptr, str->ptr,
  * ptr->str, make-callable.
  * (The obj-meta-* accessors are pure x-lang now: boot/reflect.x files
@@ -1084,9 +774,6 @@ static x_obj_t *x_prim_make_callable(x_obj_t *p_base, x_obj_t *p_args)
 x_obj_t *x_prim_ffi_register(x_obj_t *p_base, x_obj_t *p_args)
 {
 	static const x_prim_entry_t entries[] = {
-		{ "dlopen",          x_prim_dlopen,             "ffi", "dlopen"        },
-		{ "dlsym",           x_prim_dlsym,              "ffi", "dlsym"         },
-		{ "ffi-call",        x_prim_ffi_call,           "ffi", "call"          },
 		{ "ptr-call",        x_prim_ptr_call,           "ptr", "call"          },
 		{ "int->ptr",        x_prim_int_to_ptr,         "int", "->ptr"         },
 		{ "ptr->int",        x_prim_ptr_to_int,         "ptr", "->int"         },

@@ -44,6 +44,7 @@
 #include "x-type/operative.h"
 #include "x-type/prim.h"
 #include "x-type/procedure.h"
+#include "x-type/ptr.h"
 #include "x-type/str.h"
 #include "x-type/symbol.h"
 #include "x-type/whitespace.h"
@@ -51,6 +52,10 @@
 #ifdef X_SYSCALL
 #include <unistd.h>
 #include <sys/syscall.h>
+#endif
+
+#ifdef X_DL
+#include <dlfcn.h>
 #endif
 
 #ifndef TESTS
@@ -215,6 +220,51 @@ static x_obj_t *x_prim_include(x_obj_t *p_base, x_obj_t *p_args)
 
 #endif /* ! TESTS -- CLI-only helpers above */
 
+#ifdef X_DL
+/**
+ * Open a dynamic shared library. x-lang: (dlopen path flags)
+ *
+ * Wraps the host's dlopen(3); a nil path opens the main program.  This is
+ * the CLI's, not the engine's: the engine proper loads no libraries, so the
+ * host door lives here beside syscall.
+ *
+ * @param p_base  x_obj_t* -- Base (execution context)
+ * @param p_args  x_obj_t* -- Unevaluated: (self path-string flags-int)
+ * @return x_obj_t* -- Pointer wrapping the handle, or NULL on failure
+ */
+static x_obj_t *x_prim_dlopen(x_obj_t *p_base, x_obj_t *p_args)
+{
+	x_obj_t *p_path, *p_flags;
+	void *h;
+
+	x_eargs(p_base, p_args, 3, NULL, &p_path, &p_flags);
+	h = dlopen(x_obj_isnil(p_base, p_path) ? NULL : x_strval(p_path),
+		(int)x_intval(p_flags));
+
+	return h ? x_mkptr(p_base, h) : NULL;
+}
+
+/**
+ * Look up a symbol in a dynamic library. x-lang: (dlsym handle name)
+ *
+ * Wraps the host's dlsym(3).
+ *
+ * @param p_base  x_obj_t* -- Base (execution context)
+ * @param p_args  x_obj_t* -- Unevaluated: (self handle-ptr name-string)
+ * @return x_obj_t* -- Pointer wrapping the address, or NULL if not found
+ */
+static x_obj_t *x_prim_dlsym(x_obj_t *p_base, x_obj_t *p_args)
+{
+	x_obj_t *p_handle, *p_name;
+	void *sym;
+
+	x_eargs(p_base, p_args, 3, NULL, &p_handle, &p_name);
+	sym = dlsym(x_ptrval(p_handle), x_strval(p_name));
+
+	return sym ? x_mkptr(p_base, sym) : NULL;
+}
+#endif /* X_DL */
+
 /**
  * Initialize the interpreter.
  *
@@ -272,6 +322,18 @@ x_obj_t * init(x_obj_t *p_base, x_char_t *buffer)
 #ifdef X_SYSCALL
 	/* Register syscall primitive. */
 	x_callable_bind(p_base, "syscall", x_prim_syscall);
+#endif
+
+#ifdef X_DL
+	{
+		/* Register the dynamic-loading door (the host's, not the engine's). */
+		static const x_prim_entry_t dl_entries[] = {
+			{ "dlopen",          x_prim_dlopen,             "ffi", "dlopen"        },
+			{ "dlsym",           x_prim_dlsym,              "ffi", "dlsym"         }
+		};
+		x_prims_bind_table(p_base, dl_entries,
+			sizeof(dl_entries) / sizeof(dl_entries[0]));
+	}
 #endif
 
 #ifdef X_INCLUDE

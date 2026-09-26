@@ -89,36 +89,10 @@ past the proper prefix is unaffected, which is what it did before.
 
 ### a nil function pointer raises instead of being called
 
-A dlsym miss answers nil, and handing that nil to a call convention used to
-CALL it -- an uncatchable SIGSEGV, found when the first Linux conformance
-run resolved `sqrt` against an engine that links no libm (x-lang#171 class;
-the v0.5.0 release run died on it).  The raise is catchable; the crash was
-not.
-
-```scheme
-(include "tests/bare/prim-ref.x")
-(def %call (%prim-ref (lit ffi) (lit call)))
-(match ((eq? %call ()) (error "no ffi call"))
-       (#t (guard (e (error "raised")) (%call "d->d" () 0))))
-```
----
-    *** ERROR: raised
-
-### a nil double operand raises the same way
-
-The arithmetic conventions ignore the fptr, but the call still has the seat:
-the operands follow it, so the unused fptr is passed as 0.
-
-```scheme
-(include "tests/bare/prim-ref.x")
-(def %call (%prim-ref (lit ffi) (lit call)))
-(match ((eq? %call ()) (error "no ffi call"))
-       (#t (guard (e (error "raised")) (%call "d+d" 0 0 ()))))
-```
----
-    *** ERROR: raised
-
-### ptr-call refuses a nil function pointer too
+A dlsym miss answers nil, and handing that nil to a call used to CALL it --
+an uncatchable SIGSEGV, found when the first Linux conformance run resolved
+`sqrt` against an engine that links no libm (x-lang#171 class; the v0.5.0
+release run died on it).  The raise is catchable; the crash was not.
 
 The catalog protocol is x-lang, so a bare engine has no `prim-ref`; the
 primitive is looked up by hand through tests/bare/prim-ref.x, and asserted

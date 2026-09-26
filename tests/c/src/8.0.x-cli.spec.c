@@ -10,6 +10,11 @@
 #define X_GC
 #endif /* X_GC */
 
+/* The CLI's dynamic-loading door, off in the default TEST_CFLAGS. */
+#ifndef X_DL
+#define X_DL
+#endif /* X_DL */
+
 #include "ext/x-expr/tests/src/test-helper-system.c"
 
 #include "ext/x-expr/src/x-sys.c"
@@ -134,8 +139,57 @@ static char *test_cli_init(void)
 	return NULL;
 }
 
+static char *test_cli_dlopen_dlsym(void)
+{
+	x_obj_t *p_base, *p_args, *p_handle, *p_sym;
+	x_char_t buffer[256];
+
+	p_base = init(NULL, buffer);
+
+	/* dlopen(NULL, RTLD_LAZY) -> handle to current process */
+	p_args = x_mkspair(p_base, X_OBJ_FLAG_NONE, NULL,
+		x_mkspair(p_base, X_OBJ_FLAG_NONE, NULL,
+		x_mkspair(p_base, X_OBJ_FLAG_NONE, x_mkint(p_base, (x_int_t)RTLD_LAZY),
+		NULL)));
+	p_handle = x_prim_dlopen(p_base, p_args);
+	_it_should("dlopen returns handle for NULL path",
+		p_handle != NULL);
+
+	/* dlsym(handle, "x_prim_ffi_register") -> function pointer */
+	p_args = x_mkspair(p_base, X_OBJ_FLAG_NONE, NULL,
+		x_mkspair(p_base, X_OBJ_FLAG_NONE, p_handle,
+		x_mkspair(p_base, X_OBJ_FLAG_NONE, x_mkstr(p_base, "x_prim_ffi_register"),
+		NULL)));
+	p_sym = x_prim_dlsym(p_base, p_args);
+	_it_should("dlsym finds known symbol",
+		p_sym != NULL);
+
+	/* dlsym with bogus name -> NULL */
+	p_args = x_mkspair(p_base, X_OBJ_FLAG_NONE, NULL,
+		x_mkspair(p_base, X_OBJ_FLAG_NONE, p_handle,
+		x_mkspair(p_base, X_OBJ_FLAG_NONE, x_mkstr(p_base, "____no_such_symbol____"),
+		NULL)));
+	p_sym = x_prim_dlsym(p_base, p_args);
+	_it_should("dlsym returns NULL for unknown symbol",
+		p_sym == NULL);
+
+	/* dlopen with bogus path -> NULL */
+	p_args = x_mkspair(p_base, X_OBJ_FLAG_NONE, NULL,
+		x_mkspair(p_base, X_OBJ_FLAG_NONE,
+		x_mkstr(p_base, "/no/such/lib.so"),
+		x_mkspair(p_base, X_OBJ_FLAG_NONE, x_mkint(p_base, (x_int_t)RTLD_LAZY),
+		NULL)));
+	p_handle = x_prim_dlopen(p_base, p_args);
+	_it_should("dlopen returns NULL for bad path",
+		p_handle == NULL);
+
+	test_cleanup(p_base);
+	return NULL;
+}
+
 static char *run_tests() {
 	_run_test(test_cli_init);
+	_run_test(test_cli_dlopen_dlsym);
 
 	return NULL;
 }
