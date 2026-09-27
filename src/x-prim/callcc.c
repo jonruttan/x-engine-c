@@ -14,8 +14,8 @@
 #include "x-eval.h"
 #include "x-env.h"
 #include "x-heap.h"
+#include "x-stdlib.h"
 #include <setjmp.h>
-#include <string.h>
 #include "x-type/list.h"
 #include "x-type/prim.h"
 #include "x-type/ptr.h"
@@ -57,7 +57,7 @@ static X_CALLCC_NO_ASAN void x_callcc_copy(char *dst, const char *src,
 		dst[i] = src[i];
 	}
 #else
-	memcpy(dst, src, n);
+	x_lib_memcpy(dst, src, n);
 #endif
 }
 

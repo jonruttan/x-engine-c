@@ -24,12 +24,14 @@ release it was built for.
     make
 
 `--recursive` matters: [x-expr][x-expr] is a submodule and the build needs its
-sources. C89 (`-ansi`), no dependencies beyond libc and `-ldl` (the FFI and JIT
-layers use `dlopen`/`dlsym`).
+sources. C89 (`-ansi`).  The engine proper assumes no C library and deals in
+no floats: its C library is x-expr's `x-stdlib.h`/`x-sys.h`, and only the CLI
+(`src/x-cli.c`) reaches the host -- `syscall`, and `dlopen`/`dlsym` (hence
+`-ldl`).  `make check-libc` enforces it.
 
     make            # build + strip
     make test       # the contract gates + both spec suites
-    make gates      # the three contract gates alone
+    make gates      # the contract gates alone
     make test-c     # the C spec suite alone
     make test-bare  # the bare-engine smoke specs (no library)
     make test-asan  # the C suite under AddressSanitizer
@@ -99,6 +101,11 @@ it holds — which is exactly the failure the release-identity work was about.
 Each of the three has a **runtime half** — a spec that probes a live engine —
 and those need a library to boot, so they run in x-lang under
 `tests/x/specs/meta/`.
+
+A fourth gate, `make check-libc`, holds the host boundary: the engine
+reaches libc only through x-expr's `x_sys_*`/`x_lib_*` doors.  `src/x-cli.c`
+(the host doors), the optional host modules under `opt/`, `ctype.h`,
+`setjmp.h`, the freestanding headers and DEBUG-only code are exempt.
 
 The fourth ratchet, `check-prim-coverage`, asks whether every primitive is
 *exercised* by a spec. Most primitives are reachable only through the library,

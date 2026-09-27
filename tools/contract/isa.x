@@ -25,7 +25,8 @@
 ;   raw-op   machine ALU/compare/cast ops (int +, eq?, char->int)
 ;   tok      tokenizer inner loop (buffers, token read)
 ;   io       the process I/O boundary (read, write, display)
-;   ffi      the foreign-function/syscall door (dlopen, ptr calls)
+;   ffi      the foreign-function/syscall door (ptr calls; dlopen/dlsym/syscall
+;            are bound by the CLI, x-cli.c, never by the engine proper)
 ;   sys      OS facilities (clock, signals)
 ;   types    the C type-object registry protocol (type-of, iter)
 ;   registry the prims catalog protocol itself (prim-ref, use)
@@ -71,7 +72,6 @@
   (bytes ->str alloc)
   (char ->int raw-op)
   (ctrl call/cc spine)
-  (ffi call ffi)
   (ffi dlopen ffi)
   (ffi dlsym ffi)
   (heap collect gc)
