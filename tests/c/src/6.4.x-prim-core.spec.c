@@ -545,6 +545,24 @@ static char *test_core_seq(void)
 	_it_should("seq sets tco_expr to second arg",
 		x_firstobj(x_eval_field_tco_expr(p_base)) == p_body_form);
 
+	/* (%seq 1 2 3) -> evals the first two, sets tco_expr to the third */
+	x_firstobj(x_eval_field_tco_expr(p_base)) = NULL;
+	p_body_form = x_mksatom(p_base, X_OBJ_FLAG_NONE, (x_int_t)98);
+	p_args = x_mkspair(p_base, X_OBJ_FLAG_NONE, NULL,
+		x_mkspair(p_base, X_OBJ_FLAG_NONE, x_mksatom(p_base, X_OBJ_FLAG_NONE, (x_int_t)1),
+		x_mkspair(p_base, X_OBJ_FLAG_NONE, x_mksatom(p_base, X_OBJ_FLAG_NONE, (x_int_t)2),
+		x_mkspair(p_base, X_OBJ_FLAG_NONE, p_body_form, NULL))));
+	x_prim_seq(p_base, p_args);
+	_it_should("seq sets tco_expr to the last of three forms",
+		x_firstobj(x_eval_field_tco_expr(p_base)) == p_body_form);
+
+	/* (%seq) -> leaves tco_expr nil */
+	x_firstobj(x_eval_field_tco_expr(p_base)) = NULL;
+	p_args = x_mkspair(p_base, X_OBJ_FLAG_NONE, NULL, NULL);
+	x_prim_seq(p_base, p_args);
+	_it_should("seq with no forms leaves tco_expr nil",
+		x_firstobj(x_eval_field_tco_expr(p_base)) == NULL);
+
 	test_cleanup(p_base);
 	return NULL;
 }

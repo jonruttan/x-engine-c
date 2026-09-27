@@ -65,6 +65,59 @@ navigates first/rest unchecked by design).
 ---
     *** ERROR: raised
 
+### %seq evaluates its forms in order and answers the last
+
+```scheme
+(def %log ())
+(def %last
+  (%seq (def %log (pair 1 %log)) (def %log (pair 2 %log)) (def %log (pair 3 %log)) 4))
+(match ((= %last 4)
+        (match ((= (first %log) 3)
+                (match ((= (first (rest (rest %log))) 1) (error "in order"))
+                       (#t (error "order"))))
+               (#t (error "missed"))))
+       (#t (error "last")))
+```
+---
+    *** ERROR: in order
+
+### %seq with no forms answers nil
+
+```scheme
+(match ((eq? (%seq) ()) (error "nil")) (#t (error "no")))
+```
+---
+    *** ERROR: nil
+
+### a def in %seq binds in the environment %seq runs in
+
+```scheme
+(def %sum ((fn (_) (%seq (def a 5) (def b 6)) (+ a b))))
+(match ((= %sum 11) (guard (e (error "local")) a)) (#t (error "no")))
+```
+---
+    *** ERROR: local
+
+### a dotted %seq raises before it evaluates any form
+
+```scheme
+(def %ran ())
+(guard (e (match ((eq? %ran ()) (error "nothing ran")) (#t (error "ran"))))
+  (%seq (def %ran 1) 2 . 3))
+```
+---
+    *** ERROR: nothing ran
+
+### the last form of a %seq is in tail position
+
+```scheme
+(def %down
+  (fn (self n) (match ((= n 0) (error "tail")) (#t (%seq n (self (- n 1)))))))
+(%down 50000)
+```
+---
+    *** ERROR: tail
+
 ### the walk stops where the answer is found
 
 A clause that matches before the dotted tail still answers: the guard fires
