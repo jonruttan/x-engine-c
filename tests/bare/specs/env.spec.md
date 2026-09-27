@@ -169,3 +169,82 @@ stands for the child's own symbol of its spelling, and the form runs.
 ```
 ---
     *** ERROR: ok
+
+## an environment with many names
+
+An environment under the root that comes to hold many bindings, as a
+module's does, keeps a cache of the cells its lookups find, so a lookup
+from inside it costs what one from the root does. What the environment
+finds is unchanged: its own names, the root's names through it, a root name
+it defines as its own, and the alist of its bindings, one cell a name.
+
+### each name is found, and the root's names through it
+
+```scheme
+(def root ((op () e e)))
+(def env (pair () root))
+(def fill (fn (self l k) (match ((eq? l ()) k) (#t (self (rest l) (+ (eval (pair (lit def) (pair (first l) (pair k ()))) env) 1))))))
+(fill (lit (n0 n1 n2 n3 n4 n5 n6 n7 n8 n9 n10 n11 n12 n13 n14 n15 n16 n17 n18 n19)) 0)
+(match ((= (eval (lit n0) env) 0) (match ((= (eval (lit n19) env) 19) (match ((eq? (eval (lit (first (pair 1 2))) env) 1) (error "found")) (#t (error "root name")))) (#t (error "n19")))) (#t (error "n0")))
+```
+---
+    *** ERROR: found
+
+### a root name it defines, after a lookup reached the root, is its own
+
+```scheme
+(def root ((op () e e)))
+(def env (pair () root))
+(def fill (fn (self l k) (match ((eq? l ()) k) (#t (self (rest l) (+ (eval (pair (lit def) (pair (first l) (pair k ()))) env) 1))))))
+(fill (lit (n0 n1 n2 n3 n4 n5 n6 n7 n8 n9 n10 n11 n12 n13 n14 n15 n16 n17 n18 n19)) 0)
+(def g 1)
+(eval (lit g) env)
+(eval (lit (def g 2)) env)
+(match ((= (eval (lit g) env) 2) (match ((= g 1) (error "own")) (#t (error "root changed")))) (#t (error "not shadowed")))
+```
+---
+    *** ERROR: own
+
+### set! of a root name through it changes the root's
+
+```scheme
+(def root ((op () e e)))
+(def env (pair () root))
+(def fill (fn (self l k) (match ((eq? l ()) k) (#t (self (rest l) (+ (eval (pair (lit def) (pair (first l) (pair k ()))) env) 1))))))
+(fill (lit (n0 n1 n2 n3 n4 n5 n6 n7 n8 n9 n10 n11 n12 n13 n14 n15 n16 n17 n18 n19)) 0)
+(def h 1)
+(eval (lit h) env)
+(eval (lit (set! h 3)) env)
+(match ((= h 3) (match ((= (eval (lit h) env) 3) (error "root")) (#t (error "stale")))) (#t (error "no")))
+```
+---
+    *** ERROR: root
+
+### a root name defined after its lookups missed is found through it
+
+```scheme
+(def root ((op () e e)))
+(def env (pair () root))
+(def fill (fn (self l k) (match ((eq? l ()) k) (#t (self (rest l) (+ (eval (pair (lit def) (pair (first l) (pair k ()))) env) 1))))))
+(fill (lit (n0 n1 n2 n3 n4 n5 n6 n7 n8 n9 n10 n11 n12 n13 n14 n15 n16 n17 n18 n19)) 0)
+(guard (x ()) (eval (lit late) env))
+(def late 8)
+(match ((= (eval (lit late) env) 8) (error "found")) (#t (error "no")))
+```
+---
+    *** ERROR: found
+
+### its alist still holds each binding, one cell a name
+
+```scheme
+(def root ((op () e e)))
+(def env (pair () root))
+(def fill (fn (self l k) (match ((eq? l ()) k) (#t (self (rest l) (+ (eval (pair (lit def) (pair (first l) (pair k ()))) env) 1))))))
+(fill (lit (n0 n1 n2 n3 n4 n5 n6 n7 n8 n9 n10 n11 n12 n13 n14 n15 n16 n17 n18 n19)) 0)
+(eval (lit (def n7 70)) env)
+(def cells (fn (self l n) (match ((eq? l ()) n) (#t (self (rest l) (match ((eq? (first (first l)) (lit n7)) (+ n 1)) (#t n)))))))
+(def cell (fn (self l) (match ((eq? l ()) ()) ((eq? (first (first l)) (lit n7)) (first l)) (#t (self (rest l))))))
+(match ((= (cells (first env) 0) 1) (match ((= (rest (cell (first env))) 70) (error "one")) (#t (error "stale cell")))) (#t (error "no")))
+```
+---
+    *** ERROR: one

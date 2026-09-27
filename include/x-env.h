@@ -10,11 +10,15 @@
  * is nil and its bindings are a tree (x-alist.c's BST, for the size of a
  * loaded library); every other environment's bindings are an alist of
  * @c (name . value) cells and its parent is the environment it was made
- * in.  A procedure call makes a child of the closure's environment; an
- * operative body runs in a child of its static environment and receives
- * the caller's environment as a value; `def` binds in the current
- * environment; `eval` with an environment makes that one current.  That
- * is the whole of scope, and these four operations are all of it.
+ * in.  An environment under a root with many bindings, a module's, also
+ * keeps a lookup cache at the head of its alist, a tree of the cells its
+ * lookups have found, so a lookup from inside it costs what one from the
+ * root does (x-env.c, x_env_cache).  A procedure call makes a child of the
+ * closure's environment; an operative body runs in a child of its static
+ * environment and receives the caller's environment as a value; `def`
+ * binds in the current environment; `eval` with an environment makes that
+ * one current.  That is the whole of scope, and these four operations are
+ * all of it.
  *
  * @author Jon Ruttan (jonruttan@gmail.com)
  * @copyright 2026 Jon Ruttan
@@ -34,6 +38,12 @@
 #define x_env_bindings(E)		x_firstobj(E)	/**< The alist, or the root's tree. */
 #define x_env_parent(E)			x_restobj(E)	/**< The enclosing environment, nil at the root. */
 #define x_env_isroot(B,E)		x_obj_isnil((B), x_restobj(E))	/**< A root has no parent. */
+
+/** The flag on an environment's pair that says it keeps a lookup cache.
+ *  A lookup tests it on the pair it already holds, so an environment
+ *  without one -- every call frame -- pays for nothing else.  Flag 1 is
+ *  WRAP on a procedure; its meaning is per type, and an image keeps it. */
+#define X_ENV_FLAG_CACHE		X_OBJ_FLAG_1
 /** @} */
 
 /** Make an empty environment whose parent is @p p_parent (nil for a root). */

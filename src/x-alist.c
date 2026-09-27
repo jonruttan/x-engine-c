@@ -117,26 +117,31 @@ x_obj_t *x_alist_bst_lookup(x_obj_t *p_base, x_obj_t *p_tree,
 }
 
 /**
- * Create a SHARED pair immune to GC sweep.
+ * Create a tree node's pair, carrying @p flags.
  *
- * BST nodes are structural -- the global env tree lives for the base's
- * lifetime and is reachable only through this tree, so its nodes must
- * not be collected.
+ * The root environment's tree lives for the base's lifetime, so its nodes
+ * carry X_OBJ_FLAG_SHARED and are never swept.  An environment's index
+ * lives as long as its environment, so its nodes carry no flag and are
+ * collected with it.
  *
  * @param p_base  x_obj_t* -- Base (execution context)
+ * @param flags   x_obj_flag_t -- Flags the new pair carries
  * @param a       x_obj_t* -- First element
  * @param b       x_obj_t* -- Rest element
- * @return x_obj_t* -- New pair with X_OBJ_FLAG_SHARED set
+ * @return x_obj_t* -- New pair
  */
-static x_obj_t *bst_pair(x_obj_t *p_base, x_obj_t *a, x_obj_t *b)
+static x_obj_t *bst_pair(x_obj_t *p_base, x_obj_flag_t flags,
+	x_obj_t *a, x_obj_t *b)
 {
 	x_obj_t *p = x_mkspair(p_base, X_OBJ_FLAG_NONE, a, b);
-	x_obj_flags(p) |= X_OBJ_FLAG_SHARED;
+
+	x_obj_flags(p) |= flags;
+
 	return p;
 }
 
 /**
- * In-place BST insert into the global env tree.
+ * In-place BST insert.
  *
  * MUTATES the tree in place; every environment whose chain reaches the
  * root sees the new entry, which is required: a top-level (def ...) must
@@ -152,12 +157,14 @@ static x_obj_t *bst_pair(x_obj_t *p_base, x_obj_t *a, x_obj_t *b)
  *       root and left the old one unchanged; that made every closure
  *       created before an insertion silently miss any later top-level
  *       def, so it was replaced by in-place mutation (see the body
- *       comment below).  New nodes are allocated via bst_pair(), which
- *       sets X_OBJ_FLAG_SHARED so the long-lived tree is never swept.
+ *       comment below).  New nodes are allocated via bst_pair() with
+ *       @p flags: X_OBJ_FLAG_SHARED for the root's tree, which is never
+ *       swept, and none for an environment's index.
  *
  * @param p_base   x_obj_t* -- Base (execution context)
  * @param p_tree   x_obj_t* -- Existing BST root, or NULL for empty
  * @param p_entry  x_obj_t* -- (symbol . value) entry to insert
+ * @param flags    x_obj_flag_t -- Flags the tree's new nodes carry
  * @return x_obj_t* -- The tree root (a fresh node only when @p p_tree
  *                     was empty)
  *
@@ -165,15 +172,15 @@ static x_obj_t *bst_pair(x_obj_t *p_base, x_obj_t *a, x_obj_t *b)
  * @see x_env_bind
  */
 x_obj_t *x_alist_bst_insert(x_obj_t *p_base, x_obj_t *p_tree,
-	x_obj_t *p_entry)
+	x_obj_t *p_entry, x_obj_flag_t flags)
 {
 	x_obj_t *p_children;
 	int cmp;
 
 	/* Empty tree: caller must update their root with the returned node. */
 	if (x_obj_isnil(p_base, p_tree)) {
-		return bst_pair(p_base, p_entry,
-			bst_pair(p_base, NULL, NULL));
+		return bst_pair(p_base, flags, p_entry,
+			bst_pair(p_base, flags, NULL, NULL));
 	}
 
 	/* Non-empty: MUTATE the existing tree in place so all captured BST
@@ -198,17 +205,19 @@ x_obj_t *x_alist_bst_insert(x_obj_t *p_base, x_obj_t *p_tree,
 	 * that was not the same object above goes right. */
 	if (cmp < 0) {
 		if (x_obj_isnil(p_base, x_firstobj(p_children))) {
-			x_firstobj(p_children) = bst_pair(p_base, p_entry,
-				bst_pair(p_base, NULL, NULL));
+			x_firstobj(p_children) = bst_pair(p_base, flags, p_entry,
+				bst_pair(p_base, flags, NULL, NULL));
 		} else {
-			x_alist_bst_insert(p_base, x_firstobj(p_children), p_entry);
+			x_alist_bst_insert(p_base, x_firstobj(p_children), p_entry,
+				flags);
 		}
 	} else {
 		if (x_obj_isnil(p_base, x_restobj(p_children))) {
-			x_restobj(p_children) = bst_pair(p_base, p_entry,
-				bst_pair(p_base, NULL, NULL));
+			x_restobj(p_children) = bst_pair(p_base, flags, p_entry,
+				bst_pair(p_base, flags, NULL, NULL));
 		} else {
-			x_alist_bst_insert(p_base, x_restobj(p_children), p_entry);
+			x_alist_bst_insert(p_base, x_restobj(p_children), p_entry,
+				flags);
 		}
 	}
 	return p_tree;

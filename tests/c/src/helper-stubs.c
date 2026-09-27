@@ -93,6 +93,15 @@ x_obj_t *x_make_symbol(x_obj_t *p_base, x_obj_flag_t flags,
 x_obj_t *x_type_symbol_find(x_obj_t *p_base, x_obj_t *p_args) { return NULL; }
 #endif
 
+/* x_env_bind interns the name of an environment's index when it makes one
+ * (x-env.c), and it makes one only over names that are symbols.  A spec
+ * without the symbol type binds atoms, never gets that far, and links this
+ * instead. */
+#ifdef STUB_X_MAKE_SYMBOL
+x_obj_t *x_make_symbol(x_obj_t *p_base, x_obj_flag_t flags,
+	x_char_t *s) { return NULL; }
+#endif
+
 #ifdef STUB_X_PRIM_REGISTER
 x_obj_t *x_prim_core_register(x_obj_t *p_base, x_obj_t *p_args) { return p_base; }
 x_obj_t *x_prim_arith_register(x_obj_t *p_base, x_obj_t *p_args) { return p_base; }

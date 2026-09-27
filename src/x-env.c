@@ -16,13 +16,34 @@
 #include "x-type/symbol.h"
 
 /**
+ * @brief Bindings an environment under a root holds before it keeps a
+ *        lookup cache.
+ *
+ * Below it the walk of the alist is short.  A call frame holds its
+ * parameters and the definitions in its body, rarely this many, so a frame
+ * seldom keeps one; x-engine-rust gives a frame its shadow map at the same
+ * count.
+ */
+#define X_ENV_CACHE_MIN   16
+
+/**
+ * @brief The name of the cell that holds an environment's lookup cache.
+ *
+ * The reader never makes a symbol spelled this way, so no program binds
+ * the name by writing it, and a walk of the alist that takes each cell's
+ * name for a symbol finds one here too.
+ */
+#define X_ENV_CACHE_NAME   "#<cache>"
+
+/**
  * Make an empty environment whose parent is @p p_parent.
  *
  * An environment is one pair, @c (bindings . parent).  A nil parent makes
  * a root, whose bindings are kept as a tree; any other environment keeps
- * an alist.  x_eval_make builds the base's root this way; procedure and
- * operative calls make children through x_env_extend; `guard` makes one
- * for its error variable.
+ * an alist, and one under a root that comes to hold many bindings keeps a
+ * lookup cache at the head of it (x_env_cache).  x_eval_make builds the
+ * base's root this way; procedure and operative calls make children
+ * through x_env_extend; `guard` makes one for its error variable.
  *
  * @param p_base    x_obj_t* -- Base (execution context)
  * @param p_parent  x_obj_t* -- The enclosing environment, or nil for a root
@@ -56,6 +77,113 @@ static x_obj_t *x_env_own_symbol(x_obj_t *p_base, x_obj_t *p_sym)
 }
 
 /**
+ * The link to an environment's lookup cache, or NULL when it keeps none.
+ *
+ * An environment under a root that holds X_ENV_CACHE_MIN bindings keeps a
+ * lookup cache as the first cell of its alist, and its pair carries
+ * X_ENV_FLAG_CACHE:
+ *
+ *     (#<cache> . (parent #<cache> . tree))
+ *
+ * The tree holds the cells lookups through the environment have found, by
+ * spelling as the root's tree does: the environment's own, and the root's.
+ * A cell in it does not go stale: `def` and `set!` update a cell in place,
+ * and a `def` that gives the environment a name the cache found in the root
+ * puts the new cell in its place (x_env_bind).  The alist after the cache
+ * cell still holds every binding, and is what a lookup the cache misses
+ * walks.
+ *
+ * The flag is tested first, on the pair a lookup already holds, so a frame
+ * costs nothing here.  The cell is the cache only while its value names the
+ * environment's own parent and repeats the cell's own name, so a value a
+ * program bound is never searched as a tree, and an alist whose head a
+ * program has changed is walked, as any alist is.
+ *
+ * @param p_base  x_obj_t* -- Base (execution context)
+ * @param p_env   x_obj_t* -- An environment with a parent
+ * @return x_obj_t* -- The pair @c (name . tree), or NULL
+ */
+static x_obj_t *x_env_cache(x_obj_t *p_base, x_obj_t *p_env)
+{
+	x_obj_t *p_cell, *p_value, *p_link;
+
+	if ( ! (x_obj_flags(p_env) & X_ENV_FLAG_CACHE)
+		|| x_obj_isnil(p_base, x_env_bindings(p_env))) {
+		return NULL;
+	}
+
+	p_cell = x_firstobj(x_env_bindings(p_env));
+	if (x_obj_isnil(p_base, p_cell) || ! x_obj_type_isspair(p_cell)) {
+		return NULL;
+	}
+
+	p_value = x_restobj(p_cell);
+	if (x_obj_isnil(p_base, p_value)
+		|| ! x_obj_type_isspair(p_value)
+		|| x_firstobj(p_value) != x_env_parent(p_env)) {
+		return NULL;
+	}
+
+	p_link = x_restobj(p_value);
+	if (x_obj_isnil(p_base, p_link)
+		|| ! x_obj_type_isspair(p_link)
+		|| x_firstobj(p_link) != x_firstobj(p_cell)) {
+		return NULL;
+	}
+
+	return p_link;
+}
+
+/**
+ * Give an environment under a root its lookup cache: an empty tree in a
+ * cell at the head of its alist, and X_ENV_FLAG_CACHE on its pair.
+ *
+ * @param p_base  x_obj_t* -- Base (execution context)
+ * @param p_env   x_obj_t* -- The environment, whose parent is a root
+ */
+static void x_env_cache_make(x_obj_t *p_base, x_obj_t *p_env)
+{
+	x_obj_t *p_name = x_mksymbol(p_base, X_ENV_CACHE_NAME);
+
+	x_env_bindings(p_env) = x_mkspair(p_base, X_OBJ_FLAG_NONE,
+		x_mkspair(p_base, X_OBJ_FLAG_NONE, p_name,
+			x_mkspair(p_base, X_OBJ_FLAG_NONE, x_env_parent(p_env),
+				x_mkspair(p_base, X_OBJ_FLAG_NONE, p_name, NULL))),
+		x_env_bindings(p_env));
+	x_obj_flags(p_env) |= X_ENV_FLAG_CACHE;
+}
+
+/**
+ * Whether a lookup cache can hold a cell named @p p_sym.
+ *
+ * The tree steers by spelling, so it holds only a symbol: a name of the
+ * cache's own name's type.
+ *
+ * @param p_link  x_obj_t* -- The cache's @c (name . tree) link
+ * @param p_sym   x_obj_t* -- The name
+ * @return int -- Nonzero when @p p_sym is a symbol
+ */
+static int x_env_cache_holds(x_obj_t *p_link, x_obj_t *p_sym)
+{
+	return x_obj_type(x_firstobj(p_link)) == x_obj_type(p_sym);
+}
+
+/**
+ * Put @p p_entry in a lookup cache, in the place of the cell it holds for
+ * the same name, if it holds one.
+ *
+ * @param p_base   x_obj_t* -- Base (execution context)
+ * @param p_link   x_obj_t* -- The cache's @c (name . tree) link
+ * @param p_entry  x_obj_t* -- A @c (name . value) cell
+ */
+static void x_env_cache_put(x_obj_t *p_base, x_obj_t *p_link,
+	x_obj_t *p_entry)
+{
+	x_restobj(p_link) = x_alist_bst_insert(p_base, x_restobj(p_link),
+		p_entry, X_OBJ_FLAG_NONE);
+}
+
+/**
  * The cell binding @p p_sym in @p p_env or an ancestor.
  *
  * Walks from @p p_env to the root: an environment with a parent searches
@@ -63,6 +191,13 @@ static x_obj_t *x_env_own_symbol(x_obj_t *p_base, x_obj_t *p_sym)
  * searches its tree, also by identity.  The first hit wins, so a child's
  * binding shadows a parent's.  This is the whole of symbol lookup --
  * x_type_symbol_eval and `set!` call nothing else.
+ *
+ * An environment that keeps a lookup cache (x_env_cache), a module's, is
+ * asked its cache first, and a cell found past it, in its alist or in the
+ * root, goes into the cache, so the next lookup of the name through the
+ * environment is one search of a tree of the names used there: a lookup
+ * from inside a module costs what one from the root does, whatever the
+ * module's size.
  *
  * Symbols intern per base, and a name is found by identity, not by
  * spelling: a base's own symbol finds only what was bound under it, so a
@@ -73,13 +208,13 @@ static x_obj_t *x_env_own_symbol(x_obj_t *p_base, x_obj_t *p_sym)
  * base's own symbol of its spelling, and that is what is looked up.  That
  * is what lets `(base eval B (lit (+ 2 3)))` hand a child the host's `+`
  * and reach the child's binding of its own `+`.  The retry runs only when
- * the identity lookup at the root missed.
+ * the identity lookup at the root missed, and what it finds is never put
+ * in a cache.
  *
- * Under X_PROFILE, each binding compared in an environment with a parent --
- * a frame, or a module's environment -- counts one in the base's
- * profile-env-steps cell.  The root's tree counts its own lookups, in
- * profile-bst-hits and profile-bst-misses, so the walk to the root is what
- * this one cell adds.
+ * Under X_PROFILE, each binding compared in an environment's alist counts
+ * one in the base's profile-env-steps cell.  The root's tree and a cache
+ * count their own lookups, in profile-bst-hits and profile-bst-misses, so
+ * the walk to the root is what this one cell adds.
  *
  * @param p_base  x_obj_t* -- Base (execution context)
  * @param p_env   x_obj_t* -- The environment to start from
@@ -88,13 +223,18 @@ static x_obj_t *x_env_own_symbol(x_obj_t *p_base, x_obj_t *p_sym)
  */
 x_obj_t *x_env_lookup(x_obj_t *p_base, x_obj_t *p_env, x_obj_t *p_sym)
 {
-	x_obj_t *p_cell, *p_entry, *p_own;
+	x_obj_t *p_cell, *p_entry, *p_own, *p_link;
+	x_obj_t *p_missed = NULL;
 
 	for (; ! x_obj_isnil(p_base, p_env); p_env = x_env_parent(p_env)) {
 		if (x_env_isroot(p_base, p_env)) {
 			p_entry = x_alist_bst_lookup(p_base,
 				x_env_bindings(p_env), p_sym);
 			if ( ! x_obj_isnil(p_base, p_entry)) {
+				if (p_missed != NULL) {
+					x_env_cache_put(p_base, p_missed, p_entry);
+				}
+
 				return p_entry;
 			}
 
@@ -109,14 +249,33 @@ x_obj_t *x_env_lookup(x_obj_t *p_base, x_obj_t *p_env, x_obj_t *p_sym)
 			continue;
 		}
 
-		for (p_cell = x_env_bindings(p_env);
-			! x_obj_isnil(p_base, p_cell);
-			p_cell = x_restobj(p_cell)) {
+		p_cell = x_env_bindings(p_env);
+		p_link = x_env_cache(p_base, p_env);
+		if (p_link != NULL && x_env_cache_holds(p_link, p_sym)) {
+			p_entry = x_alist_bst_lookup(p_base, x_restobj(p_link), p_sym);
+			if ( ! x_obj_isnil(p_base, p_entry)) {
+				return p_entry;
+			}
+
+			/* A miss walks the alist past the cache cell.  The cache's
+			 * environment's parent is a root, so a miss there too is
+			 * looked up next in the root, which puts what it finds here. */
+			p_cell = x_restobj(p_cell);
+			p_missed = p_link;
+		} else {
+			p_link = NULL;
+		}
+
+		for (; ! x_obj_isnil(p_base, p_cell); p_cell = x_restobj(p_cell)) {
 #ifdef X_PROFILE
 			if (x_base_isset(p_base))
 				x_atomint(x_firstobj(x_eval_field_profile_env_steps(p_base)))++;
 #endif
 			if (x_firstobj(x_firstobj(p_cell)) == p_sym) {
+				if (p_link != NULL) {
+					x_env_cache_put(p_base, p_link, x_firstobj(p_cell));
+				}
+
 				return x_firstobj(p_cell);
 			}
 		}
@@ -135,6 +294,13 @@ x_obj_t *x_env_lookup(x_obj_t *p_base, x_obj_t *p_env, x_obj_t *p_sym)
  * `def` is this on the current environment; the C binding doors and
  * `base bind` are this on a root.
  *
+ * An environment under a root whose alist this brings to X_ENV_CACHE_MIN
+ * bindings is given a lookup cache (x_env_cache_make).  In one that keeps
+ * a cache, a new binding goes just after the cache cell, which stays at the
+ * head, and into the cache only in the place of a cell the cache found for
+ * the name in the root: that cell is the root's, and is never written from
+ * here.
+ *
  * @param p_base  x_obj_t* -- Base (execution context)
  * @param p_env   x_obj_t* -- The environment to bind in
  * @param p_sym   x_obj_t* -- The symbol
@@ -149,7 +315,8 @@ x_obj_t *x_env_lookup(x_obj_t *p_base, x_obj_t *p_env, x_obj_t *p_sym)
 x_obj_t *x_env_bind(x_obj_t *p_base, x_obj_t *p_env,
 	x_obj_t *p_sym, x_obj_t *p_val)
 {
-	x_obj_t *p_cell, *p_pair;
+	x_obj_t *p_cell, *p_pair, *p_link;
+	int n_cells = 0;
 
 	if (x_env_isroot(p_base, p_env)) {
 		p_cell = x_alist_bst_lookup(p_base, x_env_bindings(p_env), p_sym);
@@ -160,23 +327,48 @@ x_obj_t *x_env_bind(x_obj_t *p_base, x_obj_t *p_env,
 
 		p_pair = x_mkspair(p_base, X_OBJ_FLAG_NONE, p_sym, p_val);
 		x_env_bindings(p_env) = x_alist_bst_insert(p_base,
-			x_env_bindings(p_env), p_pair);
+			x_env_bindings(p_env), p_pair, X_OBJ_FLAG_SHARED);
 
 		return p_val;
 	}
 
-	for (p_cell = x_env_bindings(p_env);
-		! x_obj_isnil(p_base, p_cell);
-		p_cell = x_restobj(p_cell)) {
+	p_link = x_env_cache(p_base, p_env);
+	p_cell = x_env_bindings(p_env);
+	if (p_link != NULL) {
+		p_cell = x_restobj(p_cell);
+	}
+
+	for (; ! x_obj_isnil(p_base, p_cell); p_cell = x_restobj(p_cell)) {
 		if (x_firstobj(x_firstobj(p_cell)) == p_sym) {
 			x_restobj(x_firstobj(p_cell)) = p_val;
 			return p_val;
 		}
+
+		n_cells++;
 	}
 
 	p_pair = x_mkspair(p_base, X_OBJ_FLAG_NONE, p_sym, p_val);
+
+	if (p_link != NULL) {
+		x_restobj(x_env_bindings(p_env)) = x_mkspair(p_base, X_OBJ_FLAG_NONE,
+			p_pair, x_restobj(x_env_bindings(p_env)));
+
+		if (x_env_cache_holds(p_link, p_sym)
+			&& ! x_obj_isnil(p_base,
+				x_alist_bst_lookup(p_base, x_restobj(p_link), p_sym))) {
+			x_env_cache_put(p_base, p_link, p_pair);
+		}
+
+		return p_val;
+	}
+
 	x_env_bindings(p_env) = x_mkspair(p_base, X_OBJ_FLAG_NONE,
 		p_pair, x_env_bindings(p_env));
+
+	if (n_cells + 1 >= X_ENV_CACHE_MIN
+		&& x_env_isroot(p_base, x_env_parent(p_env))) {
+		x_env_cache_make(p_base, p_env);
+	}
 
 	return p_val;
 }

@@ -43,8 +43,9 @@ x_obj_t *x_alist_assoc(x_obj_t *p_base, x_obj_t *p_args);
 /** Find an entry in a BST alist by symbol pointer. */
 x_obj_t *x_alist_bst_lookup(x_obj_t *p_base, x_obj_t *p_tree, x_obj_t *p_sym);
 
-/** Insert an entry into a BST alist. */
-x_obj_t *x_alist_bst_insert(x_obj_t *p_base, x_obj_t *p_tree, x_obj_t *p_entry);
+/** Insert an entry into a BST alist; the new nodes carry @p flags. */
+x_obj_t *x_alist_bst_insert(x_obj_t *p_base, x_obj_t *p_tree, x_obj_t *p_entry,
+	x_obj_flag_t flags);
 
 /** @} */
 

@@ -71,7 +71,9 @@ extern x_satom_t x_eval_obj;
  *  binding; FRAME, a bit on an env spine cell that marked it as part of a
  *  local frame; and FNFRAME, FRAME's refinement for procedure activations.
  *  An environment is an object now, so a frame is a value and needs no
- *  mark.  Flag bits 1, 3 and 4 are free at this layer. */
+ *  mark.  Flag bit 1 on an environment's pair says it keeps a lookup
+ *  cache (X_ENV_FLAG_CACHE, x-env.h); bits 3 and 4 are free at this
+ *  layer. */
 #define X_OBJ_FLAG_COV		X_OBJ_FLAG_2
 
 /**

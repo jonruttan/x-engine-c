@@ -319,6 +319,193 @@ static char *test_core_env_root_identity(void)
 	return NULL;
 }
 
+/* The names a cache spec binds: static, since a symbol keeps the string
+ * it was made from. */
+static x_char_t *_cache_names[] = {
+	"cx-00", "cx-01", "cx-02", "cx-03", "cx-04", "cx-05", "cx-06", "cx-07",
+	"cx-08", "cx-09", "cx-10", "cx-11", "cx-12", "cx-13", "cx-14", "cx-15",
+	"cx-16"
+};
+
+/* The number of cells in an alist. */
+static int _cells(x_obj_t *p_base, x_obj_t *p_alist)
+{
+	int n = 0;
+
+	for (; ! x_obj_isnil(p_base, p_alist); p_alist = x_restobj(p_alist)) {
+		n++;
+	}
+
+	return n;
+}
+
+/* Whether an environment's first cell is named #<cache>. */
+static int _head_is_cache(x_obj_t *p_base, x_obj_t *p_env)
+{
+	x_obj_t *p_name = x_firstobj(x_firstobj(x_env_bindings(p_env)));
+
+	return x_obj_type_issymbol(p_base, p_name)
+		&& x_lib_strcmp(x_symbolval(p_name), X_ENV_CACHE_NAME) == 0;
+}
+
+/* The cell a cache holds for a name, or nil. */
+static x_obj_t *_cached(x_obj_t *p_base, x_obj_t *p_link, x_obj_t *p_sym)
+{
+	return x_alist_bst_lookup(p_base, x_restobj(p_link), p_sym);
+}
+
+/* An environment under the root that comes to hold X_ENV_CACHE_MIN
+ * bindings keeps a lookup cache at the head of its alist: a cell named
+ * #<cache> whose value is (root #<cache> . tree), and its pair carries
+ * X_ENV_FLAG_CACHE.  The alist still holds every binding.  The tree holds
+ * the cells lookups through the environment found: its own, and the root's.
+ * A def or set! in the root is seen through a cached root cell; a def of
+ * the name in the environment takes the cell's place and leaves the root's
+ * cell alone. */
+static char *test_core_env_cache(void)
+{
+	x_obj_t *p_base, *p_root, *p_env, *p_other, *p_moved, *p_frame;
+	x_obj_t *p_syms[X_ENV_CACHE_MIN + 1], *p_link, *p_cell, *p_shadow;
+	x_obj_t *p_params = NULL, *p_vals = NULL;
+	int i, n, found;
+
+	p_base = x_eval_make(NULL, NULL);
+	x_prim_register(p_base, NULL);
+	p_root = x_eval_field_env_root(p_base);
+	p_env = x_env_make(p_base, p_root);
+
+	for (i = 0; i <= X_ENV_CACHE_MIN; i++) {
+		p_syms[i] = x_mksymbol(p_base, _cache_names[i]);
+	}
+
+	for (i = 0; i < X_ENV_CACHE_MIN - 1; i++) {
+		x_env_bind(p_base, p_env, p_syms[i],
+			x_mksatom(p_base, X_OBJ_FLAG_NONE, (x_int_t)i));
+	}
+	_it_should("an environment below the threshold keeps a plain alist",
+		x_env_cache(p_base, p_env) == NULL
+		&& ! (x_obj_flags(p_env) & X_ENV_FLAG_CACHE)
+		&& ! _head_is_cache(p_base, p_env)
+		&& _cells(p_base, x_env_bindings(p_env)) == X_ENV_CACHE_MIN - 1);
+
+	x_env_bind(p_base, p_env, p_syms[X_ENV_CACHE_MIN - 1],
+		x_mksatom(p_base, X_OBJ_FLAG_NONE, (x_int_t)(X_ENV_CACHE_MIN - 1)));
+	p_link = x_env_cache(p_base, p_env);
+	_it_should("the binding that reaches the threshold gives it a cache at the head",
+		p_link != NULL
+		&& (x_obj_flags(p_env) & X_ENV_FLAG_CACHE)
+		&& _head_is_cache(p_base, p_env)
+		&& x_firstobj(x_restobj(x_firstobj(x_env_bindings(p_env)))) == p_root
+		&& x_firstobj(p_link) == x_firstobj(x_firstobj(x_env_bindings(p_env))));
+	_it_should("the cache starts empty, and the alist after it holds every binding",
+		x_obj_isnil(p_base, x_restobj(p_link))
+		&& _cells(p_base, x_restobj(x_env_bindings(p_env))) == X_ENV_CACHE_MIN);
+
+	found = 0;
+	for (i = 0; i < X_ENV_CACHE_MIN - 1; i++) {
+		p_cell = x_env_lookup(p_base, p_env, p_syms[i]);
+		if (p_cell != NULL && x_atomint(x_restobj(p_cell)) == i
+			&& _cached(p_base, p_link, p_syms[i]) == p_cell) {
+			found++;
+		}
+	}
+	_it_should("each binding is found, and a found cell is cached",
+		found == X_ENV_CACHE_MIN - 1);
+	_it_should("a name no lookup has asked for is not cached",
+		x_obj_isnil(p_base, _cached(p_base, p_link, p_syms[X_ENV_CACHE_MIN - 1])));
+
+	x_env_bind(p_base, p_env, p_syms[3],
+		x_mksatom(p_base, X_OBJ_FLAG_NONE, (x_int_t)33));
+	_it_should("rebinding a name updates its cell in place",
+		x_atomint(x_restobj(x_env_lookup(p_base, p_env, p_syms[3]))) == 33
+		&& _cells(p_base, x_env_bindings(p_env)) == X_ENV_CACHE_MIN + 1);
+
+	x_env_bind(p_base, p_env, p_syms[X_ENV_CACHE_MIN],
+		x_mksatom(p_base, X_OBJ_FLAG_NONE, (x_int_t)99));
+	_it_should("a new binding goes after the cache cell, which stays at the head",
+		_head_is_cache(p_base, p_env)
+		&& x_firstobj(x_firstobj(x_restobj(x_env_bindings(p_env))))
+			== p_syms[X_ENV_CACHE_MIN]
+		&& x_obj_isnil(p_base, _cached(p_base, p_link, p_syms[X_ENV_CACHE_MIN]))
+		&& x_atomint(x_restobj(x_env_lookup(p_base, p_env,
+			p_syms[X_ENV_CACHE_MIN]))) == 99);
+
+	/* A root name, reached through the environment. */
+	p_shadow = x_mksymbol(p_base, "cx-root");
+	x_env_bind(p_base, p_root, p_shadow,
+		x_mksatom(p_base, X_OBJ_FLAG_NONE, (x_int_t)1));
+	p_cell = x_env_lookup(p_base, p_root, p_shadow);
+	n = _cells(p_base, x_env_bindings(p_env));
+	_it_should("a root name found through the environment is the root's cell",
+		x_env_lookup(p_base, p_env, p_shadow) == p_cell);
+	_it_should("and the cache now holds that cell, the alist nothing new",
+		_cached(p_base, p_link, p_shadow) == p_cell
+		&& _cells(p_base, x_env_bindings(p_env)) == n);
+
+	x_env_bind(p_base, p_root, p_shadow,
+		x_mksatom(p_base, X_OBJ_FLAG_NONE, (x_int_t)2));
+	_it_should("a def in the root is seen through the cache",
+		x_atomint(x_restobj(x_env_lookup(p_base, p_env, p_shadow))) == 2);
+
+	x_env_bind(p_base, p_env, p_shadow,
+		x_mksatom(p_base, X_OBJ_FLAG_NONE, (x_int_t)5));
+	_it_should("a def of the name in the environment shadows the root's",
+		x_atomint(x_restobj(x_env_lookup(p_base, p_env, p_shadow))) == 5
+		&& x_env_lookup(p_base, p_env, p_shadow) != p_cell
+		&& _cached(p_base, p_link, p_shadow) == x_env_lookup(p_base, p_env, p_shadow));
+	_it_should("without touching the root's cell",
+		x_env_lookup(p_base, p_root, p_shadow) == p_cell
+		&& x_atomint(x_restobj(p_cell)) == 2);
+	_it_should("and the alist holds the new binding",
+		_cells(p_base, x_env_bindings(p_env)) == n + 1);
+
+	_it_should("the cache cell is no binding: its name is not found through it",
+		x_env_lookup(p_base, p_env, x_mksymbol(p_base, X_ENV_CACHE_NAME)) == NULL);
+
+	/* The same alist in another pair, under another parent, is walked:
+	 * the new pair carries no flag. */
+	p_other = x_env_make(p_base, p_root);
+	x_env_bind(p_base, p_other, x_mksymbol(p_base, "cx-other"),
+		x_mksatom(p_base, X_OBJ_FLAG_NONE, (x_int_t)7));
+	p_moved = x_mkspair(p_base, X_OBJ_FLAG_NONE,
+		x_env_bindings(p_env), p_other);
+	_it_should("the same alist in another environment keeps no cache there",
+		x_env_cache(p_base, p_moved) == NULL);
+	_it_should("and its names are still found, by the walk",
+		x_atomint(x_restobj(x_env_lookup(p_base, p_moved, p_syms[7]))) == 7
+		&& x_atomint(x_restobj(x_env_lookup(p_base, p_moved,
+			x_mksymbol(p_base, "cx-other")))) == 7);
+
+	/* A frame binds its parameters without x_env_bind, so it keeps its
+	 * alist whatever its size. */
+	for (i = X_ENV_CACHE_MIN; i >= 0; i--) {
+		p_params = x_mkspair(p_base, X_OBJ_FLAG_NONE, p_syms[i], p_params);
+		p_vals = x_mkspair(p_base, X_OBJ_FLAG_NONE,
+			x_mksatom(p_base, X_OBJ_FLAG_NONE, (x_int_t)(100 + i)), p_vals);
+	}
+	p_frame = x_env_extend(p_base, p_root, p_params, p_vals);
+	_it_should("a frame keeps a plain alist",
+		x_env_cache(p_base, p_frame) == NULL
+		&& ! (x_obj_flags(p_frame) & X_ENV_FLAG_CACHE)
+		&& _cells(p_base, x_env_bindings(p_frame)) == X_ENV_CACHE_MIN + 1
+		&& x_atomint(x_restobj(x_env_lookup(p_base, p_frame, p_syms[0]))) == 100);
+
+	/* A cell a program puts in front of the cache by hand. */
+	x_env_bindings(p_env) = x_mkspair(p_base, X_OBJ_FLAG_NONE,
+		x_mkspair(p_base, X_OBJ_FLAG_NONE, x_mksymbol(p_base, "cx-hand"),
+			x_mksatom(p_base, X_OBJ_FLAG_NONE, (x_int_t)42)),
+		x_env_bindings(p_env));
+	_it_should("an environment whose head a program changed is walked",
+		x_env_cache(p_base, p_env) == NULL
+		&& x_atomint(x_restobj(x_env_lookup(p_base, p_env,
+			x_mksymbol(p_base, "cx-hand")))) == 42
+		&& x_atomint(x_restobj(x_env_lookup(p_base, p_env, p_syms[5]))) == 5
+		&& x_atomint(x_restobj(x_env_lookup(p_base, p_env, p_shadow))) == 5);
+
+	test_cleanup(p_base);
+	return NULL;
+}
+
 static char *test_core_fn(void)
 {
 	x_obj_t *p_base, *p_args, *p_result;
@@ -987,6 +1174,7 @@ static char *run_tests() {
 	_run_test(test_core_def_set);
 	_run_test(test_core_env_root);
 	_run_test(test_core_env_root_identity);
+	_run_test(test_core_env_cache);
 	_run_test(test_core_fn);
 	_run_test(test_core_op);
 	_run_test(test_core_eval);

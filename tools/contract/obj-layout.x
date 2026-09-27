@@ -44,10 +44,11 @@
 
 ; --- flags word bits (decimal; hex noted in comments) ---
 ; Low nibble: general-purpose attribute bits.  Their MEANING is per-type:
-; flag-1 is WRAP on procedures (wrapped applicative) and SHADOW on env
-; pairs; flag-2 is COV.  The x-eval layer owns those aliases.
+; flag-1 is WRAP on procedures (wrapped applicative) and CACHE on env
+; pairs (the environment keeps a lookup cache); flag-2 is COV.  The x-eval
+; and x-env layers own those aliases.
 (def %obj-flag-attr-mask 15)    ; 0x0F
-(def %obj-flag-1 1)             ; 0x01  WRAP / SHADOW
+(def %obj-flag-1 1)             ; 0x01  WRAP / CACHE
 (def %obj-flag-2 2)             ; 0x02  COV
 (def %obj-flag-3 4)             ; 0x04
 (def %obj-flag-4 8)             ; 0x08
