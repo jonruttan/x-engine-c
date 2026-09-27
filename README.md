@@ -34,12 +34,43 @@ no floats: its C library is x-expr's `x-stdlib.h`/`x-sys.h`, and only the CLI
     make gates      # the contract gates alone
     make test-c     # the C spec suite alone
     make test-bare  # the bare-engine smoke specs (no library)
+    make test-bare-profile  # the same, and the eval-count specs, on x-bin-profile
     make test-asan  # the C suite under AddressSanitizer
     make help       # every target
 
 Variant builds — `x-bin-debug`, `x-bin-profile`, `x-bin-asan`, `x-bin-cov` —
 each compile to their own object suffix, so no two configurations share an
-object path and variants rebuild incrementally.
+object path and variants rebuild incrementally. `x-bin-profile` also ships in
+every release, beside `x-bin`.
+
+## Profiling
+
+`x-bin-profile` is the engine built with `-DX_PROFILE -DX_COV`. A release
+strips and signs it as it does `x-bin`, so the two shipped engines differ in
+those flags and nothing else. It counts two ways, and reports each `include`'s
+load time on stderr.
+
+**The profile counters**: cells in the base object, at the paths
+`tools/contract/base-paths.x` gives, for allocations, evals, tail calls, alist,
+tree and symbol lookups, the bindings a lookup compares, and collections. A
+plain engine counts only evals and tail calls; the rest count only here.
+
+**The eval count**: in every object, how many times evaluation reached it.
+Every expression evaluated counts, a tail call included, and so does every
+body cell the evaluator steps onto. A procedure's first body cell therefore
+holds its calls, and the counts through its body are the evaluation it did
+itself. Where coverage marks that a node was reached, the count says how
+often. A form's count belongs to its place in the source; a symbol is
+interned, so its count is every evaluation of that name, wherever it appears.
+
+The count lives in the object's flags word, bits 11 to 30. Reflective code
+reads it with the `tools/contract/obj-layout.x` rows:
+
+    count = (& (>> flags %obj-evals-shift) (- (<< 1 %obj-evals-bits) 1))
+
+It saturates at 1048575 rather than wrapping. Bit 10, `%obj-flag-trace`, stays
+free for callers of `heap tree-mark!` and `image write!` to mark with. A build
+without `X_PROFILE` never writes these bits, so they read zero there.
 
 ## Layout
 
@@ -59,7 +90,7 @@ object path and variants rebuild incrementally.
 | `include/` | headers, including the generated `x-eval-layout.h` |
 | `ext/x-expr/` | the foundation library, as a submodule |
 | `tests/c/` | the C spec suite |
-| `tests/bare/` | bare-engine smoke specs — the engine with no library on stdin |
+| `tests/bare/` | bare-engine smoke specs — the engine with no library on stdin; `profile/` holds the eval-count cases only `x-bin-profile` passes |
 | `tools/contract/` | the committed manifests, shipped as the engine's self-description |
 
 ## Testing the engine unaided

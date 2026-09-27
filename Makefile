@@ -242,7 +242,7 @@ x-bin-debug: ## Build debug target
 	$(MAKE) OUTPUT=$@ OBJ_EXT=.debug.o CFLAGS="$(CFLAGS) -g -Og -DDEBUG" $@
 .PHONY: x-bin-debug
 
-x-bin-profile: ## Build profiling binary (includes coverage)
+x-bin-profile: ## Build profiling binary (includes coverage; ships in the release)
 	$(MAKE) OUTPUT=$@ OBJ_EXT=.profile.o CFLAGS="$(CFLAGS) -DX_PROFILE -DX_COV" $@
 .PHONY: x-bin-profile
 
@@ -289,8 +289,15 @@ clean-obj:
 
 # Pulled in with `-include` rather than `include`: on a clean tree there are no
 # .d files yet and their absence is normal, not an error.
--include $(OBJECTS:$(OBJ_EXT)=.d)
--include $(X_EXPR_OBJECTS:$(OBJ_EXT)=.d)
+#
+# `.o=.d`, NOT `$(OBJ_EXT)=.d`.  The compiler names a .d after its object, so
+# x-eval.profile.o writes x-eval.profile.d; substituting the whole OBJ_EXT
+# turned x-eval.profile.o into x-eval.d, and every variant build read the PLAIN
+# build's dependencies -- rules for x-eval.o, none for its own objects -- so a
+# changed header rebuilt no variant at all.  Every variant ends in .o, so
+# swapping that last suffix names each configuration's own file.
+-include $(OBJECTS:.o=.d)
+-include $(X_EXPR_OBJECTS:.o=.d)
 
 # ============================================================================
 # Distribute
@@ -306,6 +313,13 @@ clean-obj:
 # WHAT GOES IN, and who asks for it:
 #   x-bin                  the engine; x-lang copies it to its own root, where
 #                          its spec runner derives the awk harness path from it
+#   x-bin-profile          the same engine built with X_PROFILE and X_COV: the
+#                          profile counters count, and every object carries its
+#                          eval count (x-eval.h).  x-lang's bench and coverage
+#                          tools run it, and an unpacked release has no sources
+#                          to build it from -- so the release carries it, at
+#                          the root where a checkout's `make x-bin-profile`
+#                          puts it
 #   x-engine-build.xon     this BINARY's params -- word size, endian, os, arch
 #   x-engine.xon           what this engine provides, and what it claims
 #   tools/contract/*.x     x-lang's boot INCLUDES base-paths.x and obj-layout.x
@@ -335,16 +349,24 @@ DIST_NAME=x-engine-c-$(X_RELEASE)-$(DIST_OS)-$(DIST_ARCH)
 # copied fails the target instead of shipping as a hole.  Consumers meet a
 # missing contract file as a segfault in field access, which is the worst
 # possible place to learn that packaging drifted.
-DIST_REQUIRED=x-bin x-engine.xon x-engine-build.xon LICENSE \
+DIST_REQUIRED=x-bin x-bin-profile x-engine.xon x-engine-build.xon LICENSE \
 	tools/contract/isa.x tools/contract/obj-layout.x \
 	tools/contract/base-paths.x tools/contract/base-layout.x \
 	tools/contract/claims.x \
 	include/x-eval.h ext/x-expr/include/x-obj.h
 
-dist: all strip ## Package this engine as a consumable artifact (tar.gz + sha256)
+dist: all strip x-bin-profile ## Package this engine as a consumable artifact (tar.gz + sha256)
 	@rm -rf $(DIST_DIR)/$(DIST_NAME)
 	@mkdir -p $(DIST_DIR)/$(DIST_NAME)/tools/contract $(DIST_DIR)/$(DIST_NAME)/ext/x-expr
-	@cp $(EXECUTABLE) x-engine.xon x-engine-build.xon LICENSE $(DIST_DIR)/$(DIST_NAME)/
+	@cp $(EXECUTABLE) x-bin-profile x-engine.xon x-engine-build.xon LICENSE $(DIST_DIR)/$(DIST_NAME)/
+	@# The profile binary gets what `strip` gives x-bin -- local symbols out,
+	@# the exported jit_* table kept, re-signed with the JIT entitlements --
+	@# so the two shipped engines differ in their -D flags and nothing else.
+	@# It is done to the STAGED copy: the working-tree variant is a dev build
+	@# and keeps its symbols, and stripping it in place would rewrite its
+	@# bytes on every dist, the churn build/.strip-stamp exists to stop.
+	@strip -x $(DIST_DIR)/$(DIST_NAME)/x-bin-profile
+	@if [ -f entitlements.plist ]; then codesign -s - --entitlements entitlements.plist -f $(DIST_DIR)/$(DIST_NAME)/x-bin-profile 2>/dev/null || true; fi
 	@cp tools/contract/isa.x tools/contract/obj-layout.x tools/contract/base-paths.x \
 		tools/contract/base-layout.x tools/contract/claims.x \
 		$(DIST_DIR)/$(DIST_NAME)/tools/contract/
@@ -463,7 +485,20 @@ test-bare: $(EXECUTABLE) ## Run the bare-engine smoke specs (no library)
 	sh tests/bare/bare-runner.sh
 .PHONY: test-bare
 
-test: gates test-c test-bare ## Run all tests
+# The PROFILE build ships in every release beside x-bin (see `dist`), so it
+# is asked to stand up unaided the same way: the bare specs, run against it,
+# then the ones only it can pass.  tests/bare/profile/ reads the eval count
+# X_PROFILE writes into each object, which a plain engine never writes -- so
+# those cases live apart from tests/bare/specs/, where `test-bare` would run
+# them against x-bin and fail every one.
+BARE_PROFILE_SPECS=$(sort $(wildcard tests/bare/specs/*.spec.md)) \
+	$(sort $(wildcard tests/bare/profile/*.spec.md))
+
+test-bare-profile: x-bin-profile ## Run the bare-engine smoke specs against the profile build
+	X_BIN=./x-bin-profile sh tests/bare/bare-runner.sh $(BARE_PROFILE_SPECS)
+.PHONY: test-bare-profile
+
+test: gates test-c test-bare test-bare-profile ## Run all tests
 .PHONY: test
 
 # Memory-safety gate: run the C suite against an AddressSanitizer build.

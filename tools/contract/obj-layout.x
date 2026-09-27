@@ -10,8 +10,9 @@
 ;   2. tests/x/specs/meta/obj-layout.spec.md -- probes the LIVE build's
 ;      objects word by word and fails if reality disagrees with these values
 ;   3. tools/check/obj-layout.sh (make check-obj-layout) -- parses the same
-;      values out of ext/x-expr/include/x-obj.h and diffs, so an x-expr bump
-;      that moves the layout fails the build even before anything runs
+;      values out of ext/x-expr/include/x-obj.h (and the x-eval layer's bits
+;      out of include/x-eval.h) and diffs, so an x-expr bump that moves the
+;      layout fails the build even before anything runs
 ;
 ; Units are x_obj_t WORDS; multiply by %word-size for byte offsets.
 ; VALUES DESCRIBE THE X_HEAP BUILD (every shipped personality): without
@@ -67,3 +68,20 @@
 ; X_HEAP-only bits
 (def %obj-flag-shared 256)      ; 0x100
 (def %obj-flag-mark 512)        ; 0x200  the GC mark bit (was %obj-flag-heap pre-B1)
+
+; --- the x-eval layer's bits: above every flag x-obj.h declares ---
+; Not x-expr's: include/x-eval.h defines them.
+;
+; TRACE is the bit a caller borrows to mark objects of its own: (heap
+; tree-mark!), (heap chain-clear!) and (image write!) take the flag as an
+; argument, and every caller passes this one.  The engine never sets it.
+(def %obj-flag-trace 1024)      ; 0x400
+;
+; The EVAL COUNT, above TRACE.  An X_PROFILE build counts there how many times
+; evaluation reached the object -- each expression evaluated, each body cell
+; stepped onto -- so a procedure's first body cell holds its calls.  A build
+; without X_PROFILE never writes these bits and they read zero.  The count
+; SATURATES at its maximum, (- (<< 1 %obj-evals-bits) 1), rather than wrapping.
+;   count = (& (>> flags %obj-evals-shift) (- (<< 1 %obj-evals-bits) 1))
+(def %obj-evals-shift 11)       ; the count's lowest bit
+(def %obj-evals-bits 20)        ; its width: bits 11..30, at most 1048575

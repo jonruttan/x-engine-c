@@ -43,6 +43,10 @@ jobs:
         run: make test-c
       - name: Bare-engine smoke
         run: make test-bare
+      # The profile build ships in every release beside x-bin, so it gets the
+      # same smoke plus the eval-count cases only it can pass.
+      - name: Bare-engine smoke (profile build)
+        run: make test-bare-profile
       - name: Contract gates
         run: make gates
       # gen-layout must be a no-op: include/x-eval-layout.h is COMMITTED (so a

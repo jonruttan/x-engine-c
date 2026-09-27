@@ -27,7 +27,11 @@ contract_diff_setup base-paths
 # to be walkable paths.  Space-separated; every entry needs a reason here.
 #   x_error_handler_jmp -- a jmp-buffer pointer cast (x_ptrval), not a
 #                          walkable path.
-SKIP_MACROS="x_error_handler_jmp"
+#   x_obj_evals         -- the eval count: a shift and mask of any object's
+#                          flags word, not a walkable path.  Its bits are
+#                          tools/contract/obj-layout.x's, checked by
+#                          tools/check/obj-layout.sh.
+SKIP_MACROS="x_error_handler_jmp x_obj_evals"
 
 extract() {
 awk -v skip="$SKIP_MACROS" '

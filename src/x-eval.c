@@ -37,6 +37,31 @@
  * #including this file -- the base construction/IO/error code below stays. */
 #if !defined(STUB_X_EVAL) && !defined(X_EVAL_OWN)
 
+#if defined(X_COV) || defined(X_PROFILE)
+/**
+ * Record that evaluation reached @p p_obj: X_COV marks it, X_PROFILE adds
+ * one to its eval count (x-eval.h), which saturates rather than wraps.
+ *
+ * x_eval calls this on every expression it evaluates and the two body
+ * walkers on every body cell.  It is one definition so the two instruments
+ * cannot disagree about what was reached: in a build with both, whatever
+ * evaluation marks, it also counts.
+ *
+ * @param p_obj  x_obj_t* -- The object reached (never nil)
+ */
+static void x_eval_reached(x_obj_t *p_obj)
+{
+#ifdef X_COV
+	x_obj_flags(p_obj) |= X_OBJ_FLAG_COV;
+#endif
+#ifdef X_PROFILE
+	if (x_obj_evals(p_obj) < X_OBJ_EVALS_MAX) {
+		x_obj_flags(p_obj) += X_OBJ_EVALS_ONE;
+	}
+#endif
+}
+#endif /* X_COV || X_PROFILE */
+
 /**
  * Defer an operative body's tail to the outer trampoline (TCO).
  *
@@ -237,9 +262,9 @@ eval_start:
 		}
 	}
 
-#ifdef X_COV
+#if defined(X_COV) || defined(X_PROFILE)
 	if (p_exp != NULL) {
-		x_obj_flags(p_exp) |= X_OBJ_FLAG_COV;
+		x_eval_reached(p_exp);
 	}
 #endif
 
@@ -468,7 +493,8 @@ x_obj_t *x_eval_list(x_obj_t *p_base, x_obj_t *p_args)
  * @param p_body  x_obj_t* -- List of body expressions
  * @return x_obj_t* -- Result of the last expression, or NULL if empty
  *
- * @note When X_COV is defined, marks each body cell with X_OBJ_FLAG_COV.
+ * @note When X_COV is defined, marks each body cell with X_OBJ_FLAG_COV;
+ *       when X_PROFILE is, counts it (x_eval_reached).
  */
 x_obj_t *x_eval_body(x_obj_t *p_base, x_obj_t *p_body)
 {
@@ -486,8 +512,8 @@ x_obj_t *x_eval_body(x_obj_t *p_base, x_obj_t *p_body)
 		/* A body is user-supplied: nil ends a proper one, an atom ends
 		 * a dotted one and must not be read as a cell (#487). */
 		x_eval_spine_guard(p_base, p_body);
-#ifdef X_COV
-		x_obj_flags(p_body) |= X_OBJ_FLAG_COV;
+#if defined(X_COV) || defined(X_PROFILE)
+		x_eval_reached(p_body);
 #endif
 		x_firstobj((x_obj_t *)root) = p_body;
 
@@ -536,7 +562,8 @@ x_obj_t *x_eval_body(x_obj_t *p_base, x_obj_t *p_body)
  *          function does a full restore from the popped frame before
  *          returning, since no trampoline iteration will follow.
  *
- * @note When X_COV is defined, marks each body cell with X_OBJ_FLAG_COV.
+ * @note When X_COV is defined, marks each body cell with X_OBJ_FLAG_COV;
+ *       when X_PROFILE is, counts it (x_eval_reached).
  *
  * @see x_eval                  -- outermost trampoline that consumes tco_expr/tco_env
  * @see x_eval_tco_trampoline   -- standalone trampoline for closure call paths
@@ -556,8 +583,8 @@ x_obj_t *x_eval_body_tco(x_obj_t *p_base, x_obj_t *p_body)
 		/* A body is user-supplied: nil ends a proper one, an atom ends
 		 * a dotted one and must not be read as a cell (#487). */
 		x_eval_spine_guard(p_base, p_body);
-#ifdef X_COV
-		x_obj_flags(p_body) |= X_OBJ_FLAG_COV;
+#if defined(X_COV) || defined(X_PROFILE)
+		x_eval_reached(p_body);
 #endif
 		if (x_obj_isnil(p_base, x_restobj(p_body))) {
 			x_firstobj(x_eval_field_tco_expr(p_base)) = x_firstobj(p_body);
