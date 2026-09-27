@@ -289,8 +289,15 @@ clean-obj:
 
 # Pulled in with `-include` rather than `include`: on a clean tree there are no
 # .d files yet and their absence is normal, not an error.
--include $(OBJECTS:$(OBJ_EXT)=.d)
--include $(X_EXPR_OBJECTS:$(OBJ_EXT)=.d)
+#
+# `.o=.d`, NOT `$(OBJ_EXT)=.d`.  The compiler names a .d after its object, so
+# x-eval.profile.o writes x-eval.profile.d; substituting the whole OBJ_EXT
+# turned x-eval.profile.o into x-eval.d, and every variant build read the PLAIN
+# build's dependencies -- rules for x-eval.o, none for its own objects -- so a
+# changed header rebuilt no variant at all.  Every variant ends in .o, so
+# swapping that last suffix names each configuration's own file.
+-include $(OBJECTS:.o=.d)
+-include $(X_EXPR_OBJECTS:.o=.d)
 
 # ============================================================================
 # Distribute
