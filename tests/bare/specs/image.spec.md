@@ -185,7 +185,8 @@ is on any fresh object here, never the record's.
 (s (obj->ptr p) %obj-slot-flags (| (w (obj->ptr p) %obj-slot-flags) 1024))
 (def T (ptr-alloc 8000)) (def BL (ptr-alloc 800)) (def R (ptr-alloc 64))
 (s R 0 1000) (s R 1 800)
-(guard (e (error "raised")) (image-write! p 1024 T BL (fn (_ word kind obj) ()) () R))
+(match ((eq? %image-prims-found #f) (error "prims missing"))
+       (#t (guard (e (error "raised")) (image-write! p 1024 T BL (fn (_ word kind obj) ()) () R))))
 ```
 ---
     *** ERROR: raised
@@ -198,7 +199,8 @@ is on any fresh object here, never the record's.
 (s (obj->ptr h) %obj-slot-flags (| (w (obj->ptr h) %obj-slot-flags) 1024))
 (def T (ptr-alloc 64)) (def BL (ptr-alloc 64)) (def R (ptr-alloc 64))
 (s R 0 2) (s R 1 64)
-(guard (e (error "raised")) (image-write! h 1024 T BL (fn (_ word kind obj) ()) () R))
+(match ((eq? %image-prims-found #f) (error "prims missing"))
+       (#t (guard (e (error "raised")) (image-write! h 1024 T BL (fn (_ word kind obj) ()) () R))))
 ```
 ---
     *** ERROR: raised

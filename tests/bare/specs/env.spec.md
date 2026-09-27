@@ -140,21 +140,18 @@ keeps a copy, because the root's bindings are a tree that steers by
 spelling, and a spelling hit would satisfy every other test.
 
 ```scheme
-(include "tools/contract/base-paths.x")
-(def %assoc (fn (self k l)
-  (match ((eq? l ()) ())
-         ((eq? (first (first l)) k) (first l))
-         (#t (self k (rest l))))))
-(def %walk (fn (self steps o)
-  (match ((eq? steps ()) o)
-         ((eq? (first steps) (lit f)) (self (rest steps) (first o)))
-         (#t (self (rest steps) (rest o))))))
-(def %cat (first (%walk (rest (rest (%assoc (lit prims) %base-paths))) (%base))))
-(def %coord (fn (_ ns nm) (rest (%assoc nm (rest (%assoc ns %cat))))))
-(def b ((%coord (lit base) (lit make))))
-((%coord (lit base) (lit bind)) b (lit answer) 42)
-((%coord (lit base) (lit bind)) b (lit mk) (%coord (lit str) (lit ->sym)))
-(match ((guard (e #f) ((%coord (lit base) (lit eval)) b (lit (eval! (mk "answer"))))) (error "found by spelling")) (#t (error "ok")))
+(include "tests/bare/prim-ref.x")
+(def %make  (%prim-ref (lit base) (lit make)))
+(def %bind  (%prim-ref (lit base) (lit bind)))
+(def %eval  (%prim-ref (lit base) (lit eval)))
+(def %->sym (%prim-ref (lit str) (lit ->sym)))
+(def b (%make))
+(%bind b (lit answer) 42)
+(%bind b (lit mk) %->sym)
+(match ((eq? (%all-found? (pair %make (pair %bind (pair %eval (pair %->sym ()))))) #f)
+        (error "prims missing"))
+       ((guard (e #f) (%eval b (lit (eval! (mk "answer"))))) (error "found by spelling"))
+       (#t (error "ok")))
 ```
 ---
     *** ERROR: ok
@@ -166,19 +163,9 @@ keyed by the child's. A foreign symbol has no identity in the child, so it
 stands for the child's own symbol of its spelling, and the form runs.
 
 ```scheme
-(include "tools/contract/base-paths.x")
-(def %assoc (fn (self k l)
-  (match ((eq? l ()) ())
-         ((eq? (first (first l)) k) (first l))
-         (#t (self k (rest l))))))
-(def %walk (fn (self steps o)
-  (match ((eq? steps ()) o)
-         ((eq? (first steps) (lit f)) (self (rest steps) (first o)))
-         (#t (self (rest steps) (rest o))))))
-(def %cat (first (%walk (rest (rest (%assoc (lit prims) %base-paths))) (%base))))
-(def %coord (fn (_ ns nm) (rest (%assoc nm (rest (%assoc ns %cat))))))
-(def b ((%coord (lit base) (lit make))))
-(match ((eq? ((%coord (lit base) (lit eval)) b (lit (+ 2 3))) 5) (error "ok")) (#t (error "no")))
+(include "tests/bare/prim-ref.x")
+(def b ((%prim-ref (lit base) (lit make))))
+(match ((eq? ((%prim-ref (lit base) (lit eval)) b (lit (+ 2 3))) 5) (error "ok")) (#t (error "no")))
 ```
 ---
     *** ERROR: ok

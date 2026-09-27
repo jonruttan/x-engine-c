@@ -104,8 +104,9 @@ and not asserted here.
 (guard (e ()) (fn))
 (guard (e ()) (op))
 (guard (e ()) (op ()))
-(guard (e ()) ((%prim-ref (lit ptr) (lit call))))
-(error "survived")
+(def %call (%prim-ref (lit ptr) (lit call)))
+(guard (e ()) (%call))
+(match ((eq? %call ()) (error "no ptr call")) (#t (error "survived")))
 ```
 ---
     *** ERROR: survived
@@ -195,21 +196,11 @@ freed key. Three reads across two collects is the shortest shape that
 shows it.
 
 ```scheme
-(include "tools/contract/base-paths.x")
-(def %assoc (fn (self k l)
-  (match ((eq? l ()) ())
-         ((eq? (first (first l)) k) (first l))
-         (#t (self k (rest l))))))
-(def %walk (fn (self steps o)
-  (match ((eq? steps ()) o)
-         ((eq? (first steps) (lit f)) (self (rest steps) (first o)))
-         (#t (self (rest steps) (rest o))))))
-(def %cat (first (%walk (rest (rest (%assoc (lit prims) %base-paths))) (%base))))
-(def %ref (fn (_ ns m) (rest (%assoc m (rest (%assoc ns %cat))))))
-(def %mk-tok   (%ref (lit base) (lit make-tok)))
-(def %mk-type  (%ref (lit base) (lit make-type)))
-(def %read-str (%ref (lit tok)  (lit read-str)))
-(def %collect  (%ref (lit heap) (lit collect)))
+(include "tests/bare/prim-ref.x")
+(def %mk-tok   (%prim-ref (lit base) (lit make-tok)))
+(def %mk-type  (%prim-ref (lit base) (lit make-type)))
+(def %read-str (%prim-ref (lit tok)  (lit read-str)))
+(def %collect  (%prim-ref (lit heap) (lit collect)))
 (def b (%mk-tok))
 (%mk-type b "W" (pair (pair (lit read) (fn (_ . args) (lit w))) ()))
 (%read-str b "a")
