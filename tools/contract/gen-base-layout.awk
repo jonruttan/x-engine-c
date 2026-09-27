@@ -14,10 +14,10 @@
 BEGIN {
 	PREFIX = "x_eval"
 	# Top-level roots map onto x-expr's documented extension anchors.
-	ANCHOR["base"]       = "x_base"
-	ANCHOR["io-group"]   = "x_base_field_io_group"
-	ANCHOR["profile"]    = "x_base_field_profile"
-	ANCHOR["meta-group"] = "x_base_field_meta_group"
+	ANCHOR["base"]        = "x_base"
+	ANCHOR["io-fields"]   = "x_base_field_io_fields"
+	ANCHOR["profile"]     = "x_base_field_profile"
+	ANCHOR["meta-fields"] = "x_base_field_meta_fields"
 }
 
 # Accumulate source, stripping ';' line comments.

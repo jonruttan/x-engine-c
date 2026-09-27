@@ -29,10 +29,10 @@
  * Construct a type struct from a type descriptor.
  *
  * Builds the canonical nested-pair structure that represents a type
- * in the type alist: name-stack, data-stack, heap group (mark, make,
- * free, clone, units, length), proc group (call, eval), cvt group
- * (from, to), IO group (analyse, delimit, read, write, display,
- * error), iter group, and ops group.
+ * in the type alist: name-stack, data-stack, heap fields (mark, make,
+ * free, clone, units, length), proc fields (call, eval), cvt fields
+ * (from, to), IO fields (analyse, delimit, read, write, display,
+ * error), iter fields, and ops fields.
  *
  * @param p_base  x_obj_t* -- Base (execution context) (for allocation)
  * @param type    struct x_type_t -- Type descriptor with all hook pointers

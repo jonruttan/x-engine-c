@@ -45,7 +45,7 @@ static void x_heap_run_hooks(x_obj_t *p_base, x_obj_t *p_hooks)
  *  Four passes: (1) fire mark hooks, (2) tree-mark from the base data
  *  tree, (3) root-chain walk -- the off-chain stack objects frames
  *  registered via x_heap_root_push, (4) tree-mark each registered GC
- *  root.  The hook/root lists live in x-expr's heap-group; x-expr
+ *  root.  The hook/root lists live in x-expr's heap-fields; x-expr
  *  stores but cannot dispatch (no callable mechanism at that layer), so
  *  the walk + invoke happens here.
  *
@@ -276,7 +276,7 @@ static x_obj_t *x_prim_system_mark(x_obj_t *p_base, x_obj_t *p_args)
  *  @param p_base  Base (execution context).
  *  @param p_args  Unevaluated (hook).
  *  @return NULL.
- *  @note Storage in x-expr's heap-group (one canonical location).
+ *  @note Storage in x-expr's heap-fields (one canonical location).
  *  @see x_heap_mark_hook_add
  */
 static x_obj_t *x_prim_heap_mark_hook(x_obj_t *p_base, x_obj_t *p_args)

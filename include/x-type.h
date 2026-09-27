@@ -6,8 +6,8 @@
  * @brief Type system field accessors and type struct definition.
  *
  * Defines the @c x_type_t struct that mirrors the pair-tree layout of a
- * type descriptor, along with macros to navigate each field group (name,
- * data, heap, proc, cvt, io, iter).  Each field has a @c _stack variant
+ * type descriptor, along with macros to navigate each field (name, data,
+ * heap, proc, cvt, io, iter).  Each field has a @c _stack variant
  * returning the full @c (current . saved) cell, and a bare variant
  * returning the current value.
  *
@@ -90,10 +90,10 @@
 #define x_type_field_data(X)          x_firstobj(x_type_field_data_stack((X))) /**< Current data. */
 /** @} */
 
-/** @name Heap Group -- Memory Management Handlers
+/** @name Heap Fields -- Memory Management Handlers
  *  @c (mark make free clone units length)
  * @{ */
-#define x_type_field_heap(X)          x_firstobj(x_restobj(x_restobj(X)))    /**< Heap handler group. */
+#define x_type_field_heap(X)          x_firstobj(x_restobj(x_restobj(X)))    /**< Heap handler fields. */
 #define x_type_field_mark_stack(X)    x_firstobj(x_type_field_heap((X)))     /**< GC mark stack cell. */
 #define x_type_field_mark(X)          x_firstobj(x_type_field_mark_stack((X))) /**< Current GC mark handler. */
 #define x_type_field_make_stack(X)    x_firstobj(x_restobj(x_type_field_heap((X)))) /**< Constructor stack cell. */
@@ -108,30 +108,30 @@
 #define x_type_field_length(X)        x_firstobj(x_type_field_length_stack((X))) /**< Current length handler. */
 /** @} */
 
-/** @name Proc Group -- Call and Eval Handlers
+/** @name Proc Fields -- Call and Eval Handlers
  *  @c (call eval)
  * @{ */
-#define x_type_field_proc(X)          x_firstobj(x_restobj(x_restobj(x_restobj(X)))) /**< Proc handler group. */
+#define x_type_field_proc(X)          x_firstobj(x_restobj(x_restobj(x_restobj(X)))) /**< Proc handler fields. */
 #define x_type_field_call_stack(X)    x_firstobj(x_type_field_proc((X)))     /**< Call stack cell. */
 #define x_type_field_call(X)          x_firstobj(x_type_field_call_stack((X))) /**< Current call handler. */
 #define x_type_field_eval_stack(X)    x_firstobj(x_restobj(x_type_field_proc((X)))) /**< Eval stack cell. */
 #define x_type_field_eval(X)          x_firstobj(x_type_field_eval_stack((X))) /**< Current eval handler. */
 /** @} */
 
-/** @name Cvt Group -- Conversion Handlers
+/** @name Cvt Fields -- Conversion Handlers
  *  @c (from to)
  * @{ */
-#define x_type_field_cvt(X)           x_firstobj(x_restobj(x_restobj(x_restobj(x_restobj(X))))) /**< Conversion handler group. */
+#define x_type_field_cvt(X)           x_firstobj(x_restobj(x_restobj(x_restobj(x_restobj(X))))) /**< Conversion handler fields. */
 #define x_type_field_from_stack(X)    x_firstobj(x_type_field_cvt((X)))      /**< From-conversion stack cell. */
 #define x_type_field_from(X)          x_firstobj(x_type_field_from_stack((X))) /**< Current from-conversion handler. */
 #define x_type_field_to_stack(X)      x_firstobj(x_restobj(x_type_field_cvt((X)))) /**< To-conversion stack cell. */
 #define x_type_field_to(X)            x_firstobj(x_type_field_to_stack((X))) /**< Current to-conversion handler. */
 /** @} */
 
-/** @name I/O Group -- Read, Write, and Display Handlers
+/** @name I/O Fields -- Read, Write, and Display Handlers
  *  @c (analyse delimit read write display)
  * @{ */
-#define x_type_field_io(X)            x_firstobj(x_restobj(x_restobj(x_restobj(x_restobj(x_restobj(X)))))) /**< I/O handler group. */
+#define x_type_field_io(X)            x_firstobj(x_restobj(x_restobj(x_restobj(x_restobj(x_restobj(X)))))) /**< I/O handler fields. */
 #define x_type_field_analyse_stack(X) x_firstobj(x_type_field_io((X)))       /**< Tokenizer analyse stack cell. */
 #define x_type_field_analyse(X)       x_firstobj(x_type_field_analyse_stack((X))) /**< Current analyse handler. */
 #define x_type_field_delimit_stack(X) x_firstobj(x_restobj(x_type_field_io((X)))) /**< Delimiter stack cell. */
@@ -144,28 +144,28 @@
 #define x_type_field_display(X)       x_firstobj(x_type_field_display_stack((X))) /**< Current display handler. */
 /** @} */
 
-/** @name Iter Group -- Iterator Handler
+/** @name Iter Fields -- Iterator Handler
  *  @c (iter)
  * @{ */
-#define x_type_field_iter_group(X)    x_firstobj(x_restobj(x_restobj(x_restobj(x_restobj(x_restobj(x_restobj(X))))))) /**< Iterator handler group. */
-#define x_type_field_iter_stack(X)    x_firstobj(x_type_field_iter_group((X))) /**< Iterator stack cell. */
+#define x_type_field_iter_fields(X)   x_firstobj(x_restobj(x_restobj(x_restobj(x_restobj(x_restobj(x_restobj(X))))))) /**< Iterator handler fields. */
+#define x_type_field_iter_stack(X)    x_firstobj(x_type_field_iter_fields((X))) /**< Iterator stack cell. */
 #define x_type_field_iter(X)          x_firstobj(x_type_field_iter_stack((X))) /**< Current iterator handler. */
 /** @} */
 
-/** @name Ops Group -- Generic-Operator Dispatch
+/** @name Ops Fields -- Generic-Operator Dispatch
  *  @c (ops) -- the per-type generic-operator alist.  A typed operand
  *  dispatches @c + - * / % = < to its type's registered handler; a type
  *  with a nil ops alist never dispatches (ints keep the pure-C fast path).
  * @{ */
-#define x_type_field_ops_group(X)     x_firstobj(x_restobj(x_restobj(x_restobj(x_restobj(x_restobj(x_restobj(x_restobj(X)))))))) /**< Ops handler group. */
-#define x_type_field_ops_stack(X)     x_firstobj(x_type_field_ops_group((X))) /**< Ops alist stack cell. */
+#define x_type_field_ops_fields(X)    x_firstobj(x_restobj(x_restobj(x_restobj(x_restobj(x_restobj(x_restobj(x_restobj(X)))))))) /**< Ops handler fields. */
+#define x_type_field_ops_stack(X)     x_firstobj(x_type_field_ops_fields((X))) /**< Ops alist stack cell. */
 #define x_type_field_ops(X)           x_firstobj(x_type_field_ops_stack((X))) /**< Current ops alist. */
-/** @name Image group: '(save-stack load-stack) -- docs/state-image-format.md
+/** @name Image fields: '(save-stack load-stack) -- docs/state-image-format.md
  *  @{ */
-#define x_type_field_image_group(X)   x_firstobj(x_restobj(x_restobj(x_restobj(x_restobj(x_restobj(x_restobj(x_restobj(x_restobj(X))))))))) /**< Image handler group. */
-#define x_type_field_save_stack(X)    x_firstobj(x_type_field_image_group((X))) /**< Save stack cell. */
+#define x_type_field_image_fields(X)  x_firstobj(x_restobj(x_restobj(x_restobj(x_restobj(x_restobj(x_restobj(x_restobj(x_restobj(X))))))))) /**< Image handler fields. */
+#define x_type_field_save_stack(X)    x_firstobj(x_type_field_image_fields((X))) /**< Save stack cell. */
 #define x_type_field_save(X)          x_firstobj(x_type_field_save_stack((X))) /**< Current save handler. */
-#define x_type_field_load_stack(X)    x_firstobj(x_restobj(x_type_field_image_group((X)))) /**< Load stack cell. */
+#define x_type_field_load_stack(X)    x_firstobj(x_restobj(x_type_field_image_fields((X)))) /**< Load stack cell. */
 #define x_type_field_load(X)          x_firstobj(x_type_field_load_stack((X))) /**< Current load handler. */
 /** @} */
 /** @} */

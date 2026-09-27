@@ -714,8 +714,8 @@ static x_satom_t x_type_heap_free_hook =
  * Create and initialize a full x-lang base object atop x-expr.
  *
  * Calls x_base_make (x-expr layer) with default file descriptors and
- * hooks, then fills in the type-system-specific slots: env-group
- * (the current environment and the root), ctrl-group
+ * hooks, then fills in the type-system-specific slots: the env fields
+ * (the current environment and the root), the ctrl fields
  * (save-stack, error-handler, TCO slots), io-state (line counter,
  * boolean caches), extended profile counters, and project extras
  * (eval-list, token-cache, mark/free hooks, mark-roots).
@@ -725,7 +725,7 @@ static x_satom_t x_type_heap_free_hook =
  * @return x_obj_t* -- Newly constructed base object
  *
  * @details **x-expr vs x-lang layers.**  x_base_make (x-expr) allocates
- *          the base tree skeleton: heap group (pools, GC state), file
+ *          the base tree skeleton: heap fields (pools, GC state), file
  *          descriptors, buffer stack, type-alist slot, profile head
  *          (1 counter for GC cycles), and hook slots.  It leaves env,
  *          ctrl, io-state, and extras as nil.  This function fills all
@@ -737,7 +737,7 @@ static x_satom_t x_type_heap_free_hook =
  *          must be marked but never freed -- they are structurally
  *          permanent for the lifetime of the base.
  *
- * @details **Env-group layout:**
+ * @details **Env fields layout:**
  *          @code
  *          (env . env-root)
  *          @endcode
@@ -745,7 +745,7 @@ static x_satom_t x_type_heap_free_hook =
  *          - env-root: the base's root environment, whose bindings are
  *            a tree and whose parent is nil
  *
- * @details **Ctrl-group layout:**
+ * @details **Ctrl fields layout:**
  *          @code
  *          ((save-stack . (error-handler-slot . nil)) .
  *           ((tco-expr-slot . nil) . (tco-env-slot . nil)))
@@ -758,8 +758,8 @@ static x_satom_t x_type_heap_free_hook =
  *       are inherited from the parent so all bases in a tree share the
  *       same singleton boolean objects.
  *
- * @see x_eval_error  -- uses the error-handler from ctrl-group
- * @see x_eval        -- uses tco-expr/tco-env from ctrl-group
+ * @see x_eval_error  -- uses the error-handler from the ctrl fields
+ * @see x_eval        -- uses tco-expr/tco-env from the ctrl fields
  */
 x_obj_t *x_eval_make(x_obj_t *p_base, x_obj_t *p_args)
 {
@@ -783,7 +783,7 @@ x_obj_t *x_eval_make(x_obj_t *p_base, x_obj_t *p_args)
 	x_obj_type(p_base) = x_eval_obj;
 
 	/* Build the empty pair-tree skeleton -- env+ctrl, the type-alist cell,
-	 * io-state, the profile counters, and the state group -- from the
+	 * io-state, the profile counters, and the state fields -- from the
 	 * descriptor (tools/contract/base-layout.x) via the generated x-eval-layout.h.
 	 * Every leaf cell's car comes out nil; initial values are set just below. */
 #define X_EVAL_BUILD_TREE

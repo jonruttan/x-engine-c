@@ -18,8 +18,8 @@
 ;
 ; x-eval fills five reserved slots in x-expr's spine.  Each top-level (node ...)
 ; is anchored at the x-expr extension macro the awk maps its name to:
-;   base -> x_base   io-group -> x_base_field_io_group
-;   profile -> x_base_field_profile   meta-group -> x_base_field_meta_group
+;   base -> x_base   io-fields -> x_base_field_io_fields
+;   profile -> x_base_field_profile   meta-fields -> x_base_field_meta_fields
 
 ; --- base.first: env + ctrl ---
 (node base
@@ -39,8 +39,8 @@
               (cell tco-env)))))
   (todo io-meta))
 
-; --- io group: type-alist cell + io-state ---
-(node io-group
+; --- io fields: type-alist cell + io-state ---
+(node io-fields
   (pair
     (build (cell type-alist))
     (todo files))
@@ -69,8 +69,8 @@
                       (pair (cell profile-env-steps)
                             (nil)))))))))))))
 
-; --- meta group: x-expr's alloc group, then the state group (was 'extras') ---
-(node meta-group
+; --- meta fields: x-expr's alloc fields, then the state fields (was 'extras') ---
+(node meta-fields
   (todo profile-hooks)
   (pair
     (todo heap)

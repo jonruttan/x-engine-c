@@ -6,7 +6,7 @@
  * @brief Syntax form helpers.
  *
  * Registration functions for the built-in syntax forms (operatives).
- * Each function binds a group of related primitives into the base
+ * Each function binds several related primitives into the base
  * environment.
  *
  * @author Jon Ruttan (jonruttan@gmail.com)
