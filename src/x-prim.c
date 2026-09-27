@@ -102,7 +102,7 @@ void x_callable_bind_table(x_obj_t *p_base, const x_callable_entry_t *table, int
 }
 
 /*
- * # Primitives catalog
+ * # Primitives catalogue
  *
  * Stored in the base's prims slot as an alist-of-alists
  * ((type . ((method . #<prim>) ...)) ...) keyed by type/section namespace,
@@ -112,7 +112,7 @@ void x_callable_bind_table(x_obj_t *p_base, const x_callable_entry_t *table, int
  * methods.  Namespace/method names are interned, so lookups compare by pointer.
  */
 
-/** The catalog value (car of the prims cell); nil before any registration. */
+/** The catalogue value (car of the prims cell); nil before any registration. */
 x_obj_t *x_prims(x_obj_t *p_base)
 {
 	return x_firstobj(x_eval_field_prims(p_base));
@@ -131,15 +131,16 @@ static x_obj_t *x_prims_domain_pair(x_obj_t *p_base, x_obj_t *p_ns)
 	return NULL;
 }
 
-/* Splice one (method . value) entry into p_ns's catalog domain, creating the
+/* Splice one (method . value) entry into p_ns's catalogue domain, creating the
  * domain on first use.  The shared filing core of C-side registration
  * (x_prims_add) and x-lang-side registration (prim-reg!).  p_ns and p_entry
  * must already be pinned by the caller -- the conses here can trigger GC.
  *
  * Conses are built with x_mklist (the list-pair type), NOT x_mkspair: the
- * catalog must be an ordinary iterable x-lang list so (prims) supports pair?,
- * map, fold, etc. -- the x-lang catalog->methods mapping walks it.  Structural
- * x_mkspair pairs are not pair? and segfault the iterator protocol. */
+ * catalogue must be an ordinary iterable x-lang list so (prims) supports
+ * pair?, map, fold, etc. -- the x-lang catalogue->methods mapping walks it.
+ * Structural x_mkspair pairs are not pair? and segfault the iterator
+ * protocol. */
 static void x_prims_file(x_obj_t *p_base, x_obj_t *p_ns, x_obj_t *p_entry)
 {
 	x_obj_t *p_dom, *p_methods, *p_newdom;
@@ -155,7 +156,7 @@ static void x_prims_file(x_obj_t *p_base, x_obj_t *p_ns, x_obj_t *p_entry)
 		x_restobj(p_dom) = x_mklist(p_base,
 			p_entry, x_restobj(p_dom));
 	} else {
-		/* New namespace: prepend (ns . (entry)) to the catalog, rooting the
+		/* New namespace: prepend (ns . (entry)) to the catalogue, rooting the
 		 * partial spine across each subsequent cons. */
 		p_methods = x_mklist(p_base, p_entry, NULL);
 		x_firstobj((x_obj_t *)root) = p_methods;
@@ -168,7 +169,7 @@ static void x_prims_file(x_obj_t *p_base, x_obj_t *p_ns, x_obj_t *p_entry)
 	}
 }
 
-/* File one (ns/method -> fn) entry into the catalog.  The freshly interned
+/* File one (ns/method -> fn) entry into the catalogue.  The freshly interned
  * symbols, prim, and conses are pinned on the eval-list root across the
  * allocations that follow, since they are not yet reachable from the base and
  * -O2 stack scanning is unreliable (see the gc-rooting note). */
@@ -196,7 +197,7 @@ static void x_prims_add(x_obj_t *p_base, x_char_t *ns, x_char_t *method, x_fn_t 
 
 /* Keep-list names: the approved permanent global vocabulary (the operators,
  * the identity predicates, call/cc -- the R5 keep-list).  These bind bare
- * even when their catalog namespace is de-registered: eq?/same? file under
+ * even when their catalogue namespace is de-registered: eq?/same? file under
  * ns `obj`, the operators under ns `int`, call/cc under ns `ctrl`, and those
  * namespaces' OTHER names retire while these stay. */
 static int x_prims_name_kept(const x_char_t *name)
@@ -218,7 +219,7 @@ static int x_prims_name_kept(const x_char_t *name)
 }
 
 /* Namespaces whose bare env names have been de-registered: their prims live
- * only in the catalog and the object-system classes, not as transitional bare
+ * only in the catalogue and the object-system classes, not as transitional bare
  * names.  Migrating call sites to the class access (e.g. (clock) -> (Sys clock))
  * lets a namespace move here; the list shrinks the env one namespace at a time,
  * and the whole de-registration check is removed once it is empty. */
@@ -239,12 +240,12 @@ static int x_prims_ns_deregistered(const x_char_t *ns)
 }
 
 /**
- * Bind a table into the env and file its cataloged entries.
+ * Bind a table into the env and file its catalogued entries.
  *
  * Each entry is bound into the env by @c name (transitional, so existing code
- * keeps working) and, when it carries a namespace, filed into the catalog
+ * keeps working) and, when it carries a namespace, filed into the catalogue
  * under @c (ns . ((method . prim) ...)).  De-registration removes the env
- * binding here, leaving the catalog as the single source.
+ * binding here, leaving the catalogue as the single source.
  *
  * @param p_base  x_obj_t* -- Base (execution context)
  * @param table   const x_prim_entry_t* -- Array of entries
@@ -256,7 +257,7 @@ void x_prims_bind_table(x_obj_t *p_base, const x_prim_entry_t *table, int count)
 
 	for (i = 0; i < count; i++) {
 		/* Bind the transitional bare name unless the namespace has been
-		 * de-registered -- then the catalog/classes are the only source.
+		 * de-registered -- then the catalogue/classes are the only source.
 		 * Keep-list names (the approved global vocabulary) always bind. */
 		if ( ! x_prims_ns_deregistered(table[i].ns)
 				|| x_prims_name_kept(table[i].name))
@@ -266,7 +267,7 @@ void x_prims_bind_table(x_obj_t *p_base, const x_prim_entry_t *table, int count)
 	}
 }
 
-/* The x-lang-facing catalog protocol (prims / prim-domain / prim-ref /
+/* The x-lang-facing catalogue protocol (prims / prim-domain / prim-ref /
  * prim-reg! / use) used to live here as C prims; it is pure x-lang now
  * (boot/registry.x reads, boot/reflect.x writes), walking the same prims
  * cell via the committed path contract tools/contract/base-paths.x. */
@@ -292,10 +293,10 @@ x_obj_t *x_prim_register(x_obj_t *p_base, x_obj_t *p_args)
 	x_value_bind(p_base, x_atomstr(x_false_obj), (x_obj_t *)&x_false_obj);
 	x_firstobj(x_eval_field_false(p_base)) = (x_obj_t *)&x_false_obj;
 
-	/* The catalog access protocol (prims / prim-domain / prim-ref /
+	/* The catalogue access protocol (prims / prim-domain / prim-ref /
 	 * prim-reg!) is pure x-lang: boot/registry.x walks the prims cell via
 	 * tools/contract/base-paths.x before any other X code loads, and boot/reflect.x
-	 * supplies the mutating half.  C only FILES the catalog, right here. */
+	 * supplies the mutating half.  C only FILES the catalogue, right here. */
 	x_prim_core_register(p_base, p_args);
 	x_syntax_quote_register(p_base, p_args);
 	x_syntax_binding_register(p_base, p_args);

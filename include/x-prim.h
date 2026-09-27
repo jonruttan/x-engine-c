@@ -181,10 +181,10 @@ void x_callable_bind_table(x_obj_t *p_base, const x_callable_entry_t *table, int
 /** @} */
 
 /**
- * @defgroup prims_catalog Primitives Catalog
+ * @defgroup prims_catalogue Primitives Catalogue
  * @brief The type-keyed primitive registry stored in the base's prims slot.
  *
- * The catalog is an alist-of-alists @c ((type . ((method . prim) ...)) ...)
+ * The catalogue is an alist-of-alists @c ((type . ((method . prim) ...)) ...)
  * keyed by type/section namespace, with bare method names.  It is the
  * transitional home for primitives ahead of mapping them onto the type
  * objects as static methods.  Namespace and method names are interned, so
@@ -192,25 +192,25 @@ void x_callable_bind_table(x_obj_t *p_base, const x_callable_entry_t *table, int
  * @{
  */
 
-/** The primitives catalog (the prims-slot value); nil before registration.
- *  Catalog LOOKUP is pure x-lang (boot/registry.x over tools/contract/base-paths.x);
+/** The primitives catalogue (the prims-slot value); nil before registration.
+ *  Catalogue LOOKUP is pure x-lang (boot/registry.x over tools/contract/base-paths.x);
  *  C only files entries, via x_prims_bind_table below. */
 x_obj_t *x_prims(x_obj_t *p_base);
 
-/** A primitive's env name + catalog coordinates, for x_prims_bind_table().
- *  @c ns NULL => bound into the env only (not cataloged).  A module adopts the
- *  catalog by switching its table to this type; unconverted modules keep using
- *  x_callable_entry_t untouched. */
+/** A primitive's env name + catalogue coordinates, for x_prims_bind_table().
+ *  @c ns NULL => bound into the env only (not catalogued).  A module adopts
+ *  the catalogue by switching its table to this type; unconverted modules
+ *  keep using x_callable_entry_t untouched. */
 typedef struct {
 	x_char_t *name;                        /**< Env symbol name (transitional). */
 	x_fn_t fn;                             /**< C primitive function pointer. */
-	x_char_t *ns;                          /**< Catalog namespace (type/section), or NULL. */
-	x_char_t *method;                      /**< Catalog bare method name. */
+	x_char_t *ns;                          /**< Catalogue namespace (type/section), or NULL. */
+	x_char_t *method;                      /**< Catalogue bare method name. */
 } x_prim_entry_t;
 
-/** Bind a table into the env AND file its cataloged entries (those with ns).
+/** Bind a table into the env AND file its catalogued entries (those with ns).
  *  The env binding is transitional -- de-registration drops it, leaving the
- *  catalog as the single source. */
+ *  catalogue as the single source. */
 void x_prims_bind_table(x_obj_t *p_base, const x_prim_entry_t *table, int count);
 
 /** @} */

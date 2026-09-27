@@ -3,7 +3,7 @@
 ; SINGLE SOURCE OF TRUTH for the C surface, the "ISA" of the interpreter.
 ; The C layer is a CPU: unchecked, minimal, fixed.  Checks, dispatch, and
 ; policy live in X.  Consumed two ways, so the surface cannot drift silently:
-;   1. tests/x/specs/meta/isa.spec.md -- walks the LIVE catalog at runtime
+;   1. tests/x/specs/meta/isa.spec.md -- walks the LIVE catalogue at runtime
 ;      and fails on any C prim not listed here (and any stale entry)
 ;   2. tools/check/isa.sh (make check-isa) -- extracts every binding site from
 ;      the C SOURCE and diffs it against this file, catching bare bindings
@@ -12,9 +12,9 @@
 ; commit -- a deliberate, reviewable act.  Shrinking it is always welcome.
 ;
 ; FORMAT (rigid, one entry per line -- the awk parses the same bytes):
-;   %isa-catalog: (ns method tag)   filed in the prims catalog by C
-;   %isa-bare:    (name tag)        bound bare by C, no catalog entry
-;   %isa-values:  (name [tag])      non-prim VALUES bound by C
+;   %isa-catalogue: (ns method label)   filed in the prims catalogue by C
+;   %isa-bare:      (name label)        bound bare by C, no catalogue entry
+;   %isa-values:    (name [label])      non-prim VALUES bound by C
 ;
 ; Tags justify why the entry must be C.  An entry that cannot honestly take
 ; one of these tags does not belong in C -- it is a migration candidate:
@@ -29,7 +29,7 @@
 ;            are bound by the CLI, x-cli.c, never by the engine proper)
 ;   sys      OS facilities (clock, signals)
 ;   types    the C type-object registry protocol (type-of, iter)
-;   registry the prims catalog protocol itself (prim-ref, use)
+;   registry the prims catalogue protocol itself (prim-ref, use)
 ;   hot      DERIVED (X-expressible via reflection) but kept in C on an
 ;            explicit exception: used inside reader lambdas (X calls allocate
 ;            arg spines; tokenizer callbacks must not allocate) or measured
@@ -51,7 +51,7 @@
 ; #t/#f are bound from interned singletons, not name literals -- the scanner
 ; special-cases them.
 
-(def %isa-catalog (lit (
+(def %isa-catalogue (lit (
   (alloc limit! gc)           ; the runaway guard: the spec harness arms it BEFORE any lib loads, so it
                               ;   must exist in a bare env -- C by necessity (derived otherwise)
   (base bind spine)           ; SURVIVES the reflective test: allocates a STRUCTURAL spair for the env spine, which X pair cannot make
@@ -241,10 +241,10 @@
 )))
 
 ; The keep-list (x_prims_name_kept): the approved permanent global
-; vocabulary -- names that bind BARE even when their catalog namespace is
+; vocabulary -- names that bind BARE even when their catalogue namespace is
 ; de-registered.  Tracked here so growing the C array requires a manifest
 ; edit (isa-scan.sh extracts the array; the runtime env walk enforces that
-; every live PRIMITIVE-typed global is catalog-filed or manifested).
+; every live PRIMITIVE-typed global is catalogue-filed or manifested).
 (def %isa-keep (lit (
   (% raw-op)
   (& raw-op)

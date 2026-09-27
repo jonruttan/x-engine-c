@@ -4,7 +4,7 @@
 engine: no library, every object made by a primitive, every word read back
 at the offsets `tools/contract/obj-layout.x` declares.  Each case includes
 `tests/bare/image-prelude.x`, which reaches those primitives through the
-prims catalog and binds them under their bare names.  The contract is
+prims catalogue and binds them under their bare names.  The contract is
 x-lang's docs/state-image-format.md; the section numbers below are its.
 
 Each case ends in `(error ...)` whose text is the verdict, as the smoke spec

@@ -9,15 +9,15 @@
 #   check/prim-doc.sh  joins them to the entries in docs/primitives.md
 #
 # Records:
-#   catalog <ns> <method>          a table entry filed in the prims catalog
+#   catalogue <ns> <method>        a table entry filed in the prims catalogue
 #   bare <name>                    bound bare in the env
 #   value <name>                   a non-prim value binding
 #   keep <name>                    on the keep-list: binds bare even when its
 #                                  namespace is de-registered
 #
-# With -v names=1, catalog records carry the entry's NAME as a fourth field:
+# With -v names=1, catalogue records carry the entry's NAME as a fourth field:
 #
-#   catalog <ns> <method> <name> <c-function>
+#   catalogue <ns> <method> <name> <c-function>
 #   bare <name> <c-function>
 #
 # The name and the coordinate are different things -- `str-append` is FILED at
@@ -32,7 +32,7 @@ FNR == 1 { in_keep = 0; in_kept_fn = 0; in_dereg_fn = 0 }
 # a keep record so growing the array requires a manifest edit.
 /^static int x_prims_name_kept/ { in_kept_fn = 1 }
 # x_prims_ns_deregistered: the namespaces whose bare names are DROPPED at
-# registration, leaving the catalog as the only door. Whether a documented
+# registration, leaving the catalogue as the only door. Whether a documented
 # primitive is callable by name turns on this list, so prim-doc.sh needs it;
 # isa.sh diffs against a manifest that has no such entries, hence names-only.
 /^static int x_prims_ns_deregistered/ { in_dereg_fn = 1 }
@@ -88,8 +88,8 @@ in_keep {
 	if (line ~ /x_value_bind\(/)    { print "value " str[1]; next }
 	if (line !~ /\{[ \t]*"/) next
 	if (n >= 3) {
-		if (names) print "catalog " str[2] " " str[3] " " str[1] " " fn
-		else       print "catalog " str[2] " " str[3]
+		if (names) print "catalogue " str[2] " " str[3] " " str[1] " " fn
+		else       print "catalogue " str[2] " " str[3]
 		next
 	}
 	if (line ~ /x_prim_|x_syntax_/)      { print "bare " str[1] (names ? " " fn : ""); next }

@@ -214,7 +214,7 @@ static x_obj_t *x_prim_str_byte_sub(x_obj_t *p_base, x_obj_t *p_args)
  */
 x_obj_t *x_prim_string_register(x_obj_t *p_base, x_obj_t *p_args)
 {
-	/* { env-name, fn, catalog-ns, catalog-method }.  Conversions are filed
+	/* { env-name, fn, catalogue-ns, catalogue-method }.  Conversions are filed
 	 * under their source type (the eventual method receiver). */
 	static const x_prim_entry_t entries[] = {
 		{ "str-append",   x_prim_string_append,    "str",   "append"   },

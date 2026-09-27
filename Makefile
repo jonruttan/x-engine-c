@@ -426,7 +426,7 @@ gates: check-isa check-obj-layout check-base-paths check-libc ## Run the contrac
 # The C-surface ratchet: every binding site in the C source must appear in
 # the committed manifest tools/contract/isa.x, so growing the C layer takes a
 # deliberate manifest edit in the same commit.  The runtime half -- a walk of
-# the LIVE catalog -- is x-lang's tests/x/specs/meta/isa.spec.md.
+# the LIVE catalogue -- is x-lang's tests/x/specs/meta/isa.spec.md.
 check-isa: ## Diff the C source's binding surface against tools/contract/isa.x
 	sh tools/check/isa.sh
 .PHONY: check-isa

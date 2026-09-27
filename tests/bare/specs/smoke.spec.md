@@ -8,7 +8,7 @@
 ---
     *** ERROR: ok
 
-### the committed base paths reach the prims catalog
+### the committed base paths reach the prims catalogue
 
 ```scheme
 (include "tools/contract/base-paths.x")
@@ -22,10 +22,10 @@
          (#t (self (rest steps) (rest o))))))
 (def %entry (%assoc (lit prims) %base-paths))
 (def %cat (%walk (rest (rest %entry)) (%base)))
-(match ((eq? %cat ()) (error "nil")) (#t (error "catalog")))
+(match ((eq? %cat ()) (error "nil")) (#t (error "catalogue")))
 ```
 ---
-    *** ERROR: catalog
+    *** ERROR: catalogue
 
 ### a prim raises on a dotted argument list instead of walking off it
 
@@ -118,7 +118,7 @@ an uncatchable SIGSEGV, found when the first Linux conformance run resolved
 `sqrt` against an engine that links no libm (x-lang#171 class; the v0.5.0
 release run died on it).  The raise is catchable; the crash was not.
 
-The catalog protocol is x-lang, so a bare engine has no `prim-ref`; the
+The catalogue protocol is x-lang, so a bare engine has no `prim-ref`; the
 primitive is looked up by hand through tests/bare/prim-ref.x, and asserted
 present before the guard -- an unbound name raised inside it would pass the
 case without ever reaching the call.

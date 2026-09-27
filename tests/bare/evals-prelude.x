@@ -4,7 +4,7 @@
 ; evaluation reached it.  The cases read that count the way reflective x-lang
 ; code must: the flags word at the offset tools/contract/obj-layout.x declares,
 ; shifted and masked by the %obj-evals-* rows beside it.  The raw word prims
-; have no bare names, so they come from the catalog.
+; have no bare names, so they come from the catalogue.
 (include "tools/contract/obj-layout.x")
 (include "tests/bare/prim-ref.x")
 (def obj->ptr     (%prim-ref (lit obj) (lit ->ptr)))

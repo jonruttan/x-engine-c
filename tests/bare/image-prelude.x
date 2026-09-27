@@ -1,7 +1,7 @@
 ; image-prelude.x -- what every case of tests/bare/specs/image.spec.md needs.
 ;
 ; The bare engine binds a handful of names; the rest of its surface is the
-; prims catalog on the base, reached by the committed base paths, so the
+; prims catalogue on the base, reached by the committed base paths, so the
 ; primitives the cases call are looked up there and bound under their bare
 ; names.  Word access is by the offsets tools/contract/obj-layout.x declares.
 (include "tools/contract/obj-layout.x")
