@@ -16,8 +16,8 @@
 ;   %isa-bare:      (name label)        bound bare by C, no catalogue entry
 ;   %isa-values:    (name [label])      non-prim VALUES bound by C
 ;
-; Tags justify why the entry must be C.  An entry that cannot honestly take
-; one of these tags does not belong in C -- it is a migration candidate:
+; Labels justify why the entry must be C.  An entry that cannot honestly take
+; one of these labels does not belong in C -- it is a migration candidate:
 ;   spine    the evaluator/binder itself (eval, apply, fn/op, def, call/cc)
 ;   alloc    constructs heap objects (pair, atoms, instances)
 ;   gc       heap management (collect, hooks, limits)
@@ -198,7 +198,7 @@
   (sys exit sys)
   (tok read tok)
   (tok read-str tok)
-  (type ? hot)                ; derived (tag compare) but HOT: runs per `do` form (dotted-body validator)
+  (type ? hot)                ; derived (label compare) but HOT: runs per `do` form (dotted-body validator)
                               ;   and per predicate call (pair?, str?, ...) -- the hottest sites in the system
   (type make types)
   (type make-instance alloc)

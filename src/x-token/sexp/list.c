@@ -146,7 +146,7 @@ x_obj_t *x_sexp_list_read(x_obj_t *p_base, x_obj_t *p_args)
 			break;
 		}
 
-		/* THE SEPARATOR IS A SYMBOL, not a token kind.  `.` is read like
+		/* THE SEPARATOR IS A SYMBOL, not a token of its own.  `.` is read like
 		 * any other symbol and recognised HERE, where the decision it
 		 * affects is already being made.  The reader asks whether this
 		 * element is the one-character symbol "." -- it takes no view on

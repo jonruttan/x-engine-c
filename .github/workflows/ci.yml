@@ -70,7 +70,7 @@ jobs:
     name: asan (${{ matrix.os }})
     runs-on: ${{ matrix.os }}
     timeout-minutes: 30
-    # Deep tier: main pushes and manual runs, not every PR.
+    # Deep run: main pushes and manual runs, not every PR.
     if: github.event_name != 'pull_request'
     strategy:
       fail-fast: false

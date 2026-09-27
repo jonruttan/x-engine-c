@@ -11,7 +11,7 @@
 ;   (secondary H S L)         the colour for role b
 ;   (eyes (H S L) (H S L))    two-tone eyes, left then right
 ;   (rows "ROW" ...)          the owl's glyph rows: printable ASCII, plus lambda and the turtle
-;   (roles "ROW" ...)         same shape: i ink, e/f the eyes, a accent, b secondary
+;   (roles "ROW" ...)         same layout: i ink, e/f the eyes, a accent, b secondary
 ;   (reference "LINE")        one line in this project's own language, on the banner
 
 (costume "x-engine-c"

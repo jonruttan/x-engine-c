@@ -8,7 +8,8 @@
 #include "x-type/buffer.h"
 #include "x-token/sexp/list.h"
 
-/* The truncation tests install a guard-shaped jmp error handler. */
+/* The truncation tests install a jmp error handler laid out like
+ * x_prim_guard's. */
 #include <setjmp.h>
 
 /* We need the GC structures for cleanup. */
@@ -295,7 +296,8 @@ static char *test_sexp_list_read(void)
 /* End-of-input INSIDE an open list is truncation: the reader must raise
  * ("Unterminated input"), never return a partial list and never spin
  * (#156).  The raise needs a live error handler or x_eval_error exits;
- * install the guard-shaped jmp handler by hand (x-syntax/control.c). */
+ * install a jmp handler laid out like x_prim_guard's, by hand
+ * (x-syntax/control.c). */
 static char *test_sexp_list_read_truncated_one(const char *s)
 {
 	x_obj_t *p_base, *p_args, *p_buffer, *p_handler;

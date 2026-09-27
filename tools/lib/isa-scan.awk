@@ -2,7 +2,7 @@
 #
 # Extracts every env-binding site from the C source: primitive tables, direct
 # x_callable_bind/x_value_bind calls, and the x_prims_name_kept keep-list.
-# ONE parser, because there are six registration shapes and a second reader of
+# ONE parser, because there are six registration variants and a second reader of
 # them would drift from this one. Consumers:
 #
 #   check/isa.sh       diffs the records against tools/contract/isa.x

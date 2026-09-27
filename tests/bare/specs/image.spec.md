@@ -67,7 +67,7 @@ does: the bare engine prints nothing on its own.
 ---
     *** ERROR: call slot and state
 
-### save! saves a type handle -- its name atom, static-tagged and OWN -- as bytes (3.3)
+### save! saves a type handle -- its name atom, static-labelled and OWN -- as bytes (3.3)
 
 ```scheme
 (include "tests/bare/image-prelude.x")

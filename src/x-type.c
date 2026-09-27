@@ -170,11 +170,11 @@ static int x_type_from_has(x_obj_t *p_base, x_obj_t *p_type, x_obj_t *p_name)
 /*
  * Generic-operator dispatch: the ops half of the type system's hot path.
  *
- * EVERY value's type tag is its type pair tree -- ints included
+ * EVERY value's type label is its type pair tree -- ints included
  * (x_type_int_make stamps the int tree) -- so "is it typed" is not the
  * dispatch test; CARRYING A HANDLER is.  If either operand's type has a
  * handler registered for the op in its ops alist, call it as (handler a b);
- * the handler receives the raw operands and owns any coercion.  This
+ * the handler receives the raw operands and owns any promotion.  This
  * replaces the load-order-dependent set! wrapper chain: types REGISTER ops
  * (type-push-op), nothing wraps ambient names.
  *
@@ -183,7 +183,7 @@ static int x_type_from_has(x_obj_t *p_base, x_obj_t *p_type, x_obj_t *p_name)
  *   - different types  -> the declared from-relation decides: the side whose
  *     type registers a conversion FROM the other side's type absorbs it (e.g.
  *     complex declares from float/rational/int, so complex wins over float).
- *     The winning handler owns the coercion.  No invented ordering: the rule
+ *     The winning handler owns the promotion.  No invented ordering: the rule
  *     reads the relation the cvt from-alists already declare.  Neither side
  *     declaring the other: = answers #f -- unrelated values are not equal,
  *     a question with an answer -- and every other op raises, since both
@@ -206,7 +206,7 @@ int x_type_op_try(x_obj_t *p_base, x_char_t *op, x_obj_t *p_a, x_obj_t *p_b,
 		x_obj_set(NULL, X_OBJ_FLAG_NONE, { NULL }, { NULL })
 	};
 
-	/* Resolve each side's ops alist (guard: a static atom's tag is not a
+	/* Resolve each side's ops alist (guard: a static atom's label is not a
 	 * pair tree, and its fields must not be navigated). */
 	p_ta = p_a == NULL ? NULL : x_obj_type(p_a);
 	p_tb = p_b == NULL ? NULL : x_obj_type(p_b);
@@ -308,9 +308,9 @@ x_obj_t *x_type_prim_type_name(x_obj_t *p_base, x_obj_t *p_args)
 		return NULL;
 	}
 
-	/* The raw-pointer branch also covers non-pair-tree type tags (the
+	/* The raw-pointer branch also covers non-pair-tree type labels (the
 	 * base sentinel x_eval_obj, a static atom): navigating their fields
-	 * reads past the tag string. Same rule as x_type_op_try. */
+	 * reads past the label string. Same rule as x_type_op_try. */
 	if (x_obj_type_issatom(p_obj)
 			|| x_obj_type_isspair(p_obj)
 			|| x_obj_isnil(p_base, x_obj_type(p_obj))
@@ -440,7 +440,7 @@ x_obj_t *x_type_prim_units(x_obj_t *p_base, x_obj_t *p_args)
 		return x_pair_prim_units(p_base, p_args);
 	}
 
-	/* Non-pair-tree type tags (base sentinel) fall back to atom units:
+	/* Non-pair-tree type labels (base sentinel) fall back to atom units:
 	 * their fields must not be navigated (see x_type_op_try). */
 	if (x_obj_type_issatom(p_obj) || x_obj_isnil(p_base, x_obj_type(p_obj))
 			|| ! x_obj_type_isspair(x_obj_type(p_obj))) {
@@ -458,8 +458,8 @@ x_obj_t *x_type_prim_units(x_obj_t *p_base, x_obj_t *p_args)
 	 * same ABI x_type_heap_mark and the improper-spine guard read. A
 	 * negative count is the dynamic-size sentinel: -k means k leading
 	 * units and slot 0 of the instance holds how many follow (the vector
-	 * convention; see x_type_heap_mark). Returns plain int atoms, the
-	 * same shape the x_atom_prim_units/x_pair_prim_units leaves return. */
+	 * convention; see x_type_heap_mark). Returns plain int atoms,
+	 * matching what the x_atom_prim_units/x_pair_prim_units leaves return. */
 	n = x_type_units_count(p_units);
 
 	if (n < 0) {
@@ -468,8 +468,8 @@ x_obj_t *x_type_prim_units(x_obj_t *p_base, x_obj_t *p_args)
 				+ (-n)));
 	}
 
-	/* The pair form's count is an atom of the same shape as the bare
-	 * form's slot, so callers see one answer either way. */
+	/* The pair form's count is an atom, matching the bare form's slot,
+	 * so callers see one answer either way. */
 	if (x_obj_type_isspair(p_units)) {
 		return x_firstobj(p_units);
 	}
@@ -499,7 +499,7 @@ x_obj_t *x_type_prim_length(x_obj_t *p_base, x_obj_t *p_args)
 		return x_pair_prim_length(p_base, p_args);
 	}
 
-	/* Non-pair-tree type tags (base sentinel) fall back to atom length:
+	/* Non-pair-tree type labels (base sentinel) fall back to atom length:
 	 * their fields must not be navigated (see x_type_op_try). */
 	if (x_obj_type_issatom(p_obj) || x_obj_isnil(p_base, x_obj_type(p_obj))
 			|| ! x_obj_type_isspair(x_obj_type(p_obj))) {

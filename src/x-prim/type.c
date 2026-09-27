@@ -183,9 +183,9 @@ static x_obj_t *x_prim_typep(x_obj_t *p_base, x_obj_t *p_args)
 
 	x_eargs(p_base, p_args, 3, NULL, &p_obj, &p_handle);
 
-	/* Guard the non-pair-tree tags before navigating type fields: a child
-	 * base's type is the x_eval_obj sentinel (a static atom tagging the
-	 * raw string "BASE"), and x_type_field_name on it reads past the tag
+	/* Guard the non-pair-tree labels before navigating type fields: a child
+	 * base's type is the x_eval_obj sentinel (a static atom labelling the
+	 * raw string "BASE"), and x_type_field_name on it reads past the label
 	 * string (ASan global-buffer-overflow). Same rule as x_type_op_try:
 	 * only a pair-tree type has fields. No handle can match -> #f. */
 	if (x_obj_isnil(p_base, p_obj) || x_obj_isnil(p_base, x_obj_type(p_obj))
@@ -224,7 +224,7 @@ static x_obj_t *x_prim_type_of(x_obj_t *p_base, x_obj_t *p_args)
 }
 
 /* (type name obj-or-handle) is pure x-lang now: boot/reflect.x mirrors the
- * handle/object/nil branches over the layout contracts (the sentinel tags
+ * handle/object/nil branches over the layout contracts (the sentinel labels
  * come from live probes at boot, the name walk from tools/contract/base-paths.x's
  * type-rooted entries). */
 
@@ -343,7 +343,7 @@ x_obj_t *x_prim_op1(x_obj_t *p_base, x_obj_t *p_args,
  * tree's iter handler over the layout contracts.)
  * (obj-ref / obj-set! / type-name are pure x-lang now: boot/data.x +
  * boot/reflect.x implement them reflectively over the layout contracts.)
- * ((obj retag!) is pure x-lang too: boot/reflect.x writes the type header
+ * ((obj relabel!) is pure x-lang too: boot/reflect.x writes the type header
  * slot over the layout contract -- retired from C by the #101 ruling.)
  *
  * @param p_base  Base (execution context) to bind primitives into.

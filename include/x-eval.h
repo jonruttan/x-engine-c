@@ -60,7 +60,7 @@
 #include "x-base.h"
 
 /** The interpreter object: the base object specialized into this project's
- *  execution context.  Serves as the type tag for base/interp objects. */
+ *  execution context.  Serves as the type label for base/interp objects. */
 extern x_satom_t x_eval_obj;
 
 /** Expression flags.

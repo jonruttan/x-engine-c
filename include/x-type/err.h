@@ -29,7 +29,7 @@
 /** Test whether object X is a raised error on base B. */
 #define x_obj_type_iserr(B,X)	x_obj_is_type((B), (X), X_TYPE_ERR_NAME)
 
-/** An ERR is a PAIR-shaped typed object: (code . obj).
+/** An ERR is a typed object laid out as a PAIR: (code . obj).
  *
  * The error's CODE: a static-string atom naming what went wrong.
  *
@@ -37,7 +37,7 @@
  * SYMBOL", "type: no + for"), repointed in place on each raise -- the
  * literals have static storage, so no copy and no allocation is needed
  * to make one reachable from x-lang.  The language maps the code to
- * whatever tag vocabulary it likes; the engine does not name tags. */
+ * whatever label vocabulary it likes; the engine does not name labels. */
 #define x_err_code(X)		x_firstobj((X))
 
 /** The error's SUBJECT: what the raise site was complaining about -- the

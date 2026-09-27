@@ -59,7 +59,7 @@ x_obj_t *x_type_iter_struct(x_obj_t *p_base, x_obj_t *p_args)
 		/* Two payload slots (step-fn . value), a pair layout. Without
 		 * units the GC mark hook never traced them: an iterator held
 		 * across a collect lost its step function or state and the
-		 * next step segfaulted -- the same untraced-payload class as
+		 * next step segfaulted -- the same untraced-payload bug as
 		 * the vector-payload fix (a Gen driving a C iterator kept one
 		 * alive across a REPL turn). */
 		.p_units = (x_obj_t *)&x_type_units_pair_obj
@@ -160,7 +160,7 @@ x_obj_t *x_type_iter_next(x_obj_t *p_base, x_obj_t *p_args)
  * Step an iterator FUNCTIONALLY -- no mutation, generator view.
  *
  * The persistent complement of x_type_iter_next: yields
- * (value . next-iterator) as a fresh pair (the Seq step shape), leaving
+ * (value . next-iterator) as a fresh pair (the Seq step layout), leaving
  * the given iterator untouched, or nil when it is exhausted.  This is
  * the X-boundary door that lets Gen pipelines run on C steps; the two
  * allocations happen here, where allocation is legal.

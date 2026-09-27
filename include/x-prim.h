@@ -51,7 +51,7 @@
  *       the tail atom's value word as a pair pointer (#487).  The nil
  *       test below ends a proper list; x_eval_spine_guard raises on the
  *       atom a dotted tail ends with, which is the same catchable error
- *       an applicative already gave for the same call shape.
+ *       an applicative already gave for a call with a dotted tail.
  */
 static void __attribute__((unused)) x_args(x_obj_t *p_base, x_obj_t *p_args,
 	int count, ...)

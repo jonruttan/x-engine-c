@@ -113,7 +113,7 @@ X_CALLCC_NO_ASAN void x_callcc_init(void)
  *  The capture in x_prim_callcc() must include EVERY slot of its own
  *  frame: locals the compiler spills below the address taken (gcc puts
  *  p_base/cont there) would otherwise be restored as garbage after
- *  longjmp -- the crash class that only clang's register allocation
+ *  longjmp -- the crash that only clang's register allocation
  *  hid.  A callee's local is below the caller's whole frame by
  *  construction, so its address is a safe lower bound.
  *

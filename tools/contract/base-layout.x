@@ -6,7 +6,7 @@
 ; Valid X (plain s-expressions); the awk parses the same bytes.  Both layers
 ; derive from this one file, so their views cannot drift.
 ;
-; Tags (the contract):
+; Labels (the contract):
 ;   (node NAME L R)   named interior pair  -> x_eval_NAME(X) anchor macro
 ;   (pair L R)        anonymous interior pair (structure only)
 ;   (cell NAME)       stack-cell leaf   -> field macro; pair(nil,nil) at build

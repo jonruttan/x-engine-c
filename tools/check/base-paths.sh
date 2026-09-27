@@ -5,7 +5,7 @@
 # spread across four headers: include/x-eval-layout.h (generated from
 # tools/contract/base-layout.x), ext/x-expr/include/x-base.h (the x-expr spine),
 # include/x-eval.h (the error-handler object), and include/x-type.h (the
-# type-object tree).  This scan expands every chain-shaped macro into a
+# type-object tree).  This scan expands every chain-structured macro into a
 # flat f/r step path and diffs the result against the committed descriptor
 # tools/contract/base-paths.x, which reflective X code walks (lib/x/boot/reflect.x).
 # Non-chain macros (value casts, predicates) are not paths, but they must

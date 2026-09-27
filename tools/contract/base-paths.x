@@ -2,7 +2,7 @@
 ;
 ; SINGLE SOURCE OF TRUTH for reflective navigation of the interpreter state
 ; (the third layout contract, after tools/contract/base-layout.x -- the x-eval spine
-; shape -- and tools/contract/obj-layout.x -- the per-object header).  The base
+; layout -- and tools/contract/obj-layout.x -- the per-object header).  The base
 ; object's C accessors are pure first/rest macro chains across three
 ; headers (include/x-eval-layout.h, ext/x-expr/include/x-base.h, and the
 ; error-handler object in include/x-eval.h); this file is those chains
@@ -17,8 +17,8 @@
 ;   (name root step...)
 ; root is `base` (walk from the (%base) object), `handler` (walk from an
 ; error-handler object), or `type` (walk from a type-tree object).  Steps are
-; f (first) / r (rest), applied left to right.  A `cell`-kind field's value
-; sits in the cell's first slot; see the C headers for per-field kind notes.
+; f (first) / r (rest), applied left to right.  A field labelled `cell` has
+; its value in the cell's first slot; see the C headers for each field's label.
 ; Regenerate with: sh tools/check/base-paths.sh --gen
 
 (def %base-paths (lit (

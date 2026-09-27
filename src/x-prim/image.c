@@ -26,8 +26,8 @@
  * docs/state-image-format.md, section 3.3.
  */
 enum {
-	X_IMAGE_ROLE_SPAIR = -1,    /**< A type-struct node, tagged x_type_pair_obj. */
-	X_IMAGE_ROLE_SATOM = -2,    /**< A static atom, tagged x_type_atom_obj. */
+	X_IMAGE_ROLE_SPAIR = -1,    /**< A type-struct node, labelled x_type_pair_obj. */
+	X_IMAGE_ROLE_SATOM = -2,    /**< A static atom, labelled x_type_atom_obj. */
 	X_IMAGE_ROLE_NIL = -3       /**< An untyped object. */
 };
 
@@ -73,7 +73,7 @@ static x_int_t x_image_record_words(x_int_t units)
 }
 
 /**
- * @brief The type tag for a role, or NULL for a type set later by index.
+ * @brief The type label for a role, or NULL for a type set later by index.
  */
 static x_obj_t *x_image_role_type(x_int_t type)
 {
@@ -318,10 +318,10 @@ static void x_image_save_spair(x_obj_t *p_obj, x_int_t *buf)
 }
 
 /**
- * @brief Save a static-tagged atom or an untyped object: one unit.
+ * @brief Save a static-labelled atom or an untyped object: one unit.
  *
  * The word is bytes when the object owns them -- a type handle is its name
- * atom, x_type_atom_obj-tagged and OWN, its word a C string (type.c,
+ * atom, x_type_atom_obj-labelled and OWN, its word a C string (type.c,
  * make-type) -- and a machine word otherwise.  The rebuild does not keep
  * OWN, so the loaded atom never frees the blob it then points into.
  */

@@ -37,7 +37,7 @@
 (def %obj-slot-flags 2)
 (def %obj-meta-len 3)     ; header length = the word where data begins
 
-; --- data shapes (words, relative to data start) ---
+; --- data layouts (words, relative to data start) ---
 (def %obj-units-atom 1)   ; atom: the value word (int / str ptr / char)
 (def %obj-units-pair 2)   ; pair: first at data 0, rest at data 1
 (def %obj-slot-first 0)
