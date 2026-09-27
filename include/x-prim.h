@@ -131,6 +131,29 @@ static void __attribute__((unused)) x_eargs(x_obj_t *p_base, x_obj_t *p_args, in
 	x_heap_root_pop(p_cell);
 }
 
+/**
+ * The args list past its first @p count positions, or nil if it is shorter.
+ *
+ * For a prim that unpacks a fixed prefix with x_args/x_eargs and then takes
+ * the tail as a body or a variadic rest.  Walking there with x_11/x_111
+ * reads rest of nil when the call is short -- (fn), (eval) -- which is a
+ * SIGSEGV where x_args had already stopped at the end.
+ *
+ * @param p_base  Base/execution context (for the improper-spine raise).
+ * @param p_args  Argument list (pair chain).
+ * @param count   Number of positions to skip.
+ * @return The remaining list, or nil.
+ */
+static x_obj_t __attribute__((unused)) *x_args_tail(x_obj_t *p_base,
+	x_obj_t *p_args, int count)
+{
+	while (count-- > 0 && p_args != NULL) {
+		x_eval_spine_guard(p_base, p_args);	/* dotted tail (#487) */
+		p_args = x_restobj(p_args);
+	}
+	return p_args;
+}
+
 /** @} */ /* end arg_helpers */
 
 

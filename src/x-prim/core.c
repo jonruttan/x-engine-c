@@ -95,7 +95,7 @@ static x_obj_t *x_prim_apply(x_obj_t *p_base, x_obj_t *p_args)
 	 * once the operands exist. */
 	x_restobj((x_obj_t *)root) = p_fn;
 	x_heap_root_push(p_cell, root);
-	p_evaled = x_eval_list(p_base, x_11(p_args));
+	p_evaled = x_eval_list(p_base, x_args_tail(p_base, p_args, 2));
 
 	/* Build combined arg list: prefix args prepended to tail list.
 	 * (apply f a b '(c d)) -> p_evaled = (a b (c d))
@@ -166,7 +166,7 @@ static x_obj_t *x_prim_eval(x_obj_t *p_base, x_obj_t *p_args)
 	x_obj_t *p_env, *p_result;
 
 	x_eargs(p_base, p_args, 2, NULL, &p_expr);
-	p_env_arg = x_11(p_args);
+	p_env_arg = x_args_tail(p_base, p_args, 2);
 	if ( ! x_obj_isnil(p_base, p_env_arg)) {
 		x_eval_spine_guard(p_base, p_env_arg);	/* dotted tail (#487) */
 	}
