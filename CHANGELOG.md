@@ -11,6 +11,44 @@ alongside the library changes they landed with.
 [x-lang]: https://github.com/jonruttan/x-lang
 [x-changelog]: https://github.com/jonruttan/x-lang/blob/main/CHANGELOG.md
 
+## 0.2.15 — 2026-09-27
+
+**The release ships a profiling engine, and it counts evaluation per object**
+([#66]). Every release now carries `x-bin-profile` beside `x-bin`: built with
+`X_PROFILE` and `X_COV`, it differs from `x-bin` in those flags and nothing
+else, and it is stripped and signed the same way. `make dist` packs it at the
+tarball root, and `release.yml` checks it on unpack. Under `X_PROFILE` the
+evaluator now also counts, in each object's flags word, how many times
+evaluation reached it, at exactly the points `X_COV` marks, through one
+helper, `x_eval_reached`. A procedure's first body cell holds its calls, and
+the counts through its body are the evaluation it did itself. The count takes
+bits 11 to 30 and stops at 1,048,575: x-expr's sweep clears bits 32 and up of
+every object it keeps on a 64-bit host, and bit 31 is a 32-bit host's sign.
+Bit 10 is the one the callers of `(heap tree-mark!)`, `(heap chain-clear!)`
+and `(image write!)` mark with; it is named now, `X_OBJ_FLAG_TRACE`, and
+`include/x-eval.h` asserts at compile time that the count sits above it.
+`tools/contract/obj-layout.x` gains `%obj-flag-trace`, `%obj-evals-shift` and
+`%obj-evals-bits`, `check-obj-layout` holds them against the header, and the
+layout digest in `x-engine.xon` follows. The default build and `x-bin-cov`
+are unchanged. A C spec covers the count, and `make test-bare-profile` runs
+the bare specs against `x-bin-profile` and reads the count through the
+contract, as x-lang will.
+
+The variant builds (debug, profile, asan, cov) read their own dependency
+files ([#66]). Each looked for the plain build's `.d` file, so a changed
+header rebuilt none of them.
+
+Also: five bare fixtures share `tests/bare/prim-ref.x`'s catalog walk instead
+of keeping their own copies, and the guarded cases in `env.spec.md`,
+`image.spec.md` and `smoke.spec.md` check their primitives before the guard,
+so a missing primitive fails the case instead of raising into the guard it
+asserts on ([#65]).
+
+x-lang's pin bump picks up the new layout digest.
+
+[#65]: https://github.com/jonruttan/x-engine-c/pull/65
+[#66]: https://github.com/jonruttan/x-engine-c/pull/66
+
 ## 0.2.14 — 2026-09-26
 
 **The engine proper deals in no floats and loads no libraries** ([#63]).
