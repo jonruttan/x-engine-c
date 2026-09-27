@@ -103,7 +103,10 @@ heap < 0 { next }
 	print xname(name) " " units[name]
 	next
 }
-# Flags enum members: explicit "=value" or auto-increment from the previous.
+# Flags enumerators: explicit "=value" or auto-increment from the previous.
+# The simple-type codes belong to x-expr alone: the engine neither uses nor
+# supports them, so the descriptor has no row for them.  Their values still
+# advance the auto-increment.
 /^[ \t]*X_OBJ_FLAG_[A-Z0-9_]+/ {
 	line = $0
 	sub(/^[ \t]*/, "", line)
@@ -116,6 +119,10 @@ heap < 0 { next }
 	}
 	if (line ~ /=/) { v = line; sub(/^[^=]*=/, "", v); prev = numval(v) }
 	else prev = prev + 1
+	if (name == "X_OBJ_FLAG_NONE" || name == "X_OBJ_FLAG_OBJ" \
+			|| name == "X_OBJ_FLAG_MASK" \
+			|| name ~ /^X_OBJ_FLAG_(SIMPLE_TYPE|PRIM|FN|INT|CHAR|STR|PTR|TYPE_MASK)$/)
+		next
 	print xname(name) " " prev
 	next
 }

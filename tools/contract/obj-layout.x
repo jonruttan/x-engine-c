@@ -52,15 +52,6 @@
 (def %obj-flag-2 2)             ; 0x02  COV
 (def %obj-flag-3 4)             ; 0x04
 (def %obj-flag-4 8)             ; 0x08
-; Simple-type code (advisory tag for C consumers; NOT the type slot)
-(def %obj-flag-simple-type 16)  ; 0x10  marker bit: a simple-type code follows
-(def %obj-flag-prim 16)         ; 0x10
-(def %obj-flag-fn 17)           ; 0x11
-(def %obj-flag-int 18)          ; 0x12
-(def %obj-flag-char 19)         ; 0x13
-(def %obj-flag-str 20)          ; 0x14
-(def %obj-flag-ptr 21)          ; 0x15
-(def %obj-flag-type-mask 240)   ; 0xF0
 ; Independent attribute bits
 (def %obj-flag-own 32)          ; 0x20  object owns its (string) storage
 (def %obj-flag-ro 64)           ; 0x40  read-only
