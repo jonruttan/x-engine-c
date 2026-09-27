@@ -470,7 +470,19 @@ test-bare: $(EXECUTABLE) ## Run the bare-engine smoke specs (no library)
 	sh tests/bare/bare-runner.sh
 .PHONY: test-bare
 
-test: gates test-c test-bare ## Run all tests
+# The PROFILE build, asked to stand up unaided the way x-bin is: the bare
+# specs, run against it, then the ones only it can pass.  tests/bare/profile/
+# reads the eval count X_PROFILE writes into each object, which a plain engine
+# never writes -- so those cases live apart from tests/bare/specs/, where
+# `test-bare` would run them against x-bin and fail every one.
+BARE_PROFILE_SPECS=$(sort $(wildcard tests/bare/specs/*.spec.md)) \
+	$(sort $(wildcard tests/bare/profile/*.spec.md))
+
+test-bare-profile: x-bin-profile ## Run the bare-engine smoke specs against the profile build
+	X_BIN=./x-bin-profile sh tests/bare/bare-runner.sh $(BARE_PROFILE_SPECS)
+.PHONY: test-bare-profile
+
+test: gates test-c test-bare test-bare-profile ## Run all tests
 .PHONY: test
 
 # Memory-safety gate: run the C suite against an AddressSanitizer build.

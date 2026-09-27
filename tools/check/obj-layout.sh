@@ -2,11 +2,13 @@
 # tools/check/obj-layout.sh -- source half of the object-layout contract.
 #
 # Parses the layout constants out of ext/x-expr/include/x-obj.h (units per
-# header slot, the flags-word bits) and diffs them against the committed
-# descriptor tools/contract/obj-layout.x, so an x-expr bump that moves the object
-# layout fails `make check-obj-layout` before anything runs.  The runtime
-# half is tests/x/specs/meta/obj-layout.spec.md, which probes live objects
-# word by word.
+# header slot, the flags-word bits), and the x-eval layer's bits above them
+# (TRACE, the eval count) out of include/x-eval.h, and diffs them against the
+# committed descriptor
+# tools/contract/obj-layout.x, so an x-expr bump that moves the object layout
+# fails `make check-obj-layout` before anything runs.  The runtime half is
+# tests/x/specs/meta/obj-layout.spec.md, which probes live objects word by
+# word.
 #
 # The descriptor records the X_HEAP build (every shipped personality); the
 # scan tracks the header's #ifdef X_HEAP/#ifndef X_HEAP/#else/#endif nesting
@@ -136,6 +138,51 @@ END {
 	print "%obj-slot-rest 1"
 }' "$HDR" > "$SRC_LIST" || exit 1
 
+# --- 1b. the x-eval layer's bits in the flags word ---------------------------
+# The TRACE bit and the eval count above it are the x-eval layer's, not
+# x-expr's, so they are defined in include/x-eval.h rather than x-obj.h.  Same
+# naming rule as the flags above (X_OBJ_EVALS_SHIFT -> %obj-evals-shift).
+# Every one must be there, as a plain decimal or hex literal: a missing or
+# reshaped definition fails here by name instead of surfacing as an
+# unexplained descriptor row.
+awk '
+function hex2dec(h,    n, i) {
+	n = 0
+	h = tolower(h)
+	sub(/^0x/, "", h)
+	for (i = 1; i <= length(h); i++)
+		n = n * 16 + index("0123456789abcdef", substr(h, i, 1)) - 1
+	return n
+}
+/^#define X_OBJ_(FLAG_TRACE|EVALS_SHIFT|EVALS_BITS)[ \t]/ {
+	if ($3 !~ /^([0-9]+|0x[0-9a-fA-F]+)$/) {
+		printf "FAIL: %s is not a plain literal at %s:%d -- teach" \
+			" tools/check/obj-layout.sh the shape.\n", \
+			$2, FILENAME, FNR > "/dev/stderr"
+		bad = 1
+		exit 1
+	}
+	name = $2
+	sub(/^X_OBJ_/, "", name)
+	name = tolower(name)
+	gsub(/_/, "-", name)
+	print "%obj-" name " " ($3 ~ /^0x/ ? hex2dec($3) : $3 + 0)
+	found[$2] = 1
+	next
+}
+END {
+	if (bad) exit 1
+	split("X_OBJ_FLAG_TRACE X_OBJ_EVALS_SHIFT X_OBJ_EVALS_BITS", want, " ")
+	for (i = 1; i in want; i++) {
+		if (!(want[i] in found)) {
+			printf "FAIL: %s defines no %s -- the x-eval layer" \
+				" lost a flags-word definition.\n", \
+				FILENAME, want[i] > "/dev/stderr"
+			exit 1
+		}
+	}
+}' "$ROOT/include/x-eval.h" >> "$SRC_LIST" || exit 1
+
 # --- 2. the descriptor's view ------------------------------------------------
 awk '/^\(def %obj-/ { gsub(/[()]/, ""); print $2 " " $3 }' \
 	"$ROOT/tools/contract/obj-layout.x" > "$MAN_LIST"
@@ -143,5 +190,5 @@ awk '/^\(def %obj-/ { gsub(/[()]/, ""); print $2 " " $3 }' \
 # --- 3. diff -------------------------------------------------------------------
 contract_diff_check "$MAN_LIST" "$SRC_LIST" \
 	"Object layout and tools/contract/obj-layout.x disagree (-descriptor +header):" \
-	"FAIL: x-obj.h layout changed without a descriptor edit (or vice versa)." \
-	"Object-layout check: x-obj.h and tools/contract/obj-layout.x agree."
+	"FAIL: x-obj.h/x-eval.h layout changed without a descriptor edit (or vice versa)." \
+	"Object-layout check: x-obj.h, x-eval.h and tools/contract/obj-layout.x agree."

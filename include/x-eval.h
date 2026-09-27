@@ -74,6 +74,52 @@ extern x_satom_t x_eval_obj;
  *  mark.  Flag bits 1, 3 and 4 are free at this layer. */
 #define X_OBJ_FLAG_COV		X_OBJ_FLAG_2
 
+/** The TRACE bit -- the first bit above x-expr's, and the one a caller
+ *  borrows to mark objects of its own.  (heap tree-mark!), (heap
+ *  chain-clear!) and (image write!) take the flag as an argument; every
+ *  caller, here and in x-lang, passes this one.  The engine sets it nowhere
+ *  itself.  It is named so that nothing of the engine's lands on it: the
+ *  eval count below, on this bit, would make every object evaluated an odd
+ *  number of times look traced to an image write. */
+#define X_OBJ_FLAG_TRACE	0x400
+
+/** The EVAL COUNT -- under X_PROFILE, how many times evaluation has reached
+ *  an object.  It counts exactly where COV marks: every expression x_eval
+ *  evaluates, a trampolined tail included, and every body cell x_eval_body
+ *  and x_eval_body_tco step onto.  So a procedure's first body cell counts
+ *  its calls, and the counts through its body are the evaluation it did
+ *  itself.
+ *
+ *  It lives in the FLAGS WORD, above x-expr's bits and the TRACE bit, so it
+ *  costs no allocation and needs no initializing: x_obj_alloc writes the
+ *  whole word, and every object is born at zero.  Read it with
+ *  x_obj_evals().  Reflective x-lang code reads the same bits through
+ *  %obj-evals-shift and %obj-evals-bits in tools/contract/obj-layout.x.
+ *
+ *  20 BITS, AND IT SATURATES.  x-expr's sweep clears the mark with
+ *  `flags &= ~mark`, and the mark is an x_obj_flag_t, an unsigned int, so
+ *  on a 64-bit host the complement zero-extends and every collection clears
+ *  bits 32 and up of every object it keeps.  Bits 11 to 30 survive that, and
+ *  they keep the word non-negative where bit 31 is a 32-bit host's sign.  A
+ *  count therefore stops at X_OBJ_EVALS_MAX (1048575) instead of wrapping: a
+ *  node reading the maximum was reached at least that often. */
+#define X_OBJ_EVALS_SHIFT	11
+#define X_OBJ_EVALS_BITS	20
+#define X_OBJ_EVALS_ONE		((x_int_t)1 << X_OBJ_EVALS_SHIFT)
+#define X_OBJ_EVALS_MAX		(((x_int_t)1 << X_OBJ_EVALS_BITS) - 1)
+#define x_obj_evals(X)		((x_obj_flags(X) >> X_OBJ_EVALS_SHIFT) & X_OBJ_EVALS_MAX)
+
+/* TRACE sits above x-expr's highest flag, the count above TRACE, and the
+ * count ends below bit 31.  An x-expr bump that grows the flags, or an edit
+ * that moves or widens either, fails to compile here instead of sharing
+ * bits without a word. */
+typedef char x_assert_trace_above_flags[
+	X_OBJ_FLAG_MASK < X_OBJ_FLAG_TRACE ? 1 : -1];
+typedef char x_assert_evals_above_trace[
+	(x_int_t)X_OBJ_FLAG_TRACE < X_OBJ_EVALS_ONE ? 1 : -1];
+typedef char x_assert_evals_below_sign[
+	X_OBJ_EVALS_SHIFT + X_OBJ_EVALS_BITS <= 31 ? 1 : -1];
+
 /**
  * @defgroup error_handler Error Handler Macros
  * @brief Navigate the error handler pair tree

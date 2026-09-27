@@ -136,7 +136,7 @@ is on any fresh object here, never the record's.
 (include "tests/bare/image-prelude.x")
 (def h (make-type "IMGT" ()))
 (def st (%newest-struct))
-(def flag! (fn (_ o) (s (obj->ptr o) %obj-slot-flags (| (w (obj->ptr o) %obj-slot-flags) 1024))))
+(def flag! (fn (_ o) (s (obj->ptr o) %obj-slot-flags (| (w (obj->ptr o) %obj-slot-flags) %obj-flag-trace))))
 (def spair? (fn (_ o) (= (w (obj->ptr o) %obj-slot-type) (w (obj->ptr st) %obj-slot-type))))
 (def flag-tree! (fn (self o)
   (match ((eq? o ()) ())
@@ -146,7 +146,7 @@ is on any fresh object here, never the record's.
 (def cur (pair 1 2))
 (def T (ptr-alloc 8000)) (def BL (ptr-alloc 800)) (def R (ptr-alloc 64))
 (s R 0 1000) (s R 1 800)
-(def N (image-write! cur 1024 T BL (fn (_ word kind obj) ()) (pair st ()) R))
+(def N (image-write! cur %obj-flag-trace T BL (fn (_ word kind obj) ()) (pair st ()) R))
 (def IX (ptr-alloc (* %word-size (+ N 1))))
 (image-rebuild! T 0 N (pair () ()) 1 BL IX)
 (def root (ptr->obj (int->ptr (w IX (w R 4)))))
@@ -162,7 +162,7 @@ is on any fresh object here, never the record's.
 (include "tests/bare/image-prelude.x")
 (def h (make-type "IMGT" ()))
 (def SP (w (obj->ptr (%newest-struct)) %obj-slot-type))
-(def flag! (fn (_ o) (s (obj->ptr o) %obj-slot-flags (| (w (obj->ptr o) %obj-slot-flags) 1024))))
+(def flag! (fn (_ o) (s (obj->ptr o) %obj-slot-flags (| (w (obj->ptr o) %obj-slot-flags) %obj-flag-trace))))
 (def node (fn (_ a b) ((fn (_ p) ((fn (_ x y) p) (flag! p) (s (obj->ptr p) %obj-slot-type SP))) (pair a b))))
 (def elems (fn (self n) (match ((= n 0) ()) (#t (pair (pair n n) (self (- n 1)))))))
 (def pass (fn (self l r) (match ((eq? l ()) r) (#t (node (first l) (self (rest l) r))))))
@@ -171,7 +171,7 @@ is on any fresh object here, never the record's.
 (def cur (pair () ()))
 (def T (ptr-alloc 160000)) (def BL (ptr-alloc 800)) (def R (ptr-alloc 64))
 (s R 0 20000) (s R 1 800)
-(def N (image-write! cur 1024 T BL (fn (_ word kind obj) ()) (pair S ()) R))
+(def N (image-write! cur %obj-flag-trace T BL (fn (_ word kind obj) ()) (pair S ()) R))
 (error (match ((= (w R 3) 300) (match ((= N 600) "300 asked once") (#t "count"))) (#t "asked")))
 ```
 ---
@@ -182,11 +182,11 @@ is on any fresh object here, never the record's.
 ```scheme
 (include "tests/bare/image-prelude.x")
 (def p (pair 1 2))
-(s (obj->ptr p) %obj-slot-flags (| (w (obj->ptr p) %obj-slot-flags) 1024))
+(s (obj->ptr p) %obj-slot-flags (| (w (obj->ptr p) %obj-slot-flags) %obj-flag-trace))
 (def T (ptr-alloc 8000)) (def BL (ptr-alloc 800)) (def R (ptr-alloc 64))
 (s R 0 1000) (s R 1 800)
 (match ((eq? %image-prims-found #f) (error "prims missing"))
-       (#t (guard (e (error "raised")) (image-write! p 1024 T BL (fn (_ word kind obj) ()) () R))))
+       (#t (guard (e (error "raised")) (image-write! p %obj-flag-trace T BL (fn (_ word kind obj) ()) () R))))
 ```
 ---
     *** ERROR: raised
@@ -196,11 +196,11 @@ is on any fresh object here, never the record's.
 ```scheme
 (include "tests/bare/image-prelude.x")
 (def h (make-type "IMGT" ()))
-(s (obj->ptr h) %obj-slot-flags (| (w (obj->ptr h) %obj-slot-flags) 1024))
+(s (obj->ptr h) %obj-slot-flags (| (w (obj->ptr h) %obj-slot-flags) %obj-flag-trace))
 (def T (ptr-alloc 64)) (def BL (ptr-alloc 64)) (def R (ptr-alloc 64))
 (s R 0 2) (s R 1 64)
 (match ((eq? %image-prims-found #f) (error "prims missing"))
-       (#t (guard (e (error "raised")) (image-write! h 1024 T BL (fn (_ word kind obj) ()) () R))))
+       (#t (guard (e (error "raised")) (image-write! h %obj-flag-trace T BL (fn (_ word kind obj) ()) () R))))
 ```
 ---
     *** ERROR: raised
