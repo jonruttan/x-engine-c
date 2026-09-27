@@ -75,7 +75,7 @@ x_obj_t *x_type_struct_make(x_obj_t *p_base, struct x_type_t type)
 		pair(pair(pair(type.p_ops, nil),
 			nil),
 		/* Image: '(save-stack load-stack) -- a type saves and loads its
-		 * own payload; the default save is the units shape. */
+		 * own payload; the default save is the type's unit labels. */
 		pair(pair(pair(type.p_save != NULL
 				? type.p_save : (x_obj_t *)x_type_save_default_prim, nil),
 			pair(pair(type.p_load, nil),
@@ -87,13 +87,13 @@ x_obj_t *x_type_struct_make(x_obj_t *p_base, struct x_type_t type)
 
 /* --- image save: the type's own knowledge of its payload -------------- */
 
-x_obj_t *x_type_save_units(x_obj_t *p_obj, x_int_t *buf, x_int_t n, const int *kinds, int nkinds)
+x_obj_t *x_type_save_units(x_obj_t *p_obj, x_int_t *buf, x_int_t n, const int *labels, int nlabels)
 {
 	x_int_t i;
 
 	buf[0] = n;
 	for (i = 0; i < n; i++) {
-		buf[1 + 2 * i] = kinds[i < nkinds ? i : nkinds - 1];
+		buf[1 + 2 * i] = labels[i < nlabels ? i : nlabels - 1];
 		buf[2 + 2 * i] = x_obj_data_i(p_obj, i).i;
 	}
 
@@ -101,8 +101,8 @@ x_obj_t *x_type_save_units(x_obj_t *p_obj, x_int_t *buf, x_int_t n, const int *k
 }
 
 /**
- * @brief The default save: the units the type's shape declares, each with
- * the kind the shape's mask gives it (a bare count: all references).
+ * @brief The default save: the units the type's unit labels declare, each
+ * with the label the mask gives it (a bare count: all references).
  * Args are already evaluated: (obj buf).
  */
 x_obj_t *x_type_save_default(x_obj_t *p_base, x_obj_t *p_args)
@@ -127,7 +127,7 @@ x_obj_t *x_type_save_default(x_obj_t *p_base, x_obj_t *p_args)
 	}
 	buf[0] = n;
 	for (i = 0; i < n; i++) {
-		buf[1 + 2 * i] = x_type_unit_kind(mask, i, described);
+		buf[1 + 2 * i] = x_type_unit_label(mask, i, described);
 		buf[2 + 2 * i] = x_obj_data_i(p_obj, i).i;
 	}
 
@@ -350,7 +350,7 @@ x_int_t x_type_units_count(x_obj_t *p_units)
 }
 
 /**
- * The per-unit kind mask, from either form of a p_units slot.
+ * The per-unit label mask, from either form of a p_units slot.
  *
  * The bare-count form has no mask; 0 is the honest answer for it, since
  * X_TYPE_UNIT_REF is 0 and "every unit a reference" is what a bare count
@@ -372,12 +372,12 @@ x_int_t x_type_units_mask(x_obj_t *p_units)
  * How many leading units the mask describes before the repeat rule applies.
  *
  * A fixed count describes exactly its own units. A dynamic count of -k
- * describes the k leading units plus the kind of the payload that follows
+ * describes the k leading units plus the label of the payload that follows
  * them -- k + 1 fields -- so a count of -1 with mask (ref, ref) covers slot 0
  * and the slot-0-many payload units after it, with no repeat marker.
  *
  * Note that the slot-0-counted convention holds its length as a heap INTEGER
- * OBJECT, so slot 0 is X_TYPE_UNIT_REF, not X_TYPE_UNIT_WORD -- see the kind
+ * OBJECT, so slot 0 is X_TYPE_UNIT_REF, not X_TYPE_UNIT_WORD -- see the label
  * documentation in x-type.h.
  *
  * @param p_units  x_obj_t* -- A type's p_units slot, or NULL
@@ -393,18 +393,18 @@ x_int_t x_type_units_described(x_obj_t *p_units)
 }
 
 /**
- * The kind of unit @p i.
+ * The label of unit @p i.
  *
- * Units at or past @p described take the kind of the last described unit.
+ * Units at or past @p described take the label of the last described unit.
  * That is the repeat rule, and it is how a dynamic-size type says what its
  * payload units are without a marker.
  *
- * @param mask       x_int_t -- The kind mask
+ * @param mask       x_int_t -- The label mask
  * @param i          x_int_t -- Unit index
  * @param described  x_int_t -- Fields the mask describes
  * @return int -- One of X_TYPE_UNIT_REF .. X_TYPE_UNIT_FOREIGN
  */
-int x_type_unit_kind(x_int_t mask, x_int_t i, x_int_t described)
+int x_type_unit_label(x_int_t mask, x_int_t i, x_int_t described)
 {
 	if (described < 1) {
 		return X_TYPE_UNIT_REF;
@@ -414,7 +414,7 @@ int x_type_unit_kind(x_int_t mask, x_int_t i, x_int_t described)
 		i = described - 1;
 	}
 
-	return (int)((mask >> (i * X_TYPE_UNIT_BITS)) & X_TYPE_UNIT_KIND_MASK);
+	return (int)((mask >> (i * X_TYPE_UNIT_BITS)) & X_TYPE_UNIT_LABEL_MASK);
 }
 
 /**
@@ -599,7 +599,7 @@ x_obj_t *x_type_heap_mark(x_obj_t *p_base, x_obj_t *p_obj, x_obj_flag_t flags)
 			}
 
 			for (i = 0; i < n; i++) {
-				if (x_type_unit_kind(mask, i, described)
+				if (x_type_unit_label(mask, i, described)
 						!= X_TYPE_UNIT_REF) {
 					continue;
 				}

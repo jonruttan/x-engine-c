@@ -2,7 +2,7 @@
  * # Unit Tests: *the image cells and the per-type save and load handlers*
  *
  * docs/state-image-format.md (x-lang) 4.3: a type saves and loads its own
- * payload.  Every handler writes [n][kind word]*n into the buffer it is
+ * payload.  Every handler writes [n][label word]*n into the buffer it is
  * handed, with evaluated arguments (obj buf).
  */
 

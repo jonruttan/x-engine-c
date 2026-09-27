@@ -85,14 +85,14 @@ x_obj_t *x_make_operative(x_obj_t *p_base, x_obj_flag_t flags,
  * @return Type struct pair list
  */
 /* Image save (docs/state-image-format.md): this type's payload, unit by
- * unit, by kind. */
+ * unit, by label. */
 x_obj_t *x_type_operative_save(x_obj_t *p_base, x_obj_t *p_args)
 {
-	static const int kinds[] = { X_TYPE_UNIT_FOREIGN, X_TYPE_UNIT_REF };
+	static const int labels[] = { X_TYPE_UNIT_FOREIGN, X_TYPE_UNIT_REF };
 	x_obj_t *p_obj = x_firstobj(p_args);
 	x_obj_t *p_buf = x_firstobj(x_restobj(p_args));
 
-	return x_type_save_units(p_obj, (x_int_t *)x_firstptr(p_buf), 2, kinds, 2);
+	return x_type_save_units(p_obj, (x_int_t *)x_firstptr(p_buf), 2, labels, 2);
 }
 x_satom_t x_type_operative_save_prim = x_obj_set(x_type_atom_obj, X_OBJ_FLAG_NONE, { (x_obj_t *)&x_type_operative_save });
 

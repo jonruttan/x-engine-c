@@ -32,13 +32,13 @@ enum {
 };
 
 /**
- * @brief The layout of one object record: [type][flags][n][kind word]*n.
+ * @brief The layout of one object record: [type][flags][n][label word]*n.
  */
 enum {
 	X_IMAGE_RECORD_TYPE = 0,    /**< Object index of the type, or a role. */
 	X_IMAGE_RECORD_FLAGS = 1,   /**< The object's flags as written. */
 	X_IMAGE_RECORD_COUNT = 2,   /**< n, the unit count. */
-	X_IMAGE_RECORD_UNITS = 3,   /**< First unit; each unit is a kind and a word. */
+	X_IMAGE_RECORD_UNITS = 3,   /**< First unit; each unit is a label and a word. */
 	X_IMAGE_UNIT_WORDS = 2      /**< Words per unit. */
 };
 
@@ -132,12 +132,12 @@ static x_obj_t *x_image_ref(const x_image_t *img, x_int_t v)
 }
 
 /**
- * @brief Store one unit of @p p_obj from its kind and word.
+ * @brief Store one unit of @p p_obj from its label and word.
  */
 static void x_image_patch_unit(const x_image_t *img, x_obj_t *p_obj,
-	x_int_t j, x_int_t kind, x_int_t v)
+	x_int_t j, x_int_t label, x_int_t v)
 {
-	switch (kind) {
+	switch (label) {
 	case X_TYPE_UNIT_REF:
 		x_obj(x_obj_data_i(p_obj, j)) = x_image_ref(img, v);
 		break;
@@ -273,7 +273,7 @@ static void x_image_load_pass(x_obj_t *p_base, x_image_t *img)
  * x-lang form: @code (image rebuild! buf ostart nobj externals nextern blob index) @endcode
  *
  * The object table at word @p ostart of @p buf holds @p nobj records with
- * no length word: n is the unit count and each unit carries its kind,
+ * no length word: n is the unit count and each unit carries its label,
  * exactly as the type's save handler wrote it.  Three passes -- allocate,
  * patch, load -- so that a type struct exists before an instance names it,
  * and every reference is in place before a load handler runs.
@@ -337,7 +337,7 @@ static void x_image_save_word(x_obj_t *p_obj, x_int_t *buf)
  * @brief Save a typed object through its type's save handler.
  *
  * Applied as (save obj buf) with evaluated arguments; a type without a
- * handler of its own gets the default, which walks the units shape.
+ * handler of its own gets the default, which walks the type's unit labels.
  */
 static void x_image_save_typed(x_obj_t *p_base, x_obj_t *p_obj,
 	x_obj_t *p_buf)
@@ -396,7 +396,7 @@ static x_int_t x_image_save(x_obj_t *p_base, x_obj_t *p_obj, x_obj_t *p_buf)
  * x-lang form: @code (image save! obj buf) @endcode
  *
  * The three roles are structural; everything else is its type's.  @p buf
- * receives [n][kind word]*n.
+ * receives [n][label word]*n.
  *
  * @param p_base  Base (execution context).
  * @param p_args  Unevaluated: (self obj buf).
@@ -579,7 +579,7 @@ typedef struct {
 	char *blob;                 /**< The bytes section. */
 	x_int_t blob_cap;           /**< Its capacity, in bytes. */
 	x_int_t blob_pos;           /**< Bytes written. */
-	x_obj_t *p_name;            /**< (name word kind obj): an external index, or nil. */
+	x_obj_t *p_name;            /**< (name word label obj): an external index, or nil. */
 	x_obj_t *p_buf;             /**< The save buffer, as the PTR the type saves take. */
 	x_int_t *buf;               /**< The same buffer, as words. */
 	x_image_table_t index;      /**< Object address to object index. */
@@ -629,13 +629,13 @@ static void x_image_count_pass(x_image_writer_t *w)
 /**
  * @brief The external index for @p word, asking the naming callable once.
  *
- * Applied as (name word kind obj) with evaluated arguments; an integer
+ * Applied as (name word label obj) with evaluated arguments; an integer
  * answer is the index, anything else means the word has no name and is
  * written as the sentinel.  Every answer is cached, one up since the table
  * reads 0 as no entry, so a word is asked about once however often it
  * occurs.
  */
-static x_int_t x_image_extern(x_image_writer_t *w, x_int_t word, x_int_t kind,
+static x_int_t x_image_extern(x_image_writer_t *w, x_int_t word, x_int_t label,
 	x_obj_t *p_obj)
 {
 	x_spair_t args[4];
@@ -660,7 +660,7 @@ static x_int_t x_image_extern(x_image_writer_t *w, x_int_t word, x_int_t kind,
 	x_restobj((x_obj_t *)args) = (x_obj_t *)(args + 1);
 	x_firstobj((x_obj_t *)(args + 1)) = x_mkint(w->p_base, word);
 	x_restobj((x_obj_t *)(args + 1)) = (x_obj_t *)(args + 2);
-	x_firstobj((x_obj_t *)(args + 2)) = x_mkint(w->p_base, kind);
+	x_firstobj((x_obj_t *)(args + 2)) = x_mkint(w->p_base, label);
 	x_restobj((x_obj_t *)(args + 2)) = (x_obj_t *)(args + 3);
 	x_firstobj((x_obj_t *)(args + 3)) = p_obj;
 	x_restobj((x_obj_t *)(args + 3)) = NULL;
@@ -773,11 +773,11 @@ static x_int_t x_image_type_word(x_image_writer_t *w, x_obj_t *p_obj)
 }
 
 /**
- * @brief Write one object's record: [type][flags][n][kind word]*n.
+ * @brief Write one object's record: [type][flags][n][label word]*n.
  */
 static void x_image_emit_object(x_image_writer_t *w, x_obj_t *p_obj)
 {
-	x_int_t n, j, kind, word;
+	x_int_t n, j, label, word;
 	x_int_t *rec;
 
 	n = x_image_save(w->p_base, p_obj, w->p_buf);
@@ -792,10 +792,10 @@ static void x_image_emit_object(x_image_writer_t *w, x_obj_t *p_obj)
 	rec[X_IMAGE_RECORD_COUNT] = n;
 
 	for (j = 0; j < n; j++) {
-		kind = w->buf[1 + X_IMAGE_UNIT_WORDS * j];
+		label = w->buf[1 + X_IMAGE_UNIT_WORDS * j];
 		word = w->buf[2 + X_IMAGE_UNIT_WORDS * j];
 
-		switch (kind) {
+		switch (label) {
 		case X_TYPE_UNIT_REF:
 			word = x_image_ref_word(w, word, p_obj);
 			break;
@@ -812,7 +812,7 @@ static void x_image_emit_object(x_image_writer_t *w, x_obj_t *p_obj)
 			break;
 		}
 
-		rec[X_IMAGE_RECORD_UNITS + X_IMAGE_UNIT_WORDS * j] = kind;
+		rec[X_IMAGE_RECORD_UNITS + X_IMAGE_UNIT_WORDS * j] = label;
 		rec[X_IMAGE_RECORD_UNITS + X_IMAGE_UNIT_WORDS * j + 1] = word;
 	}
 
@@ -842,7 +842,7 @@ static void x_image_emit_pass(x_image_writer_t *w)
  * object carrying @p flag, once to write each one's record through its
  * type's save.  The loop names nothing: a reference to an object outside
  * the image and every foreign word go to @p name, applied as
- * (name word kind obj), once per distinct word, and its integer answer is
+ * (name word label obj), once per distinct word, and its integer answer is
  * the external index -- nil, the sentinel.  @p result holds the table's
  * capacity in words and the blob's in bytes on the way in, and the object
  * count, table words, blob bytes and sentinel count on the way out,
