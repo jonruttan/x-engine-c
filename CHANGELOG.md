@@ -11,6 +11,75 @@ alongside the library changes they landed with.
 [x-lang]: https://github.com/jonruttan/x-lang
 [x-changelog]: https://github.com/jonruttan/x-lang/blob/main/CHANGELOG.md
 
+## 0.2.14 — 2026-09-26
+
+**The engine proper deals in no floats and loads no libraries** ([#63]).
+`ffi-call` was a C double machine inside the engine, with arithmetic,
+comparison, casts, libm calls through a function pointer, and string
+conversion through `sprintf`, and `ffi.c` called libc for `sprintf`,
+`memcpy`, `dlopen` and `dlsym`. The `sprintf` was what surfaced, as a macOS
+deprecation warning in x-lang's ASan boot. The primitive is gone, with its
+double helpers, its specs and the `(ffi call)` row of the ISA manifest;
+floats belong to the language, and x-lang emits its double operations as
+assembler stubs called through `(ptr call)` ([x-lang#796]). `dlopen` and
+`dlsym` move to the CLI, `src/x-cli.c`, behind `X_DL`, on by default beside
+`X_SYSCALL`, and keep their catalog names `(ffi dlopen)` and `(ffi dlsym)`.
+`ffi.c` and `callcc.c` copy through `x_lib_memcpy`.
+
+A new gate holds the line: `make check-libc` (`tools/check/libc.sh`), in
+`make gates`, refuses a libc header, a libc call, a feature-test macro or a
+silenced diagnostic anywhere outside x-expr's `x_sys_*` and `x_lib_*`
+wrappers. `src/x-cli.c`, the optional host modules under `opt/` (listed by
+name), `ctype.h`, `setjmp.h`, the freestanding headers and code compiled
+only under `DEBUG` are exempt. `--self-test` plants one offender per rule
+and checks that the scan names exactly those. The rule was set before
+0.2.9, but its gate was never committed, and the calls stayed.
+
+x-lang reads the declaration's new ISA digest and drops `ffi/call` from its
+contract files with the pin bump.
+
+**A short call stops where its arguments do** ([#62]). A primitive that
+unpacks a fixed prefix with `x_args` or `x_eargs` and then reads the rest of
+its arguments as `x_11` or `x_111` of the list took the rest of nil when the
+call was short, and segfaulted before any check ran: `(-)`, `(eval)`,
+`(fn)`, `(op)`, a bare `ptr-call`. `x_args_tail`, in `include/x-prim.h`,
+walks the list as `x_args` does, stops at nil and raises on a dotted tail
+through `x_eval_spine_guard` ([x-lang#487]), and every such read in
+`src/x-prim` and `src/x-syntax` goes through it: `-`, `apply`, `eval`,
+`buf make`, `ptr-call`, `def`, `set!`, `fn`, `op` and `guard`. What a
+primitive does with the nil it then receives is unchanged; `(apply)`,
+`(def)`, `(set!)` and a bare `buf make` get past the walk and still fail on
+nil, as they do when the nil is written out. Found by calling every catalog
+primitive with none to three arguments. Covered by a bare case that crashed
+on 0.2.13.
+
+**A profiling counter for the environment walk** ([#59]).
+`profile-env-steps`, a tenth x-eval counter, counts under `X_PROFILE` each
+binding `x_env_lookup` compares on its way to the root, the one lookup loop
+no counter covered. The root's tree counts its own lookups
+(`profile-bst-hits`, `profile-bst-misses`) and `profile-assoc-steps` counts
+`assoc`, so nothing priced what scoping a module adds to a lookup, the
+question standing between x-lang and scoping its hot modules. The base
+layout gains the cell, with `x-eval-layout.h` regenerated and a new
+`base-paths.x` row; the default build compiles none of it. A C spec,
+built with `X_PROFILE`, checks a fresh counter reads zero, a hit on an
+environment's only binding counts one, a miss counts every binding on the
+way to the root, and a lookup starting at the root counts none.
+
+Also: the bare smoke cases for the FFI nil-pointer and nil-operand raises
+called `prim-ref`, which is x-lang's and unbound in a bare engine, so each
+guard caught the unbound name and the case passed without reaching the
+primitive ([#61]). `tests/bare/prim-ref.x` looks a primitive up through the
+committed base paths, and each case checks the lookup is non-nil before
+the guard.
+
+[#59]: https://github.com/jonruttan/x-engine-c/pull/59
+[#61]: https://github.com/jonruttan/x-engine-c/pull/61
+[#62]: https://github.com/jonruttan/x-engine-c/pull/62
+[#63]: https://github.com/jonruttan/x-engine-c/pull/63
+[x-lang#487]: https://github.com/jonruttan/x-lang/issues/487
+[x-lang#796]: https://github.com/jonruttan/x-lang/pull/796
+
 ## 0.2.13 — 2026-09-16
 
 **`read` answers the EOF sentinel at end of input** ([#57]). The primitive
