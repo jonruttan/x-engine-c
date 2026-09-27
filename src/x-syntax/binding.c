@@ -46,7 +46,7 @@ static x_obj_t *x_prim_define(x_obj_t *p_base, x_obj_t *p_args)
 
 	x_args(p_base, p_args, 2, NULL, &p_name);
 	p_val = x_eval_arg(p_base,
-		x_eval_spine_first(p_base, x_11(p_args)));
+		x_eval_spine_first(p_base, x_args_tail(p_base, p_args, 2)));
 
 	return x_env_bind(p_base, x_eval_field_env(p_base), p_name, p_val);
 }
@@ -73,7 +73,7 @@ static x_obj_t *x_prim_set(x_obj_t *p_base, x_obj_t *p_args)
 
 	x_args(p_base, p_args, 2, NULL, &p_name);
 	p_val = x_eval_arg(p_base,
-		x_eval_spine_first(p_base, x_11(p_args)));
+		x_eval_spine_first(p_base, x_args_tail(p_base, p_args, 2)));
 
 	p_entry = x_env_lookup(p_base, x_eval_field_env(p_base), p_name);
 	if (p_entry != NULL) {

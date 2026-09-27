@@ -138,7 +138,7 @@ static x_obj_t *x_prim_guard(x_obj_t *p_base, x_obj_t *p_args)
 	x_args(p_base, p_args, 2, NULL, &p_clause);
 	p_var = x_firstobj(p_clause);
 	p_handler_body = x_restobj(p_clause);
-	p_body = x_11(p_args);
+	p_body = x_args_tail(p_base, p_args, 2);
 
 	/* Build handler: (jmp-ptr (saved-env . previous-handler) error-value).
 	 *

@@ -109,13 +109,13 @@ static x_obj_t *x_prim_sub(x_obj_t *p_base, x_obj_t *p_args)
 
 	/* Unary negation keeps the int path (typed negation is the tower
 	 * layer's concern, not binary op dispatch). */
-	if (x_obj_isnil(p_base, x_11(p_args))) {
+	if (x_obj_isnil(p_base, x_args_tail(p_base, p_args, 2))) {
 		if (x_obj_isnil(p_base, a))
 			x_eval_error(p_base, (x_char_t *)"-: operand is nil", NULL);
 		return x_mkint(p_base, -x_intval(a));
 	}
 
-	b = x_eval_arg(p_base, x_eval_spine_first(p_base, x_11(p_args)));
+	b = x_eval_arg(p_base, x_eval_spine_first(p_base, x_args_tail(p_base, p_args, 2)));
 	if (x_type_op_try(p_base, (x_char_t *)"-", a, b, &p_result))
 		return p_result;
 

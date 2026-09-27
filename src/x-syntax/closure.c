@@ -33,7 +33,7 @@ static x_obj_t *x_prim_closure(x_obj_t *p_base, x_obj_t *p_args)
 	x_obj_t *p_params, *p_body,
 		*p_env = x_eval_field_env(p_base);
 	x_args(p_base, p_args, 2, NULL, &p_params);
-	p_body = x_11(p_args);
+	p_body = x_args_tail(p_base, p_args, 2);
 
 	return x_mkproc(p_base, p_params, p_body, p_env);
 }
@@ -56,7 +56,7 @@ static x_obj_t *x_prim_operative(x_obj_t *p_base, x_obj_t *p_args)
 	x_obj_t *p_params, *p_envparam, *p_body,
 		*p_env = x_eval_field_env(p_base);
 	x_args(p_base, p_args, 3, NULL, &p_params, &p_envparam);
-	p_body = x_111(p_args);
+	p_body = x_args_tail(p_base, p_args, 3);
 
 	return x_mkop(p_base, p_params, p_envparam, p_body, p_env);
 }

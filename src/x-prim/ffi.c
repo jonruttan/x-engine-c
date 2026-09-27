@@ -389,7 +389,7 @@ static x_obj_t *x_prim_ptr_call(x_obj_t *p_base, x_obj_t *p_args)
 	long (*fn)(long, long, long, long, long, long, long);
 
 	x_eargs(p_base, p_args, 2, NULL, &p_fptr);
-	p_args = x_11(p_args); /* skip self + fptr, walk remaining */
+	p_args = x_args_tail(p_base, p_args, 2); /* skip self + fptr, walk remaining */
 	p[0] = p[1] = p[2] = p[3] = p[4] = p[5] = p[6] = 0;
 
 	while (!x_obj_isnil(p_base, p_args) && i < 7) {

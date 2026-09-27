@@ -87,6 +87,29 @@ past the proper prefix is unaffected, which is what it did before.
 ---
     *** ERROR: ignored
 
+### a short call stops where its arguments do
+
+A prim that takes a fixed prefix and then a tail -- a body, an env, the
+rest of an arithmetic -- used to reach the tail as rest-of-rest, which is
+rest of NIL when the call is short: `(fn)` and `(eval)` segfaulted before
+any check ran.  The tail walk now stops at the end the way the prefix walk
+always did, so each call below answers or raises, and the case reaches its
+last line.  What a nil ARGUMENT does after that is each prim's own contract
+and not asserted here.
+
+```scheme
+(include "tests/bare/prim-ref.x")
+(guard (e ()) (-))
+(guard (e ()) (eval))
+(guard (e ()) (fn))
+(guard (e ()) (op))
+(guard (e ()) (op ()))
+(guard (e ()) ((%prim-ref (lit ptr) (lit call))))
+(error "survived")
+```
+---
+    *** ERROR: survived
+
 ### a nil function pointer raises instead of being called
 
 A dlsym miss answers nil, and handing that nil to a call convention used to

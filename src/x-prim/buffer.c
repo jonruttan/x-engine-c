@@ -202,7 +202,7 @@ static x_obj_t *x_prim_buffer_make(x_obj_t *p_base, x_obj_t *p_args)
 	x_obj_flag_t flags = 0;
 
 	x_eargs(p_base, p_args, 2, NULL, &p_str);
-	p_rest = x_11(p_args);
+	p_rest = x_args_tail(p_base, p_args, 2);
 	if ( ! x_obj_isnil(p_base, p_rest)) {
 		x_eval_spine_guard(p_base, p_rest);	/* dotted tail (#487) */
 	}
