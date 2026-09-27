@@ -4,7 +4,7 @@
 # Extracts every env-binding site from the C source (primitive tables,
 # direct x_callable_bind/x_value_bind calls) and diffs the result against
 # the committed manifest tools/contract/isa.x.  Complements the runtime half
-# (tests/x/specs/meta/isa.spec.md): the runtime walk sees the live catalog
+# (tests/x/specs/meta/isa.spec.md): the runtime walk sees the live catalogue
 # but cannot enumerate bare env bindings; this scan sees every binding in
 # the source, including ones behind non-default compile flags.
 #
@@ -41,7 +41,7 @@ awk '
 	line = $0
 	gsub(/[()]/, "", line)
 	split(line, f, " ")
-	if (sect == "catalog") print "catalog " f[1] " " f[2]
+	if (sect == "catalogue") print "catalogue " f[1] " " f[2]
 	else if (sect != "")   print sect " " f[1]
 }' "$ROOT"/tools/contract/isa.x > "$MAN_LIST"
 

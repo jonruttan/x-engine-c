@@ -51,43 +51,43 @@ function xname(c) {
 # The descriptor records the X_HEAP build, so the X_HEAP branch of every
 # conditional is selected EXPLICITLY (never first-definition-wins).  heap is
 # 0 outside any X_HEAP conditional, 1 inside the taken branch, -1 inside the
-# excluded branch; kind[] stacks every open conditional so #else/#endif pair
+# excluded branch; branch[] stacks every open conditional so #else/#endif pair
 # with the right #if.  Anything the tracker cannot classify (an X_HEAP
 # conditional nested in another, #if/#elif expressions naming X_HEAP) fails
 # loudly rather than guessing.
 function ppfail(msg) {
-	printf "FAIL: %s at %s:%d: %s -- teach tools/check/obj-layout.sh the shape.\n", \
+	printf "FAIL: %s at %s:%d: %s -- teach tools/check/obj-layout.sh to handle it.\n", \
 		msg, FILENAME, FNR, $0 > "/dev/stderr"
 	bad = 1
 	exit 1
 }
 /^[ \t]*#[ \t]*ifdef[ \t]+X_HEAP([ \t]|$)/ {
 	if (heap != 0) ppfail("nested X_HEAP conditional")
-	depth++; kind[depth] = "hy"; heap = 1; next
+	depth++; branch[depth] = "hy"; heap = 1; next
 }
 /^[ \t]*#[ \t]*ifndef[ \t]+X_HEAP([ \t]|$)/ {
 	if (heap != 0) ppfail("nested X_HEAP conditional")
-	depth++; kind[depth] = "hn"; heap = -1; next
+	depth++; branch[depth] = "hn"; heap = -1; next
 }
 /^[ \t]*#[ \t]*(if|ifdef|ifndef)([ \t]|$)/ {
 	if ($0 ~ /X_HEAP/) ppfail("unclassifiable X_HEAP conditional")
-	depth++; kind[depth] = "other"; next
+	depth++; branch[depth] = "other"; next
 }
 /^[ \t]*#[ \t]*elif([ \t]|$)/ {
 	if (depth == 0) ppfail("unmatched #elif")
-	if (kind[depth] != "other" || $0 ~ /X_HEAP/)
+	if (branch[depth] != "other" || $0 ~ /X_HEAP/)
 		ppfail("unclassifiable X_HEAP conditional")
 	next
 }
 /^[ \t]*#[ \t]*else([ \t]|$|\/)/ {
 	if (depth == 0) ppfail("unmatched #else")
-	if (kind[depth] == "hy")      { kind[depth] = "hn"; heap = -1 }
-	else if (kind[depth] == "hn") { kind[depth] = "hy"; heap = 1 }
+	if (branch[depth] == "hy")      { branch[depth] = "hn"; heap = -1 }
+	else if (branch[depth] == "hn") { branch[depth] = "hy"; heap = 1 }
 	next
 }
 /^[ \t]*#[ \t]*endif([ \t]|$|\/)/ {
 	if (depth == 0) ppfail("unmatched #endif")
-	if (kind[depth] != "other") heap = 0
+	if (branch[depth] != "other") heap = 0
 	depth--; next
 }
 # Lines in the excluded (non-X_HEAP) branch are not part of the recorded
@@ -103,19 +103,21 @@ heap < 0 { next }
 	print xname(name) " " units[name]
 	next
 }
-# Flags enum members: explicit "=value" or auto-increment from the previous.
+# Flags enumerators: explicit "=value" or auto-increment from the previous.
+# The simple-type codes belong to x-expr alone: the engine neither uses nor
+# supports them, so the descriptor has no row for them.  Their values still
+# advance the auto-increment.
 /^[ \t]*X_OBJ_FLAG_[A-Z0-9_]+/ {
 	line = $0
 	sub(/^[ \t]*/, "", line)
 	name = line
 	sub(/[=,].*$/, "", name)
-	if (name == "X_OBJ_FLAG_NONE" || name == "X_OBJ_FLAG_OBJ" \
-			|| name == "X_OBJ_FLAG_MASK") {
-		if (line ~ /=/) { v = line; sub(/^[^=]*=/, "", v); prev = numval(v) }
-		next
-	}
 	if (line ~ /=/) { v = line; sub(/^[^=]*=/, "", v); prev = numval(v) }
 	else prev = prev + 1
+	if (name == "X_OBJ_FLAG_NONE" || name == "X_OBJ_FLAG_OBJ" \
+			|| name == "X_OBJ_FLAG_MASK" \
+			|| name ~ /^X_OBJ_FLAG_(SIMPLE_TYPE|PRIM|FN|INT|CHAR|STR|PTR|TYPE_MASK)$/)
+		next
 	print xname(name) " " prev
 	next
 }
@@ -124,7 +126,7 @@ END {
 	if (depth != 0) {
 		printf "FAIL: unbalanced preprocessor conditionals in %s" \
 			" (%d left open) -- teach tools/check/obj-layout.sh" \
-			" the shape.\n", FILENAME, depth > "/dev/stderr"
+			" to handle it.\n", FILENAME, depth > "/dev/stderr"
 		exit 1
 	}
 	uh = units["X_OBJ_UNITS_HEAP"]
@@ -143,7 +145,7 @@ END {
 # x-expr's, so they are defined in include/x-eval.h rather than x-obj.h.  Same
 # naming rule as the flags above (X_OBJ_EVALS_SHIFT -> %obj-evals-shift).
 # Every one must be there, as a plain decimal or hex literal: a missing or
-# reshaped definition fails here by name instead of surfacing as an
+# rewritten definition fails here by name instead of surfacing as an
 # unexplained descriptor row.
 awk '
 function hex2dec(h,    n, i) {
@@ -157,7 +159,7 @@ function hex2dec(h,    n, i) {
 /^#define X_OBJ_(FLAG_TRACE|EVALS_SHIFT|EVALS_BITS)[ \t]/ {
 	if ($3 !~ /^([0-9]+|0x[0-9a-fA-F]+)$/) {
 		printf "FAIL: %s is not a plain literal at %s:%d -- teach" \
-			" tools/check/obj-layout.sh the shape.\n", \
+			" tools/check/obj-layout.sh to handle it.\n", \
 			$2, FILENAME, FNR > "/dev/stderr"
 		bad = 1
 		exit 1

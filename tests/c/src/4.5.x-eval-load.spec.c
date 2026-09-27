@@ -188,7 +188,7 @@ static char *test_load_keeps_the_includer_across_a_collect(void)
 
 	p_base = init(NULL, buffer);
 	/* The heap namespace binds no bare names (its prims are reached through
-	 * the catalog, which is x-lang), so name the collector for the source. */
+	 * the catalogue, which is x-lang), so name the collector for the source. */
 	x_callable_bind(p_base, (x_char_t *)"heap-collect", x_prim_heap_collect);
 
 	p_sym = x_make_symbol(p_base, X_OBJ_FLAG_NONE, (x_char_t *)"includer-local");

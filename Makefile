@@ -426,7 +426,7 @@ gates: check-isa check-obj-layout check-base-paths check-libc ## Run the contrac
 # The C-surface ratchet: every binding site in the C source must appear in
 # the committed manifest tools/contract/isa.x, so growing the C layer takes a
 # deliberate manifest edit in the same commit.  The runtime half -- a walk of
-# the LIVE catalog -- is x-lang's tests/x/specs/meta/isa.spec.md.
+# the LIVE catalogue -- is x-lang's tests/x/specs/meta/isa.spec.md.
 check-isa: ## Diff the C source's binding surface against tools/contract/isa.x
 	sh tools/check/isa.sh
 .PHONY: check-isa
@@ -502,7 +502,7 @@ test: gates test-c test-bare test-bare-profile ## Run all tests
 .PHONY: test
 
 # Memory-safety gate: run the C suite against an AddressSanitizer build.
-# Catches the crash class we keep hitting -- e.g. an unchecked `first`
+# Catches the recurring crash -- e.g. an unchecked `first`
 # reading past a non-pair, which is silently wrong on 64-bit but SIGSEGVs
 # on 32-bit/Pi -- on the dev box, before a Pi run surfaces it.  x-lang's
 # repo runs the same ASan ENGINE against the x spec suite (its own
@@ -619,7 +619,7 @@ watch: ## Watch for changes
 # And MANDIR is a SHARED hierarchy: an unconditional install would make
 # `make install` scatter files outside the three dirs `uninstall` owns.
 #
-# Two classes of page come out of doc-c and both must ship:
+# Two variants of page come out of doc-c and both must ship:
 #
 #   real pages    112 of them -- one per file, group and struct.
 #   alias pages   964 one-line `.so man3/<real>.3` stubs, one per documented

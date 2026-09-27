@@ -183,9 +183,9 @@ static x_obj_t *x_prim_typep(x_obj_t *p_base, x_obj_t *p_args)
 
 	x_eargs(p_base, p_args, 3, NULL, &p_obj, &p_handle);
 
-	/* Guard the non-pair-tree tags before navigating type fields: a child
-	 * base's type is the x_eval_obj sentinel (a static atom tagging the
-	 * raw string "BASE"), and x_type_field_name on it reads past the tag
+	/* Guard the non-pair-tree labels before navigating type fields: a child
+	 * base's type is the x_eval_obj sentinel (a static atom labelling the
+	 * raw string "BASE"), and x_type_field_name on it reads past the label
 	 * string (ASan global-buffer-overflow). Same rule as x_type_op_try:
 	 * only a pair-tree type has fields. No handle can match -> #f. */
 	if (x_obj_isnil(p_base, p_obj) || x_obj_isnil(p_base, x_obj_type(p_obj))
@@ -224,30 +224,31 @@ static x_obj_t *x_prim_type_of(x_obj_t *p_base, x_obj_t *p_args)
 }
 
 /* (type name obj-or-handle) is pure x-lang now: boot/reflect.x mirrors the
- * handle/object/nil branches over the layout contracts (the sentinel tags
+ * handle/object/nil branches over the layout contracts (the sentinel labels
  * come from live probes at boot, the name walk from tools/contract/base-paths.x's
  * type-rooted entries). */
 
 /**
- * @brief Declare a type's unit shape.
+ * @brief Declare a type's unit labels.
  *
- * x-lang form: @code (type set-shape! type count mask) @endcode
+ * x-lang form: @code (type set-unit-labels! type count mask) @endcode
  *
  * Installs the pair form of the @c p_units slot: @p count keeps both of the
  * bare form's meanings (fixed, or negative for dynamic-size), and @p mask
- * gives each unit its kind -- see #X_TYPE_UNIT_REF.
+ * gives each unit its label -- see #X_TYPE_UNIT_REF.
  *
- * The shape must be a STRUCTURAL pair, which is why this is a primitive at
- * all: x builds list-pairs only, and the readers discriminate the two forms
- * of the slot by x_obj_type_isspair() -- one pointer comparison on a path
- * the collector walks per object. A list-pair here would be read as a bare
- * count, and the count would be the pair's first data word.
+ * The unit labels must be a STRUCTURAL pair, which is why this is a
+ * primitive at all: x builds list-pairs only, and the readers discriminate
+ * the two forms of the slot by x_obj_type_isspair() -- one pointer
+ * comparison on a path the collector walks per object. A list-pair here
+ * would be read as a bare count, and the count would be the pair's first
+ * data word.
  *
  * @param p_base  Base (execution context).
  * @param p_args  Unevaluated: (self type count mask).
  * @return The type struct, or nil if it was nil.
  */
-static x_obj_t *x_prim_type_set_shape(x_obj_t *p_base, x_obj_t *p_args)
+static x_obj_t *x_prim_type_set_unit_labels(x_obj_t *p_base, x_obj_t *p_args)
 {
 	x_obj_t *p_type, *p_count, *p_mask;
 
@@ -342,7 +343,7 @@ x_obj_t *x_prim_op1(x_obj_t *p_base, x_obj_t *p_args,
  * tree's iter handler over the layout contracts.)
  * (obj-ref / obj-set! / type-name are pure x-lang now: boot/data.x +
  * boot/reflect.x implement them reflectively over the layout contracts.)
- * ((obj retag!) is pure x-lang too: boot/reflect.x writes the type header
+ * ((obj relabel!) is pure x-lang too: boot/reflect.x writes the type header
  * slot over the layout contract -- retired from C by the #101 ruling.)
  *
  * @param p_base  Base (execution context) to bind primitives into.
@@ -352,12 +353,12 @@ x_obj_t *x_prim_op1(x_obj_t *p_base, x_obj_t *p_args,
 x_obj_t *x_prim_type_register(x_obj_t *p_base, x_obj_t *p_args)
 {
 	static const x_prim_entry_t entries[] = {
-		{ "make-type",         x_prim_make_type,         "type",   "make"          },
-		{ "make-instance",     x_prim_make_instance,     "type",   "make-instance" },
-		{ "make-obj",          x_prim_make_obj,          "obj",    "make"          },
-		{ "type-set-shape!",   x_prim_type_set_shape,    "type",   "set-shape!"    },
-		{ "type?",             x_prim_typep,             "type",   "?"             },
-		{ "type-of",           x_prim_type_of,           "type",   "of"            },
+		{ "make-type",             x_prim_make_type,            "type", "make"             },
+		{ "make-instance",         x_prim_make_instance,        "type", "make-instance"    },
+		{ "make-obj",              x_prim_make_obj,             "obj",  "make"             },
+		{ "type-set-unit-labels!", x_prim_type_set_unit_labels, "type", "set-unit-labels!" },
+		{ "type?",                 x_prim_typep,                "type", "?"                },
+		{ "type-of",               x_prim_type_of,              "type", "of"               },
 	};
 
 	x_prims_bind_table(p_base, entries,

@@ -4,7 +4,7 @@
 ; immediate reuse does that on its own, macOS's allocator mostly does not.
 ;
 ; A bare engine binds no name for the collector (the heap namespace lives in
-; the catalog only), so reach it through tests/bare/prim-ref.x.
+; the catalogue only), so reach it through tests/bare/prim-ref.x.
 (include "tests/bare/prim-ref.x")
 (def %lc-collect (%prim-ref (lit heap) (lit collect)))
 (%lc-collect)

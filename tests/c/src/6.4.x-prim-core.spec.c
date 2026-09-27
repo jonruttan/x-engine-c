@@ -928,8 +928,8 @@ static char *test_core_mkspair_spine_not_dotted(void)
 	p_base = x_eval_make(NULL, NULL);
 	x_prim_register(p_base, NULL);
 
-	/* (fn (x) x) bound to idfn, '(42) bound to args -- the embedder
-	 * shape: C code hands x_mkspair-built spines to a prim directly. */
+	/* (fn (x) x) bound to idfn, '(42) bound to args -- as an embedder
+	 * would: C code hands x_mkspair-built spines to a prim directly. */
 	p_args = x_mkspair(p_base, X_OBJ_FLAG_NONE, NULL,
 		x_mkspair(p_base, X_OBJ_FLAG_NONE,
 		x_mkspair(p_base, X_OBJ_FLAG_NONE, x_mksymbol(p_base, "x"), NULL),
@@ -940,7 +940,7 @@ static char *test_core_mkspair_spine_not_dotted(void)
 		x_mksatom(p_base, X_OBJ_FLAG_NONE, (x_int_t)42), NULL);
 	x_env_bind(p_base, x_eval_field_env(p_base), x_mksymbol(p_base, "args"), p_arglist);
 
-	/* Install a real jmp handler (guard shape, #253) so a raise is
+	/* Install a real jmp handler (guard layout, #253) so a raise is
 	 * observable instead of hitting the no-handler exit path. */
 	p_handler = x_mkspair(p_base, X_OBJ_FLAG_NONE,
 		x_mkptr(p_base, &jmp),
@@ -951,9 +951,9 @@ static char *test_core_mkspair_spine_not_dotted(void)
 	x_firstobj(x_eval_field_error_handler(p_base)) = x_mkspair(p_base,
 		X_OBJ_FLAG_NONE, p_handler, NULL);
 
-	/* (apply idfn args) with an x_mkspair-built spine: tagged with the
+	/* (apply idfn args) with an x_mkspair-built spine: labelled with the
 	 * built-in pair static, whose own type slot is NULL.  Pre-#296 the
-	 * evlis dotted-tail guard could not classify that shape as a cell
+	 * evlis dotted-tail guard could not classify that layout as a cell
 	 * and raised on a proper list. */
 	x_firstobj(x_eval_field_tco_expr(p_base)) = NULL;
 	p_args = x_mkspair(p_base, X_OBJ_FLAG_NONE, NULL,

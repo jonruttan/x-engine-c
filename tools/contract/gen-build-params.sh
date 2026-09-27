@@ -79,6 +79,6 @@ printf '(param arch %s)\n' "$arch"
 # WHY IT IS DECLARED RATHER THAN ASKED.  The engine binds `x-release` too, and
 # that is the answer for a program already running.  A wrapper deciding whether
 # a pinned amalgam may boot is not running anything yet, and starting an engine
-# to find out whether it is allowed to start an engine is a worse shape than
+# to find out whether it is allowed to start an engine is worse than
 # reading a file beside it.
 printf '(param release "%s")\n' "$X_RELEASE"

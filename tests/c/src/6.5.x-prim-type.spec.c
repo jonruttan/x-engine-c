@@ -327,7 +327,7 @@ static char *test_type_make_type_with_handlers(void)
 	p_base = x_eval_make(NULL, NULL);
 	x_prim_register(p_base, NULL);
 
-	/* Use a prim as handler — it has the right shape for type handler calls */
+	/* Use a prim as handler — it takes the arguments type handler calls expect */
 	p_fn = x_make_prim(p_base, X_OBJ_FLAG_NONE, test_type_dummy_handler);
 
 	/* Build handlers alist with all 9 handler keys */

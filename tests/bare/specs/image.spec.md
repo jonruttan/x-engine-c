@@ -4,7 +4,7 @@
 engine: no library, every object made by a primitive, every word read back
 at the offsets `tools/contract/obj-layout.x` declares.  Each case includes
 `tests/bare/image-prelude.x`, which reaches those primitives through the
-prims catalog and binds them under their bare names.  The contract is
+prims catalogue and binds them under their bare names.  The contract is
 x-lang's docs/state-image-format.md; the section numbers below are its.
 
 Each case ends in `(error ...)` whose text is the verdict, as the smoke spec
@@ -16,7 +16,7 @@ does: the bare engine prints nothing on its own.
 (include "tests/bare/image-prelude.x")
 (def B (ptr-alloc 512))
 (def n (image-save! (pair 1 2) B))
-(error (match ((= n 2) (match ((= (w B 1) 0) (match ((= (w B 3) 0) "two refs") (#t "unit 1 kind"))) (#t "unit 0 kind"))) (#t "count")))
+(error (match ((= n 2) (match ((= (w B 1) 0) (match ((= (w B 3) 0) "two refs") (#t "unit 1 label"))) (#t "unit 0 label"))) (#t "count")))
 ```
 ---
     *** ERROR: two refs
@@ -27,7 +27,7 @@ does: the bare engine prints nothing on its own.
 (include "tests/bare/image-prelude.x")
 (def B (ptr-alloc 512))
 (def n (image-save! "abc" B))
-(error (match ((= n 1) (match ((= (w B 1) 2) (match ((= (ptr-strlen (int->ptr (w B 2))) 3) "bytes") (#t "text"))) (#t "kind"))) (#t "count")))
+(error (match ((= n 1) (match ((= (w B 1) 2) (match ((= (ptr-strlen (int->ptr (w B 2))) 3) "bytes") (#t "text"))) (#t "label"))) (#t "count")))
 ```
 ---
     *** ERROR: bytes
@@ -38,7 +38,7 @@ does: the bare engine prints nothing on its own.
 (include "tests/bare/image-prelude.x")
 (def B (ptr-alloc 512))
 (def n (image-save! 42 B))
-(error (match ((= n 1) (match ((= (w B 1) 1) (match ((= (w B 2) 42) "word") (#t "value"))) (#t "kind"))) (#t "count")))
+(error (match ((= n 1) (match ((= (w B 1) 1) (match ((= (w B 2) 42) "word") (#t "value"))) (#t "label"))) (#t "count")))
 ```
 ---
     *** ERROR: word
@@ -49,7 +49,7 @@ does: the bare engine prints nothing on its own.
 (include "tests/bare/image-prelude.x")
 (def B (ptr-alloc 512))
 (def n (image-save! first B))
-(error (match ((= n 2) (match ((= (w B 1) 3) (match ((= (w B 3) 3) (match ((= (w B 2) 0) "no function") (#t "foreign"))) (#t "rest kind"))) (#t "first kind"))) (#t "count")))
+(error (match ((= n 2) (match ((= (w B 1) 3) (match ((= (w B 3) 3) (match ((= (w B 2) 0) "no function") (#t "foreign"))) (#t "rest label"))) (#t "first label"))) (#t "count")))
 ```
 ---
     *** ERROR: foreign
@@ -67,14 +67,14 @@ does: the bare engine prints nothing on its own.
 ---
     *** ERROR: call slot and state
 
-### save! saves a type handle -- its name atom, static-tagged and OWN -- as bytes (3.3)
+### save! saves a type handle -- its name atom, static-labelled and OWN -- as bytes (3.3)
 
 ```scheme
 (include "tests/bare/image-prelude.x")
 (def B (ptr-alloc 512))
 (def h (make-type "IMGT" ()))
 (def n (image-save! h B))
-(error (match ((= n 1) (match ((= (w B 1) 2) (match ((= (ptr-strlen (int->ptr (w B 2))) 4) "handle is bytes") (#t "text"))) (#t "kind"))) (#t "count")))
+(error (match ((= n 1) (match ((= (w B 1) 2) (match ((= (ptr-strlen (int->ptr (w B 2))) 4) "handle is bytes") (#t "text"))) (#t "label"))) (#t "count")))
 ```
 ---
     *** ERROR: handle is bytes
@@ -146,7 +146,7 @@ is on any fresh object here, never the record's.
 (def cur (pair 1 2))
 (def T (ptr-alloc 8000)) (def BL (ptr-alloc 800)) (def R (ptr-alloc 64))
 (s R 0 1000) (s R 1 800)
-(def N (image-write! cur %obj-flag-trace T BL (fn (_ word kind obj) ()) (pair st ()) R))
+(def N (image-write! cur %obj-flag-trace T BL (fn (_ word label obj) ()) (pair st ()) R))
 (def IX (ptr-alloc (* %word-size (+ N 1))))
 (image-rebuild! T 0 N (pair () ()) 1 BL IX)
 (def root (ptr->obj (int->ptr (w IX (w R 4)))))
@@ -171,7 +171,7 @@ is on any fresh object here, never the record's.
 (def cur (pair () ()))
 (def T (ptr-alloc 160000)) (def BL (ptr-alloc 800)) (def R (ptr-alloc 64))
 (s R 0 20000) (s R 1 800)
-(def N (image-write! cur %obj-flag-trace T BL (fn (_ word kind obj) ()) (pair S ()) R))
+(def N (image-write! cur %obj-flag-trace T BL (fn (_ word label obj) ()) (pair S ()) R))
 (error (match ((= (w R 3) 300) (match ((= N 600) "300 asked once") (#t "count"))) (#t "asked")))
 ```
 ---
@@ -186,7 +186,7 @@ is on any fresh object here, never the record's.
 (def T (ptr-alloc 8000)) (def BL (ptr-alloc 800)) (def R (ptr-alloc 64))
 (s R 0 1000) (s R 1 800)
 (match ((eq? %image-prims-found #f) (error "prims missing"))
-       (#t (guard (e (error "raised")) (image-write! p %obj-flag-trace T BL (fn (_ word kind obj) ()) () R))))
+       (#t (guard (e (error "raised")) (image-write! p %obj-flag-trace T BL (fn (_ word label obj) ()) () R))))
 ```
 ---
     *** ERROR: raised
@@ -200,7 +200,7 @@ is on any fresh object here, never the record's.
 (def T (ptr-alloc 64)) (def BL (ptr-alloc 64)) (def R (ptr-alloc 64))
 (s R 0 2) (s R 1 64)
 (match ((eq? %image-prims-found #f) (error "prims missing"))
-       (#t (guard (e (error "raised")) (image-write! h %obj-flag-trace T BL (fn (_ word kind obj) ()) () R))))
+       (#t (guard (e (error "raised")) (image-write! h %obj-flag-trace T BL (fn (_ word label obj) ()) () R))))
 ```
 ---
     *** ERROR: raised

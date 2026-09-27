@@ -348,13 +348,13 @@ x_obj_t *x_eval_arg(x_obj_t *p_base, x_obj_t *p_arg)
  *
  * @details **Improper-spine guard (#69, ruled).**  A first/rest walk is
  *          only meaningful for an object whose TYPE DECLARES pair units
- *          -- the same shape contract the collector's payload walk
- *          trusts (x_type_prim_heap_mark).  The test is STRUCTURAL, not
- *          a type-identity list: any reader personality's spine type
+ *          -- the same structural contract the collector's payload
+ *          walk trusts (x_type_prim_heap_mark).  The test is STRUCTURAL,
+ *          not a type-identity list: any reader personality's spine type
  *          participates by declaring pair units (the reader and the
- *          evaluator need not be symmetric), and two shapes are cells
+ *          evaluator need not be symmetric), and two layouts are cells
  *          by construction -- raw stack cells (NULL type slot) and heap
- *          pairs tagged with the built-in pair static (the x_mkspair
+ *          pairs labelled with the built-in pair static (the x_mkspair
  *          product; #296).  The static's own type slot is NULL, so the
  *          registered-type probe could never accept it -- omitting it
  *          made every C-built spine handed to an applicative in a
@@ -362,8 +362,8 @@ x_obj_t *x_eval_arg(x_obj_t *p_base, x_obj_t *p_arg)
  *          a non-cell and raises a catchable error in place of the
  *          segfault it replaces -- (list 1 . 5), and bare-x-core
  *          (f 1.5) where the float module is absent and 1.5 reads as a
- *          dotted pair; the tail atom is atom-tagged or registered-typed,
- *          so neither shape re-admits it.
+ *          dotted pair; the tail atom is atom-labelled or
+ *          registered-typed, so neither layout re-admits it.
  *
  * @note Every C consumer of an argument spine funnels through here:
  *       x_eval_list for applicatives, and x_args/x_eargs for the prims
@@ -696,8 +696,9 @@ static x_satom_t x_type_prim_units_hook =
 	x_obj_set(NULL, X_OBJ_FLAG_NONE, { .fn = x_type_prim_units });
 static x_satom_t x_type_prim_length_hook =
 	x_obj_set(NULL, X_OBJ_FLAG_NONE, { .fn = x_type_prim_length });
-/* The pre-registration error value: an ERR-SHAPED (code . subject) pair
- * with no type tag, for bases built before the type registry exists.
+/* The pre-registration error value: a (code . subject) pair, laid out as
+ * an ERR is, with no type label, for bases built before the type registry
+ * exists.
  * See x_eval_error's else branch. */
 static x_satom_t s_bare_code = x_obj_set(NULL, X_OBJ_FLAG_NONE, { .s = NULL });
 static x_satom_t s_bare_subject = x_obj_set(NULL, X_OBJ_FLAG_NONE, { .s = NULL });
@@ -714,8 +715,8 @@ static x_satom_t x_type_heap_free_hook =
  * Create and initialize a full x-lang base object atop x-expr.
  *
  * Calls x_base_make (x-expr layer) with default file descriptors and
- * hooks, then fills in the type-system-specific slots: env-group
- * (the current environment and the root), ctrl-group
+ * hooks, then fills in the type-system-specific slots: the env fields
+ * (the current environment and the root), the ctrl fields
  * (save-stack, error-handler, TCO slots), io-state (line counter,
  * boolean caches), extended profile counters, and project extras
  * (eval-list, token-cache, mark/free hooks, mark-roots).
@@ -725,7 +726,7 @@ static x_satom_t x_type_heap_free_hook =
  * @return x_obj_t* -- Newly constructed base object
  *
  * @details **x-expr vs x-lang layers.**  x_base_make (x-expr) allocates
- *          the base tree skeleton: heap group (pools, GC state), file
+ *          the base tree skeleton: heap fields (pools, GC state), file
  *          descriptors, buffer stack, type-alist slot, profile head
  *          (1 counter for GC cycles), and hook slots.  It leaves env,
  *          ctrl, io-state, and extras as nil.  This function fills all
@@ -737,7 +738,7 @@ static x_satom_t x_type_heap_free_hook =
  *          must be marked but never freed -- they are structurally
  *          permanent for the lifetime of the base.
  *
- * @details **Env-group layout:**
+ * @details **Env fields layout:**
  *          @code
  *          (env . env-root)
  *          @endcode
@@ -745,7 +746,7 @@ static x_satom_t x_type_heap_free_hook =
  *          - env-root: the base's root environment, whose bindings are
  *            a tree and whose parent is nil
  *
- * @details **Ctrl-group layout:**
+ * @details **Ctrl fields layout:**
  *          @code
  *          ((save-stack . (error-handler-slot . nil)) .
  *           ((tco-expr-slot . nil) . (tco-env-slot . nil)))
@@ -758,8 +759,8 @@ static x_satom_t x_type_heap_free_hook =
  *       are inherited from the parent so all bases in a tree share the
  *       same singleton boolean objects.
  *
- * @see x_eval_error  -- uses the error-handler from ctrl-group
- * @see x_eval        -- uses tco-expr/tco-env from ctrl-group
+ * @see x_eval_error  -- uses the error-handler from the ctrl fields
+ * @see x_eval        -- uses tco-expr/tco-env from the ctrl fields
  */
 x_obj_t *x_eval_make(x_obj_t *p_base, x_obj_t *p_args)
 {
@@ -783,7 +784,7 @@ x_obj_t *x_eval_make(x_obj_t *p_base, x_obj_t *p_args)
 	x_obj_type(p_base) = x_eval_obj;
 
 	/* Build the empty pair-tree skeleton -- env+ctrl, the type-alist cell,
-	 * io-state, the profile counters, and the state group -- from the
+	 * io-state, the profile counters, and the state fields -- from the
 	 * descriptor (tools/contract/base-layout.x) via the generated x-eval-layout.h.
 	 * Every leaf cell's car comes out nil; initial values are set just below. */
 #define X_EVAL_BUILD_TREE
@@ -944,13 +945,13 @@ void x_eval_error(x_obj_t *p_base, x_char_t *message, x_obj_t *p_obj)
 			 * layering, and it is worth keeping -- x-eval must not depend
 			 * on x-type).
 			 *
-			 * The fallback has the SAME SHAPE, (code . subject), and only
-			 * lacks the type tag.  That matters: every C consumer reads a
+			 * The fallback is laid out the same way, (code . subject), and
+			 * only lacks the type label.  That matters: every C consumer reads a
 			 * raised error through x_err_code/x_err_subject and none of
 			 * them should have to ask which window it came from.  x-lang
 			 * never observes this one -- it closes when
 			 * x_type_err_register runs, before any library loads -- so the
-			 * missing tag costs nothing that can be seen from up there.
+			 * missing label costs nothing that can be seen from up there.
 			 *
 			 * File-static, like the scratch buffer it replaces, and safe
 			 * for the same reason: no second base can exist this early. */

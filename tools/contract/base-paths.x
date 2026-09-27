@@ -2,7 +2,7 @@
 ;
 ; SINGLE SOURCE OF TRUTH for reflective navigation of the interpreter state
 ; (the third layout contract, after tools/contract/base-layout.x -- the x-eval spine
-; shape -- and tools/contract/obj-layout.x -- the per-object header).  The base
+; layout -- and tools/contract/obj-layout.x -- the per-object header).  The base
 ; object's C accessors are pure first/rest macro chains across three
 ; headers (include/x-eval-layout.h, ext/x-expr/include/x-base.h, and the
 ; error-handler object in include/x-eval.h); this file is those chains
@@ -17,8 +17,8 @@
 ;   (name root step...)
 ; root is `base` (walk from the (%base) object), `handler` (walk from an
 ; error-handler object), or `type` (walk from a type-tree object).  Steps are
-; f (first) / r (rest), applied left to right.  A `cell`-kind field's value
-; sits in the cell's first slot; see the C headers for per-field kind notes.
+; f (first) / r (rest), applied left to right.  A field labelled `cell` has
+; its value in the cell's first slot; see the C headers for each field's label.
 ; Regenerate with: sh tools/check/base-paths.sh --gen
 
 (def %base-paths (lit (
@@ -56,14 +56,14 @@
   (err-file base f r r r r r r r r r r r r f)
   (file-registry base f r r r r r r r r r r r r r)
   (base base f)
-  (io-group base f r f)
+  (io-fields base f r f)
   (files base f r f f r)
   (filein base f r f f r f)
   (fileout base f r f f r r f)
   (fileerr base f r f f r r r f)
   (write-buf base f r f f r r r r f)
   (buffer base f r f f r r r r r f)
-  (meta-group base f r r)
+  (meta-fields base f r r)
   (profile base f r r f f)
   (profile-allocs base f r r f f f)
   (hooks base f r r f r)
@@ -71,7 +71,7 @@
   (hook-units base f r r f r r f)
   (hook-length base f r r f r r r f)
   (hook-error base f r r f r r r r f)
-  (heap-group base f r r r f)
+  (heap-fields base f r r r f)
   (obj-meta-extra base f r r r f f)
   (heap-mark base f r r r f r f)
   (heap-free base f r r r f r r f)
@@ -79,7 +79,7 @@
   (heap-free-hooks base f r r r f r r r r f)
   (heap-mark-roots base f r r r f r r r r r f)
   (heap-root-chain base f r r r f r r r r r r f)
-  (alloc-group base f r r r r f)
+  (alloc-fields base f r r r r f)
   (alloc-count base f r r r r f f)
   (alloc-limit base f r r r r f r f)
   (alloc-error base f r r r r f r r f)
@@ -125,13 +125,13 @@
   (type-write type r r r r r f r r r f f)
   (type-display-stack type r r r r r f r r r r f)
   (type-display type r r r r r f r r r r f f)
-  (type-iter-group type r r r r r r f)
+  (type-iter-fields type r r r r r r f)
   (type-iter-stack type r r r r r r f f)
   (type-iter type r r r r r r f f f)
-  (type-ops-group type r r r r r r r f)
+  (type-ops-fields type r r r r r r r f)
   (type-ops-stack type r r r r r r r f f)
   (type-ops type r r r r r r r f f f)
-  (type-image-group type r r r r r r r r f)
+  (type-image-fields type r r r r r r r r f)
   (type-save-stack type r r r r r r r r f f)
   (type-save type r r r r r r r r f f f)
   (type-load-stack type r r r r r r r r f r f)

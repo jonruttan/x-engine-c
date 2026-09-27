@@ -259,9 +259,9 @@ x_obj_t *x_type_list_eval(x_obj_t *p_base, x_obj_t *p_args)
 
 	x_restobj((x_obj_t *)root) = p_proc;
 
-	/* Non-navigable operator type: an operator whose type tag is not a
+	/* Non-navigable operator type: an operator whose type label is not a
 	 * pair tree -- the base sentinel x_eval_obj, a type-handle atom --
-	 * has no call slot, and walking the tag reads past its payload
+	 * has no call slot, and walking the label reads past its payload
 	 * ("must not be navigated", x_type_op_try's rule).  The form is
 	 * data, exactly as a nil call slot just below. */
 	if (x_obj_isnil(p_base, x_obj_type(p_proc))

@@ -50,7 +50,7 @@ jobs:
     uses: ./.github/workflows/declaration.yml
 
   # Create the release first, once, so the per-platform jobs have somewhere to
-  # upload to.  Same shape as x-lang's release workflow, for the same reason:
+  # upload to.  Built the same way x-lang's release workflow is, for the same reason:
   # matrix legs racing to create the same release is a coin flip.
   release:
     name: create the release
@@ -100,7 +100,7 @@ jobs:
 
           x-lang links `engine` at that directory and uses the binary as it
           comes -- an unpacked release has no sources to build, and the build
-          asks which kind of directory it was given rather than assuming.
+          asks what type of directory it was given rather than assuming.
 
           Verify with the sidecar: `sha256sum -c <tarball>.sha256`.
 

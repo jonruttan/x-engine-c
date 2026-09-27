@@ -7,8 +7,8 @@
  *        environment, control-flow, I/O, and metadata fields the evaluator
  *        needs, plus the central x_eval entry point.
  *
- * The base object is a pair tree.  x-expr provides the skeleton (io-group,
- * meta-group, profile, hooks, heap-group); this layer fills the
+ * The base object is a pair tree.  x-expr provides the skeleton (io-fields,
+ * meta-fields, profile, hooks, heap-fields); this layer fills the
  * environment/control half it leaves nil and appends a few project fields
  * (booleans, eval-list, token-cache, GC hooks, sigint).
  *
@@ -21,7 +21,7 @@
  *     io     type-alist, line, true, false
  *     meta   profile counters, eval-list, token-cache, sigint
  *            (GC hook + root lists -- mark-hooks, free-hooks,
- *             mark-roots -- now live in x-expr's heap-group;
+ *             mark-roots -- now live in x-expr's heap-fields;
  *             register via x_heap_{mark,free}_hook_add() and
  *             x_heap_mark_root_add().)
  *
@@ -60,7 +60,7 @@
 #include "x-base.h"
 
 /** The interpreter object: the base object specialized into this project's
- *  execution context.  Serves as the type tag for base/interp objects. */
+ *  execution context.  Serves as the type label for base/interp objects. */
 extern x_satom_t x_eval_obj;
 
 /** Expression flags.
@@ -143,7 +143,7 @@ typedef char x_assert_evals_below_sign[
  * @c x_eval_field_* macros return a field's stack cell @c (current .
  * saved); read the current value with @c x_firstobj().  The @c x_eval_env,
  * @c x_eval_ctrl, @c x_eval_io_state, and @c x_eval_state macros are
- * the group anchors the fields hang off.  @c x_base, @c io, @c meta, @c
+ * the anchors the fields hang off.  @c x_base, @c io, @c meta, @c
  * hooks, and @c heap come from x-base.h (x-expr).
  * @{
  */

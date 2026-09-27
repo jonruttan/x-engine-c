@@ -69,7 +69,7 @@ for spec in $SPECS; do
 	printf "%s%s%s\n" "$BLUE" "$(basename "$spec")" "$OFF"
 
 	# Split the spec into one directory per case: code, the expected value,
-	# and the name. Same shape as the other spec files -- ### name, a fenced
+	# and the name. Same layout as the other spec files -- ### name, a fenced
 	# block, --- , then the expected value indented.
 	rm -rf "$WORK/cases"; mkdir -p "$WORK/cases"
 	awk -v out="$WORK/cases" '

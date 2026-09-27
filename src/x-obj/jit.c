@@ -135,18 +135,18 @@ x_obj_t *jit_score_set(x_obj_t *score, long sign, x_obj_t *buffer)
 }
 
 /**
- * Declare the VARIANT an analyser accepted -- written into the variant cell
+ * Declare the LABEL an analyser accepted -- written into the label cell
  * x_token_analyse hangs off the score's rest, and handed to the type's
  * reader as its second argument (x-token.h).  Peer of jit_score_set: the
- * other half of the score cell, the same three-line shape.
+ * other half of the score cell, written in the same three lines.
  *
- * @param score  x_obj_t* -- Score cell (its rest is the variant cell)
- * @param variant   long     -- The variant, a non-zero integer of the type's choosing
+ * @param score  x_obj_t* -- Score cell (its rest is the label cell)
+ * @param label  long     -- The label, a non-zero integer of the type's choosing
  * @return The score cell
  */
-x_obj_t *jit_score_variant(x_obj_t *score, long variant)
+x_obj_t *jit_score_label(x_obj_t *score, long label)
 {
-	x_firstint(x_restobj(score)) = (x_int_t)variant;
+	x_firstint(x_restobj(score)) = (x_int_t)label;
 
 	return score;
 }
@@ -181,7 +181,8 @@ long jit_buffer_len(x_obj_t *buffer)
  * The tokenizer's delimiter handlers test the last character consumed;
  * exposing it here lets those handlers JIT-compile through the same lane
  * the tower's numeric analysers use, instead of running interpreted per
- * character.  Peer of jit_buffer_len (a different buffer macro, same shape).
+ * character.  Peer of jit_buffer_len (a different buffer macro, built the
+ * same way).
  *
  * @param buffer  x_obj_t* -- Token buffer object
  * @return The last-read character, as a long
@@ -222,14 +223,14 @@ x_obj_t *jit_make_prim(x_obj_t *p_base, x_obj_t *p_args)
  * THE TYPE CHECK IS THE POINT.  @c x_primval is the object's first word;
  * on anything that is not a PRIMITIVE that word is a length, a character,
  * a pair -- and branching to it is a SIGSEGV with no relation to the call
- * site, the same failure mode the emitter's "refuse loudly at generation"
+ * site, the same failure the emitter's "refuse loudly at generation"
  * rule exists to prevent.  A head is only known at run time, so the
  * refusal has to happen here.  It lives in C rather than in emitted
  * instructions because the type name it consults is the type system's
  * business, not a layout offset the emitter should be baking in.
  *
  * @param p_base  x_obj_t* -- Base (execution context)
- * @param p_args  x_obj_t* -- (callee arg0 arg1 ...), the prim ABI shape
+ * @param p_args  x_obj_t* -- (callee arg0 arg1 ...), the prim ABI layout
  * @return Whatever the callee returns
  */
 x_obj_t *jit_call_value(x_obj_t *p_base, x_obj_t *p_args)

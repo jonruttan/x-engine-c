@@ -5,8 +5,9 @@
 # and committed here.  So every edit to tools/contract/isa.x or claims.x has a
 # second half, regenerate and commit the declaration, and until this script
 # nothing in this repository checked that the second half happened.  Twice it
-# did not: 0.1.5 added (base def-global), 0.2.1 added (type set-shape! types),
-# and both shipped declaring the digest of the ISA they had BEFORE the row.
+# did not: 0.1.5 added (base def-global), 0.2.1 added
+# (type set-unit-labels! types), released as (type set-shape! types), and
+# both shipped declaring the digest of the ISA they had BEFORE the row.
 # The built engine was right both times -- only the declaration lied -- so
 # every gate here stayed green and x-lang's check-engine-contract found it on
 # the first pin bump, one release too late.

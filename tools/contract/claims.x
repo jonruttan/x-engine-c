@@ -2,8 +2,8 @@
 ;
 ; x-engine.xon is generated (by x-lang's tools/contract/gen-engine-xon.sh), and
 ; most of it is DERIVED: the capability groups fall out of tools/contract/isa.x,
-; the profiles fall out of those, the digests fall out of the files.  Two kinds of
-; row cannot be derived, and they live here.
+; the profiles fall out of those, the digests fall out of the files.  Two variants
+; of row cannot be derived, and they live here.
 ;
 ; 1. GUARANTEES -- behaviours, which are mostly things this engine does NOT do.
 ;    No manifest can show them: there is no primitive called "never collects
@@ -36,7 +36,7 @@
   ; `x-engine-c`, an unpacked release sits in `x-engine-c-<release>-<os>-<arch>`,
   ; and the same engine would answer to two different names depending on how it
   ; arrived -- refusing a project whose pin.xon says (engine "x-engine-c") for no
-  ; reason but the shape of a path.  So the name is asserted here, beside the
+  ; reason but how the path is written.  So the name is asserted here, beside the
   ; binary's, for the same reason the binary's is: no one else is entitled to
   ; decide it.
   (name "x-engine-c")
@@ -46,7 +46,7 @@
   (provides io/include)
   ; The layout descriptors ship in this repo (tools/contract/obj-layout.x,
   ; base-paths.x, base-layout.x) and x-lang's boot includes them before data.x.
-  ; This is decision L1's runtime shape: the engine supplies its own layout.
+  ; This is decision L1 at runtime: the engine supplies its own layout.
   (provides reflect/layout-data)
   ; int<->ptr round-trips faithfully enough for x-lang to size a word at boot.
   (provides reflect/word-probe)
@@ -82,7 +82,7 @@
   ; (x-lang#201) -- which asm-compile.x refuses on, by probing every helper before
   ; it emits anything rather than compiling a `blr` to address 0.
   (provides native/jit)
-  (provides tok/variant)          ; the reader receives the variant an analyser declared (x-token.h); jit_score_variant is the compiled door
+  (provides tok/label)            ; the reader receives the label an analyser declared (x-token.h); jit_score_label is the compiled door
 
   ; --- guarantees ---
   ; Collection happens only when asked.  Allocation never triggers it, so a raw

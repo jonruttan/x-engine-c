@@ -234,7 +234,7 @@ static x_obj_t *x_prim_base_eval(x_obj_t *p_base, x_obj_t *p_args)
 
 	x_eargs(p_base, p_args, 3, NULL, &p_target, &p_expr);
 
-	/* Build handler pair tree, SAME shape as x_prim_guard's (#253):
+	/* Build handler pair tree, laid out the same as x_prim_guard's (#253):
 	 * (jmp-ptr . ((saved-env . previous) . (error-value . line))).
 	 * The previous slot is nil here: this handler is consed onto the
 	 * target's stack below, so the one under it stays reachable through
@@ -322,7 +322,7 @@ static x_obj_t *x_prim_base_bind(x_obj_t *p_base, x_obj_t *p_args)
  *          environment, and it is expressible without a primitive now
  *          that environments are values: a `def` evaluated with the root
  *          as its environment binds there.  It stays for one release so
- *          the langs that call it through the catalog keep working until
+ *          the langs that call it through the catalogue keep working until
  *          they move to that spelling; its manifest row goes with it.
  *
  * @param p_base  Base (execution context).

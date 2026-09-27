@@ -8,7 +8,7 @@
 ---
     *** ERROR: ok
 
-### the committed base paths reach the prims catalog
+### the committed base paths reach the prims catalogue
 
 ```scheme
 (include "tools/contract/base-paths.x")
@@ -22,10 +22,10 @@
          (#t (self (rest steps) (rest o))))))
 (def %entry (%assoc (lit prims) %base-paths))
 (def %cat (%walk (rest (rest %entry)) (%base)))
-(match ((eq? %cat ()) (error "nil")) (#t (error "catalog")))
+(match ((eq? %cat ()) (error "nil")) (#t (error "catalogue")))
 ```
 ---
-    *** ERROR: catalog
+    *** ERROR: catalogue
 
 ### a prim raises on a dotted argument list instead of walking off it
 
@@ -33,7 +33,7 @@ A prim reads its arguments by walking the spine, and a proper list ends at
 nil while an improper one ends at an ATOM -- which the walk used to read as
 a pair, dereferencing the atom's value word (#487).  No `guard` could catch
 it, because a prim call never enters the applicative walk that #69 guarded.
-The shape is reachable from ordinary text: with no float module loaded,
+This is reachable from ordinary text: with no float module loaded,
 `1.5` reads as `(1 . 5)`, so `(= 1.5 1.5)` is exactly this call.
 
 ```scheme
@@ -115,10 +115,10 @@ and not asserted here.
 
 A dlsym miss answers nil, and handing that nil to a call used to CALL it --
 an uncatchable SIGSEGV, found when the first Linux conformance run resolved
-`sqrt` against an engine that links no libm (x-lang#171 class; the v0.5.0
+`sqrt` against an engine that links no libm (x-lang#171; the v0.5.0
 release run died on it).  The raise is catchable; the crash was not.
 
-The catalog protocol is x-lang, so a bare engine has no `prim-ref`; the
+The catalogue protocol is x-lang, so a bare engine has no `prim-ref`; the
 primitive is looked up by hand through tests/bare/prim-ref.x, and asserted
 present before the guard -- an unbound name raised inside it would pass the
 case without ever reaching the call.
@@ -137,7 +137,7 @@ case without ever reaching the call.
 The dot used to be a single-character token scored on sight, so any token
 BEGINNING with one was taken whole as the pair separator -- and `...` reached
 the caller as the separator's raw satom, sitting in a list as a value.
-Touching it segfaulted, which is why this is asserted at the bare tier rather
+Touching it segfaulted, which is why this is asserted here, in bare, rather
 than left to a downstream lang's macro suite.
 
 ```scheme
@@ -163,7 +163,7 @@ displaced state used to wait in x_eval_load's C locals, which the collector
 cannot see.  A loaded file that collected swept the includer's frames, and
 the includer resumed into freed memory: on glibc a SIGSEGV in symbol lookup
 the moment it touched a local, on macOS usually a stale-but-intact read
-that happened to answer right.  So this case is the SHAPE of the failure as
+that happened to answer right.  So this case shows the failure the way
 a program sees it; the deterministic half is tests/c/src/4.5.x-eval-load.spec.c,
 which asks the allocation chain rather than the cell.
 
@@ -192,7 +192,7 @@ the target's own skeleton cells, which live on the target's chain and are
 never visited by the calling base's sweep. The second walk took those
 still-marked cells for already-done and stopped short, and the sweep freed
 the name atom the alist was keyed by; the next read walked the alist over a
-freed key. Three reads across two collects is the shortest shape that
+freed key. Three reads across two collects is the shortest case that
 shows it.
 
 ```scheme

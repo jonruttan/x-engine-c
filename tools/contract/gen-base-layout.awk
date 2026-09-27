@@ -14,10 +14,10 @@
 BEGIN {
 	PREFIX = "x_eval"
 	# Top-level roots map onto x-expr's documented extension anchors.
-	ANCHOR["base"]       = "x_base"
-	ANCHOR["io-group"]   = "x_base_field_io_group"
-	ANCHOR["profile"]    = "x_base_field_profile"
-	ANCHOR["meta-group"] = "x_base_field_meta_group"
+	ANCHOR["base"]        = "x_base"
+	ANCHOR["io-fields"]   = "x_base_field_io_fields"
+	ANCHOR["profile"]     = "x_base_field_profile"
+	ANCHOR["meta-fields"] = "x_base_field_meta_fields"
 }
 
 # Accumulate source, stripping ';' line comments.
@@ -51,11 +51,11 @@ END {
 # Traverse one node.  `mode` is "acc" (reader macros) or "con" (construction
 # assignments).  `anchor` is the nearest enclosing anchor macro; `path` is the
 # car/cdr route (car=0, cdr=1) from it to here.
-function walk(mode, anchor, path,    tag, name, mine, kind) {
+function walk(mode, anchor, path,    label, name, mine) {
 	expect("(")
-	tag = tok[ti++]
+	label = tok[ti++]
 
-	if (tag == "node") {
+	if (label == "node") {
 		name = tok[ti++]
 		if (name in ANCHOR) {
 			mine = ANCHOR[name]                     # external x-expr anchor
@@ -67,45 +67,45 @@ function walk(mode, anchor, path,    tag, name, mine, kind) {
 		walk(mode, mine, "0")
 		walk(mode, mine, "1")
 		expect(")")
-	} else if (tag == "pair") {
+	} else if (label == "pair") {
 		walk(mode, anchor, path "0")
 		walk(mode, anchor, path "1")
 		expect(")")
-	} else if (tag == "cell" || tag == "slot") {
+	} else if (label == "cell" || label == "slot") {
 		name = tok[ti++]
 		if (mode == "acc") {
-			kind = (tag == "cell") ? "cell" : "direct"
 			printf "#define %s_field_%s(X)\t%s\t/* %s */\n", \
-				PREFIX, cid(name), navwrap(path, anchor "(X)"), kind
+				PREFIX, cid(name), navwrap(path, anchor "(X)"), \
+				(label == "cell") ? "cell" : "direct"
 		}
 		expect(")")
-	} else if (tag == "build") {
+	} else if (label == "build") {
 		if (mode == "con")
 			printf "\t%s = %s;\n", navwrap(path, anchor "(p_base)"), buildexpr()
 		else
 			walk(mode, anchor, path)                # transparent: recurse in
 		expect(")")
-	} else if (tag == "nil") {
+	} else if (label == "nil") {
 		expect(")")
-	} else if (tag == "todo") {
+	} else if (label == "todo") {
 		ti++
 		expect(")")
 	} else {
-		print "PARSE ERROR: unknown tag '" tag "'" > "/dev/stderr"
+		print "PARSE ERROR: unknown label '" label "'" > "/dev/stderr"
 		exit 1
 	}
 }
 
 # Consume one subtree; return the C expression that builds its empty skeleton.
-function buildexpr(    tag, s) {
+function buildexpr(    label, s) {
 	expect("(")
-	tag = tok[ti++]
-	if (tag == "node") { ti++; s = "pair(" buildexpr() ", " buildexpr() ")"; expect(")"); return s }
-	if (tag == "pair") {       s = "pair(" buildexpr() ", " buildexpr() ")"; expect(")"); return s }
-	if (tag == "cell") { ti++; expect(")"); return "pair(nil, nil)" }
-	if (tag == "slot") { ti++; expect(")"); return "nil" }
-	if (tag == "nil")  {       expect(")"); return "nil" }
-	print "PARSE ERROR: bad tag in build '" tag "'" > "/dev/stderr"
+	label = tok[ti++]
+	if (label == "node") { ti++; s = "pair(" buildexpr() ", " buildexpr() ")"; expect(")"); return s }
+	if (label == "pair") {       s = "pair(" buildexpr() ", " buildexpr() ")"; expect(")"); return s }
+	if (label == "cell") { ti++; expect(")"); return "pair(nil, nil)" }
+	if (label == "slot") { ti++; expect(")"); return "nil" }
+	if (label == "nil")  {       expect(")"); return "nil" }
+	print "PARSE ERROR: bad label in build '" label "'" > "/dev/stderr"
 	exit 1
 }
 

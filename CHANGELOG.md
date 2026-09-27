@@ -38,7 +38,7 @@ The variant builds (debug, profile, asan, cov) read their own dependency
 files ([#66]). Each looked for the plain build's `.d` file, so a changed
 header rebuilt none of them.
 
-Also: five bare fixtures share `tests/bare/prim-ref.x`'s catalog walk instead
+Also: five bare fixtures share `tests/bare/prim-ref.x`'s catalogue walk instead
 of keeping their own copies, and the guarded cases in `env.spec.md`,
 `image.spec.md` and `smoke.spec.md` check their primitives before the guard,
 so a missing primitive fails the case instead of raising into the guard it
@@ -61,7 +61,7 @@ double helpers, its specs and the `(ffi call)` row of the ISA manifest;
 floats belong to the language, and x-lang emits its double operations as
 assembler stubs called through `(ptr call)` ([x-lang#796]). `dlopen` and
 `dlsym` move to the CLI, `src/x-cli.c`, behind `X_DL`, on by default beside
-`X_SYSCALL`, and keep their catalog names `(ffi dlopen)` and `(ffi dlsym)`.
+`X_SYSCALL`, and keep their catalogue names `(ffi dlopen)` and `(ffi dlsym)`.
 `ffi.c` and `callcc.c` copy through `x_lib_memcpy`.
 
 A new gate holds the line: `make check-libc` (`tools/check/libc.sh`), in
@@ -87,7 +87,7 @@ through `x_eval_spine_guard` ([x-lang#487]), and every such read in
 `buf make`, `ptr-call`, `def`, `set!`, `fn`, `op` and `guard`. What a
 primitive does with the nil it then receives is unchanged; `(apply)`,
 `(def)`, `(set!)` and a bare `buf make` get past the walk and still fail on
-nil, as they do when the nil is written out. Found by calling every catalog
+nil, as they do when the nil is written out. Found by calling every catalogue
 primitive with none to three arguments. Covered by a bare case that crashed
 on 0.2.13.
 
@@ -207,10 +207,10 @@ the form every lang already wrote and which used to bind nothing inside a
 frame ([x-lang#527]); `eval!` no longer binds a form's `def` somewhere
 other than where evaluation said ([x-lang#644]). `def-global` is kept for
 this release as `def` in the root, for the langs that reach it through the
-catalog; it is expressible without a primitive now and its row goes when
+catalogue; it is expressible without a primitive now and its row goes when
 they have moved.
 
-The base layout changes with it: the env group is `env`, the current
+The base layout changes with it: the env fields are `env`, the current
 environment, and `env-root`, in place of the alist, boundary, tree and
 shadow slots, and the error handler's saved-boundary slot is nil. The
 procedure state is `(params . (body . env))`. Both descriptors and the
@@ -258,16 +258,17 @@ grew.
 **An analyser tells the reader which of its states accepted** ([#43]). An
 analyser knows things the token text does not say — which state accepted,
 whether a numeric literal ran through a fraction or an exponent — and threw
-that away, so the type's reader rescanned the text it had just read to find
-out again. The score cell an analyser is handed now carries a **variant cell**
-on its rest. A state writes an integer there as it accepts; `x_token_analyse`
-resets both per handler (and puts the cell back on the rest, since an analyser
-may set that slot itself — the C specs do, as a reader side channel), records
-the winning handler's variant through a new out-parameter, and `x_token_read`
-hands it to the type's reader as its **second argument**: the slot in
-`(buffer ())` that always held nil. It stays nil when no state declared one,
-so a type that never heard of the channel reads exactly what it always read,
-and every reader in x-lang and its bundles is variadic, so no arity changes.
+that away, so the type's reader rescanned the text it had just read to find out
+again. The score cell an analyser is handed now carries a **label cell**
+(released as the variant cell) on its rest. A state writes an integer there as
+it accepts; `x_token_analyse` resets both per handler (and puts the cell back
+on the rest, since an analyser may set that slot itself — the C specs do, as a
+reader side channel), records the winning handler's label through a new
+out-parameter, and `x_token_read` hands it to the type's reader as its **second
+argument**: the slot in `(buffer ())` that always held nil. It stays nil when
+no state declared one, so a type that never heard of the channel reads exactly
+what it always read, and every reader in x-lang and its bundles is variadic, so
+no arity changes.
 
 **A raw atom cell, not an int.** An int object only means anything in a base
 that registered the int type, and `x_mkint` reaches it through the type's
@@ -275,25 +276,25 @@ that registered the int type, and `x_mkint` reaches it through the type's
 tokenizer base (`make-tok`) has no int type on purpose. Measured: the
 registration put a built-in integer analyser into a custom tokenizer mid-read,
 and the next token it read was the built-in's. The atom type is static and
-lives everywhere, so the variant travels the way the score does: a cell whose
+lives everywhere, so the label travels the way the score does: a cell whose
 value word is the integer, `x_atomint` in C, `%cell-int` in x-lang.
 
-`jit_score_variant` is the compiled states' door — `jit_score_set`'s
-three-line peer, one export. The channel is a protocol extension of
-`(tok read)` rather than a primitive, so the ISA manifest cannot describe it;
-it is claimed as `tok/variant` in `claims.x`, the way `native/jit` is, and the
-declaration is regenerated in the same commit — the step 0.1.5 and 0.2.1 each
-shipped without. x-lang spells the two ends `%score-variant!` and
-`%read-variant` ([x-lang#671]) and gates its specs on `@requires tok/variant`;
-an engine without the symbol is unaffected, since the binding is optional and
-the compile falls back. Covered by `tests/c/src/7.0.x-token.spec.c`: a
-three-character token whose type declares variant 7 arrives with its span
-whole and its variant delivered, and one whose type declares none hands the
-reader nil.
+`jit_score_label` (released as `jit_score_variant`) is the compiled states'
+door — `jit_score_set`'s three-line peer, one export. The channel is a protocol
+extension of `(tok read)` rather than a primitive, so the ISA manifest cannot
+describe it; it is claimed as `tok/label` (released as `tok/variant`) in
+`claims.x`, the way `native/jit` is, and the declaration is regenerated in the
+same commit — the step 0.1.5 and 0.2.1 each shipped without. x-lang spells the
+two ends `%score-label!` and `%read-label` (released as `%score-variant!` and
+`%read-variant`, [x-lang#671]) and gates its specs on `@requires tok/label`; an
+engine without the symbol is unaffected, since the binding is optional and the
+compile falls back. Covered by `tests/c/src/7.0.x-token.spec.c`: a
+three-character token whose type declares label 7 arrives with its span whole
+and its label delivered, and one whose type declares none hands the reader nil.
 
-Also: three comments called an error's classifying symbol its "kind". x-lang
-names it the **tag** ([x-lang#672]), and the engine's prose now follows
-([#44]). Comments only, no code change.
+Also: three comments called an error's label its "kind". The engine's prose
+follows x-lang's word for it (released as **tag**, [x-lang#672]; now
+**label**) ([#44]). Comments only, no code change.
 
 [#43]: https://github.com/jonruttan/x-engine-c/pull/43
 [#44]: https://github.com/jonruttan/x-engine-c/pull/44
@@ -354,11 +355,11 @@ leaving the name atom unmarked and unpinned; the sweep freed it, and the next
 read walked the type alist over a freed key (`x_alist_assoc`, a
 heap-use-after-free under ASan).
 
-The shape this cost is a bundle that registers its own tokenizer types on an
-isolated `make-tok` base: x-ash had to run its whole suite with the per-snippet
+A bundle that registers its own tokenizer types on an isolated `make-tok`
+base paid for this: x-ash had to run its whole suite with the per-snippet
 `SPEC_SEAM_COLLECT` off, because with it on the tokenizer specs died first.
-Covered by a bare-tier regression case — three reads across two collects, which
-is the shortest shape that shows it.
+Covered by a regression case in bare — three reads across two collects, the
+shortest case that shows it.
 
 [x-lang#599]: https://github.com/jonruttan/x-lang/issues/599
 
@@ -385,7 +386,7 @@ an x86-64 guest showed the includer's `(%io-path …)` frame cell with glibc's
 safe-linked free-list pointer written through it.
 
 The saves now ride the root chain for the loop — the mechanism built for a C
-frame holding the only reference (`x_prims_add` roots a half-built catalog
+frame holding the only reference (`x_prims_add` roots a half-built catalogue
 entry the same way). Two registered nodes rather than one pointing at the
 other, because the chain's pre-clear pass strips stale marks only from
 registered nodes. The error path needs nothing: the guard already restores the
@@ -396,7 +397,7 @@ Two specs. `tests/c/src/4.5.x-eval-load.spec.c` stands an includer up, loads a
 file that only collects, and asks the allocation chain whether the frame and
 compound survived — chain membership is the collector's own record and reads
 no freed memory, so it is the same answer on every allocator; red before,
-green after. `tests/bare/specs/smoke.spec.md` gains the shape a program sees:
+green after. `tests/bare/specs/smoke.spec.md` gains the case a program sees:
 a procedure includes a file that collects, then reads its own formal. Verified
 end to end: v0.1.6 plus this change, built on an x86-64 Linux guest, boots the
 xenon tower cold with `%asm-gc-window` forced to 1 — the configuration that
@@ -429,11 +430,11 @@ functions behind them:
     (heap chain-clear! flags)      clear them again, freeing nothing
 
 Which flag is the caller's problem. The collector owns `SHARED` and `MARK`, so
-a caller picks a bit above them and names it in its own source. Getting that
-wrong has two shapes worth knowing: the flag doubles as the traversal's visited
-test, so `SHARED` halts at the first base-tree node — two objects marked, out
-of 85,431 live — and a leftover `MARK` makes the next mark phase stop short and
-its sweep free the children it missed.
+a caller picks a bit above them and names it in its own source. There are two
+ways to get that wrong worth knowing: the flag doubles as the traversal's
+visited test, so `SHARED` halts at the first base-tree node — two objects
+marked, out of 85,431 live — and a leftover `MARK` makes the next mark phase
+stop short and its sweep free the children it missed.
 
 A **chain** clear rather than a tree one, and rather than an unset mode on the
 walker. The mark hooks call back into `x_heap_tree_mark` with the flags they
@@ -456,8 +457,9 @@ The declaration matches the ISA again.
 ### Fixed
 
 - **`x-engine.xon` declared 0.2.0's ISA through 0.2.1** ([#29]). 0.2.1 added
-  `(type set-shape! types)` to `tools/contract/isa.x` and did not regenerate
-  the declaration, so that release ships
+  `(type set-unit-labels! types)` (released as `(type set-shape! types)`) to
+  `tools/contract/isa.x` and did not regenerate the declaration, so that
+  release ships
 
       (isa "sha256:9ac3e2b2…")
 
@@ -498,7 +500,7 @@ The declaration matches the ISA again.
   immediate. It had no way to call a callable it *computed*, which is what a C
   function pointer is (x-lang#604) and what a dispatch table needs.
 
-  `jit_call_value` takes `(p_base, p_args)` — the prim ABI shape exactly —
+  `jit_call_value` takes `(p_base, p_args)` — a primitive's signature exactly —
   and calls the callee sitting in `p_args`' self slot. That placement is the
   point of the signature: the emitter already builds `(callee arg0 arg1 ...)`
   to hand the callee its own args list, so the callee needs no second
@@ -563,7 +565,7 @@ So the slot **widens in place** — no new field. An INT atom keeps both of its
 meanings exactly (N units all references; negative for the slot-0-counted
 convention), and a structural pair `(count . mask)` adds two bits per unit
 saying what each one is: `ref`, `word`, `bytes`, `foreign`. Units past the
-described prefix take the kind of the last one described, so a dynamic-size
+described prefix take the label of the last one described, so a dynamic-size
 type says what its payload units are without a repeat marker.
 `X_TYPE_UNIT_REF` is 0, so a zero mask means "every unit a reference" and the
 pair form degrades exactly onto the integer form.
@@ -583,11 +585,12 @@ Three sites read the slot and each takes one `x_obj_type_isspair()` test per
 object — the collector's traversal, the unit accessor, the spine guard — then
 a shift and mask per unit. Nothing allocates and nothing interns.
 
-**`(type set-shape!)` is a primitive** because the shape must be a
-*structural* pair: x makes list-pairs only, the readers discriminate on
-`x_obj_type_isspair()`, and an x-built shape would be read as a bare count
-whose value is the pair's first data word. The readable spelling stays in
-x-lang and compiles to two integers before the engine sees it.
+**`(type set-unit-labels!)` (released as `(type set-shape!)`) is a primitive**
+because the unit labels must be a *structural* pair: x makes list-pairs only,
+the readers discriminate on `x_obj_type_isspair()`, and an x-built pair would
+be read as a bare count whose value is the pair's first data word. The readable
+spelling stays in x-lang and compiles to two integers before the engine sees
+it.
 
 `(type set-units!)` is untouched: the integer form is still the integer form.
 
@@ -623,7 +626,7 @@ before, and a lang pushes its own over that. The uncaught path is unchanged
 and still words itself in C: it runs before any library exists, and nothing
 on a fatal path calls into x-lang.
 
-The shape is a declared guarantee, `err/typed-raise`, claimed in `claims.x`
+The layout is a declared guarantee, `err/typed-raise`, claimed in `claims.x`
 and so copied into `x-engine.xon` by the generator: a raise delivers a value
 of a registered type carrying `(code . subject)`, and the base's `err` row
 holds a value of that same type. Identity is deliberately not claimed — this
@@ -635,8 +638,8 @@ executable form.
 `x_eval_make` does **not** build the ERR — it runs before the type registry
 exists, and x-eval must not depend on x-type (`tests/c/src/2.x-base.spec.c`
 pins that layering). `x_type_err_register` builds it at the first moment it
-can. A base still in that window raises through an ERR-SHAPED static
-fallback, so every C consumer reads `x_err_code`/`x_err_subject` without
+can. A base still in that window raises through a static fallback laid out
+as an ERR, so every C consumer reads `x_err_code`/`x_err_subject` without
 asking which window it came from.
 
 ### Added
@@ -647,7 +650,7 @@ asking which window it came from.
   The JIT lane already publishes the engine's buffer and score macros as real
   callable functions (`jit_score_set`, `jit_buffer_unread`, `jit_buffer_len`).
   This is the peer of `jit_buffer_len` — a different buffer macro
-  (`x_bufferlastchar` vs `x_bufferlen`), the same three-line shape, not a
+  (`x_bufferlastchar` vs `x_bufferlen`), the same three lines, not a
   duplicate to factor — and it lets the tokenizer's per-character delimiter
   handler JIT-compile through the same lane the tower's numeric analysers
   already use, instead of running interpreted on every character of every
@@ -801,14 +804,14 @@ an internal marker back as a value.
   and `(first (rest …))` on it segfaulted. Ordinary source text, not
   malformed input.
 
-  The dot was a token *kind*: it sat in `X_SEXP_LIST_CHARS_STR` beside the
-  brackets, so the analyser scored it on sight. That is correct for `(` and
-  `)`, which really are always single-character tokens, and false for `.`,
-  which is a separator only when nothing follows it. A token merely
-  *beginning* with a dot was taken whole as the separator, and
-  `x_sexp_list_read` returned `x_sexp_list_delimit_prim` for it — consumed
-  inside a list, and returned to the caller at the head of one, where a raw C
-  satom is not a value any x program can survive touching.
+  The dot was one of the single-character tokens: it sat in
+  `X_SEXP_LIST_CHARS_STR` beside the brackets, so the analyser scored it on
+  sight. That is correct for `(` and `)`, which really are always
+  single-character tokens, and false for `.`, which is a separator only when
+  nothing follows it. A token merely *beginning* with a dot was taken whole as
+  the separator, and `x_sexp_list_read` returned `x_sexp_list_delimit_prim` for
+  it — consumed inside a list, and returned to the caller at the head of one,
+  where a raw C satom is not a value any x program can survive touching.
 
   It is an ordinary character now. Nothing claims it, the symbol analyser
   accumulates it like any other, and the list *reader* recognises the
@@ -909,17 +912,17 @@ was: by a test suite meeting a platform for the first time.
 
 ### Fixed
 
-- **The FFI raises on a nil function pointer or operand instead of calling
-  it** ([x-lang#171][i171] class). A dlsym miss answers nil, and every call
-  convention handed that nil straight to the machine — `x_ptrval(nil)` as a
-  call target, `x_intval(nil)` as a memcpy source. x-lang's v0.5.0 release
-  run died on exactly this: the first conformance run Linux ever saw
-  resolved `sqrt` against an engine that links no libm, got nil, and called
-  it. One door per harm: `x_ffi_fptr` guards the function-pointer
-  conventions and `ptr-call`; the nil-operand check lives in
-  `x_ffi_to_double`, which every double convention shares. The arithmetic
-  and comparison conventions never touch the fptr and are untouched. Three
-  bare specs pin the behaviour.
+- **The FFI raises on a nil function pointer or operand instead of calling it**
+  (one of the failures of [x-lang#171][i171]). A dlsym miss answers nil, and
+  every call convention handed that nil straight to the machine —
+  `x_ptrval(nil)` as a call target, `x_intval(nil)` as a memcpy source.
+  x-lang's v0.5.0 release run died on exactly this: the first conformance run
+  Linux ever saw resolved `sqrt` against an engine that links no libm, got nil,
+  and called it. One door per harm: `x_ffi_fptr` guards the function-pointer
+  conventions and `ptr-call`; the nil-operand check lives in `x_ffi_to_double`,
+  which every double convention shares. The arithmetic and comparison
+  conventions never touch the fptr and are untouched. Three bare specs pin the
+  behaviour.
 
 [i171]: https://github.com/jonruttan/x-lang/issues/171
 
