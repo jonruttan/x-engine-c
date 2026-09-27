@@ -139,7 +139,7 @@ x_obj_t *x_token_display(x_obj_t *p_base, x_obj_t *p_args) { return NULL; }
 #endif
 
 #ifdef STUB_X_TOKEN_ANALYSE
-x_obj_t *x_token_analyse(x_obj_t *p_base, x_obj_t *p_args, x_int_t *p_variant) { if (p_variant) *p_variant = 0; return NULL; }
+x_obj_t *x_token_analyse(x_obj_t *p_base, x_obj_t *p_args, x_int_t *p_label) { if (p_label) *p_label = 0; return NULL; }
 #endif
 
 #ifdef STUB_X_TOKEN_DELIMIT

@@ -82,7 +82,7 @@
   ; (x-lang#201) -- which asm-compile.x refuses on, by probing every helper before
   ; it emits anything rather than compiling a `blr` to address 0.
   (provides native/jit)
-  (provides tok/variant)          ; the reader receives the variant an analyser declared (x-token.h); jit_score_variant is the compiled door
+  (provides tok/label)            ; the reader receives the label an analyser declared (x-token.h); jit_score_label is the compiled door
 
   ; --- guarantees ---
   ; Collection happens only when asked.  Allocation never triggers it, so a raw

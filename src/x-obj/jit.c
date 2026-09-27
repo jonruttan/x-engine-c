@@ -135,18 +135,18 @@ x_obj_t *jit_score_set(x_obj_t *score, long sign, x_obj_t *buffer)
 }
 
 /**
- * Declare the VARIANT an analyser accepted -- written into the variant cell
+ * Declare the LABEL an analyser accepted -- written into the label cell
  * x_token_analyse hangs off the score's rest, and handed to the type's
  * reader as its second argument (x-token.h).  Peer of jit_score_set: the
  * other half of the score cell, the same three-line shape.
  *
- * @param score  x_obj_t* -- Score cell (its rest is the variant cell)
- * @param variant   long     -- The variant, a non-zero integer of the type's choosing
+ * @param score  x_obj_t* -- Score cell (its rest is the label cell)
+ * @param label  long     -- The label, a non-zero integer of the type's choosing
  * @return The score cell
  */
-x_obj_t *jit_score_variant(x_obj_t *score, long variant)
+x_obj_t *jit_score_label(x_obj_t *score, long label)
 {
-	x_firstint(x_restobj(score)) = (x_int_t)variant;
+	x_firstint(x_restobj(score)) = (x_int_t)label;
 
 	return score;
 }

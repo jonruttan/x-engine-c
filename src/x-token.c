@@ -87,8 +87,8 @@ x_satom_t x_token_eof_prim = x_obj_set(x_type_atom_obj, X_OBJ_FLAG_NONE, { .v = 
  *
  * @param p_base  x_obj_t* -- Base (execution context)
  * @param p_args  x_obj_t* -- (buffer . base) pair
- * @param p_variant  x_int_t* -- Out: the variant the winning handler declared
- *                            through the variant cell (0 when none)
+ * @param p_label  x_int_t* -- Out: the label the winning handler declared
+ *                          through the label cell (0 when none)
  * @return x_obj_t* -- Winning type alist entry (name . type-struct),
  *                      or NULL if no type matched
  *
@@ -96,20 +96,20 @@ x_satom_t x_token_eof_prim = x_obj_set(x_type_atom_obj, X_OBJ_FLAG_NONE, { .v = 
  *       fallback scores negative, sexp/symbol.c, so any positive match
  *       wins over it). The absolute value determines advancement.
  */
-x_obj_t *x_token_analyse(x_obj_t *p_base, x_obj_t *p_args, x_int_t *p_variant)
+x_obj_t *x_token_analyse(x_obj_t *p_base, x_obj_t *p_args, x_int_t *p_label)
 {
 	x_int_t i_best, i_consumed;
 	x_obj_t *p_buffer = x_firstobj(p_args), *p_winner, *p_entry, *p_analyse, *p_analyse_slot, *p_obj;
 	x_satom_t chr = x_obj_set(NULL, X_OBJ_FLAG_NONE, { .c = '\0' } ),
 		arg_chr = x_obj_set(NULL, X_OBJ_FLAG_NONE, { .i = 0 });
 	x_spair_t
-		/* THE VARIANT CELL hangs off the score's rest (x-token.h): a state
+		/* THE LABEL CELL hangs off the score's rest (x-token.h): a state
 		 * declares what it accepted with a set-cell-int! on (rest score),
-		 * and the winner's value goes out through p_variant.  Reset per
-		 * handler with the score, so a handler that declares a variant and
+		 * and the winner's value goes out through p_label.  Reset per
+		 * handler with the score, so a handler that declares a label and
 		 * then loses the tie leaves nothing behind. */
-		variant = x_obj_set(NULL, X_OBJ_FLAG_NONE, { .i = 0 }, { NULL }),
-		score = x_obj_set(NULL, X_OBJ_FLAG_NONE, { .i = 0 }, { (x_obj_t *)variant }),
+		label = x_obj_set(NULL, X_OBJ_FLAG_NONE, { .i = 0 }, { NULL }),
+		score = x_obj_set(NULL, X_OBJ_FLAG_NONE, { .i = 0 }, { (x_obj_t *)label }),
 		type_iter = x_obj_set(NULL, X_OBJ_FLAG_NONE, { x_type_list_iter_prim }, { x_firstobj(x_eval_field_type_alist(p_base)) }),
 		iter_args[2] = {
 			x_obj_set(NULL, X_OBJ_FLAG_NONE, { type_iter }, { (x_obj_t *)(iter_args + 1) }),
@@ -154,7 +154,7 @@ x_obj_t *x_token_analyse(x_obj_t *p_base, x_obj_t *p_args, x_int_t *p_variant)
 	/* Cycle through all types, tracking the winning type entry. */
 	p_winner = NULL;
 	i_best = 0;
-	*p_variant = 0;
+	*p_label = 0;
 
 	while ( ! x_iterempty(p_base, (x_obj_t *)type_iter)) {
 		p_entry = x_type_iter_next(p_base, (x_obj_t *)iter_args);
@@ -181,14 +181,14 @@ x_obj_t *x_token_analyse(x_obj_t *p_base, x_obj_t *p_args, x_int_t *p_variant)
 			p_analyse = x_type_iter_next(p_base, (x_obj_t *)an_args);
 			x_firstobj((x_obj_t *)analyse_root) = p_analyse;
 
-			/* Clear score and declared variant for this handler -- and put the
-			 * variant cell back on the score's rest: an analyser may set that
+			/* Clear score and declared label for this handler -- and put the
+			 * label cell back on the score's rest: an analyser may set that
 			 * slot itself (the C specs do, as a reader side channel), and a
-			 * later handler's variant must land in the cell, not in whatever
+			 * later handler's label must land in the cell, not in whatever
 			 * the previous one left there. */
 			x_firstint(p_score) = 0;
-			x_firstint((x_obj_t *)variant) = 0;
-			x_restobj(p_score) = (x_obj_t *)variant;
+			x_firstint((x_obj_t *)label) = 0;
+			x_restobj(p_score) = (x_obj_t *)label;
 
 			for (;;) {
 
@@ -228,7 +228,7 @@ x_obj_t *x_token_analyse(x_obj_t *p_base, x_obj_t *p_args, x_int_t *p_variant)
 					if (x_firstint(p_score) >= i_best || (i_best < 1 && x_firstint(p_score) <= i_best)) {
 						i_best = x_firstint(p_score);
 						p_winner = p_entry;
-						*p_variant = x_firstint((x_obj_t *)variant);
+						*p_label = x_firstint((x_obj_t *)label);
 					}
 
 					x_bufferread(p_buffer) = x_bufferval(p_buffer);
@@ -253,7 +253,7 @@ x_obj_t *x_token_analyse(x_obj_t *p_base, x_obj_t *p_args, x_int_t *p_variant)
 				if (i_score >= i_best || (i_best < 1 && i_score <= i_best)) {
 					i_best = i_score;
 					p_winner = p_entry;
-					*p_variant = x_firstint((x_obj_t *)variant);
+					*p_label = x_firstint((x_obj_t *)label);
 				}
 			}
 
@@ -287,7 +287,7 @@ x_obj_t *x_token_read(x_obj_t *p_base, x_obj_t *p_args)
 {
 	x_obj_t *p_buffer = x_firstobj(p_args), *p_entry, *p_read, *p_obj;
 	x_char_t *p_scan;
-	x_int_t line, file, variant;
+	x_int_t line, file, label;
 	x_spair_t buffer_args[3] = {
 			x_obj_set(NULL, X_OBJ_FLAG_NONE, { p_buffer }, { (x_obj_t *)(buffer_args + 1) }),
 			x_obj_set(NULL, X_OBJ_FLAG_NONE, { NULL }, { NULL }),
@@ -306,7 +306,7 @@ x_obj_t *x_token_read(x_obj_t *p_base, x_obj_t *p_args)
 		};
 
 	for (;;) {
-		p_entry = x_token_analyse(p_base, p_args, &variant);
+		p_entry = x_token_analyse(p_base, p_args, &label);
 
 		/* No token and NOTHING consumed: end of input (or input no
 		 * analyser recognizes -- indistinguishable here).  Return the
@@ -352,9 +352,9 @@ x_obj_t *x_token_read(x_obj_t *p_base, x_obj_t *p_args)
 			}
 		}
 
-		/* THE VARIANT RIDES AS THE READER'S SECOND ARGUMENT.  The argument
+		/* THE LABEL RIDES AS THE READER'S SECOND ARGUMENT.  The argument
 		 * list was always (buffer ()); the slot that held nil now holds
-		 * the declared variant, and stays nil when no state declared one --
+		 * the declared label, and stays nil when no state declared one --
 		 * so a type that never heard of the channel reads exactly what it
 		 * always read, and allocates nothing for it.
 		 *
@@ -365,11 +365,11 @@ x_obj_t *x_token_read(x_obj_t *p_base, x_obj_t *p_args)
 		 * on purpose.  Measured: the registration put a built-in integer
 		 * analyser into a custom tokenizer mid-read, and on a parentless
 		 * base the next token crashed.  The atom type is static and lives
-		 * everywhere, so the variant travels the way the score does: a cell
+		 * everywhere, so the label travels the way the score does: a cell
 		 * whose value word is the integer, read with x_atomint in C and
 		 * %cell-int in x-lang. */
-		x_firstobj((x_obj_t *)(buffer_args + 1)) = variant == 0
-			? NULL : x_mksatom(p_base, X_OBJ_FLAG_NONE, variant);
+		x_firstobj((x_obj_t *)(buffer_args + 1)) = label == 0
+			? NULL : x_mksatom(p_base, X_OBJ_FLAG_NONE, label);
 
 		/* Walk the read slot's reader(s) and take the first non-nil
 		 * result.  A list is walked directly; a lone reader is wrapped in
