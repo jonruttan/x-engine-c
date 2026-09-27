@@ -40,12 +40,15 @@ no floats: its C library is x-expr's `x-stdlib.h`/`x-sys.h`, and only the CLI
 
 Variant builds — `x-bin-debug`, `x-bin-profile`, `x-bin-asan`, `x-bin-cov` —
 each compile to their own object suffix, so no two configurations share an
-object path and variants rebuild incrementally.
+object path and variants rebuild incrementally. `x-bin-profile` also ships in
+every release, beside `x-bin`.
 
 ## Profiling
 
-`x-bin-profile` is the engine built with `-DX_PROFILE -DX_COV`. It counts two
-ways, and reports each `include`'s load time on stderr.
+`x-bin-profile` is the engine built with `-DX_PROFILE -DX_COV`. A release
+strips and signs it as it does `x-bin`, so the two shipped engines differ in
+those flags and nothing else. It counts two ways, and reports each `include`'s
+load time on stderr.
 
 **The profile counters**: cells in the base object, at the paths
 `tools/contract/base-paths.x` gives, for allocations, evals, tail calls, alist,

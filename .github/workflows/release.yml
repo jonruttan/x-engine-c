@@ -79,6 +79,9 @@ jobs:
 
           ```
           x-bin                  the engine
+          x-bin-profile          the same engine built with profiling: its
+                                 counters count, and every object carries
+                                 how many times evaluation reached it
           x-engine-build.xon     word size, byte order, os, arch -- of THIS build
           x-engine.xon           what this engine provides, and what it claims
           tools/contract/*.x     isa, obj-layout, base-paths, base-layout, claims
@@ -130,7 +133,8 @@ jobs:
           submodules: recursive
       # The full gate stands between a tag and its artifacts: a tag on a red
       # tree publishes nothing.  `make test` is the contract ratchets, the C
-      # suite and the bare-engine smoke.  ASan is deliberately not here -- it
+      # suite and the bare-engine smoke, run against both engines the tarball
+      # carries (x-bin and x-bin-profile).  ASan is deliberately not here -- it
       # runs on every push to main, and doubling a release's wall clock to
       # re-prove a green main is not worth it.
       - name: Full gate
@@ -150,7 +154,7 @@ jobs:
           tar -xzf "$tarball" -C "$work"
           tree=$(ls -d "$work"/*/)
           missing=
-          for f in x-bin x-engine.xon x-engine-build.xon LICENSE \
+          for f in x-bin x-bin-profile x-engine.xon x-engine-build.xon LICENSE \
                    tools/contract/isa.x tools/contract/obj-layout.x \
                    tools/contract/base-paths.x tools/contract/base-layout.x \
                    tools/contract/claims.x \

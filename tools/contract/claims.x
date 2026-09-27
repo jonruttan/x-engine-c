@@ -60,7 +60,8 @@
   (provides invoke/argv)
   (provides err/stderr-prefix)
   ; Coverage marking and eval counters.  Claimed at the IMPLEMENTATION level: the
-  ; repo builds both variants.  A binary compiled without them is a build fact,
+  ; repo builds both variants, and every release ships x-bin-profile, which has
+  ; both, beside x-bin.  A binary compiled without them is a build fact,
   ; recorded beside that binary, not a limit of this engine.
   (provides instr/cov)
   (provides instr/profile)
