@@ -11,6 +11,34 @@ alongside the library changes they landed with.
 [x-lang]: https://github.com/jonruttan/x-lang
 [x-changelog]: https://github.com/jonruttan/x-lang/blob/main/CHANGELOG.md
 
+## 0.2.17 — 2026-09-28
+
+**`%seq` walks its forms as an operative body is walked** ([#72]). `%seq` had
+its own loop over its forms and checked the whole list before it evaluated
+the first. It now calls `x_eval_op_body`, the walk an operative call uses for
+its body, with the current environment as the one to make current when the
+body is done. Two things change:
+
+- A dotted list raises where the walk reaches the dot, as an operative body
+  does, so the forms before the dot have been evaluated. The message is the
+  same, `call: improper argument list (dotted tail)`.
+- The environment `%seq` started in is current again when its last form is
+  done, as after an operative or a procedure call. `%seq` handed the
+  trampoline no environment, as `match` does, and the environment was left as
+  its last form left it.
+
+The forms run in order, the last in tail position, no forms answer nil, a
+`def` binds in the environment `%seq` runs in, and a call allocates nothing,
+as before. Covered by two bare smoke cases, both failed by v0.2.16: a dotted
+`%seq` raising after the form before the dot has run, and a name read after a
+`%seq` whose last form ran in another environment.
+
+x-lang's image loader sequenced its install with `%seq` and carried on in the
+image's environment; it uses `atomic` there from [x-lang#850].
+
+[#72]: https://github.com/jonruttan/x-engine-c/pull/72
+[x-lang#850]: https://github.com/jonruttan/x-lang/pull/850
+
 ## 0.2.16 — 2026-09-28
 
 **`%seq` sequences any number of forms** ([#70]). It took exactly two:
