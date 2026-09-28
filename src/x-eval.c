@@ -194,7 +194,7 @@ static void x_eval_tco_apply(x_obj_t *p_base, x_obj_t *p_save)
  * @details **p_tco_env_save snapshot.**
  *          - Captured on first trampoline entry from tco_env on p_base.
  *          - On later iterations, if the initial snapshot was nil (set by
- *            simple forms like if/do/match) but an inner form (fn/let/op)
+ *            simple forms like if/match) but an inner form (fn/let/op)
  *            now provides a non-nil tco_env, the snapshot is upgraded.
  *          - Used only at exit: the outermost x_eval makes it current.
  *
@@ -298,8 +298,9 @@ eval_start:
 		trampolining = 1;
 
 		/* Keep the first (outermost) environment: a procedure hands over
-		 * its caller's, an operative its caller's.  if/do/match/and/or set
-		 * none (tco_env nil) -- an inner fn/let/op fills it later. */
+		 * its caller's, an operative its caller's, %seq its own.
+		 * if/match/and/or set none (tco_env nil) -- an inner fn/let/op
+		 * fills it later. */
 		x_eval_tco_keep(p_base, p_te, (x_obj_t *)tco_root, &p_tco_env_save);
 
 		x_firstobj(x_eval_field_tco_env(p_base)) = NULL;

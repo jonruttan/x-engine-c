@@ -98,15 +98,29 @@ navigates first/rest unchecked by design).
 ---
     *** ERROR: local
 
-### a dotted %seq raises before it evaluates any form
+### %seq makes the environment it started in current again
+
+Its last form may run in another environment; the form after the `%seq` runs
+where the `%seq` did.
+
+```scheme
+(def v 1)
+(def %inner ((fn (_ v) ((op () e e))) 7))
+(atomic (%seq 1 (tail-eval (lit v) %inner))
+        (match ((= v 1) (error "put back")) (#t (error "left"))))
+```
+---
+    *** ERROR: put back
+
+### a dotted %seq raises where its walk reaches the dot
 
 ```scheme
 (def %ran ())
-(guard (e (match ((eq? %ran ()) (error "nothing ran")) (#t (error "ran"))))
+(guard (e (match ((eq? %ran ()) (error "nothing ran")) (#t (error "ran to the dot"))))
   (%seq (def %ran 1) 2 . 3))
 ```
 ---
-    *** ERROR: nothing ran
+    *** ERROR: ran to the dot
 
 ### the last form of a %seq is in tail position
 
