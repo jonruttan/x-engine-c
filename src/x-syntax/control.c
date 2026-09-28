@@ -298,39 +298,49 @@ static x_obj_t *x_prim_error(x_obj_t *p_base, x_obj_t *p_args)
 }
 
 /**
- * Sequence form. x-lang: (%seq a b)
+ * Sequence form. x-lang: (%seq form ...)
  *
- * Evaluates the first expression for its side effects, then tail-call
- * evaluates the second (fexpr -- both arguments are explicitly evaluated
- * internally).  Roots the argument list during evaluation of the first
- * expression to protect it from GC.
+ * Evaluates each form but the last for its side effects, in the current
+ * environment, then tail-call evaluates the last (fexpr -- the forms are
+ * explicitly evaluated internally).  No forms answers nil.  Roots the
+ * advancing form list while a form evaluates, to protect the rest from GC.
  *
  * @param p_base  Base (execution context).
- * @param p_args  Unevaluated argument list; expects (caller a b).
- * @return NULL; result of b delivered via TCO expr slot.
- * @note Internal primitive; used by the compiler to sequence body forms.
+ * @param p_args  Unevaluated argument list; expects (caller form ...).
+ * @return NULL; result of the last form delivered via TCO expr slot.
+ * @note The whole list is checked before any form is evaluated: a dotted
+ *       tail raises at the spine guard (#487) with nothing evaluated.
  */
 static x_obj_t *x_prim_seq(x_obj_t *p_base, x_obj_t *p_args)
 {
-	x_obj_t *p_a, *p_b;
+	x_obj_t *p_form;
 	x_obj_t **p_cell = x_heap_root_slot(p_base);
 	/* Pair-typed so the root-chain mark traverses the payload (the
 	 * walk descends spair-typed pairs only). */
 	x_spair_t root = x_obj_set((x_obj_t *)x_type_pair_obj, X_OBJ_FLAG_NONE,
 		{ NULL }, { NULL });
-	x_args(p_base, p_args, 3, NULL, &p_a, &p_b);
 
-	/* Root args so GC doesn't free them during eval of first arg -- a
-	 * registered stack cell instead of an eval-list push: the same LIFO
-	 * protection without allocating a rooting pair per call.  If the
-	 * eval errors, the longjmp skips the pop; the guard handler restores
-	 * the chain head to its snapshot (see x_prim_guard), exactly as it
-	 * restores the save stack. */
-	x_firstobj((x_obj_t *)root) = x_1(p_args);
+	for (p_form = x_1(p_args); ! x_obj_isnil(p_base, p_form);
+			p_form = x_restobj(p_form))
+		x_eval_spine_guard(p_base, p_form);
+
+	/* Root the rest of the list while a form evaluates -- a registered
+	 * stack cell instead of an eval-list push: the same LIFO protection
+	 * without allocating a rooting pair per call.  If an eval errors, the
+	 * longjmp skips the pop; the guard handler restores the chain head to
+	 * its snapshot (see x_prim_guard), exactly as it restores the save
+	 * stack. */
 	x_heap_root_push(p_cell, root);
 
-	x_eval_arg(p_base, p_a);
-	x_firstobj(x_eval_field_tco_expr(p_base)) = p_b;
+	for (p_form = x_1(p_args); ! x_obj_isnil(p_base, p_form);
+			p_form = x_restobj(p_form)) {
+		if (x_obj_isnil(p_base, x_restobj(p_form))) {
+			x_firstobj(x_eval_field_tco_expr(p_base)) = x_firstobj(p_form);
+			break;
+		}
+		x_firstobj((x_obj_t *)root) = p_form;
+		x_eval_arg(p_base, x_firstobj(p_form));
+	}
 
 	/* Unroot */
 	x_heap_root_pop(p_cell);
