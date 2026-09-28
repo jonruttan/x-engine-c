@@ -11,6 +11,61 @@ alongside the library changes they landed with.
 [x-lang]: https://github.com/jonruttan/x-lang
 [x-changelog]: https://github.com/jonruttan/x-lang/blob/main/CHANGELOG.md
 
+## 0.2.16 — 2026-09-28
+
+**`%seq` sequences any number of forms** ([#70]). It took exactly two:
+`(%seq a b c)` evaluated `a`, tail-evaluated `b` and never read `c`, and
+`(%seq a)` evaluated `a` and answered nil. It now evaluates each form but
+the last in the current environment, so a `def` among them binds there, and
+hands the last to the trampoline, so it stays in tail position; with no
+forms it answers nil. The whole list is checked before any form is
+evaluated: a dotted tail raises at the spine guard ([x-lang#487]),
+`call: improper argument list (dotted tail)`, with nothing evaluated. Two
+forms behave as they did. Covered by the prim-core C spec, where three forms
+leave the third in the tail-call slot and none leave it nil, and by five
+bare smoke cases: the order and the answer, no forms, a `def` binding where
+`%seq` runs, a dotted list raising with nothing evaluated, and the last form
+in tail position over 50,000 calls.
+
+**The contract's names follow x-lang's glossary** ([#69], [x-lang#808]).
+Every rename is breaking and keeps no alias:
+
+- A set of fields is `fields`. The base-path routes `io-group`,
+  `meta-group`, `heap-group`, `alloc-group`, `type-iter-group`,
+  `type-ops-group` and `type-image-group` are `io-fields`, `meta-fields`,
+  `heap-fields`, `alloc-fields`, `type-iter-fields`, `type-ops-fields` and
+  `type-image-fields`. In C, `x_type_field_iter_group`,
+  `x_type_field_ops_group` and `x_type_field_image_group` end in `_fields`,
+  as do x-expr's `x_base_field_io_group`, `_meta_group`, `_heap_group` and
+  `_alloc_group` ([x-expr#11]).
+- A unit's ref, word, bytes or foreign is its label. `(type set-shape!)`
+  and its bare name `type-set-shape!` are `(type set-unit-labels!)` and
+  `type-set-unit-labels!`; `x_type_unit_kind` and `X_TYPE_UNIT_KIND_MASK`
+  are `x_type_unit_label` and `X_TYPE_UNIT_LABEL_MASK`.
+- The channel an analyser declares through carries a label. The export
+  `jit_score_variant` is `jit_score_label`, the capability `tok/variant` is
+  `tok/label`, and `x_token_read_arg_variant` is `x_token_read_arg_label`.
+- The registry of instructions is the catalogue: `tools/contract/isa.x`
+  defines `%isa-catalogue` in place of `%isa-catalog`.
+- `tools/contract/obj-layout.x` drops x-expr's simple-type codes,
+  `%obj-flag-simple-type`, `%obj-flag-prim`, `-fn`, `-int`, `-char`,
+  `-str`, `-ptr` and `%obj-flag-type-mask`: the engine neither uses nor
+  supports them.
+
+The renames change no behaviour: the tree the routes walk, the mask's bits
+and an image's bytes are what they were. The declaration's ISA and layout
+digests follow the manifests, and its capabilities are the same set with
+`tok/label` in place of `tok/variant`. Comments, tool-local names and the
+earlier entries in this file use the glossary's words; an earlier entry
+that quotes a renamed name says what it was released as.
+
+x-lang takes the new names with the pin bump.
+
+[#69]: https://github.com/jonruttan/x-engine-c/pull/69
+[#70]: https://github.com/jonruttan/x-engine-c/pull/70
+[x-expr#11]: https://github.com/jonruttan/x-expr/pull/11
+[x-lang#808]: https://github.com/jonruttan/x-lang/pull/808
+
 ## 0.2.15 — 2026-09-27
 
 **The release ships a profiling engine, and it counts evaluation per object**
