@@ -300,52 +300,20 @@ static x_obj_t *x_prim_error(x_obj_t *p_base, x_obj_t *p_args)
 /**
  * Sequence form. x-lang: (%seq form ...)
  *
- * Evaluates each form but the last for its side effects, in the current
- * environment, then tail-call evaluates the last (fexpr -- the forms are
- * explicitly evaluated internally).  No forms answers nil.  Roots the
- * advancing form list while a form evaluates, to protect the rest from GC.
+ * Walks its forms as an operative call walks its body, in the current
+ * environment: each form but the last is evaluated for its side effects and
+ * the last is handed to the trampoline (fexpr -- the forms are explicitly
+ * evaluated internally).  No forms answers nil.  The environment %seq
+ * started in is current again when the last form is done.
  *
  * @param p_base  Base (execution context).
  * @param p_args  Unevaluated argument list; expects (caller form ...).
  * @return NULL; result of the last form delivered via TCO expr slot.
- * @note The whole list is checked before any form is evaluated: a dotted
- *       tail raises at the spine guard (#487) with nothing evaluated.
+ * @see x_eval_op_body -- the walk: its rooting, its spine guard, its tail
  */
 static x_obj_t *x_prim_seq(x_obj_t *p_base, x_obj_t *p_args)
 {
-	x_obj_t *p_form;
-	x_obj_t **p_cell = x_heap_root_slot(p_base);
-	/* Pair-typed so the root-chain mark traverses the payload (the
-	 * walk descends spair-typed pairs only). */
-	x_spair_t root = x_obj_set((x_obj_t *)x_type_pair_obj, X_OBJ_FLAG_NONE,
-		{ NULL }, { NULL });
-
-	for (p_form = x_1(p_args); ! x_obj_isnil(p_base, p_form);
-			p_form = x_restobj(p_form))
-		x_eval_spine_guard(p_base, p_form);
-
-	/* Root the rest of the list while a form evaluates -- a registered
-	 * stack cell instead of an eval-list push: the same LIFO protection
-	 * without allocating a rooting pair per call.  If an eval errors, the
-	 * longjmp skips the pop; the guard handler restores the chain head to
-	 * its snapshot (see x_prim_guard), exactly as it restores the save
-	 * stack. */
-	x_heap_root_push(p_cell, root);
-
-	for (p_form = x_1(p_args); ! x_obj_isnil(p_base, p_form);
-			p_form = x_restobj(p_form)) {
-		if (x_obj_isnil(p_base, x_restobj(p_form))) {
-			x_firstobj(x_eval_field_tco_expr(p_base)) = x_firstobj(p_form);
-			break;
-		}
-		x_firstobj((x_obj_t *)root) = p_form;
-		x_eval_arg(p_base, x_firstobj(p_form));
-	}
-
-	/* Unroot */
-	x_heap_root_pop(p_cell);
-
-	return NULL;
+	return x_eval_op_body(p_base, x_1(p_args), x_eval_field_env(p_base));
 }
 
 /**
