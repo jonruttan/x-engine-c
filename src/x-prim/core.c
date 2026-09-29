@@ -14,6 +14,7 @@
  * # Includes
  */
 #include "x-prim.h"
+#include "x-eval-slots.h"
 #include "x-eval.h"
 #include "x-env.h"
 #include "x-tco.h"
@@ -125,8 +126,13 @@ static x_obj_t *x_prim_apply(x_obj_t *p_base, x_obj_t *p_args)
 		x_tco_env_save(p_base);
 
 		p_vals = x_mkspair(p_base, X_OBJ_FLAG_NONE, p_fn, p_vals);
-		x_eval_field_env(p_base) = x_env_extend(
-			p_base, x_procenv(p_fn), x_procparams(p_fn), p_vals);
+		{
+			x_obj_t env_extend_args[x_vector_storage(3)] = x_vector_set(
+				x_base_vector_type(p_base), 3,
+				{ x_procenv(p_fn) }, { x_procparams(p_fn) }, { p_vals });
+
+			x_eval_field_env(p_base) = x_base_call(p_base, X_SLOT_ENV_EXTEND, env_extend_args);
+		}
 
 		/* Unroot */
 		x_heap_root_pop(p_cell);

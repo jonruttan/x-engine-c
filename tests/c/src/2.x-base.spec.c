@@ -347,7 +347,7 @@ static char *test_base_env(void)
 	_it_should("an unbound name is NULL, not an error",
 		x_env_lookup(p_base, x_mksvector(p_base, 2, p_child, p_syms[1])) == NULL);
 
-	x_env_bind(p_base, p_child, p_syms[1], p_atoms[1]);
+	x_env_bind(p_base, x_mksvector(p_base, 3, p_child, p_syms[1], p_atoms[1]));
 	_it_should("a child binding is an alist cell in the child",
 		x_obj_type_isspair(x_env_bindings(p_child))
 		&& x_firstobj(x_firstobj(x_env_bindings(p_child))) == p_syms[1]
@@ -355,15 +355,15 @@ static char *test_base_env(void)
 	_it_should("the binding is found from the child",
 		x_restobj(x_env_lookup(p_base, x_mksvector(p_base, 2, p_child, p_syms[1]))) == p_atoms[1]);
 
-	x_env_bind(p_base, p_child, p_syms[0], p_atoms[2]);
-	x_env_bind(p_base, p_child, p_syms[0], p_atoms[1]);
+	x_env_bind(p_base, x_mksvector(p_base, 3, p_child, p_syms[0], p_atoms[2]));
+	x_env_bind(p_base, x_mksvector(p_base, 3, p_child, p_syms[0], p_atoms[1]));
 	_it_should("rebinding in the same environment updates in place",
 		x_restobj(x_env_lookup(p_base, x_mksvector(p_base, 2, p_child, p_syms[0]))) == p_atoms[1]
 		&& x_restobj(x_env_bindings(p_child)) != NULL
 		&& x_obj_isnil(p_base, x_restobj(x_restobj(x_env_bindings(p_child)))));
 
 	p_grand = x_env_make(p_base, p_child);
-	x_env_bind(p_base, p_grand, p_syms[0], p_atoms[2]);
+	x_env_bind(p_base, x_mksvector(p_base, 3, p_grand, p_syms[0], p_atoms[2]));
 	_it_should("a grandchild's binding shadows the child's without touching it",
 		x_restobj(x_env_lookup(p_base, x_mksvector(p_base, 2, p_grand, p_syms[0]))) == p_atoms[2]
 		&& x_restobj(x_env_lookup(p_base, x_mksvector(p_base, 2, p_child, p_syms[0]))) == p_atoms[1]);

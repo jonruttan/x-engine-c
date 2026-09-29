@@ -219,30 +219,26 @@ static char *test_core_env_root(void)
 	p_a = x_mksymbol(p_base, "root-a");
 	p_b = x_mksymbol(p_base, "root-b");
 
-	x_env_bind(p_base, p_root, p_a,
-		x_mksatom(p_base, X_OBJ_FLAG_NONE, (x_int_t)1));
+	x_env_bind(p_base, x_mksvector(p_base, 3, p_root, p_a, x_mksatom(p_base, X_OBJ_FLAG_NONE, (x_int_t)1)));
 	p_entry = x_env_lookup(p_base, x_mksvector(p_base, 2, p_root, p_a));
 	_it_should("a root binding is found in the root",
 		p_entry != NULL && x_atomint(x_restobj(p_entry)) == 1);
 	_it_should("a symbol resolves through the root",
 		x_atomint(x_eval_arg(p_base, p_a)) == 1);
 
-	x_env_bind(p_base, p_root, p_a,
-		x_mksatom(p_base, X_OBJ_FLAG_NONE, (x_int_t)2));
+	x_env_bind(p_base, x_mksvector(p_base, 3, p_root, p_a, x_mksatom(p_base, X_OBJ_FLAG_NONE, (x_int_t)2)));
 	_it_should("rebinding in the root updates the same entry",
 		x_env_lookup(p_base, x_mksvector(p_base, 2, p_root, p_a)) == p_entry
 		&& x_atomint(x_restobj(p_entry)) == 2);
 
 	p_child = x_env_make(p_base, p_root);
-	x_env_bind(p_base, p_child, p_b,
-		x_mksatom(p_base, X_OBJ_FLAG_NONE, (x_int_t)3));
+	x_env_bind(p_base, x_mksvector(p_base, 3, p_child, p_b, x_mksatom(p_base, X_OBJ_FLAG_NONE, (x_int_t)3)));
 	_it_should("a child reaches the root's binding",
 		x_atomint(x_restobj(x_env_lookup(p_base, x_mksvector(p_base, 2, p_child, p_a)))) == 2);
 	_it_should("the root does not see the child's binding",
 		x_env_lookup(p_base, x_mksvector(p_base, 2, p_root, p_b)) == NULL);
 
-	x_env_bind(p_base, p_child, p_a,
-		x_mksatom(p_base, X_OBJ_FLAG_NONE, (x_int_t)4));
+	x_env_bind(p_base, x_mksvector(p_base, 3, p_child, p_a, x_mksatom(p_base, X_OBJ_FLAG_NONE, (x_int_t)4)));
 	_it_should("a child's binding shadows the root's without touching it",
 		x_atomint(x_restobj(x_env_lookup(p_base, x_mksvector(p_base, 2, p_child, p_a)))) == 4
 		&& x_atomint(x_restobj(x_env_lookup(p_base, x_mksvector(p_base, 2, p_root, p_a)))) == 2);
@@ -286,8 +282,7 @@ static char *test_core_env_root_identity(void)
 		p_own != p_foreign && p_foreign != p_other && p_own != p_other);
 
 	/* The host binds into the child under the host's symbol. */
-	x_env_bind(p_base, p_root, p_foreign,
-		x_mksatom(p_base, X_OBJ_FLAG_NONE, (x_int_t)1));
+	x_env_bind(p_base, x_mksvector(p_base, 3, p_root, p_foreign, x_mksatom(p_base, X_OBJ_FLAG_NONE, (x_int_t)1)));
 	p_entry_foreign = x_env_lookup(p_base, x_mksvector(p_base, 2, p_root, p_foreign));
 	_it_should("the host's symbol finds what it bound",
 		p_entry_foreign != NULL && x_atomint(x_restobj(p_entry_foreign)) == 1);
@@ -295,8 +290,7 @@ static char *test_core_env_root_identity(void)
 		x_env_lookup(p_base, x_mksvector(p_base, 2, p_root, p_own)) == NULL);
 
 	/* The base binds under its own symbol: a second node beside the first. */
-	x_env_bind(p_base, p_root, p_own,
-		x_mksatom(p_base, X_OBJ_FLAG_NONE, (x_int_t)2));
+	x_env_bind(p_base, x_mksvector(p_base, 3, p_root, p_own, x_mksatom(p_base, X_OBJ_FLAG_NONE, (x_int_t)2)));
 	p_entry_own = x_env_lookup(p_base, x_mksvector(p_base, 2, p_root, p_own));
 	_it_should("the own symbol gets its own binding beside the foreign one",
 		p_entry_own != NULL && p_entry_own != p_entry_foreign
@@ -307,8 +301,7 @@ static char *test_core_env_root_identity(void)
 	_it_should("a symbol the base has no spelling for is unbound",
 		x_env_lookup(p_base, x_mksvector(p_base, 2, p_root, x_mksymbol(p_host, "elsewhere"))) == NULL);
 
-	x_env_bind(p_base, p_root, p_own,
-		x_mksatom(p_base, X_OBJ_FLAG_NONE, (x_int_t)3));
+	x_env_bind(p_base, x_mksvector(p_base, 3, p_root, p_own, x_mksatom(p_base, X_OBJ_FLAG_NONE, (x_int_t)3)));
 	_it_should("rebinding the own symbol updates its node only",
 		x_atomint(x_restobj(x_env_lookup(p_base, x_mksvector(p_base, 2, p_root, p_own)))) == 3
 		&& x_atomint(x_restobj(x_env_lookup(p_base, x_mksvector(p_base, 2, p_root, p_foreign)))) == 1);
@@ -492,7 +485,7 @@ static char *test_core_wrap_unwrap(void)
 		x_mkspair(p_base, X_OBJ_FLAG_NONE, x_mksatom(p_base, X_OBJ_FLAG_NONE, (x_int_t)1), NULL),
 		x_eval_field_env(p_base));
 
-	x_env_bind(p_base, x_eval_field_env(p_base), x_mksymbol(p_base, "myop"), p_op);
+	x_env_bind(p_base, x_mksvector(p_base, 3, x_eval_field_env(p_base), x_mksymbol(p_base, "myop"), p_op));
 
 	/* (wrap myop) -> applicative */
 	p_args = x_mkspair(p_base, X_OBJ_FLAG_NONE, NULL,
@@ -502,7 +495,7 @@ static char *test_core_wrap_unwrap(void)
 		p_result != NULL);
 
 	/* Bind wrapped, then (unwrap it) -> gets underlying combiner back */
-	x_env_bind(p_base, x_eval_field_env(p_base), x_mksymbol(p_base, "wrapped"), p_result);
+	x_env_bind(p_base, x_mksvector(p_base, 3, x_eval_field_env(p_base), x_mksymbol(p_base, "wrapped"), p_result));
 
 	p_args = x_mkspair(p_base, X_OBJ_FLAG_NONE, NULL,
 		x_mkspair(p_base, X_OBJ_FLAG_NONE, x_mksymbol(p_base, "wrapped"), NULL));
@@ -614,7 +607,7 @@ static char *test_core_rest(void)
 	p_pair = x_mklist(p_base, p_a, p_b);
 
 	/* Bind pair so prim_rest can eval it */
-	x_env_bind(p_base, x_eval_field_env(p_base), x_mksymbol(p_base, "pp"), p_pair);
+	x_env_bind(p_base, x_mksvector(p_base, 3, x_eval_field_env(p_base), x_mksymbol(p_base, "pp"), p_pair));
 
 	/* (rest pp) -> p_b */
 	p_args = x_mkspair(p_base, X_OBJ_FLAG_NONE, NULL,
@@ -640,8 +633,8 @@ static char *test_core_eval_with_env(void)
 	/* Create a child environment with the binding z -> 123 */
 	p_sym = x_mksymbol(p_base, "z");
 	p_env = x_env_make(p_base, x_eval_field_env(p_base));
-	x_env_bind(p_base, p_env, p_sym, x_mksatom(p_base, X_OBJ_FLAG_NONE, (x_int_t)123));
-	x_env_bind(p_base, x_eval_field_env(p_base), x_mksymbol(p_base, "myenv"), p_env);
+	x_env_bind(p_base, x_mksvector(p_base, 3, p_env, p_sym, x_mksatom(p_base, X_OBJ_FLAG_NONE, (x_int_t)123)));
+	x_env_bind(p_base, x_mksvector(p_base, 3, x_eval_field_env(p_base), x_mksymbol(p_base, "myenv"), p_env));
 
 	/* Build (lit z) — evaluates to the symbol z */
 	p_quote_form = x_mklist(p_base,
@@ -681,10 +674,10 @@ static char *test_core_apply(void)
 	p_fn = x_prim_closure(p_base, p_args);
 
 	/* Bind fn and arg list */
-	x_env_bind(p_base, x_eval_field_env(p_base), x_mksymbol(p_base, "idfn"), p_fn);
+	x_env_bind(p_base, x_mksvector(p_base, 3, x_eval_field_env(p_base), x_mksymbol(p_base, "idfn"), p_fn));
 	p_arglist = x_mklist(p_base,
 		x_mksatom(p_base, X_OBJ_FLAG_NONE, (x_int_t)42), NULL);
-	x_env_bind(p_base, x_eval_field_env(p_base), x_mksymbol(p_base, "args"), p_arglist);
+	x_env_bind(p_base, x_mksvector(p_base, 3, x_eval_field_env(p_base), x_mksymbol(p_base, "args"), p_arglist));
 
 	/* (apply idfn args) — single trailing list, procedure path.
 	 * apply + procedure uses TCO: sets tco_expr = x, returns NULL. */
@@ -706,12 +699,12 @@ static char *test_core_apply(void)
 				x_mkspair(p_base, X_OBJ_FLAG_NONE, x_mksymbol(p_base, "b"), NULL)),
 			x_mkspair(p_base, X_OBJ_FLAG_NONE, x_mksymbol(p_base, "a"), NULL)));
 		p_fn2 = x_prim_closure(p_base, p_args);
-		x_env_bind(p_base, x_eval_field_env(p_base), x_mksymbol(p_base, "fn2"), p_fn2);
+		x_env_bind(p_base, x_mksvector(p_base, 3, x_eval_field_env(p_base), x_mksymbol(p_base, "fn2"), p_fn2));
 
 		/* Tail list: bind '(200) to tl */
 		p_tl = x_mklist(p_base,
 			x_mksatom(p_base, X_OBJ_FLAG_NONE, (x_int_t)200), NULL);
-		x_env_bind(p_base, x_eval_field_env(p_base), x_mksymbol(p_base, "tl"), p_tl);
+		x_env_bind(p_base, x_mksvector(p_base, 3, x_eval_field_env(p_base), x_mksymbol(p_base, "tl"), p_tl));
 
 		/* (apply fn2 100 tl) — prefix 100, tail (200): 2-arg splice path.
 		 * evlis on (100 tl) -> (100 (200)), walk to second-to-last (100),
@@ -739,11 +732,11 @@ static char *test_core_apply(void)
 			x_mkspair(p_base, X_OBJ_FLAG_NONE, x_mksymbol(p_base, "c"), NULL))),
 			x_mkspair(p_base, X_OBJ_FLAG_NONE, x_mksymbol(p_base, "a"), NULL)));
 		p_fn3 = x_prim_closure(p_base, p_args);
-		x_env_bind(p_base, x_eval_field_env(p_base), x_mksymbol(p_base, "fn3"), p_fn3);
+		x_env_bind(p_base, x_mksvector(p_base, 3, x_eval_field_env(p_base), x_mksymbol(p_base, "fn3"), p_fn3));
 
 		p_tl = x_mklist(p_base,
 			x_mksatom(p_base, X_OBJ_FLAG_NONE, (x_int_t)300), NULL);
-		x_env_bind(p_base, x_eval_field_env(p_base), x_mksymbol(p_base, "tl3"), p_tl);
+		x_env_bind(p_base, x_mksvector(p_base, 3, x_eval_field_env(p_base), x_mksymbol(p_base, "tl3"), p_tl));
 
 		/* (apply fn3 100 200 tl3) — 3 args total: 2 prefix + tail */
 		x_firstobj(x_eval_field_tco_expr(p_base)) = NULL;
@@ -773,11 +766,11 @@ static char *test_core_apply(void)
 			x_mkspair(p_base, X_OBJ_FLAG_NONE, x_mksymbol(p_base, "x"), NULL),
 			x_mkspair(p_base, X_OBJ_FLAG_NONE, x_mksymbol(p_base, "x"), NULL)));
 		p_op = x_prim_operative(p_base, p_args);
-		x_env_bind(p_base, x_eval_field_env(p_base), x_mksymbol(p_base, "myop"), p_op);
+		x_env_bind(p_base, x_mksvector(p_base, 3, x_eval_field_env(p_base), x_mksymbol(p_base, "myop"), p_op));
 
 		p_tl = x_mklist(p_base,
 			x_mksatom(p_base, X_OBJ_FLAG_NONE, (x_int_t)42), NULL);
-		x_env_bind(p_base, x_eval_field_env(p_base), x_mksymbol(p_base, "optl"), p_tl);
+		x_env_bind(p_base, x_mksvector(p_base, 3, x_eval_field_env(p_base), x_mksymbol(p_base, "optl"), p_tl));
 
 		/* (apply myop optl) */
 		p_args = x_mkspair(p_base, X_OBJ_FLAG_NONE, NULL,
@@ -954,10 +947,10 @@ static char *test_core_mkspair_spine_not_dotted(void)
 		x_mkspair(p_base, X_OBJ_FLAG_NONE, x_mksymbol(p_base, "x"), NULL),
 		x_mkspair(p_base, X_OBJ_FLAG_NONE, x_mksymbol(p_base, "x"), NULL)));
 	p_fn = x_prim_closure(p_base, p_args);
-	x_env_bind(p_base, x_eval_field_env(p_base), x_mksymbol(p_base, "idfn"), p_fn);
+	x_env_bind(p_base, x_mksvector(p_base, 3, x_eval_field_env(p_base), x_mksymbol(p_base, "idfn"), p_fn));
 	p_arglist = x_mklist(p_base,
 		x_mksatom(p_base, X_OBJ_FLAG_NONE, (x_int_t)42), NULL);
-	x_env_bind(p_base, x_eval_field_env(p_base), x_mksymbol(p_base, "args"), p_arglist);
+	x_env_bind(p_base, x_mksvector(p_base, 3, x_eval_field_env(p_base), x_mksymbol(p_base, "args"), p_arglist));
 
 	/* Install a real jmp handler (guard layout, #253) so a raise is
 	 * observable instead of hitting the no-handler exit path. */

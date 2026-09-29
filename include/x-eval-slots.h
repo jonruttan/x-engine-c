@@ -148,12 +148,6 @@ x_obj_t *x_slot_callable_apply(x_obj_t *p_base, x_obj_t *p_args);
 /** Slot function for x_obj_prim_call(). */
 x_obj_t *x_slot_obj_prim_call(x_obj_t *p_base, x_obj_t *p_args);
 
-/** Slot function for x_env_bind(). */
-x_obj_t *x_slot_env_bind(x_obj_t *p_base, x_obj_t *p_args);
-
-/** Slot function for x_env_extend(). */
-x_obj_t *x_slot_env_extend(x_obj_t *p_base, x_obj_t *p_args);
-
 /** Slot function for x_token_read(). */
 x_obj_t *x_slot_token_read(x_obj_t *p_base, x_obj_t *p_args);
 

@@ -12,6 +12,7 @@
  *      " "
  */
 #include "x-type/operative.h"
+#include "x-eval-slots.h"
 #include "x-eval.h"
 #include "x-env.h"
 #include "x-heap.h"
@@ -202,13 +203,24 @@ x_obj_t *x_type_operative_call(x_obj_t *p_base, x_obj_t *p_args)
 
 	/* The body's environment: a child of the captured one, with the
 	 * formals bound to the unevaluated args. */
-	p_env = x_env_extend(
-		p_base, p_captured_env, p_params, p_unevaluated_args);
+	{
+		x_obj_t env_extend_args[x_vector_storage(3)] = x_vector_set(
+			x_base_vector_type(p_base), 3,
+			{ p_captured_env }, { p_params }, { p_unevaluated_args });
+
+		p_env = x_base_call(p_base, X_SLOT_ENV_EXTEND, env_extend_args);
+	}
 
 	/* Bind the env-param to the caller's env.  Only route from body
 	 * back into caller's scope (via eval/tail-eval). */
 	if ( ! x_obj_isnil(p_base, p_envparam)) {
-		x_env_bind(p_base, p_env, p_envparam, p_caller_env);
+		{
+			x_obj_t env_bind_args[x_vector_storage(3)] = x_vector_set(
+				x_base_vector_type(p_base), 3,
+				{ p_env }, { p_envparam }, { p_caller_env });
+
+			x_base_call(p_base, X_SLOT_ENV_BIND, env_bind_args);
+		}
 	}
 
 	x_eval_field_env(p_base) = p_env;

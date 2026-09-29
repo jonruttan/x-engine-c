@@ -142,19 +142,20 @@ x_obj_t *x_env_lookup(x_obj_t *p_base, x_obj_t *p_args)
  * `base bind` are this on a root.
  *
  * @param p_base  x_obj_t* -- Base (execution context)
- * @param p_env   x_obj_t* -- The environment to bind in
- * @param p_sym   x_obj_t* -- The symbol
- * @param p_val   x_obj_t* -- The value
- * @return x_obj_t* -- @p p_val
+ * @param p_args  x_obj_t* -- Argument vector: (env, symbol, value) -- the
+ *                            environment to bind in, the symbol, the value
+ * @return x_obj_t* -- The value
  *
  * @note The tree insert mutates in place (x_alist_bst_insert), so every
  *       closure whose chain reaches this root sees the new binding at its
  *       next lookup -- a top-level definition made after a closure was
  *       created is visible to it, as it must be.
  */
-x_obj_t *x_env_bind(x_obj_t *p_base, x_obj_t *p_env,
-	x_obj_t *p_sym, x_obj_t *p_val)
+x_obj_t *x_env_bind(x_obj_t *p_base, x_obj_t *p_args)
 {
+	x_obj_t *p_env = x_vectorobj(p_args, 0);
+	x_obj_t *p_sym = x_vectorobj(p_args, 1);
+	x_obj_t *p_val = x_vectorobj(p_args, 2);
 	x_obj_t *p_cell, *p_pair;
 	x_obj_t tree_args[x_vector_storage(2)] =
 		x_vector_set(x_base_vector_type(p_base), 2, { NULL }, { p_sym });
@@ -204,10 +205,11 @@ x_obj_t *x_env_bind(x_obj_t *p_base, x_obj_t *p_env,
  * the entire remaining value list, (2) base -- no more params, (3) one
  * parameter to one value, then the rest.
  *
- * @param p_base   x_obj_t* -- Base (execution context)
- * @param p_parent x_obj_t* -- The environment the new one is a child of
- * @param p_params x_obj_t* -- Parameter list (or single symbol for variadic)
- * @param p_vals   x_obj_t* -- Value list
+ * @param p_base  x_obj_t* -- Base (execution context)
+ * @param p_args  x_obj_t* -- Argument vector: (parent, params, values) --
+ *                            the environment the new one is a child of,
+ *                            the parameter list (or a single symbol for
+ *                            variadic), and the value list
  * @return x_obj_t* -- The new environment
  *
  * @details **The parent is never modified.**  The bindings are new cells
@@ -223,9 +225,11 @@ x_obj_t *x_env_bind(x_obj_t *p_base, x_obj_t *p_env,
  * @see x_env_bind        -- `def`, the same binder one name at a time
  * @see x_eval_body_tco   -- saves/restores env around a body
  */
-x_obj_t *x_env_extend(x_obj_t *p_base, x_obj_t *p_parent,
-	x_obj_t *p_params, x_obj_t *p_vals)
+x_obj_t *x_env_extend(x_obj_t *p_base, x_obj_t *p_args)
 {
+	x_obj_t *p_parent = x_vectorobj(p_args, 0);
+	x_obj_t *p_params = x_vectorobj(p_args, 1);
+	x_obj_t *p_vals = x_vectorobj(p_args, 2);
 	x_obj_t *p_env = x_env_make(p_base, p_parent);
 	x_obj_t *p_pair;
 	x_obj_t *p_val;

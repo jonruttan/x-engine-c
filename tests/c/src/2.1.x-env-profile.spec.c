@@ -113,10 +113,10 @@ static char *test_env_profile_steps(void)
 
 	/* The child holds two bindings and the grandchild one. */
 	p_child = x_env_make(p_base, p_root);
-	x_env_bind(p_base, p_child, p_syms[0], p_atoms[0]);
-	x_env_bind(p_base, p_child, p_syms[1], p_atoms[1]);
+	x_env_bind(p_base, x_mksvector(p_base, 3, p_child, p_syms[0], p_atoms[0]));
+	x_env_bind(p_base, x_mksvector(p_base, 3, p_child, p_syms[1], p_atoms[1]));
 	p_grand = x_env_make(p_base, p_child);
-	x_env_bind(p_base, p_grand, p_syms[2], p_atoms[2]);
+	x_env_bind(p_base, x_mksvector(p_base, 3, p_grand, p_syms[2], p_atoms[2]));
 
 	before = _env_steps(p_base);
 	x_env_lookup(p_base, x_mksvector(p_base, 2, p_grand, p_syms[2]));

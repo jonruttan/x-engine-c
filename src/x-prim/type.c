@@ -24,6 +24,7 @@
  * # Includes
  */
 #include "x-prim.h"
+#include "x-eval-slots.h"
 #include "x-alist.h"
 #include "x-eval.h"
 #include "x-heap.h"

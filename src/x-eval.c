@@ -759,6 +759,12 @@ static const x_fn_t x_eval_hooks[X_SLOT_LEN] = {
 	[X_SLOT_HEAP_FREE] = x_slot_type_heap_free,
 
 	[X_SLOT_ENV_LOOKUP] = x_env_lookup,
+	[X_SLOT_ENV_BIND] = x_env_bind,
+/* The child a call makes is the evaluator's business, and a unit test that
+ * omits the evaluator omits it (see x-env.c). */
+#if !defined(STUB_X_EVAL) && !defined(X_EVAL_OWN)
+	[X_SLOT_ENV_EXTEND] = x_env_extend,
+#endif /* !STUB_X_EVAL && !X_EVAL_OWN -- evaluator engine */
 	[X_SLOT_ALIST_BST_LOOKUP] = x_alist_bst_lookup
 };
 

@@ -228,36 +228,6 @@ x_obj_t *x_slot_obj_prim_call(x_obj_t *p_base, x_obj_t *p_args)
  * # Environments
  */
 
-/**
- * Slot function for x_env_bind().
- *
- * @param p_base  x_obj_t* -- Base (execution context)
- * @param p_args  x_obj_t* -- Argument vector: (env, symbol, value)
- * @return x_obj_t* -- What x_env_bind() returns
- */
-x_obj_t *x_slot_env_bind(x_obj_t *p_base, x_obj_t *p_args)
-{
-	return x_env_bind(p_base,
-		x_vectorobj(p_args, 0),
-		x_vectorobj(p_args, 1),
-		x_vectorobj(p_args, 2));
-}
-
-/**
- * Slot function for x_env_extend().
- *
- * @param p_base  x_obj_t* -- Base (execution context)
- * @param p_args  x_obj_t* -- Argument vector: (parent, params, values)
- * @return x_obj_t* -- What x_env_extend() returns
- */
-x_obj_t *x_slot_env_extend(x_obj_t *p_base, x_obj_t *p_args)
-{
-	return x_env_extend(p_base,
-		x_vectorobj(p_args, 0),
-		x_vectorobj(p_args, 1),
-		x_vectorobj(p_args, 2));
-}
-
 /*
  * # The Reader
  */
@@ -329,8 +299,6 @@ static const x_fn_t x_eval_slots[X_SLOT_LEN] = {
 	[X_SLOT_CALLABLE_APPLY] = x_slot_callable_apply,
 	[X_SLOT_OBJ_PRIM_CALL] = x_slot_obj_prim_call,
 
-	[X_SLOT_ENV_BIND] = x_slot_env_bind,
-	[X_SLOT_ENV_EXTEND] = x_slot_env_extend,
 
 	[X_SLOT_TOKEN_READ] = x_slot_token_read,
 	[X_SLOT_TOKEN_ANALYSE] = x_slot_token_analyse,

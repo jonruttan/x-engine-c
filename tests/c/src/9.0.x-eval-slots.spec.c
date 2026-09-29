@@ -442,8 +442,7 @@ static char *test_slots_heap(void)
 	 * root environment, one held by a pair registered on the root chain,
 	 * and one nothing refers to. */
 	p_kept = x_mkint(p_base, (x_int_t)1);
-	x_env_bind(p_base, x_eval_field_env(p_base),
-		x_mksymbol(p_base, "slot-spec-kept"), p_kept);
+	x_env_bind(p_base, x_mksvector(p_base, 3, x_eval_field_env(p_base), x_mksymbol(p_base, "slot-spec-kept"), p_kept));
 	p_held = x_mkint(p_base, (x_int_t)2);
 	p_lost = x_mkint(p_base, (x_int_t)3);
 

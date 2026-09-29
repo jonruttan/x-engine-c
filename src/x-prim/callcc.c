@@ -11,6 +11,7 @@
  *      " "
  */
 #include "x-prim.h"
+#include "x-eval-slots.h"
 #include "x-eval.h"
 #include "x-env.h"
 #include "x-heap.h"
@@ -327,8 +328,20 @@ static X_CALLCC_NO_ASAN x_obj_t *x_prim_callcc(x_obj_t *p_base,
 	/* env: a child of the current environment holding %cc-ptr and
 	 * %cc-state, the closure's own. */
 	p_env = x_env_make(p_base, x_eval_field_env(p_base));
-	x_env_bind(p_base, p_env, p_ptr_sym, p_ptr);
-	x_env_bind(p_base, p_env, p_state_sym, p_state);
+	{
+		x_obj_t env_bind_args[x_vector_storage(3)] = x_vector_set(
+			x_base_vector_type(p_base), 3,
+			{ p_env }, { p_ptr_sym }, { p_ptr });
+
+		x_base_call(p_base, X_SLOT_ENV_BIND, env_bind_args);
+	}
+	{
+		x_obj_t env_bind_args[x_vector_storage(3)] = x_vector_set(
+			x_base_vector_type(p_base), 3,
+			{ p_env }, { p_state_sym }, { p_state });
+
+		x_base_call(p_base, X_SLOT_ENV_BIND, env_bind_args);
+	}
 
 	/* Create k as a procedure (fn). */
 	p_k = x_mkproc(p_base, p_params, p_body, p_env);

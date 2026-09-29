@@ -313,8 +313,13 @@ static x_obj_t *x_prim_base_bind(x_obj_t *p_base, x_obj_t *p_args)
 
 	x_eargs(p_base, p_args, 4, NULL, &p_target, &p_name, &p_val);
 
-	return x_env_bind(p_target, x_eval_field_env_root(p_target),
-		p_name, p_val);
+	{
+		x_obj_t env_bind_args[x_vector_storage(3)] = x_vector_set(
+			x_base_vector_type(p_target), 3,
+			{ x_eval_field_env_root(p_target) }, { p_name }, { p_val });
+
+		return x_base_call(p_target, X_SLOT_ENV_BIND, env_bind_args);
+	}
 }
 
 
@@ -342,7 +347,13 @@ static x_obj_t *x_prim_define_global(x_obj_t *p_base, x_obj_t *p_args)
 
 	x_eargs(p_base, p_args, 3, NULL, &p_name, &p_val);
 
-	return x_env_bind(p_base, x_eval_field_env_root(p_base), p_name, p_val);
+	{
+		x_obj_t env_bind_args[x_vector_storage(3)] = x_vector_set(
+			x_base_vector_type(p_base), 3,
+			{ x_eval_field_env_root(p_base) }, { p_name }, { p_val });
+
+		return x_base_call(p_base, X_SLOT_ENV_BIND, env_bind_args);
+	}
 }
 
 /** Register the sandbox base primitives. */

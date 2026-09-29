@@ -132,8 +132,8 @@ static char *test_type_typep(void)
 	p_int_handle = x_type_field_name(x_obj_type(p_int));
 
 	/* Bind both to env for eval */
-	x_env_bind(p_base, x_eval_field_env(p_base), x_mksymbol(p_base, "myint"), p_int);
-	x_env_bind(p_base, x_eval_field_env(p_base), x_mksymbol(p_base, "inthandle"), p_int_handle);
+	x_env_bind(p_base, x_mksvector(p_base, 3, x_eval_field_env(p_base), x_mksymbol(p_base, "myint"), p_int));
+	x_env_bind(p_base, x_mksvector(p_base, 3, x_eval_field_env(p_base), x_mksymbol(p_base, "inthandle"), p_int_handle));
 
 	/* (type? myint inthandle) -> t */
 	p_args = x_mkspair(p_base, X_OBJ_FLAG_NONE, NULL,
@@ -164,7 +164,7 @@ static char *test_type_type_of(void)
 	x_prim_register(p_base, NULL);
 
 	p_int = x_mkint(p_base, (x_int_t)42);
-	x_env_bind(p_base, x_eval_field_env(p_base), x_mksymbol(p_base, "myint"), p_int);
+	x_env_bind(p_base, x_mksvector(p_base, 3, x_eval_field_env(p_base), x_mksymbol(p_base, "myint"), p_int));
 
 	/* (type-of myint) -> int handle */
 	p_args = x_mkspair(p_base, X_OBJ_FLAG_NONE, NULL,
@@ -196,7 +196,7 @@ static char *test_type_make_instance(void)
 	p_int = x_mkint(p_base, (x_int_t)0);
 	p_int_handle = x_type_field_name(x_obj_type(p_int));
 
-	x_env_bind(p_base, x_eval_field_env(p_base), x_mksymbol(p_base, "inthandle"), p_int_handle);
+	x_env_bind(p_base, x_mksvector(p_base, 3, x_eval_field_env(p_base), x_mksymbol(p_base, "inthandle"), p_int_handle));
 
 	/* (make-instance inthandle 42) -> int-typed instance with data 42 */
 	p_args = x_mkspair(p_base, X_OBJ_FLAG_NONE, NULL,
@@ -284,8 +284,8 @@ static char *test_type_make_type(void)
 	/* Build an empty handlers alist and create a type. */
 	p_handlers = NULL;
 
-	x_env_bind(p_base, x_eval_field_env(p_base), x_mksymbol(p_base, "name"), x_mkstr(p_base, "mytype"));
-	x_env_bind(p_base, x_eval_field_env(p_base), x_mksymbol(p_base, "handlers"), p_handlers);
+	x_env_bind(p_base, x_mksvector(p_base, 3, x_eval_field_env(p_base), x_mksymbol(p_base, "name"), x_mkstr(p_base, "mytype")));
+	x_env_bind(p_base, x_mksvector(p_base, 3, x_eval_field_env(p_base), x_mksymbol(p_base, "handlers"), p_handlers));
 
 	/* (make-type name handlers) */
 	p_args = x_mkspair(p_base, X_OBJ_FLAG_NONE, NULL,
@@ -300,7 +300,7 @@ static char *test_type_make_type(void)
 
 	/* Verify we can make-instance with it. */
 	p_name_handle = p_result;
-	x_env_bind(p_base, x_eval_field_env(p_base), x_mksymbol(p_base, "th"), p_name_handle);
+	x_env_bind(p_base, x_mksvector(p_base, 3, x_eval_field_env(p_base), x_mksymbol(p_base, "th"), p_name_handle));
 	p_args = x_mkspair(p_base, X_OBJ_FLAG_NONE, NULL,
 		x_mkspair(p_base, X_OBJ_FLAG_NONE,
 		x_mksymbol(p_base, "th"),
@@ -353,8 +353,8 @@ static char *test_type_make_type_with_handlers(void)
 		x_mkspair(p_base, X_OBJ_FLAG_NONE, x_mksymbol(p_base, "to"), p_fn),
 		NULL)))))))));
 
-	x_env_bind(p_base, x_eval_field_env(p_base), x_mksymbol(p_base, "name"), x_mkstr(p_base, "fulltype"));
-	x_env_bind(p_base, x_eval_field_env(p_base), x_mksymbol(p_base, "hdlrs"), p_handlers);
+	x_env_bind(p_base, x_mksvector(p_base, 3, x_eval_field_env(p_base), x_mksymbol(p_base, "name"), x_mkstr(p_base, "fulltype")));
+	x_env_bind(p_base, x_mksvector(p_base, 3, x_eval_field_env(p_base), x_mksymbol(p_base, "hdlrs"), p_handlers));
 
 	p_args = x_mkspair(p_base, X_OBJ_FLAG_NONE, NULL,
 		x_mkspair(p_base, X_OBJ_FLAG_NONE,
@@ -378,9 +378,9 @@ static char *test_type_base_make_type(void)
 	x_prim_register(p_base, NULL);
 
 	p_target = x_eval_make(p_base, NULL);
-	x_env_bind(p_base, x_eval_field_env(p_base), x_mksymbol(p_base, "tgt"), p_target);
-	x_env_bind(p_base, x_eval_field_env(p_base), x_mksymbol(p_base, "name"), x_mkstr(p_base, "tgttype"));
-	x_env_bind(p_base, x_eval_field_env(p_base), x_mksymbol(p_base, "hdlrs"), NULL);
+	x_env_bind(p_base, x_mksvector(p_base, 3, x_eval_field_env(p_base), x_mksymbol(p_base, "tgt"), p_target));
+	x_env_bind(p_base, x_mksvector(p_base, 3, x_eval_field_env(p_base), x_mksymbol(p_base, "name"), x_mkstr(p_base, "tgttype")));
+	x_env_bind(p_base, x_mksvector(p_base, 3, x_eval_field_env(p_base), x_mksymbol(p_base, "hdlrs"), NULL));
 
 	/* (base-make-type tgt name hdlrs) */
 	p_args = x_mkspair(p_base, X_OBJ_FLAG_NONE, NULL,
@@ -437,14 +437,14 @@ static char *test_type_base_eval(void)
 	p_target = x_eval_make(p_base, NULL);
 	x_prim_register(p_target, NULL);
 	p_sym = x_mksymbol(p_target, "xx");
-	x_env_bind(p_target, x_eval_field_env(p_target), p_sym, x_mksatom(p_target, X_OBJ_FLAG_NONE, (x_int_t)77));
+	x_env_bind(p_target, x_mksvector(p_target, 3, x_eval_field_env(p_target), p_sym, x_mksatom(p_target, X_OBJ_FLAG_NONE, (x_int_t)77)));
 
-	x_env_bind(p_base, x_eval_field_env(p_base), x_mksymbol(p_base, "tgt"), p_target);
+	x_env_bind(p_base, x_mksvector(p_base, 3, x_eval_field_env(p_base), x_mksymbol(p_base, "tgt"), p_target));
 
 	/* Pass the symbol xx as expression — it self-evaluates in calling base
 	 * (it's a symbol atom), then gets eval'd in target base.
 	 * Bind the symbol to expr in calling base so x_eval_arg resolves it. */
-	x_env_bind(p_base, x_eval_field_env(p_base), x_mksymbol(p_base, "expr"), p_sym);
+	x_env_bind(p_base, x_mksvector(p_base, 3, x_eval_field_env(p_base), x_mksymbol(p_base, "expr"), p_sym));
 
 	/* (base-eval tgt expr) -> evaluates xx in target -> 77 */
 	p_args = x_mkspair(p_base, X_OBJ_FLAG_NONE, NULL,
@@ -474,14 +474,14 @@ static char *test_type_base_eval_error(void)
 	p_target = x_eval_make(p_base, NULL);
 	x_prim_register(p_target, NULL);
 
-	x_env_bind(p_base, x_eval_field_env(p_base), x_mksymbol(p_base, "tgt"), p_target);
+	x_env_bind(p_base, x_mksvector(p_base, 3, x_eval_field_env(p_base), x_mksymbol(p_base, "tgt"), p_target));
 
 	/* Use an unbound symbol — evaluating it in target will trigger error.
 	 * Bind it in calling base so the first eval resolves it to the symbol. */
 	{
 		x_obj_t *p_unbound;
 		p_unbound = x_mksymbol(p_base, "____unbound____");
-		x_env_bind(p_base, x_eval_field_env(p_base), x_mksymbol(p_base, "expr"), p_unbound);
+		x_env_bind(p_base, x_mksvector(p_base, 3, x_eval_field_env(p_base), x_mksymbol(p_base, "expr"), p_unbound));
 	}
 
 	/* Set up error handler on parent base to catch re-signaled error */
@@ -520,9 +520,9 @@ static char *test_type_base_bind(void)
 	p_target = x_eval_make(p_base, NULL);
 	x_prim_register(p_target, NULL);
 
-	x_env_bind(p_base, x_eval_field_env(p_base), x_mksymbol(p_base, "tgt"), p_target);
-	x_env_bind(p_base, x_eval_field_env(p_base), x_mksymbol(p_base, "nm"), x_mksymbol(p_base, "hello"));
-	x_env_bind(p_base, x_eval_field_env(p_base), x_mksymbol(p_base, "val"), x_mksatom(p_base, X_OBJ_FLAG_NONE, (x_int_t)55));
+	x_env_bind(p_base, x_mksvector(p_base, 3, x_eval_field_env(p_base), x_mksymbol(p_base, "tgt"), p_target));
+	x_env_bind(p_base, x_mksvector(p_base, 3, x_eval_field_env(p_base), x_mksymbol(p_base, "nm"), x_mksymbol(p_base, "hello")));
+	x_env_bind(p_base, x_mksvector(p_base, 3, x_eval_field_env(p_base), x_mksymbol(p_base, "val"), x_mksatom(p_base, X_OBJ_FLAG_NONE, (x_int_t)55)));
 
 	/* (base-bind tgt nm val) — prepend NULL self */
 	p_args = x_mkspair(p_base, X_OBJ_FLAG_NONE, NULL,
@@ -552,7 +552,7 @@ static char *test_type_buffer_token(void)
 	x_lib_memcpy(x_bufferval(p_buffer), "hello", 5);
 	x_bufferread(p_buffer) = x_bufferval(p_buffer) + 5;
 
-	x_env_bind(p_base, x_eval_field_env(p_base), x_mksymbol(p_base, "buf"), p_buffer);
+	x_env_bind(p_base, x_mksvector(p_base, 3, x_eval_field_env(p_base), x_mksymbol(p_base, "buf"), p_buffer));
 
 	/* (buffer-token buf) */
 	p_args = x_mkspair(p_base, X_OBJ_FLAG_NONE, NULL,
@@ -580,11 +580,11 @@ static char *test_type_token_read_string(void)
 	/* Use make-base for a full base with all types and primitives */
 	p_token_base = x_prim_make_base(p_base, NULL);
 
-	x_env_bind(p_base, x_eval_field_env(p_base), x_mksymbol(p_base, "tb"), p_token_base);
-	x_env_bind(p_base, x_eval_field_env(p_base), x_mksymbol(p_base, "s"), x_mkstr(p_base, "hello"));
+	x_env_bind(p_base, x_mksvector(p_base, 3, x_eval_field_env(p_base), x_mksymbol(p_base, "tb"), p_token_base));
+	x_env_bind(p_base, x_mksvector(p_base, 3, x_eval_field_env(p_base), x_mksymbol(p_base, "s"), x_mkstr(p_base, "hello")));
 
-	x_env_bind(p_base, x_eval_field_env(p_base), x_mksymbol(p_base, "tb"), p_token_base);
-	x_env_bind(p_base, x_eval_field_env(p_base), x_mksymbol(p_base, "s"), x_mkstr(p_base, "hello"));
+	x_env_bind(p_base, x_mksvector(p_base, 3, x_eval_field_env(p_base), x_mksymbol(p_base, "tb"), p_token_base));
+	x_env_bind(p_base, x_mksvector(p_base, 3, x_eval_field_env(p_base), x_mksymbol(p_base, "s"), x_mkstr(p_base, "hello")));
 
 	/* (token-read-string tb s) — exercises the function and RO buffer path.
 	 * The result may be NULL if the string doesn't match registered types
@@ -617,8 +617,8 @@ static char *test_type_convert(void)
 	p_int = x_mkint(p_base, (x_int_t)42);
 	p_int_handle = x_type_field_name(x_obj_type(p_int));
 
-	x_env_bind(p_base, x_eval_field_env(p_base), x_mksymbol(p_base, "v"), p_int);
-	x_env_bind(p_base, x_eval_field_env(p_base), x_mksymbol(p_base, "h"), p_int_handle);
+	x_env_bind(p_base, x_mksvector(p_base, 3, x_eval_field_env(p_base), x_mksymbol(p_base, "v"), p_int));
+	x_env_bind(p_base, x_mksvector(p_base, 3, x_eval_field_env(p_base), x_mksymbol(p_base, "h"), p_int_handle));
 
 	/* (convert v h) -> v (same type, short-circuit) */
 	p_args = x_mkspair(p_base, X_OBJ_FLAG_NONE, NULL,
@@ -630,7 +630,7 @@ static char *test_type_convert(void)
 		p_result == p_int);
 
 	/* (convert nil h) -> nil */
-	x_env_bind(p_base, x_eval_field_env(p_base), x_mksymbol(p_base, "v"), NULL);
+	x_env_bind(p_base, x_mksvector(p_base, 3, x_eval_field_env(p_base), x_mksymbol(p_base, "v"), NULL));
 	p_args = x_mkspair(p_base, X_OBJ_FLAG_NONE, NULL,
 		x_mkspair(p_base, X_OBJ_FLAG_NONE,
 		x_mksymbol(p_base, "v"),
@@ -643,8 +643,8 @@ static char *test_type_convert(void)
 	{
 		x_obj_t *p_bogus;
 		p_bogus = x_mksatom(p_base, X_OBJ_FLAG_NONE, (x_int_t)0);
-		x_env_bind(p_base, x_eval_field_env(p_base), x_mksymbol(p_base, "v"), p_int);
-		x_env_bind(p_base, x_eval_field_env(p_base), x_mksymbol(p_base, "bh"), p_bogus);
+		x_env_bind(p_base, x_mksvector(p_base, 3, x_eval_field_env(p_base), x_mksymbol(p_base, "v"), p_int));
+		x_env_bind(p_base, x_mksvector(p_base, 3, x_eval_field_env(p_base), x_mksymbol(p_base, "bh"), p_bogus));
 		p_args = x_mkspair(p_base, X_OBJ_FLAG_NONE, NULL,
 		x_mkspair(p_base, X_OBJ_FLAG_NONE,
 			x_mksymbol(p_base, "v"),
@@ -707,8 +707,8 @@ static char *test_type_convert_from_exact(void)
 		x_mksatom(p_base, X_OBJ_FLAG_NONE, (x_int_t)42), NULL);
 
 	/* Bind to env */
-	x_env_bind(p_base, x_eval_field_env(p_base), x_mksymbol(p_base, "v"), p_instance);
-	x_env_bind(p_base, x_eval_field_env(p_base), x_mksymbol(p_base, "h"), p_tgt_handle);
+	x_env_bind(p_base, x_mksvector(p_base, 3, x_eval_field_env(p_base), x_mksymbol(p_base, "v"), p_instance));
+	x_env_bind(p_base, x_mksvector(p_base, 3, x_eval_field_env(p_base), x_mksymbol(p_base, "h"), p_tgt_handle));
 
 	/* (convert v h) -> from alist exact match */
 	p_args = x_mkspair(p_base, X_OBJ_FLAG_NONE, NULL,
@@ -762,8 +762,8 @@ static char *test_type_convert_wildcard(void)
 	p_instance = x_obj_make(p_base, p_src_type, 0, X_OBJ_LENGTH_PAIR,
 		x_mksatom(p_base, X_OBJ_FLAG_NONE, (x_int_t)99), NULL);
 
-	x_env_bind(p_base, x_eval_field_env(p_base), x_mksymbol(p_base, "v"), p_instance);
-	x_env_bind(p_base, x_eval_field_env(p_base), x_mksymbol(p_base, "h"), p_tgt_handle);
+	x_env_bind(p_base, x_mksvector(p_base, 3, x_eval_field_env(p_base), x_mksymbol(p_base, "v"), p_instance));
+	x_env_bind(p_base, x_mksvector(p_base, 3, x_eval_field_env(p_base), x_mksymbol(p_base, "h"), p_tgt_handle));
 
 	/* (convert v h) -> wildcard #t match in from alist */
 	p_args = x_mkspair(p_base, X_OBJ_FLAG_NONE, NULL,
@@ -819,8 +819,8 @@ static char *test_type_convert_to_alist(void)
 	p_instance = x_obj_make(p_base, p_src_type, 0, X_OBJ_LENGTH_PAIR,
 		x_mksatom(p_base, X_OBJ_FLAG_NONE, (x_int_t)77), NULL);
 
-	x_env_bind(p_base, x_eval_field_env(p_base), x_mksymbol(p_base, "v"), p_instance);
-	x_env_bind(p_base, x_eval_field_env(p_base), x_mksymbol(p_base, "h"), p_tgt_handle);
+	x_env_bind(p_base, x_mksvector(p_base, 3, x_eval_field_env(p_base), x_mksymbol(p_base, "v"), p_instance));
+	x_env_bind(p_base, x_mksvector(p_base, 3, x_eval_field_env(p_base), x_mksymbol(p_base, "h"), p_tgt_handle));
 
 	/* (convert v h) -> source's to alist match */
 	p_args = x_mkspair(p_base, X_OBJ_FLAG_NONE, NULL,
@@ -877,8 +877,8 @@ static char *test_type_convert_no_match(void)
 	p_instance = x_obj_make(p_base, p_src_type, 0, X_OBJ_LENGTH_PAIR,
 		x_mksatom(p_base, X_OBJ_FLAG_NONE, (x_int_t)11), NULL);
 
-	x_env_bind(p_base, x_eval_field_env(p_base), x_mksymbol(p_base, "v"), p_instance);
-	x_env_bind(p_base, x_eval_field_env(p_base), x_mksymbol(p_base, "h"), p_tgt_handle);
+	x_env_bind(p_base, x_mksvector(p_base, 3, x_eval_field_env(p_base), x_mksymbol(p_base, "v"), p_instance));
+	x_env_bind(p_base, x_mksvector(p_base, 3, x_eval_field_env(p_base), x_mksymbol(p_base, "h"), p_tgt_handle));
 
 	/* (convert v h) -> no from or to match, returns nil */
 	p_args = x_mkspair(p_base, X_OBJ_FLAG_NONE, NULL,
@@ -905,8 +905,8 @@ static char *test_type_token_read_string_tokens(void)
 
 	p_token_base = x_prim_make_base(p_base, NULL);
 
-	x_env_bind(p_base, x_eval_field_env(p_base), x_mksymbol(p_base, "tb"), p_token_base);
-	x_env_bind(p_base, x_eval_field_env(p_base), x_mksymbol(p_base, "s"), x_mkstr(p_base, "(1)(2)"));
+	x_env_bind(p_base, x_mksvector(p_base, 3, x_eval_field_env(p_base), x_mksymbol(p_base, "tb"), p_token_base));
+	x_env_bind(p_base, x_mksvector(p_base, 3, x_eval_field_env(p_base), x_mksymbol(p_base, "s"), x_mkstr(p_base, "(1)(2)")));
 
 	/* (token-read-string tb s) — "(1)(2)" produces two list tokens */
 	p_args = x_mkspair(p_base, X_OBJ_FLAG_NONE, NULL,
@@ -933,7 +933,7 @@ static char *test_type_make_instance_nil_type(void)
 
 	/* make-instance with bogus handle -> nil */
 	p_bogus = x_mksatom(p_base, X_OBJ_FLAG_NONE, (x_int_t)999);
-	x_env_bind(p_base, x_eval_field_env(p_base), x_mksymbol(p_base, "bh"), p_bogus);
+	x_env_bind(p_base, x_mksvector(p_base, 3, x_eval_field_env(p_base), x_mksymbol(p_base, "bh"), p_bogus));
 	p_args = x_mkspair(p_base, X_OBJ_FLAG_NONE, NULL,
 		x_mkspair(p_base, X_OBJ_FLAG_NONE,
 		x_mksymbol(p_base, "bh"),
@@ -972,12 +972,12 @@ static char *test_type_base_eval_error_no_parent(void)
 	p_target = x_eval_make(p_base, NULL);
 	x_prim_register(p_target, NULL);
 
-	x_env_bind(p_base, x_eval_field_env(p_base), x_mksymbol(p_base, "tgt"), p_target);
+	x_env_bind(p_base, x_mksvector(p_base, 3, x_eval_field_env(p_base), x_mksymbol(p_base, "tgt"), p_target));
 
 	{
 		x_obj_t *p_unbound;
 		p_unbound = x_mksymbol(p_base, "____unbound2____");
-		x_env_bind(p_base, x_eval_field_env(p_base), x_mksymbol(p_base, "expr"), p_unbound);
+		x_env_bind(p_base, x_mksvector(p_base, 3, x_eval_field_env(p_base), x_mksymbol(p_base, "expr"), p_unbound));
 	}
 
 	/* Install passthrough error hook on both bases */

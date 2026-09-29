@@ -11,6 +11,7 @@
  *      " "
  */
 #include "x-prim.h"
+#include "x-eval-slots.h"
 #include "x-eval.h"
 #include "x-env.h"
 #include "x-heap.h"
@@ -222,7 +223,13 @@ static x_obj_t *x_prim_guard(x_obj_t *p_base, x_obj_t *p_args)
 		 * holding the error variable, so the binding is the body's own
 		 * and a `def` there stays there. */
 		p_env = x_env_make(p_base, x_error_handler_saved_env(p_handler));
-		x_env_bind(p_base, p_env, p_var, p_err);
+		{
+			x_obj_t env_bind_args[x_vector_storage(3)] = x_vector_set(
+				x_base_vector_type(p_base), 3,
+				{ p_env }, { p_var }, { p_err });
+
+			x_base_call(p_base, X_SLOT_ENV_BIND, env_bind_args);
+		}
 		x_eval_field_env(p_base) = p_env;
 		p_result = x_eval_body(p_base, p_handler_body);
 		x_eval_field_env(p_base) = x_error_handler_saved_env(p_handler);

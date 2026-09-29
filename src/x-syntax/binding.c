@@ -49,7 +49,13 @@ static x_obj_t *x_prim_define(x_obj_t *p_base, x_obj_t *p_args)
 	p_val = x_eval_arg(p_base,
 		x_eval_spine_first(p_base, x_args_tail(p_base, p_args, 2)));
 
-	return x_env_bind(p_base, x_eval_field_env(p_base), p_name, p_val);
+	{
+		x_obj_t env_bind_args[x_vector_storage(3)] = x_vector_set(
+			x_base_vector_type(p_base), 3,
+			{ x_eval_field_env(p_base) }, { p_name }, { p_val });
+
+		return x_base_call(p_base, X_SLOT_ENV_BIND, env_bind_args);
+	}
 }
 
 /**

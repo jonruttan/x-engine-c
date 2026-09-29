@@ -12,6 +12,7 @@
  *      " "
  */
 #include "x-type/procedure.h"
+#include "x-eval-slots.h"
 #include "x-eval.h"
 #include "x-env.h"
 #include "x-tco.h"
@@ -220,9 +221,13 @@ x_obj_t *x_type_procedure_call(x_obj_t *p_base, x_obj_t *p_args)
 	p_evaled_args = (x_obj_t *)&sp;
 
 	/* The body runs in a child of the closure's environment. */
-	x_eval_field_env(p_base) = x_env_extend(
-		p_base, x_procenv(p_proc), x_procparams(p_proc),
-		p_evaled_args);
+	{
+		x_obj_t env_extend_args[x_vector_storage(3)] = x_vector_set(
+			x_base_vector_type(p_base), 3,
+			{ x_procenv(p_proc) }, { x_procparams(p_proc) }, { p_evaled_args });
+
+		x_eval_field_env(p_base) = x_base_call(p_base, X_SLOT_ENV_EXTEND, env_extend_args);
+	}
 
 	return x_eval_body_tco(p_base, x_procbody(p_proc));
 }
@@ -259,9 +264,13 @@ x_obj_t *x_type_procedure_apply(x_obj_t *p_base, x_obj_t *p_args)
 	{
 	x_spair_t sp = x_obj_set(NULL, X_OBJ_FLAG_NONE,
 		{ p_proc }, { x_restobj(p_args) });
-	x_eval_field_env(p_base) = x_env_extend(
-		p_base, x_procenv(p_proc), x_procparams(p_proc),
-		(x_obj_t *)&sp);
+	{
+		x_obj_t env_extend_args[x_vector_storage(3)] = x_vector_set(
+			x_base_vector_type(p_base), 3,
+			{ x_procenv(p_proc) }, { x_procparams(p_proc) }, { (x_obj_t *)&sp });
+
+		x_eval_field_env(p_base) = x_base_call(p_base, X_SLOT_ENV_EXTEND, env_extend_args);
+	}
 	}
 
 	p_result = x_eval_body(p_base, x_procbody(p_proc));

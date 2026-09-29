@@ -194,10 +194,7 @@ static char *test_load_keeps_the_includer_across_a_collect(void)
 	x_callable_bind(p_base, (x_char_t *)"heap-collect", x_prim_heap_collect);
 
 	p_sym = x_make_symbol(p_base, X_OBJ_FLAG_NONE, (x_char_t *)"includer-local");
-	p_frame = x_env_extend(p_base,
-		x_eval_field_env(p_base),
-		x_mklist(p_base, p_sym, NULL),
-		x_mklist(p_base, x_mkint(p_base, 7), NULL));
+	p_frame = x_env_extend(p_base, x_mksvector(p_base, 3, x_eval_field_env(p_base), x_mklist(p_base, p_sym, NULL), x_mklist(p_base, x_mkint(p_base, 7), NULL)));
 	x_eval_field_env(p_base) = p_frame;
 	p_binding = x_firstobj(x_env_bindings(p_frame));
 
@@ -293,10 +290,7 @@ static char *test_load_still_binds_top_level_defs_globally(void)
 	p_base = init(NULL, buffer);
 
 	p_sym = x_make_symbol(p_base, X_OBJ_FLAG_NONE, (x_char_t *)"includer-local");
-	p_frame = x_env_extend(p_base,
-		x_eval_field_env(p_base),
-		x_mklist(p_base, p_sym, NULL),
-		x_mklist(p_base, x_mkint(p_base, 7), NULL));
+	p_frame = x_env_extend(p_base, x_mksvector(p_base, 3, x_eval_field_env(p_base), x_mklist(p_base, p_sym, NULL), x_mklist(p_base, x_mkint(p_base, 7), NULL)));
 	x_eval_field_env(p_base) = p_frame;
 	x_tco_env_save(p_base);
 

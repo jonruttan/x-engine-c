@@ -344,7 +344,7 @@ static char *test_multiple_extend(void)
 	/* nil params: a fresh, empty child of env */
 	p_base = x_eval_make(NULL, NULL);
 	p_env = x_env_make(p_base, NULL);
-	p_result = x_env_extend(p_base, p_env, NULL, NULL);
+	p_result = x_env_extend(p_base, x_mksvector(p_base, 3, p_env, NULL, NULL));
 	_it_should("nil params makes an empty child of env",
 		p_result != p_env
 		&& x_env_parent(p_result) == p_env
@@ -356,7 +356,7 @@ static char *test_multiple_extend(void)
 	p_env = NULL;
 	p_params = x_mkspair(p_base, X_OBJ_FLAG_NONE, x_mksatom(p_base, X_OBJ_FLAG_NONE, 1), NULL);
 	p_vals = x_mkspair(p_base, X_OBJ_FLAG_NONE, x_mksatom(p_base, X_OBJ_FLAG_NONE, 10), NULL);
-	p_result = x_env_extend(p_base, p_env, p_params, p_vals);
+	p_result = x_env_extend(p_base, x_mksvector(p_base, 3, p_env, p_params, p_vals));
 	p_bindings = x_env_bindings(p_result);
 	_it_should("single binding: key is 1",
 		x_atomint(x_firstobj(x_firstobj(p_bindings))) == 1);
@@ -373,7 +373,7 @@ static char *test_multiple_extend(void)
 		x_mkspair(p_base, X_OBJ_FLAG_NONE, x_mksatom(p_base, X_OBJ_FLAG_NONE, 2), NULL));
 	p_vals = x_mkspair(p_base, X_OBJ_FLAG_NONE, x_mksatom(p_base, X_OBJ_FLAG_NONE, 10),
 		x_mkspair(p_base, X_OBJ_FLAG_NONE, x_mksatom(p_base, X_OBJ_FLAG_NONE, 20), NULL));
-	p_result = x_env_extend(p_base, p_env, p_params, p_vals);
+	p_result = x_env_extend(p_base, x_mksvector(p_base, 3, p_env, p_params, p_vals));
 	p_bindings = x_env_bindings(p_result);
 	_it_should("multi binding: first entry key is 2",
 		x_atomint(x_firstobj(x_firstobj(p_bindings))) == 2);
@@ -389,7 +389,7 @@ static char *test_multiple_extend(void)
 	p_params = x_mksymbol(p_base, (x_char_t *)"rest");
 	p_vals = x_mkspair(p_base, X_OBJ_FLAG_NONE, x_mksatom(p_base, X_OBJ_FLAG_NONE, 1),
 		x_mkspair(p_base, X_OBJ_FLAG_NONE, x_mksatom(p_base, X_OBJ_FLAG_NONE, 2), NULL));
-	p_result = x_env_extend(p_base, p_env, p_params, p_vals);
+	p_result = x_env_extend(p_base, x_mksvector(p_base, 3, p_env, p_params, p_vals));
 	p_bindings = x_env_bindings(p_result);
 	_it_should("variadic: val is entire list",
 		x_restobj(x_firstobj(p_bindings)) == p_vals);

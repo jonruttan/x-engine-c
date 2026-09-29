@@ -14,6 +14,7 @@
  * # Includes
  */
 #include "x-prim.h"
+#include "x-eval-slots.h"
 #include "x-syntax.h"
 #include "x-alist.h"
 #include "x-eval.h"
@@ -51,7 +52,13 @@ void x_callable_bind(x_obj_t *p_base, x_char_t *name, x_fn_t fn)
 	x_obj_t *p_sym = x_make_symbol(p_base, X_OBJ_FLAG_NONE, name),
 		*p_prim = x_mkprim(p_base, fn);
 
-	x_env_bind(p_base, x_eval_field_env_root(p_base), p_sym, p_prim);
+	{
+		x_obj_t env_bind_args[x_vector_storage(3)] = x_vector_set(
+			x_base_vector_type(p_base), 3,
+			{ x_eval_field_env_root(p_base) }, { p_sym }, { p_prim });
+
+		x_base_call(p_base, X_SLOT_ENV_BIND, env_bind_args);
+	}
 }
 
 /**
@@ -78,7 +85,13 @@ void x_value_bind(x_obj_t *p_base, x_char_t *name, x_obj_t *p_val)
 	p_sym = x_make_symbol(p_base, X_OBJ_FLAG_NONE, name);
 	x_heap_root_pop(p_cell);
 
-	x_env_bind(p_base, x_eval_field_env_root(p_base), p_sym, p_val);
+	{
+		x_obj_t env_bind_args[x_vector_storage(3)] = x_vector_set(
+			x_base_vector_type(p_base), 3,
+			{ x_eval_field_env_root(p_base) }, { p_sym }, { p_val });
+
+		x_base_call(p_base, X_SLOT_ENV_BIND, env_bind_args);
+	}
 }
 
 /**
