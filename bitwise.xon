@@ -5,7 +5,8 @@
 ; how it looks.  The generator reads it during discovery; drop the file and
 ; the owl goes plain.  Fields, all optional:
 ;
-;   (mascot "LABEL")          shown on the gallery card and in the readout
+;   (label "TEXT")            the line above this project's name on a banner
+;   (mascot "NAME")           shown on the gallery card and in the readout
 ;   (logo "COLOUR NAME")      printed where the hashed hue would be
 ;   (accent H S L)            replaces the hashed hue in the field and the eyes
 ;   (secondary H S L)         the colour for role b
@@ -15,6 +16,7 @@
 ;   (reference "LINE")        one line in this project's own language, on the banner
 
 (costume "x-engine-c"
+  (label "an x-lang engine")
   (logo "the C logo's blue")
   (accent 206 100 31)
   (rows "., .," "{O,O}" "(   )" " \" \"")
