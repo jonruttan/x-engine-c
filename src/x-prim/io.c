@@ -171,7 +171,13 @@ x_obj_t *x_prim_repl(x_obj_t *p_base, x_obj_t *p_args)
 			continue;
 		/* The freshly read form is this frame's only reference. */
 		x_firstobj((x_obj_t *)root) = p_exp;
-		x_eval_arg(p_base, p_exp);
+		{
+			x_obj_t eval_arg_args[x_vector_storage(1)] = x_vector_set(
+				x_base_vector_type(p_base), 1,
+				{ p_exp });
+
+			x_base_call_or(p_base, X_SLOT_EVAL_ARG, x_eval_arg, eval_arg_args);
+		}
 	}
 
 	x_heap_root_pop(p_cell);

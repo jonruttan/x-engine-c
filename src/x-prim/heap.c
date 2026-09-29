@@ -38,8 +38,13 @@ static void x_heap_run_hooks(x_obj_t *p_base, x_obj_t *p_hooks)
 	while ( ! x_obj_isnil(p_base, p_hooks)) {
 		x_firstobj((x_obj_t *)hook_args) = x_firstobj(p_hooks);
 		x_restobj((x_obj_t *)hook_args) = NULL;
-		x_eval_tco_trampoline(p_base,
-			x_base_call_or(p_base, X_SLOT_OBJ_PRIM_CALL, x_obj_prim_call, call_args));
+		{
+			x_obj_t eval_tco_trampoline_args[x_vector_storage(1)] = x_vector_set(
+				x_base_vector_type(p_base), 1,
+				{ x_base_call_or(p_base, X_SLOT_OBJ_PRIM_CALL, x_obj_prim_call, call_args) });
+
+			x_base_call_or(p_base, X_SLOT_EVAL_TCO_TRAMPOLINE, x_eval_tco_trampoline, eval_tco_trampoline_args);
+		}
 		p_hooks = x_restobj(p_hooks);
 	}
 }

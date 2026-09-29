@@ -95,100 +95,6 @@ x_obj_t *x_slot_heap_root_chain_mark(x_obj_t *p_base, x_obj_t *p_args)
 }
 
 /*
- * # The Evaluator
- */
-
-/**
- * Slot function for x_eval().
- *
- * @param p_base  x_obj_t* -- Base (execution context)
- * @param p_args  x_obj_t* -- Argument vector: (args)
- * @return x_obj_t* -- What x_eval() returns
- */
-x_obj_t *x_slot_eval(x_obj_t *p_base, x_obj_t *p_args)
-{
-	return x_eval(p_base, x_vectorobj(p_args, 0));
-}
-
-/**
- * Slot function for x_eval_arg().
- *
- * @param p_base  x_obj_t* -- Base (execution context)
- * @param p_args  x_obj_t* -- Argument vector: (arg)
- * @return x_obj_t* -- What x_eval_arg() returns
- */
-x_obj_t *x_slot_eval_arg(x_obj_t *p_base, x_obj_t *p_args)
-{
-	return x_eval_arg(p_base, x_vectorobj(p_args, 0));
-}
-
-/**
- * Slot function for x_eval_list().
- *
- * @param p_base  x_obj_t* -- Base (execution context)
- * @param p_args  x_obj_t* -- Argument vector: (args)
- * @return x_obj_t* -- What x_eval_list() returns
- */
-x_obj_t *x_slot_eval_list(x_obj_t *p_base, x_obj_t *p_args)
-{
-	return x_eval_list(p_base, x_vectorobj(p_args, 0));
-}
-
-/**
- * Slot function for x_eval_body().
- *
- * @param p_base  x_obj_t* -- Base (execution context)
- * @param p_args  x_obj_t* -- Argument vector: (body)
- * @return x_obj_t* -- What x_eval_body() returns
- */
-x_obj_t *x_slot_eval_body(x_obj_t *p_base, x_obj_t *p_args)
-{
-	return x_eval_body(p_base, x_vectorobj(p_args, 0));
-}
-
-/**
- * Slot function for x_eval_body_tco().
- *
- * @param p_base  x_obj_t* -- Base (execution context)
- * @param p_args  x_obj_t* -- Argument vector: (body)
- * @return x_obj_t* -- What x_eval_body_tco() returns
- */
-x_obj_t *x_slot_eval_body_tco(x_obj_t *p_base, x_obj_t *p_args)
-{
-	return x_eval_body_tco(p_base, x_vectorobj(p_args, 0));
-}
-
-/**
- * Slot function for x_eval_tco_trampoline().
- *
- * @param p_base  x_obj_t* -- Base (execution context)
- * @param p_args  x_obj_t* -- Argument vector: (result)
- * @return x_obj_t* -- What x_eval_tco_trampoline() returns
- */
-x_obj_t *x_slot_eval_tco_trampoline(x_obj_t *p_base, x_obj_t *p_args)
-{
-	return x_eval_tco_trampoline(p_base, x_vectorobj(p_args, 0));
-}
-
-/**
- * Slot function for x_eval_op_body().
- *
- * @param p_base  x_obj_t* -- Base (execution context)
- * @param p_args  x_obj_t* -- Argument vector: (body, caller)
- * @return x_obj_t* -- What x_eval_op_body() returns
- */
-x_obj_t *x_slot_eval_op_body(x_obj_t *p_base, x_obj_t *p_args)
-{
-	return x_eval_op_body(p_base,
-		x_vectorobj(p_args, 0),
-		x_vectorobj(p_args, 1));
-}
-
-/*
- * # Environments
- */
-
-/*
  * # The Table
  */
 
@@ -203,15 +109,7 @@ static const x_fn_t x_eval_slots[X_SLOT_LEN] = {
 	[X_SLOT_OBJ_FREE] = x_slot_obj_free,
 	[X_SLOT_HEAP_TREE_MARK] = x_slot_heap_tree_mark,
 	[X_SLOT_HEAP_SWEEP] = x_slot_heap_sweep,
-	[X_SLOT_HEAP_ROOT_CHAIN_MARK] = x_slot_heap_root_chain_mark,
-
-	[X_SLOT_EVAL] = x_slot_eval,
-	[X_SLOT_EVAL_ARG] = x_slot_eval_arg,
-	[X_SLOT_EVAL_LIST] = x_slot_eval_list,
-	[X_SLOT_EVAL_BODY] = x_slot_eval_body,
-	[X_SLOT_EVAL_BODY_TCO] = x_slot_eval_body_tco,
-	[X_SLOT_EVAL_TCO_TRAMPOLINE] = x_slot_eval_tco_trampoline,
-	[X_SLOT_EVAL_OP_BODY] = x_slot_eval_op_body
+	[X_SLOT_HEAP_ROOT_CHAIN_MARK] = x_slot_heap_root_chain_mark
 };
 
 /**

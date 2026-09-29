@@ -76,13 +76,16 @@ static void x_eval_reached(x_obj_t *p_obj)
  * evaluated in the caller's environment is IN that environment, so there is
  * nothing to decide about keeping or shedding a chain head.
  *
- * @param p_base    x_obj_t* -- Base (execution context)
- * @param p_body    x_obj_t* -- Operative body (sequence of forms)
- * @param p_caller  x_obj_t* -- The caller's environment, current on return
+ * @param p_base  x_obj_t* -- Base (execution context)
+ * @param p_args  x_obj_t* -- Argument vector: (body, caller). The body is
+ *                            the operative's sequence of forms; the caller
+ *                            is the caller's environment, current on return
  * @return x_obj_t* -- NULL (result delivered via the trampoline)
  */
-x_obj_t *x_eval_op_body(x_obj_t *p_base, x_obj_t *p_body, x_obj_t *p_caller)
+x_obj_t *x_eval_op_body(x_obj_t *p_base, x_obj_t *p_args)
 {
+	x_obj_t *p_body = x_vectorobj(p_args, 0),
+		*p_caller = x_vectorobj(p_args, 1);
 	x_obj_t **p_cell = x_heap_root_slot(p_base);
 	x_spair_t root = x_obj_set((x_obj_t *)x_type_pair_obj, X_OBJ_FLAG_NONE,
 		{ NULL }, { NULL });
@@ -115,7 +118,13 @@ x_obj_t *x_eval_op_body(x_obj_t *p_base, x_obj_t *p_body, x_obj_t *p_caller)
 		}
 
 		x_restobj((x_obj_t *)root) = p_body;
-		x_eval_arg(p_base, x_firstobj(p_body));
+		{
+			x_obj_t eval_arg_args[x_vector_storage(1)] = x_vector_set(
+				x_base_vector_type(p_base), 1,
+				{ x_firstobj(p_body) });
+
+			x_base_call_or(p_base, X_SLOT_EVAL_ARG, x_eval_arg, eval_arg_args);
+		}
 
 		p_body = x_restobj(p_body);
 	}
@@ -169,7 +178,10 @@ static void x_eval_tco_apply(x_obj_t *p_base, x_obj_t *p_save)
  * the saved TCO snapshot.
  *
  * @param p_base  x_obj_t* -- Base (execution context)
- * @param p_args  x_obj_t* -- (expression . env) pair
+ * @param p_vector  x_obj_t* -- Argument vector: (args). The args are the
+ *                              pair list the type's eval handler receives:
+ *                              its first element is a cell holding the
+ *                              expression
  * @return x_obj_t* -- Evaluated result, or NULL for nil
  *
  * @details **Outermost detection.**  The local @c trampolining flag starts
@@ -212,8 +224,9 @@ static void x_eval_tco_apply(x_obj_t *p_base, x_obj_t *p_save)
  * @see x_eval_body_tco      -- full TCO body evaluator (sets tco_expr + tco_env)
  * @see x_eval_tco_trampoline -- standalone trampoline used by closure call paths
  */
-x_obj_t *x_eval(x_obj_t *p_base, x_obj_t *p_args)
+x_obj_t *x_eval(x_obj_t *p_base, x_obj_t *p_vector)
 {
+	x_obj_t *p_args = x_vectorobj(p_vector, 0);
 	x_obj_t *p_exp;
 	x_obj_t *p_tco_env_save = NULL;   /* the outermost environment kept */
 	x_obj_t *p_te;                    /* tco_env fetched per trampoline pass */
@@ -334,19 +347,23 @@ eval_start:
 /**
  * Evaluate a single expression.
  *
- * Wraps @p p_arg in a stack-allocated (atom . nil) pair and passes it
- * through x_eval, which unwraps and evaluates the inner expression.
+ * Wraps the expression in a stack-allocated (atom . nil) pair and passes
+ * it through x_eval, which unwraps and evaluates the inner expression.
  *
  * @param p_base  x_obj_t* -- Base (execution context)
- * @param p_arg   x_obj_t* -- Expression to evaluate
+ * @param p_args  x_obj_t* -- Argument vector: (arg), the expression to
+ *                            evaluate
  * @return x_obj_t* -- Evaluation result
  */
-x_obj_t *x_eval_arg(x_obj_t *p_base, x_obj_t *p_arg)
+x_obj_t *x_eval_arg(x_obj_t *p_base, x_obj_t *p_args)
 {
-	x_satom_t wrap = x_obj_set(NULL, X_OBJ_FLAG_NONE, { p_arg });
+	x_satom_t wrap = x_obj_set(NULL, X_OBJ_FLAG_NONE, { x_vectorobj(p_args, 0) });
 	x_spair_t args = x_obj_set(NULL, X_OBJ_FLAG_NONE, { wrap }, { NULL });
+	x_obj_t eval_call_args[x_vector_storage(1)] = x_vector_set(
+		x_base_vector_type(p_base), 1,
+		{ (x_obj_t *)args });
 
-	return x_eval(p_base, (x_obj_t *)args);
+	return x_base_call_or(p_base, X_SLOT_EVAL, x_eval, eval_call_args);
 }
 
 /**
@@ -442,7 +459,8 @@ x_obj_t *x_eval_spine_first(x_obj_t *p_base, x_obj_t *p_pos)
  * arguments while evaluating the current one.
  *
  * @param p_base  x_obj_t* -- Base (execution context)
- * @param p_args  x_obj_t* -- List of unevaluated expressions
+ * @param p_vector  x_obj_t* -- Argument vector: (args), the list of
+ *                              unevaluated expressions
  * @return x_obj_t* -- New list of evaluated results, or NULL if empty
  *
  * @details **GC rooting protocol.**  Before evaluating the current
@@ -462,8 +480,9 @@ x_obj_t *x_eval_spine_first(x_obj_t *p_base, x_obj_t *p_pos)
  * @see x_eval_arg  -- evaluates a single expression
  * @see x_eval_body -- iterative body evaluator (same GC rooting pattern)
  */
-x_obj_t *x_eval_list(x_obj_t *p_base, x_obj_t *p_args)
+x_obj_t *x_eval_list(x_obj_t *p_base, x_obj_t *p_vector)
 {
+	x_obj_t *p_args = x_vectorobj(p_vector, 0);
 	x_obj_t *p_val, *p_rest;
 	x_obj_t **p_cell = x_heap_root_slot(p_base);
 	x_spair_t root = x_obj_set((x_obj_t *)x_type_pair_obj, X_OBJ_FLAG_NONE,
@@ -482,10 +501,22 @@ x_obj_t *x_eval_list(x_obj_t *p_base, x_obj_t *p_args)
 	x_firstobj((x_obj_t *)root) = p_args;
 	x_heap_root_push(p_cell, root);
 
-	p_val = x_eval_arg(p_base, x_firstobj(p_args));
+	{
+		x_obj_t eval_arg_args[x_vector_storage(1)] = x_vector_set(
+			x_base_vector_type(p_base), 1,
+			{ x_firstobj(p_args) });
+
+		p_val = x_base_call_or(p_base, X_SLOT_EVAL_ARG, x_eval_arg, eval_arg_args);
+	}
 	x_restobj((x_obj_t *)root) = p_val;
 
-	p_rest = x_eval_list(p_base, x_restobj(p_args));
+	{
+		x_obj_t eval_list_args[x_vector_storage(1)] = x_vector_set(
+			x_base_vector_type(p_base), 1,
+			{ x_restobj(p_args) });
+
+		p_rest = x_base_call_or(p_base, X_SLOT_EVAL_LIST, x_eval_list, eval_list_args);
+	}
 
 	x_heap_root_pop(p_cell);
 
@@ -499,14 +530,16 @@ x_obj_t *x_eval_list(x_obj_t *p_base, x_obj_t *p_args)
  * GC does not collect the remaining body. No tail-call optimization.
  *
  * @param p_base  x_obj_t* -- Base (execution context)
- * @param p_body  x_obj_t* -- List of body expressions
+ * @param p_args  x_obj_t* -- Argument vector: (body), the list of body
+ *                            expressions
  * @return x_obj_t* -- Result of the last expression, or NULL if empty
  *
  * @note When X_COV is defined, marks each body cell with X_OBJ_FLAG_COV;
  *       when X_PROFILE is, counts it (x_eval_reached).
  */
-x_obj_t *x_eval_body(x_obj_t *p_base, x_obj_t *p_body)
+x_obj_t *x_eval_body(x_obj_t *p_base, x_obj_t *p_args)
 {
+	x_obj_t *p_body = x_vectorobj(p_args, 0);
 	x_obj_t *p_result = NULL;
 	x_obj_t **p_cell = x_heap_root_slot(p_base);
 	x_spair_t root = x_obj_set((x_obj_t *)x_type_pair_obj, X_OBJ_FLAG_NONE,
@@ -526,7 +559,13 @@ x_obj_t *x_eval_body(x_obj_t *p_base, x_obj_t *p_body)
 #endif
 		x_firstobj((x_obj_t *)root) = p_body;
 
-		p_result = x_eval_arg(p_base, x_firstobj(p_body));
+		{
+			x_obj_t eval_arg_args[x_vector_storage(1)] = x_vector_set(
+				x_base_vector_type(p_base), 1,
+				{ x_firstobj(p_body) });
+
+			p_result = x_base_call_or(p_base, X_SLOT_EVAL_ARG, x_eval_arg, eval_arg_args);
+		}
 
 		p_body = x_restobj(p_body);
 	}
@@ -548,7 +587,8 @@ x_obj_t *x_eval_body(x_obj_t *p_base, x_obj_t *p_body)
  * the environment it held current again.
  *
  * @param p_base  x_obj_t* -- Base (execution context)
- * @param p_body  x_obj_t* -- List of body expressions
+ * @param p_args  x_obj_t* -- Argument vector: (body), the list of body
+ *                            expressions
  * @return x_obj_t* -- Result of non-tail expressions, or NULL when
  *                      tail expression is deferred to the trampoline
  *
@@ -577,8 +617,9 @@ x_obj_t *x_eval_body(x_obj_t *p_base, x_obj_t *p_body)
  * @see x_eval                  -- outermost trampoline that consumes tco_expr/tco_env
  * @see x_eval_tco_trampoline   -- standalone trampoline for closure call paths
  */
-x_obj_t *x_eval_body_tco(x_obj_t *p_base, x_obj_t *p_body)
+x_obj_t *x_eval_body_tco(x_obj_t *p_base, x_obj_t *p_args)
 {
+	x_obj_t *p_body = x_vectorobj(p_args, 0);
 	x_obj_t *p_result = NULL;
 	x_obj_t **p_cell = x_heap_root_slot(p_base);
 	x_spair_t root = x_obj_set((x_obj_t *)x_type_pair_obj, X_OBJ_FLAG_NONE,
@@ -626,7 +667,13 @@ x_obj_t *x_eval_body_tco(x_obj_t *p_base, x_obj_t *p_body)
 
 		x_firstobj((x_obj_t *)root) = p_body;
 
-		p_result = x_eval_arg(p_base, x_firstobj(p_body));
+		{
+			x_obj_t eval_arg_args[x_vector_storage(1)] = x_vector_set(
+				x_base_vector_type(p_base), 1,
+				{ x_firstobj(p_body) });
+
+			p_result = x_base_call_or(p_base, X_SLOT_EVAL_ARG, x_eval_arg, eval_arg_args);
+		}
 
 		p_body = x_restobj(p_body);
 	}
@@ -651,14 +698,16 @@ x_obj_t *x_eval_body_tco(x_obj_t *p_base, x_obj_t *p_body)
  *
  * On exit, makes the environment saved in tco-env current again.
  *
- * @param p_base   x_obj_t* -- Base (execution context)
- * @param p_result x_obj_t* -- Initial result (from non-tail evaluation)
+ * @param p_base  x_obj_t* -- Base (execution context)
+ * @param p_args  x_obj_t* -- Argument vector: (result), the initial result
+ *                            (from non-tail evaluation)
  * @return x_obj_t* -- Final evaluation result
  *
  * @see x_eval_body_tco
  */
-x_obj_t *x_eval_tco_trampoline(x_obj_t *p_base, x_obj_t *p_result)
+x_obj_t *x_eval_tco_trampoline(x_obj_t *p_base, x_obj_t *p_args)
 {
+	x_obj_t *p_result = x_vectorobj(p_args, 0);
 	x_obj_t *p_tco, *p_te, *p_tco_env = NULL;
 	/* Root for the kept environment (#243, mirrors x_eval): it is popped
 	 * off the save-stack and the tco-env field is cleared, so across the
@@ -681,7 +730,13 @@ x_obj_t *x_eval_tco_trampoline(x_obj_t *p_base, x_obj_t *p_result)
 
 		x_firstobj(x_eval_field_tco_expr(p_base)) = NULL;
 		x_firstobj(x_eval_field_tco_env(p_base)) = NULL;
-		p_result = x_eval_arg(p_base, p_tco);
+		{
+			x_obj_t eval_arg_args[x_vector_storage(1)] = x_vector_set(
+				x_base_vector_type(p_base), 1,
+				{ p_tco });
+
+			p_result = x_base_call_or(p_base, X_SLOT_EVAL_ARG, x_eval_arg, eval_arg_args);
+		}
 	}
 
 	x_eval_tco_apply(p_base, p_tco_env);
@@ -720,6 +775,14 @@ static const x_fn_t x_eval_hooks[X_SLOT_LEN] = {
 	[X_SLOT_ERROR] = x_eval_error,
 	[X_SLOT_HEAP_MARK] = x_type_heap_mark,
 	[X_SLOT_HEAP_FREE] = x_type_heap_free,
+
+	[X_SLOT_EVAL] = x_eval,
+	[X_SLOT_EVAL_ARG] = x_eval_arg,
+	[X_SLOT_EVAL_LIST] = x_eval_list,
+	[X_SLOT_EVAL_BODY] = x_eval_body,
+	[X_SLOT_EVAL_BODY_TCO] = x_eval_body_tco,
+	[X_SLOT_EVAL_TCO_TRAMPOLINE] = x_eval_tco_trampoline,
+	[X_SLOT_EVAL_OP_BODY] = x_eval_op_body,
 
 	[X_SLOT_CALLABLE_CALL] = x_callable_call,
 	[X_SLOT_CALLABLE_APPLY] = x_callable_apply,
@@ -1151,7 +1214,13 @@ x_obj_t *x_eval_load(x_obj_t *p_base, x_obj_t *p_args)
 		if (p_exp == (x_obj_t *)x_token_eof_prim) break;
 
 		x_firstobj((x_obj_t *)exp_wrap) = p_exp;
-		p_result = x_eval(p_base, (x_obj_t *)eval_args);
+		{
+			x_obj_t eval_call_args[x_vector_storage(1)] = x_vector_set(
+				x_base_vector_type(p_base), 1,
+				{ (x_obj_t *)eval_args });
+
+			p_result = x_base_call_or(p_base, X_SLOT_EVAL, x_eval, eval_call_args);
+		}
 	}
 
 	x_toplevel_leave(p_base, &top);

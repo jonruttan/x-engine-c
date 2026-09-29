@@ -231,5 +231,11 @@ x_obj_t *x_type_operative_call(x_obj_t *p_base, x_obj_t *p_args)
 	 * on op) no longer accumulates a frame per level.  x_eval_op_body sets
 	 * tco_expr and the caller's environment in tco_env; the trampoline
 	 * makes it current again after the tail. */
-	return x_eval_op_body(p_base, p_body, p_caller_env);
+	{
+		x_obj_t eval_op_body_args[x_vector_storage(2)] = x_vector_set(
+			x_base_vector_type(p_base), 2,
+			{ p_body }, { p_caller_env });
+
+		return x_base_call_or(p_base, X_SLOT_EVAL_OP_BODY, x_eval_op_body, eval_op_body_args);
+	}
 }

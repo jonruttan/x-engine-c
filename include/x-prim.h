@@ -117,7 +117,13 @@ static void __attribute__((unused)) x_eargs(x_obj_t *p_base, x_obj_t *p_args, in
 		 * path, exactly as it does for the C frames a longjmp cuts. */
 		x_eval_spine_guard(p_base, p_args);
 		if (slot != NULL) {
-			*slot = x_eval_arg(p_base, x_firstobj(p_args));
+			{
+				x_obj_t eval_arg_args[x_vector_storage(1)] = x_vector_set(
+					x_base_vector_type(p_base), 1,
+					{ x_firstobj(p_args) });
+
+				*slot = x_base_call_or(p_base, X_SLOT_EVAL_ARG, x_eval_arg, eval_arg_args);
+			}
 			if (held < 4) {
 				x_obj_data_i((x_obj_t *)roots[held >> 1], held & 1).p = *slot;
 				held++;

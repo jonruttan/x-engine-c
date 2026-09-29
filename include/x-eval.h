@@ -58,6 +58,7 @@
  */
 
 #include "x-base.h"
+#include "x-eval-slots.h"	/* the slots the evaluator's routines are called through */
 
 /** The interpreter object: the base object specialized into this project's
  *  execution context.  Serves as the type label for base/interp objects. */
@@ -209,7 +210,7 @@ x_obj_t *x_eval_error(x_obj_t *p_base, x_obj_t *p_args);
 x_obj_t *x_eval(x_obj_t *p_base, x_obj_t *p_args);
 
 /** Evaluate a single argument expression. */
-x_obj_t *x_eval_arg(x_obj_t *p_base, x_obj_t *p_arg);
+x_obj_t *x_eval_arg(x_obj_t *p_base, x_obj_t *p_args);
 
 /** @name Evaluation Entry Points
  * @{ */
@@ -224,18 +225,18 @@ void x_eval_spine_guard(x_obj_t *p_base, x_obj_t *p_obj);
 x_obj_t *x_eval_spine_first(x_obj_t *p_base, x_obj_t *p_pos);
 
 /** Evaluate a body (sequence of expressions), returning the last result. */
-x_obj_t *x_eval_body(x_obj_t *p_base, x_obj_t *p_body);
+x_obj_t *x_eval_body(x_obj_t *p_base, x_obj_t *p_args);
 
 /** Evaluate a body with TCO, setting up a trampoline for the tail call. */
-x_obj_t *x_eval_body_tco(x_obj_t *p_base, x_obj_t *p_body);
+x_obj_t *x_eval_body_tco(x_obj_t *p_base, x_obj_t *p_args);
 
 /** Execute the TCO trampoline loop until a non-TCO result is produced. */
-x_obj_t *x_eval_tco_trampoline(x_obj_t *p_base, x_obj_t *p_result);
+x_obj_t *x_eval_tco_trampoline(x_obj_t *p_base, x_obj_t *p_args);
 
 /** Defer an operative body's tail to the outer trampoline: evaluate the
  *  non-tail forms, then set tco_expr to the tail and tco_env to the
  *  caller's environment, which the trampoline restores after the tail. */
-x_obj_t *x_eval_op_body(x_obj_t *p_base, x_obj_t *p_body, x_obj_t *p_caller);
+x_obj_t *x_eval_op_body(x_obj_t *p_base, x_obj_t *p_args);
 
 /** @} */
 

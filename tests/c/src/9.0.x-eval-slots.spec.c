@@ -292,7 +292,7 @@ static char *test_slots_eval(void)
 	 * body routine is called as a procedure call calls it: with the
 	 * caller's environment saved. */
 	x_tco_env_save(p_base);
-	p_direct = x_eval_tco_trampoline(p_base, x_eval_body_tco(p_base, p_list));
+	p_direct = x_eval_tco_trampoline(p_base, x_mksvector(p_base, 1, x_eval_body_tco(p_base, x_mksvector(p_base, 1, p_list))));
 	x_tco_env_save(p_base);
 	x_vectorobj(args, 0) = p_list;
 	p_ret = SLOT(p_base, X_SLOT_EVAL_BODY_TCO, args);
@@ -607,8 +607,8 @@ static char *test_slots_replace(void)
 	);
 
 	_it_should("leave the other slots as they were",
-		x_slot_eval == x_base_slot(p_base, X_SLOT_EVAL)
-		&& x_slot_eval_list == x_base_slot(p_base, X_SLOT_EVAL_LIST)
+		x_eval == x_base_slot(p_base, X_SLOT_EVAL)
+		&& x_eval_list == x_base_slot(p_base, X_SLOT_EVAL_LIST)
 	);
 
 	x_base_slot(p_base, X_SLOT_EVAL_ARG) = was;
@@ -698,7 +698,7 @@ static char *test_slots_child_base(void)
 	x_base_slot(p_child, X_SLOT_EVAL_ARG) = _replaced_fn;
 
 	_it_should("leave the parent's slot as it was when a child's is replaced",
-		x_slot_eval_arg == x_base_slot(p_base, X_SLOT_EVAL_ARG)
+		x_eval_arg == x_base_slot(p_base, X_SLOT_EVAL_ARG)
 	);
 
 	test_cleanup(p_child);

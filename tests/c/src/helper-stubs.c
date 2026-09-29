@@ -34,12 +34,14 @@ x_obj_t *x_make_list(x_obj_t *p_base, x_obj_flag_t flags, void *p1, void *p2)
 #endif
 
 #ifdef STUB_X_EVAL
-x_obj_t *x_eval(x_obj_t *p_base, x_obj_t *p_obj) { return NULL; }
-x_obj_t *x_eval_arg(x_obj_t *p_base, x_obj_t *p_arg) { return p_arg; }
-x_obj_t *x_eval_list(x_obj_t *p_base, x_obj_t *p_args) { return p_args; }
-x_obj_t *x_eval_body(x_obj_t *p_base, x_obj_t *p_body) { return NULL; }
-x_obj_t *x_eval_body_tco(x_obj_t *p_base, x_obj_t *p_body) { return NULL; }
-x_obj_t *x_eval_tco_trampoline(x_obj_t *p_base, x_obj_t *p_result) { return p_result; }
+/* Each takes an argument vector, as the routine it stands for does. */
+x_obj_t *x_eval(x_obj_t *p_base, x_obj_t *p_args) { return NULL; }
+x_obj_t *x_eval_arg(x_obj_t *p_base, x_obj_t *p_args) { return x_vectorobj(p_args, 0); }
+x_obj_t *x_eval_list(x_obj_t *p_base, x_obj_t *p_args) { return x_vectorobj(p_args, 0); }
+x_obj_t *x_eval_body(x_obj_t *p_base, x_obj_t *p_args) { return NULL; }
+x_obj_t *x_eval_body_tco(x_obj_t *p_base, x_obj_t *p_args) { return NULL; }
+x_obj_t *x_eval_tco_trampoline(x_obj_t *p_base, x_obj_t *p_args) { return x_vectorobj(p_args, 0); }
+x_obj_t *x_eval_op_body(x_obj_t *p_base, x_obj_t *p_args) { return NULL; }
 #endif
 
 #ifdef STUB_X_BASE_ERROR

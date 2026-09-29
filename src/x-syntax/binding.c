@@ -46,8 +46,13 @@ static x_obj_t *x_prim_define(x_obj_t *p_base, x_obj_t *p_args)
 	x_obj_t *p_name, *p_val;
 
 	x_args(p_base, p_args, 2, NULL, &p_name);
-	p_val = x_eval_arg(p_base,
-		x_eval_spine_first(p_base, x_args_tail(p_base, p_args, 2)));
+	{
+		x_obj_t eval_arg_args[x_vector_storage(1)] = x_vector_set(
+			x_base_vector_type(p_base), 1,
+			{ x_eval_spine_first(p_base, x_args_tail(p_base, p_args, 2)) });
+
+		p_val = x_base_call_or(p_base, X_SLOT_EVAL_ARG, x_eval_arg, eval_arg_args);
+	}
 
 	{
 		x_obj_t env_bind_args[x_vector_storage(3)] = x_vector_set(
@@ -81,8 +86,13 @@ static x_obj_t *x_prim_set(x_obj_t *p_base, x_obj_t *p_args)
 	x_satom_t sym_name;
 
 	x_args(p_base, p_args, 2, NULL, &p_name);
-	p_val = x_eval_arg(p_base,
-		x_eval_spine_first(p_base, x_args_tail(p_base, p_args, 2)));
+	{
+		x_obj_t eval_arg_args[x_vector_storage(1)] = x_vector_set(
+			x_base_vector_type(p_base), 1,
+			{ x_eval_spine_first(p_base, x_args_tail(p_base, p_args, 2)) });
+
+		p_val = x_base_call_or(p_base, X_SLOT_EVAL_ARG, x_eval_arg, eval_arg_args);
+	}
 
 	x_vectorobj(lookup_args, 0) = x_eval_field_env(p_base);
 	x_vectorobj(lookup_args, 1) = p_name;

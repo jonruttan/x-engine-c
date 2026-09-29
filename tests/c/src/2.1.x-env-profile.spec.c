@@ -64,6 +64,20 @@ x_obj_t *x_token_analyse(x_obj_t *p_base, x_obj_t *p_args) { return NULL; }
 
 x_obj_t *x_token_delimit(x_obj_t *p_base, x_obj_t *p_args) { return NULL; }
 
+/* The slot table in x-eval.c names the evaluator's other routines, so they
+ * must link. No test here reaches them. */
+x_obj_t *x_eval_arg(x_obj_t *p_base, x_obj_t *p_args) { return NULL; }
+
+x_obj_t *x_eval_list(x_obj_t *p_base, x_obj_t *p_args) { return NULL; }
+
+x_obj_t *x_eval_body(x_obj_t *p_base, x_obj_t *p_args) { return NULL; }
+
+x_obj_t *x_eval_body_tco(x_obj_t *p_base, x_obj_t *p_args) { return NULL; }
+
+x_obj_t *x_eval_tco_trampoline(x_obj_t *p_base, x_obj_t *p_args) { return NULL; }
+
+x_obj_t *x_eval_op_body(x_obj_t *p_base, x_obj_t *p_args) { return NULL; }
+
 x_obj_t *x_eval(x_obj_t *p_base, x_obj_t *p_args) { return NULL; }
 
 

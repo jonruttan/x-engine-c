@@ -185,7 +185,7 @@ static char *test_core_def_set(void)
 	/* Lookup x -> 42 */
 	p_args = x_mkspair(p_base, X_OBJ_FLAG_NONE,
 		x_mksymbol(p_base, "x"), NULL);
-	p_result = x_eval_arg(p_base, x_mksymbol(p_base, "x"));
+	p_result = x_eval_arg(p_base, x_mksvector(p_base, 1, x_mksymbol(p_base, "x")));
 	_it_should("x resolves to 42",
 		x_atomint(p_result) == 42);
 
@@ -198,7 +198,7 @@ static char *test_core_def_set(void)
 		x_atomint(p_result) == 99);
 
 	/* x now resolves to 99 */
-	p_result = x_eval_arg(p_base, x_mksymbol(p_base, "x"));
+	p_result = x_eval_arg(p_base, x_mksvector(p_base, 1, x_mksymbol(p_base, "x")));
 	_it_should("x now resolves to 99",
 		x_atomint(p_result) == 99);
 
@@ -224,7 +224,7 @@ static char *test_core_env_root(void)
 	_it_should("a root binding is found in the root",
 		p_entry != NULL && x_atomint(x_restobj(p_entry)) == 1);
 	_it_should("a symbol resolves through the root",
-		x_atomint(x_eval_arg(p_base, p_a)) == 1);
+		x_atomint(x_eval_arg(p_base, x_mksvector(p_base, 1, p_a))) == 1);
 
 	x_env_bind(p_base, x_mksvector(p_base, 3, p_root, p_a, x_mksatom(p_base, X_OBJ_FLAG_NONE, (x_int_t)2)));
 	_it_should("rebinding in the root updates the same entry",

@@ -219,9 +219,14 @@ static x_obj_t *x_prim_buffer_make(x_obj_t *p_base, x_obj_t *p_args)
 	if ( ! x_obj_isnil(p_base, p_rest)) {
 		x_eval_spine_guard(p_base, p_rest);	/* dotted tail (#487) */
 	}
-	if ( ! x_obj_isnil(p_base, p_rest))
+	if ( ! x_obj_isnil(p_base, p_rest)) {
+		x_obj_t eval_arg_args[x_vector_storage(1)] = x_vector_set(
+			x_base_vector_type(p_base), 1,
+			{ x_firstobj(p_rest) });
+
 		flags = (x_obj_flag_t)x_intval(
-			x_eval_arg(p_base, x_firstobj(p_rest)));
+			x_base_call_or(p_base, X_SLOT_EVAL_ARG, x_eval_arg, eval_arg_args));
+	}
 
 	return x_make_buffer(p_base, flags, x_strval(p_str));
 }

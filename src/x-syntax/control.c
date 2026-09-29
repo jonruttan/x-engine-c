@@ -54,7 +54,13 @@ static x_obj_t *x_prim_match(x_obj_t *p_base, x_obj_t *p_args)
 		 * must not be read as a cell (#487). */
 		x_eval_spine_guard(p_base, p_args);
 		p_clause = x_firstobj(p_args);
-		p_test = x_eval_arg(p_base, x_firstobj(p_clause));
+		{
+			x_obj_t eval_arg_args[x_vector_storage(1)] = x_vector_set(
+				x_base_vector_type(p_base), 1,
+				{ x_firstobj(p_clause) });
+
+			p_test = x_base_call_or(p_base, X_SLOT_EVAL_ARG, x_eval_arg, eval_arg_args);
+		}
 
 		if ( ! x_obj_isnil(p_base, p_test)
 				&& p_test != x_firstobj(x_eval_field_false(p_base))) {
@@ -162,7 +168,13 @@ static x_obj_t *x_prim_guard(x_obj_t *p_base, x_obj_t *p_args)
 
 	if (setjmp(jmp) == 0) {
 		/* Normal execution: evaluate body. */
-		p_result = x_eval_body(p_base, p_body);
+		{
+			x_obj_t eval_body_args[x_vector_storage(1)] = x_vector_set(
+				x_base_vector_type(p_base), 1,
+				{ p_body });
+
+			p_result = x_base_call_or(p_base, X_SLOT_EVAL_BODY, x_eval_body, eval_body_args);
+		}
 	} else {
 		/* Error caught: restore save-stack to the guard point. */
 		p_err = x_error_handler_error(p_handler);
@@ -231,7 +243,13 @@ static x_obj_t *x_prim_guard(x_obj_t *p_base, x_obj_t *p_args)
 			x_base_call_or(p_base, X_SLOT_ENV_BIND, x_env_bind, env_bind_args);
 		}
 		x_eval_field_env(p_base) = p_env;
-		p_result = x_eval_body(p_base, p_handler_body);
+		{
+			x_obj_t eval_body_args[x_vector_storage(1)] = x_vector_set(
+				x_base_vector_type(p_base), 1,
+				{ p_handler_body });
+
+			p_result = x_base_call_or(p_base, X_SLOT_EVAL_BODY, x_eval_body, eval_body_args);
+		}
 		x_eval_field_env(p_base) = x_error_handler_saved_env(p_handler);
 	}
 
@@ -320,7 +338,11 @@ static x_obj_t *x_prim_error(x_obj_t *p_base, x_obj_t *p_args)
  */
 static x_obj_t *x_prim_seq(x_obj_t *p_base, x_obj_t *p_args)
 {
-	return x_eval_op_body(p_base, x_1(p_args), x_eval_field_env(p_base));
+	x_obj_t eval_op_body_args[x_vector_storage(2)] = x_vector_set(
+		x_base_vector_type(p_base), 2,
+		{ x_1(p_args) }, { x_eval_field_env(p_base) });
+
+	return x_base_call_or(p_base, X_SLOT_EVAL_OP_BODY, x_eval_op_body, eval_op_body_args);
 }
 
 /**

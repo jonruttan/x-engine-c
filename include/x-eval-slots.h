@@ -118,27 +118,6 @@ x_obj_t *x_slot_heap_sweep(x_obj_t *p_base, x_obj_t *p_args);
 /** Slot function for x_heap_root_chain_mark(). */
 x_obj_t *x_slot_heap_root_chain_mark(x_obj_t *p_base, x_obj_t *p_args);
 
-/** Slot function for x_eval(). */
-x_obj_t *x_slot_eval(x_obj_t *p_base, x_obj_t *p_args);
-
-/** Slot function for x_eval_arg(). */
-x_obj_t *x_slot_eval_arg(x_obj_t *p_base, x_obj_t *p_args);
-
-/** Slot function for x_eval_list(). */
-x_obj_t *x_slot_eval_list(x_obj_t *p_base, x_obj_t *p_args);
-
-/** Slot function for x_eval_body(). */
-x_obj_t *x_slot_eval_body(x_obj_t *p_base, x_obj_t *p_args);
-
-/** Slot function for x_eval_body_tco(). */
-x_obj_t *x_slot_eval_body_tco(x_obj_t *p_base, x_obj_t *p_args);
-
-/** Slot function for x_eval_tco_trampoline(). */
-x_obj_t *x_slot_eval_tco_trampoline(x_obj_t *p_base, x_obj_t *p_args);
-
-/** Slot function for x_eval_op_body(). */
-x_obj_t *x_slot_eval_op_body(x_obj_t *p_base, x_obj_t *p_args);
-
 /** @} */
 
 #endif /* X_EVAL_SLOTS_H */

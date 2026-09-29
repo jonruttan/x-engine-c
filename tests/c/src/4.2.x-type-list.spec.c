@@ -458,7 +458,7 @@ static char *test_type_list_eval(void)
 	p_args = x_mkspair(p_base, X_OBJ_FLAG_NONE, x_mkspair(p_base, X_OBJ_FLAG_NONE, p_list, NULL), NULL);
 	p_ret = x_type_list_eval(p_base, p_args);
 	_it_should("return the first argument", p_atom == p_ret);
-	p_ret = x_eval(p_base, p_args);
+	p_ret = x_eval(p_base, x_mksvector(p_base, 1, p_args));
 	_it_should("return the first argument", p_atom == p_ret);
 
 	test_cleanup(p_base);

@@ -193,8 +193,13 @@ x_obj_t *x_callable_apply(x_obj_t *p_base, x_obj_t *p_args)
 
 	/* Operative via apply: trampoline for TCO */
 	if (x_primval(p_fn) == (x_fn_t)x_type_operative_call) {
-		return x_eval_tco_trampoline(p_base,
-			x_type_operative_call(p_base, p_call));
+		{
+			x_obj_t eval_tco_trampoline_args[x_vector_storage(1)] = x_vector_set(
+				x_base_vector_type(p_base), 1,
+				{ x_type_operative_call(p_base, p_call) });
+
+			return x_base_call_or(p_base, X_SLOT_EVAL_TCO_TRAMPOLINE, x_eval_tco_trampoline, eval_tco_trampoline_args);
+		}
 	}
 
 	/* C prim: call through fn-ptr with (fn . args) */

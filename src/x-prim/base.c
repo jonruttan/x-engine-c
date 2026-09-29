@@ -263,7 +263,13 @@ static x_obj_t *x_prim_base_eval(x_obj_t *p_base, x_obj_t *p_args)
 		p_handler, x_eval_field_error_handler(p_target));
 
 	if (setjmp(jmp) == 0) {
-		p_result = x_eval_arg(p_target, p_expr);
+		{
+			x_obj_t eval_arg_args[x_vector_storage(1)] = x_vector_set(
+				x_base_vector_type(p_target), 1,
+				{ p_expr });
+
+			p_result = x_base_call_or(p_target, X_SLOT_EVAL_ARG, x_eval_arg, eval_arg_args);
+		}
 	} else {
 		p_err = x_error_handler_error(p_handler);
 

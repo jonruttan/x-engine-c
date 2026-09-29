@@ -157,7 +157,13 @@ x_obj_t *x_type_list_call(x_obj_t *p_base, x_obj_t *p_args)
 		return NULL;
 	}
 
-	arg1 = x_eval_arg(p_base, x_firstobj(vals));
+	{
+		x_obj_t eval_arg_args[x_vector_storage(1)] = x_vector_set(
+			x_base_vector_type(p_base), 1,
+			{ x_firstobj(vals) });
+
+		arg1 = x_base_call_or(p_base, X_SLOT_EVAL_ARG, x_eval_arg, eval_arg_args);
+	}
 	vals = x_restobj(vals);
 
 	if (! x_obj_isnil(p_base, vals)) {
@@ -166,7 +172,13 @@ x_obj_t *x_type_list_call(x_obj_t *p_base, x_obj_t *p_args)
 		p_result = NULL;
 		p_tail = NULL;
 
-		arg2 = x_eval_arg(p_base, x_firstobj(vals));
+		{
+			x_obj_t eval_arg_args[x_vector_storage(1)] = x_vector_set(
+				x_base_vector_type(p_base), 1,
+				{ x_firstobj(vals) });
+
+			arg2 = x_base_call_or(p_base, X_SLOT_EVAL_ARG, x_eval_arg, eval_arg_args);
+		}
 		len = x_atomint(arg2);
 
 		/* Walk to start position. */
@@ -251,7 +263,13 @@ x_obj_t *x_type_list_eval(x_obj_t *p_base, x_obj_t *p_args)
 	x_heap_root_push(p_cell, root);
 
 	/* Eval first to resolve operator (e.g. symbol -> prim). */
-	p_proc = x_eval(p_base, (x_obj_t *)eval_args);
+	{
+		x_obj_t eval_call_args[x_vector_storage(1)] = x_vector_set(
+			x_base_vector_type(p_base), 1,
+			{ (x_obj_t *)eval_args });
+
+		p_proc = x_base_call_or(p_base, X_SLOT_EVAL, x_eval, eval_call_args);
+	}
 
 	if (x_obj_isnil(p_base, p_proc)) {
 		x_heap_root_pop(p_cell);

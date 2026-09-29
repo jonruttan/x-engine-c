@@ -115,7 +115,13 @@ static x_obj_t *x_prim_sub(x_obj_t *p_base, x_obj_t *p_args)
 		return x_mkint(p_base, -x_intval(a));
 	}
 
-	b = x_eval_arg(p_base, x_eval_spine_first(p_base, x_args_tail(p_base, p_args, 2)));
+	{
+		x_obj_t eval_arg_args[x_vector_storage(1)] = x_vector_set(
+			x_base_vector_type(p_base), 1,
+			{ x_eval_spine_first(p_base, x_args_tail(p_base, p_args, 2)) });
+
+		b = x_base_call_or(p_base, X_SLOT_EVAL_ARG, x_eval_arg, eval_arg_args);
+	}
 	if (x_type_op_try(p_base, (x_char_t *)"-", a, b, &p_result))
 		return p_result;
 
