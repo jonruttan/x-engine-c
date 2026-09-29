@@ -11,6 +11,7 @@
  *      " "
  */
 #include "x-env.h"
+#include "x-eval-slots.h"
 #include "x-alist.h"
 #include "x-type/list.h"
 #include "x-type/symbol.h"
@@ -82,26 +83,31 @@ static x_obj_t *x_env_own_symbol(x_obj_t *p_base, x_obj_t *p_sym)
  * this one cell adds.
  *
  * @param p_base  x_obj_t* -- Base (execution context)
- * @param p_env   x_obj_t* -- The environment to start from
- * @param p_sym   x_obj_t* -- The symbol
+ * @param p_args  x_obj_t* -- Argument vector: (env, symbol) -- the
+ *                            environment to start from, and the symbol
  * @return x_obj_t* -- The @c (name . value) cell, or NULL when unbound
  */
-x_obj_t *x_env_lookup(x_obj_t *p_base, x_obj_t *p_env, x_obj_t *p_sym)
+x_obj_t *x_env_lookup(x_obj_t *p_base, x_obj_t *p_args)
 {
+	x_obj_t *p_env = x_slot_argobj(p_args, 0);
+	x_obj_t *p_sym = x_slot_argobj(p_args, 1);
 	x_obj_t *p_cell, *p_entry, *p_own;
+	x_obj_t tree_args[x_slot_args_units(2)] =
+		x_slot_args({ .p = NULL }, { .p = NULL });
 
 	for (; ! x_obj_isnil(p_base, p_env); p_env = x_env_parent(p_env)) {
 		if (x_env_isroot(p_base, p_env)) {
-			p_entry = x_alist_bst_lookup(p_base,
-				x_env_bindings(p_env), p_sym);
+			x_slot_argobj(tree_args, 0) = x_env_bindings(p_env);
+			x_slot_argobj(tree_args, 1) = p_sym;
+			p_entry = x_base_call(p_base, X_SLOT_ALIST_BST_LOOKUP, tree_args);
 			if ( ! x_obj_isnil(p_base, p_entry)) {
 				return p_entry;
 			}
 
 			p_own = x_env_own_symbol(p_base, p_sym);
 			if (p_own != NULL && p_own != p_sym) {
-				p_entry = x_alist_bst_lookup(p_base,
-					x_env_bindings(p_env), p_own);
+				x_slot_argobj(tree_args, 1) = p_own;
+				p_entry = x_base_call(p_base, X_SLOT_ALIST_BST_LOOKUP, tree_args);
 				if ( ! x_obj_isnil(p_base, p_entry)) {
 					return p_entry;
 				}
@@ -150,9 +156,12 @@ x_obj_t *x_env_bind(x_obj_t *p_base, x_obj_t *p_env,
 	x_obj_t *p_sym, x_obj_t *p_val)
 {
 	x_obj_t *p_cell, *p_pair;
+	x_obj_t tree_args[x_slot_args_units(2)] =
+		x_slot_args({ .p = NULL }, { .p = p_sym });
 
 	if (x_env_isroot(p_base, p_env)) {
-		p_cell = x_alist_bst_lookup(p_base, x_env_bindings(p_env), p_sym);
+		x_slot_argobj(tree_args, 0) = x_env_bindings(p_env);
+		p_cell = x_base_call(p_base, X_SLOT_ALIST_BST_LOOKUP, tree_args);
 		if ( ! x_obj_isnil(p_base, p_cell)) {
 			x_restobj(p_cell) = p_val;
 			return p_val;

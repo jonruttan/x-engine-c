@@ -12,6 +12,7 @@
  */
 
 #include "x-type/symbol.h"
+#include "x-eval-slots.h"
 #include "x-type/str.h"
 #include "x-alist.h"
 #include "x-eval.h"
@@ -294,6 +295,8 @@ x_obj_t *x_type_symbol_eval(x_obj_t *p_base, x_obj_t *p_args)
 {
 	x_obj_t *p_sym_obj = x_firstobj(x_eval_arg_exp(p_args));
 	x_obj_t *p_entry;
+	x_obj_t lookup_args[x_slot_args_units(2)] =
+		x_slot_args({ .p = NULL }, { .p = p_sym_obj });
 	/* Error-path name wrapper; filled only when the lookup misses. */
 	x_satom_t sym_name;
 
@@ -301,7 +304,8 @@ x_obj_t *x_type_symbol_eval(x_obj_t *p_base, x_obj_t *p_args)
 		return NULL;
 	}
 
-	p_entry = x_env_lookup(p_base, x_eval_field_env(p_base), p_sym_obj);
+	x_slot_argobj(lookup_args, 0) = x_eval_field_env(p_base);
+	p_entry = x_base_call(p_base, X_SLOT_ENV_LOOKUP, lookup_args);
 	if (p_entry != NULL) {
 		return x_restobj(p_entry);
 	}

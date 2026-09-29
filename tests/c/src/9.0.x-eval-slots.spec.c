@@ -58,6 +58,7 @@
 #include "src/x-prim/base.c"
 #include "src/x-prim/buffer.c"
 #include "src/x-prim/iter.c"
+#include "helper-calls.c"
 
 /* Stubs for primitives not under test. */
 x_obj_t *x_prim_core_register(x_obj_t *p_base, x_obj_t *p_args) { return p_base; }
@@ -214,14 +215,9 @@ static char *test_slots_make_and_install(void)
 		&& x_base_slot_isset(p_base, X_SLOT_HEAP_FREE)
 	);
 
-	for (set = 0, i = X_SLOT_OBJ_ALLOC; i < X_SLOT_LEN; i++) {
-		if (x_base_slot_isset(p_base, i)) {
-			set++;
-		}
-	}
-
-	_it_should("make a base with every other slot empty",
-		0 == set
+	_it_should("make a base with the routines that take an argument vector set",
+		x_env_lookup == x_base_slot(p_base, X_SLOT_ENV_LOOKUP)
+		&& x_alist_bst_lookup == x_base_slot(p_base, X_SLOT_ALIST_BST_LOOKUP)
 	);
 
 	_it_should("return the base from the install",
@@ -371,7 +367,7 @@ static char *test_slots_env(void)
 	_it_should("find the binding through the env-lookup slot",
 		p_cell != NULL
 		&& p_val == x_restobj(p_cell)
-		&& p_cell == x_env_lookup(p_base, p_env, p_sym)
+		&& p_cell == test_env_lookup(p_base, p_env, p_sym)
 	);
 
 	x_slot_argobj(args, 0) = x_env_bindings(p_env);
@@ -383,7 +379,7 @@ static char *test_slots_env(void)
 	x_slot_argobj(args, 1) = x_mklist(p_base, p_param, NULL);
 	x_slot_argobj(args, 2) = x_mklist(p_base, p_val, NULL);
 	p_child = SLOT(p_base, X_SLOT_ENV_EXTEND, args);
-	p_cell = x_env_lookup(p_base, p_child, p_param);
+	p_cell = test_env_lookup(p_base, p_child, p_param);
 	_it_should("make a child environment through the env-extend slot",
 		p_child != NULL
 		&& p_env == x_env_parent(p_child)

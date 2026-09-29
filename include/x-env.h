@@ -39,11 +39,11 @@
 /** Make an empty environment whose parent is @p p_parent (nil for a root). */
 x_obj_t *x_env_make(x_obj_t *p_base, x_obj_t *p_parent);
 
-/** The @c (name . value) cell binding @p p_sym in @p p_env or an ancestor,
- *  or NULL when no environment on the chain binds it.  Names are found by
- *  identity; a symbol interned in another base stands for this base's own
- *  symbol of its spelling. */
-x_obj_t *x_env_lookup(x_obj_t *p_base, x_obj_t *p_env, x_obj_t *p_sym);
+/** The @c (name . value) cell binding a symbol in an environment or an
+ *  ancestor, or NULL when no environment on the chain binds it.  Names are
+ *  found by identity; a symbol interned in another base stands for this
+ *  base's own symbol of its spelling.  Argument vector: (env, symbol). */
+x_obj_t *x_env_lookup(x_obj_t *p_base, x_obj_t *p_args);
 
 /** Bind @p p_sym to @p p_val in @p p_env itself: an existing binding there
  *  is updated in place, otherwise one is added.  Never touches a parent.

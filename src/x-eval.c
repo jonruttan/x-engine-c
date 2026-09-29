@@ -744,8 +744,9 @@ static x_obj_t *x_slot_type_heap_free(x_obj_t *p_base, x_obj_t *p_args)
 }
 
 /**
- * The hooks a base is made with, by position. The rest of the vector is
- * filled by x_eval_slots_install().
+ * What a base is made with, by position: the hooks, and the routines that
+ * take an argument vector themselves. The rest of the vector is filled by
+ * x_eval_slots_install().
  */
 static const x_fn_t x_eval_hooks[X_SLOT_LEN] = {
 	[X_SLOT_TYPE_NAME] = x_type_prim_type_name,
@@ -753,7 +754,10 @@ static const x_fn_t x_eval_hooks[X_SLOT_LEN] = {
 	[X_SLOT_LENGTH] = x_type_prim_length,
 	[X_SLOT_ERROR] = x_slot_eval_error,
 	[X_SLOT_HEAP_MARK] = x_slot_type_heap_mark,
-	[X_SLOT_HEAP_FREE] = x_slot_type_heap_free
+	[X_SLOT_HEAP_FREE] = x_slot_type_heap_free,
+
+	[X_SLOT_ENV_LOOKUP] = x_env_lookup,
+	[X_SLOT_ALIST_BST_LOOKUP] = x_alist_bst_lookup
 };
 
 /**

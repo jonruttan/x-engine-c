@@ -80,15 +80,16 @@ x_obj_t *x_alist_assoc(x_obj_t *p_base, x_obj_t *p_args)
  * Node structure: (entry . (left . right)).
  *
  * @param p_base  x_obj_t* -- Base (execution context)
- * @param p_tree  x_obj_t* -- BST root node, or NULL
- * @param p_sym   x_obj_t* -- Symbol to look up
+ * @param p_args  x_obj_t* -- Argument vector: (tree, symbol) -- the BST
+ *                            root node, or NULL, and the symbol to look up
  * @return x_obj_t* -- Matching alist entry, or NULL if not found
  *
  * @see x_alist_bst_insert
  */
-x_obj_t *x_alist_bst_lookup(x_obj_t *p_base, x_obj_t *p_tree,
-	x_obj_t *p_sym)
+x_obj_t *x_alist_bst_lookup(x_obj_t *p_base, x_obj_t *p_args)
 {
+	x_obj_t *p_tree = x_slot_argobj(p_args, 0);
+	x_obj_t *p_sym = x_slot_argobj(p_args, 1);
 	x_obj_t *p_entry, *p_children;
 	int cmp;
 

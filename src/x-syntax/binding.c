@@ -13,6 +13,7 @@
 #include "x-prim.h"
 #include "x-alist.h"
 #include "x-eval.h"
+#include "x-eval-slots.h"
 #include "x-env.h"
 #include "x-type/symbol.h"
 
@@ -68,6 +69,8 @@ static x_obj_t *x_prim_define(x_obj_t *p_base, x_obj_t *p_args)
 static x_obj_t *x_prim_set(x_obj_t *p_base, x_obj_t *p_args)
 {
 	x_obj_t *p_name, *p_val, *p_entry;
+	x_obj_t lookup_args[x_slot_args_units(2)] =
+		x_slot_args({ .p = NULL }, { .p = NULL });
 	/* Error-path name wrapper; filled only when the lookup misses. */
 	x_satom_t sym_name;
 
@@ -75,7 +78,9 @@ static x_obj_t *x_prim_set(x_obj_t *p_base, x_obj_t *p_args)
 	p_val = x_eval_arg(p_base,
 		x_eval_spine_first(p_base, x_args_tail(p_base, p_args, 2)));
 
-	p_entry = x_env_lookup(p_base, x_eval_field_env(p_base), p_name);
+	x_slot_argobj(lookup_args, 0) = x_eval_field_env(p_base);
+	x_slot_argobj(lookup_args, 1) = p_name;
+	p_entry = x_base_call(p_base, X_SLOT_ENV_LOOKUP, lookup_args);
 	if (p_entry != NULL) {
 		x_restobj(p_entry) = p_val;
 		return p_val;

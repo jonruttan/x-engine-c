@@ -155,20 +155,6 @@ x_obj_t *x_slot_obj_prim_call(x_obj_t *p_base, x_obj_t *p_args)
  */
 
 /**
- * Slot function for x_env_lookup().
- *
- * @param p_base  x_obj_t* -- Base (execution context)
- * @param p_args  x_obj_t* -- Argument vector: (env, symbol)
- * @return x_obj_t* -- What x_env_lookup() returns
- */
-x_obj_t *x_slot_env_lookup(x_obj_t *p_base, x_obj_t *p_args)
-{
-	return x_env_lookup(p_base,
-		x_slot_argobj(p_args, 0),
-		x_slot_argobj(p_args, 1));
-}
-
-/**
  * Slot function for x_env_bind().
  *
  * @param p_base  x_obj_t* -- Base (execution context)
@@ -196,20 +182,6 @@ x_obj_t *x_slot_env_extend(x_obj_t *p_base, x_obj_t *p_args)
 		x_slot_argobj(p_args, 0),
 		x_slot_argobj(p_args, 1),
 		x_slot_argobj(p_args, 2));
-}
-
-/**
- * Slot function for x_alist_bst_lookup().
- *
- * @param p_base  x_obj_t* -- Base (execution context)
- * @param p_args  x_obj_t* -- Argument vector: (tree, symbol)
- * @return x_obj_t* -- What x_alist_bst_lookup() returns
- */
-x_obj_t *x_slot_alist_bst_lookup(x_obj_t *p_base, x_obj_t *p_args)
-{
-	return x_alist_bst_lookup(p_base,
-		x_slot_argobj(p_args, 0),
-		x_slot_argobj(p_args, 1));
 }
 
 /*
@@ -283,10 +255,8 @@ static const x_fn_t x_eval_slots[X_SLOT_LEN] = {
 	[X_SLOT_CALLABLE_APPLY] = x_slot_callable_apply,
 	[X_SLOT_OBJ_PRIM_CALL] = x_slot_obj_prim_call,
 
-	[X_SLOT_ENV_LOOKUP] = x_slot_env_lookup,
 	[X_SLOT_ENV_BIND] = x_slot_env_bind,
 	[X_SLOT_ENV_EXTEND] = x_slot_env_extend,
-	[X_SLOT_ALIST_BST_LOOKUP] = x_slot_alist_bst_lookup,
 
 	[X_SLOT_TOKEN_READ] = x_slot_token_read,
 	[X_SLOT_TOKEN_ANALYSE] = x_slot_token_analyse,

@@ -96,6 +96,7 @@ x_obj_t *x_prim_callcc_register(x_obj_t *p_base, x_obj_t *p_args) { return p_bas
 x_obj_t *x_prim_syscall(x_obj_t *p_base, x_obj_t *p_args) { return NULL; }
 x_obj_t *x_prim_include(x_obj_t *p_base, x_obj_t *p_args) { return NULL; }
 #include "src/x-cli.c"
+#include "helper-calls.c"
 
 
 
@@ -307,7 +308,7 @@ static char *test_load_still_binds_top_level_defs_globally(void)
 		x_firstobj(x_firstobj(x_env_bindings(p_frame))) == p_sym
 		&& x_obj_isnil(p_base, x_restobj(x_env_bindings(p_frame))));
 
-	p_entry = x_env_lookup(p_base, x_eval_field_env_root(p_base),
+	p_entry = test_env_lookup(p_base, x_eval_field_env_root(p_base),
 		x_make_symbol(p_base, X_OBJ_FLAG_NONE, (x_char_t *)"loaded-global"));
 	_it_should("the loaded def is in the root",
 		p_entry != NULL

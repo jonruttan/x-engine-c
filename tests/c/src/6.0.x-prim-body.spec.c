@@ -53,6 +53,7 @@
 #include "ext/x-expr/src/x-heap.c"
 #include "src/x-token.c"
 #include "src/x-prim.c"
+#include "helper-calls.c"
 
 /* Stubs for primitives not under test. */
 x_obj_t *x_prim_core_register(x_obj_t *p_base, x_obj_t *p_args) { return p_base; }
@@ -410,7 +411,7 @@ static char *test_bind(void)
 	x_callable_bind(p_base, (x_char_t *)"test-fn", x_eval_body);
 	p_env = x_eval_field_env_root(p_base);
 	_it_should("bind fills the root", ! x_obj_isnil(p_base, x_env_bindings(p_env)));
-	p_entry = x_env_lookup(p_base, p_env, x_mksymbol(p_base, (x_char_t *)"test-fn"));
+	p_entry = test_env_lookup(p_base, p_env, x_mksymbol(p_base, (x_char_t *)"test-fn"));
 	_it_should("bind: the name is found in the root",
 		p_entry != NULL && x_obj_type_issymbol(p_base, x_firstobj(p_entry)));
 	_it_should("bind: val is prim",
