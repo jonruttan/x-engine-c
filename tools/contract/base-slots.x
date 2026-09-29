@@ -10,10 +10,13 @@
 ;      from the two headers and diffs, so a slot that moves fails the build
 ;      before anything runs
 ;
+; The slot vector is a vector: its first data unit holds its length, and slot
+; I is its element I, in data unit I + 1.
+;
 ; A slot function has the engine's one signature, (base args), and args is an
-; argument vector: an object whose data units are the routine's arguments, in
-; the order the third element of a row gives them.  An integer argument is a
-; plain word in its unit.
+; argument vector: a vector whose elements are the routine's arguments, in the
+; order the third element of a row gives them.  Each argument is an object; an
+; integer or a string travels in an atom.
 ;
 ; FORMAT (rigid, one entry per line -- the awk parses the same bytes):
 ;   (position name (argument...))

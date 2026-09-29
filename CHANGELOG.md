@@ -33,8 +33,17 @@ engine's at 11 to 27.
 - `x_eval_make` makes a base with the six hooks set. `x_eval_slots_install`
   fills the other 22, and the root base and both kinds of child base call
   it. Each base has a vector of its own.
-- Nothing in the engine calls a routine through its slot yet, the six hooks
-  apart. An empty slot means the engine's own routine.
+- The slot vector and an argument vector are vectors: the length in the
+  first data unit, the elements after it. The engine has a VECTOR type,
+  `x-type/vector`, registered with the others, and the registration gives
+  the base's slot vector the type. `x_mkvector` makes one from the objects
+  it is given.
+- A routine takes its arguments as an argument vector and is its own slot
+  function, and its callers call through the slot. So far these are
+  `x_env_lookup`, `x_alist_bst_lookup`, and the type-name, units and length
+  hooks `x_type_prim_type_name`, `x_type_prim_units` and
+  `x_type_prim_length`. The rest have a function in front of them until they
+  are converted.
 
 ## 0.2.17 — 2026-09-28
 

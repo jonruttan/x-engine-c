@@ -54,6 +54,7 @@
 #include "src/x-token.c"
 #include "src/x-prim.c"
 #include "src/x-prim/type.c"
+#include "src/x-type/vector.c"
 #include "src/x-eval-slots.c"
 #include "src/x-prim/base.c"
 #include "src/x-prim/buffer.c"
@@ -952,7 +953,8 @@ static x_obj_t *test_error_hook_type_passthrough(x_obj_t *p_base, x_obj_t *p_arg
 	 * Second call: intercept (parent base has no handler). */
 	if (test_error_hook_called_type == 0) {
 		test_error_hook_called_type = 1;
-		x_eval_error(p_base, x_slot_argstr(p_args, 0), x_slot_argobj(p_args, 1));
+		x_eval_error(p_base,
+			x_atomstr(x_vectorobj(p_args, 0)), x_vectorobj(p_args, 1));
 	} else {
 		test_error_hook_called_type = 2;
 	}

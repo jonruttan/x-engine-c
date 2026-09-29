@@ -21,6 +21,80 @@
 #include "x-type/prim.h"
 
 /*
+ * # Objects and the Heap
+ */
+
+/**
+ * Slot function for x_obj_alloc().
+ *
+ * @param p_base  x_obj_t* -- Base (execution context)
+ * @param p_args  x_obj_t* -- Argument vector: (type, flags, units)
+ * @return x_obj_t* -- What x_obj_alloc() returns
+ */
+x_obj_t *x_slot_obj_alloc(x_obj_t *p_base, x_obj_t *p_args)
+{
+	return x_obj_alloc(p_base,
+		x_vectorobj(p_args, 0),
+		(x_obj_flag_t)x_atomint(x_vectorobj(p_args, 1)),
+		(size_t)x_atomint(x_vectorobj(p_args, 2)));
+}
+
+/**
+ * Slot function for x_obj_free().
+ *
+ * @param p_base  x_obj_t* -- Base (execution context)
+ * @param p_args  x_obj_t* -- Argument vector: (object)
+ * @return x_obj_t* -- NULL
+ */
+x_obj_t *x_slot_obj_free(x_obj_t *p_base, x_obj_t *p_args)
+{
+	x_obj_free(p_base, x_vectorobj(p_args, 0));
+
+	return NULL;
+}
+
+/**
+ * Slot function for x_heap_tree_mark().
+ *
+ * @param p_base  x_obj_t* -- Base (execution context)
+ * @param p_args  x_obj_t* -- Argument vector: (object, flags)
+ * @return x_obj_t* -- What x_heap_tree_mark() returns
+ */
+x_obj_t *x_slot_heap_tree_mark(x_obj_t *p_base, x_obj_t *p_args)
+{
+	return x_heap_tree_mark(p_base,
+		x_vectorobj(p_args, 0),
+		(x_obj_flag_t)x_atomint(x_vectorobj(p_args, 1)));
+}
+
+/**
+ * Slot function for x_heap_sweep().
+ *
+ * @param p_base  x_obj_t* -- Base (execution context)
+ * @param p_args  x_obj_t* -- Argument vector: (object, flags)
+ * @return x_obj_t* -- What x_heap_sweep() returns
+ */
+x_obj_t *x_slot_heap_sweep(x_obj_t *p_base, x_obj_t *p_args)
+{
+	return x_heap_sweep(p_base,
+		x_vectorobj(p_args, 0),
+		(x_obj_flag_t)x_atomint(x_vectorobj(p_args, 1)));
+}
+
+/**
+ * Slot function for x_heap_root_chain_mark().
+ *
+ * @param p_base  x_obj_t* -- Base (execution context)
+ * @param p_args  x_obj_t* -- Argument vector: (flags)
+ * @return x_obj_t* -- NULL
+ */
+x_obj_t *x_slot_heap_root_chain_mark(x_obj_t *p_base, x_obj_t *p_args)
+{
+	return x_heap_root_chain_mark(p_base,
+		(x_obj_flag_t)x_atomint(x_vectorobj(p_args, 0)));
+}
+
+/*
  * # The Evaluator
  */
 
@@ -33,7 +107,7 @@
  */
 x_obj_t *x_slot_eval(x_obj_t *p_base, x_obj_t *p_args)
 {
-	return x_eval(p_base, x_slot_argobj(p_args, 0));
+	return x_eval(p_base, x_vectorobj(p_args, 0));
 }
 
 /**
@@ -45,7 +119,7 @@ x_obj_t *x_slot_eval(x_obj_t *p_base, x_obj_t *p_args)
  */
 x_obj_t *x_slot_eval_arg(x_obj_t *p_base, x_obj_t *p_args)
 {
-	return x_eval_arg(p_base, x_slot_argobj(p_args, 0));
+	return x_eval_arg(p_base, x_vectorobj(p_args, 0));
 }
 
 /**
@@ -57,7 +131,7 @@ x_obj_t *x_slot_eval_arg(x_obj_t *p_base, x_obj_t *p_args)
  */
 x_obj_t *x_slot_eval_list(x_obj_t *p_base, x_obj_t *p_args)
 {
-	return x_eval_list(p_base, x_slot_argobj(p_args, 0));
+	return x_eval_list(p_base, x_vectorobj(p_args, 0));
 }
 
 /**
@@ -69,7 +143,7 @@ x_obj_t *x_slot_eval_list(x_obj_t *p_base, x_obj_t *p_args)
  */
 x_obj_t *x_slot_eval_body(x_obj_t *p_base, x_obj_t *p_args)
 {
-	return x_eval_body(p_base, x_slot_argobj(p_args, 0));
+	return x_eval_body(p_base, x_vectorobj(p_args, 0));
 }
 
 /**
@@ -81,7 +155,7 @@ x_obj_t *x_slot_eval_body(x_obj_t *p_base, x_obj_t *p_args)
  */
 x_obj_t *x_slot_eval_body_tco(x_obj_t *p_base, x_obj_t *p_args)
 {
-	return x_eval_body_tco(p_base, x_slot_argobj(p_args, 0));
+	return x_eval_body_tco(p_base, x_vectorobj(p_args, 0));
 }
 
 /**
@@ -93,7 +167,7 @@ x_obj_t *x_slot_eval_body_tco(x_obj_t *p_base, x_obj_t *p_args)
  */
 x_obj_t *x_slot_eval_tco_trampoline(x_obj_t *p_base, x_obj_t *p_args)
 {
-	return x_eval_tco_trampoline(p_base, x_slot_argobj(p_args, 0));
+	return x_eval_tco_trampoline(p_base, x_vectorobj(p_args, 0));
 }
 
 /**
@@ -106,8 +180,8 @@ x_obj_t *x_slot_eval_tco_trampoline(x_obj_t *p_base, x_obj_t *p_args)
 x_obj_t *x_slot_eval_op_body(x_obj_t *p_base, x_obj_t *p_args)
 {
 	return x_eval_op_body(p_base,
-		x_slot_argobj(p_args, 0),
-		x_slot_argobj(p_args, 1));
+		x_vectorobj(p_args, 0),
+		x_vectorobj(p_args, 1));
 }
 
 /*
@@ -123,7 +197,7 @@ x_obj_t *x_slot_eval_op_body(x_obj_t *p_base, x_obj_t *p_args)
  */
 x_obj_t *x_slot_callable_call(x_obj_t *p_base, x_obj_t *p_args)
 {
-	return x_callable_call(p_base, x_slot_argobj(p_args, 0));
+	return x_callable_call(p_base, x_vectorobj(p_args, 0));
 }
 
 /**
@@ -135,7 +209,7 @@ x_obj_t *x_slot_callable_call(x_obj_t *p_base, x_obj_t *p_args)
  */
 x_obj_t *x_slot_callable_apply(x_obj_t *p_base, x_obj_t *p_args)
 {
-	return x_callable_apply(p_base, x_slot_argobj(p_args, 0));
+	return x_callable_apply(p_base, x_vectorobj(p_args, 0));
 }
 
 /**
@@ -147,7 +221,7 @@ x_obj_t *x_slot_callable_apply(x_obj_t *p_base, x_obj_t *p_args)
  */
 x_obj_t *x_slot_obj_prim_call(x_obj_t *p_base, x_obj_t *p_args)
 {
-	return x_obj_prim_call(p_base, x_slot_argobj(p_args, 0));
+	return x_obj_prim_call(p_base, x_vectorobj(p_args, 0));
 }
 
 /*
@@ -164,9 +238,9 @@ x_obj_t *x_slot_obj_prim_call(x_obj_t *p_base, x_obj_t *p_args)
 x_obj_t *x_slot_env_bind(x_obj_t *p_base, x_obj_t *p_args)
 {
 	return x_env_bind(p_base,
-		x_slot_argobj(p_args, 0),
-		x_slot_argobj(p_args, 1),
-		x_slot_argobj(p_args, 2));
+		x_vectorobj(p_args, 0),
+		x_vectorobj(p_args, 1),
+		x_vectorobj(p_args, 2));
 }
 
 /**
@@ -179,9 +253,9 @@ x_obj_t *x_slot_env_bind(x_obj_t *p_base, x_obj_t *p_args)
 x_obj_t *x_slot_env_extend(x_obj_t *p_base, x_obj_t *p_args)
 {
 	return x_env_extend(p_base,
-		x_slot_argobj(p_args, 0),
-		x_slot_argobj(p_args, 1),
-		x_slot_argobj(p_args, 2));
+		x_vectorobj(p_args, 0),
+		x_vectorobj(p_args, 1),
+		x_vectorobj(p_args, 2));
 }
 
 /*
@@ -197,7 +271,7 @@ x_obj_t *x_slot_env_extend(x_obj_t *p_base, x_obj_t *p_args)
  */
 x_obj_t *x_slot_token_read(x_obj_t *p_base, x_obj_t *p_args)
 {
-	return x_token_read(p_base, x_slot_argobj(p_args, 0));
+	return x_token_read(p_base, x_vectorobj(p_args, 0));
 }
 
 /**
@@ -210,8 +284,8 @@ x_obj_t *x_slot_token_read(x_obj_t *p_base, x_obj_t *p_args)
 x_obj_t *x_slot_token_analyse(x_obj_t *p_base, x_obj_t *p_args)
 {
 	return x_token_analyse(p_base,
-		x_slot_argobj(p_args, 0),
-		(x_int_t *)x_ptr(x_slot_arg(p_args, 1)));
+		x_vectorobj(p_args, 0),
+		(x_int_t *)x_atomptr(x_vectorobj(p_args, 1)));
 }
 
 /**
@@ -223,7 +297,7 @@ x_obj_t *x_slot_token_analyse(x_obj_t *p_base, x_obj_t *p_args)
  */
 x_obj_t *x_slot_token_delimit(x_obj_t *p_base, x_obj_t *p_args)
 {
-	return x_token_delimit(p_base, x_slot_argobj(p_args, 0));
+	return x_token_delimit(p_base, x_vectorobj(p_args, 0));
 }
 
 /*

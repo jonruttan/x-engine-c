@@ -58,7 +58,6 @@
 #include "src/x-syntax/closure.c"
 #include "src/x-syntax/control.c"
 #include "src/x-syntax/quote.c"
-#include "helper-calls.c"
 
 /* Stubs for primitives not under test. */
 x_obj_t *x_prim_arith_register(x_obj_t *p_base, x_obj_t *p_args) { return p_base; }
@@ -222,7 +221,7 @@ static char *test_core_env_root(void)
 
 	x_env_bind(p_base, p_root, p_a,
 		x_mksatom(p_base, X_OBJ_FLAG_NONE, (x_int_t)1));
-	p_entry = test_env_lookup(p_base, p_root, p_a);
+	p_entry = x_env_lookup(p_base, x_mksvector(p_base, 2, p_root, p_a));
 	_it_should("a root binding is found in the root",
 		p_entry != NULL && x_atomint(x_restobj(p_entry)) == 1);
 	_it_should("a symbol resolves through the root",
@@ -231,22 +230,22 @@ static char *test_core_env_root(void)
 	x_env_bind(p_base, p_root, p_a,
 		x_mksatom(p_base, X_OBJ_FLAG_NONE, (x_int_t)2));
 	_it_should("rebinding in the root updates the same entry",
-		test_env_lookup(p_base, p_root, p_a) == p_entry
+		x_env_lookup(p_base, x_mksvector(p_base, 2, p_root, p_a)) == p_entry
 		&& x_atomint(x_restobj(p_entry)) == 2);
 
 	p_child = x_env_make(p_base, p_root);
 	x_env_bind(p_base, p_child, p_b,
 		x_mksatom(p_base, X_OBJ_FLAG_NONE, (x_int_t)3));
 	_it_should("a child reaches the root's binding",
-		x_atomint(x_restobj(test_env_lookup(p_base, p_child, p_a))) == 2);
+		x_atomint(x_restobj(x_env_lookup(p_base, x_mksvector(p_base, 2, p_child, p_a)))) == 2);
 	_it_should("the root does not see the child's binding",
-		test_env_lookup(p_base, p_root, p_b) == NULL);
+		x_env_lookup(p_base, x_mksvector(p_base, 2, p_root, p_b)) == NULL);
 
 	x_env_bind(p_base, p_child, p_a,
 		x_mksatom(p_base, X_OBJ_FLAG_NONE, (x_int_t)4));
 	_it_should("a child's binding shadows the root's without touching it",
-		x_atomint(x_restobj(test_env_lookup(p_base, p_child, p_a))) == 4
-		&& x_atomint(x_restobj(test_env_lookup(p_base, p_root, p_a))) == 2);
+		x_atomint(x_restobj(x_env_lookup(p_base, x_mksvector(p_base, 2, p_child, p_a)))) == 4
+		&& x_atomint(x_restobj(x_env_lookup(p_base, x_mksvector(p_base, 2, p_root, p_a)))) == 2);
 
 	/* A def evaluated with the child current binds in the child. */
 	x_eval_field_env(p_base) = p_child;
@@ -256,8 +255,8 @@ static char *test_core_env_root(void)
 			x_mksatom(p_base, X_OBJ_FLAG_NONE, (x_int_t)5), NULL))));
 	x_eval_field_env(p_base) = p_root;
 	_it_should("a def binds in the current environment, not the root",
-		test_env_lookup(p_base, p_child, x_mksymbol(p_base, "root-c")) != NULL
-		&& test_env_lookup(p_base, p_root, x_mksymbol(p_base, "root-c")) == NULL);
+		x_env_lookup(p_base, x_mksvector(p_base, 2, p_child, x_mksymbol(p_base, "root-c"))) != NULL
+		&& x_env_lookup(p_base, x_mksvector(p_base, 2, p_root, x_mksymbol(p_base, "root-c"))) == NULL);
 
 	test_cleanup(p_base);
 	return NULL;
@@ -289,30 +288,30 @@ static char *test_core_env_root_identity(void)
 	/* The host binds into the child under the host's symbol. */
 	x_env_bind(p_base, p_root, p_foreign,
 		x_mksatom(p_base, X_OBJ_FLAG_NONE, (x_int_t)1));
-	p_entry_foreign = test_env_lookup(p_base, p_root, p_foreign);
+	p_entry_foreign = x_env_lookup(p_base, x_mksvector(p_base, 2, p_root, p_foreign));
 	_it_should("the host's symbol finds what it bound",
 		p_entry_foreign != NULL && x_atomint(x_restobj(p_entry_foreign)) == 1);
 	_it_should("the base's own symbol does not find the host-bound name",
-		test_env_lookup(p_base, p_root, p_own) == NULL);
+		x_env_lookup(p_base, x_mksvector(p_base, 2, p_root, p_own)) == NULL);
 
 	/* The base binds under its own symbol: a second node beside the first. */
 	x_env_bind(p_base, p_root, p_own,
 		x_mksatom(p_base, X_OBJ_FLAG_NONE, (x_int_t)2));
-	p_entry_own = test_env_lookup(p_base, p_root, p_own);
+	p_entry_own = x_env_lookup(p_base, x_mksvector(p_base, 2, p_root, p_own));
 	_it_should("the own symbol gets its own binding beside the foreign one",
 		p_entry_own != NULL && p_entry_own != p_entry_foreign
 		&& x_atomint(x_restobj(p_entry_own)) == 2
-		&& test_env_lookup(p_base, p_root, p_foreign) == p_entry_foreign);
+		&& x_env_lookup(p_base, x_mksvector(p_base, 2, p_root, p_foreign)) == p_entry_foreign);
 	_it_should("a symbol from a third base stands for the base's own",
-		test_env_lookup(p_base, p_root, p_other) == p_entry_own);
+		x_env_lookup(p_base, x_mksvector(p_base, 2, p_root, p_other)) == p_entry_own);
 	_it_should("a symbol the base has no spelling for is unbound",
-		test_env_lookup(p_base, p_root, x_mksymbol(p_host, "elsewhere")) == NULL);
+		x_env_lookup(p_base, x_mksvector(p_base, 2, p_root, x_mksymbol(p_host, "elsewhere"))) == NULL);
 
 	x_env_bind(p_base, p_root, p_own,
 		x_mksatom(p_base, X_OBJ_FLAG_NONE, (x_int_t)3));
 	_it_should("rebinding the own symbol updates its node only",
-		x_atomint(x_restobj(test_env_lookup(p_base, p_root, p_own))) == 3
-		&& x_atomint(x_restobj(test_env_lookup(p_base, p_root, p_foreign))) == 1);
+		x_atomint(x_restobj(x_env_lookup(p_base, x_mksvector(p_base, 2, p_root, p_own)))) == 3
+		&& x_atomint(x_restobj(x_env_lookup(p_base, x_mksvector(p_base, 2, p_root, p_foreign)))) == 1);
 
 	test_cleanup(p_third);
 	test_cleanup(p_host);

@@ -54,11 +54,11 @@
 #include "src/x-token.c"
 #include "src/x-prim.c"
 #include "src/x-prim/type.c"
+#include "src/x-type/vector.c"
 #include "src/x-eval-slots.c"
 #include "src/x-prim/base.c"
 #include "src/x-prim/buffer.c"
 #include "src/x-prim/iter.c"
-#include "helper-calls.c"
 
 /* Stubs for primitives not under test. */
 x_obj_t *x_prim_core_register(x_obj_t *p_base, x_obj_t *p_args) { return p_base; }
@@ -230,6 +230,10 @@ static char *test_slots_make_and_install(void)
 		}
 	}
 
+	_it_should("make the slot vector a vector of the engine's length",
+		X_SLOT_LEN == x_vectorlength(x_base_slots(p_base))
+	);
+
 	_it_should("fill every slot at the install",
 		X_SLOT_LEN == set
 	);
@@ -249,25 +253,26 @@ static char *test_slots_eval(void)
 	x_obj_t *p_base, *p_int, *p_list, *p_ret, *p_direct;
 	x_satom_t wrap = x_obj_set(NULL, X_OBJ_FLAG_NONE, { NULL });
 	x_spair_t eval_args = x_obj_set(NULL, X_OBJ_FLAG_NONE, { wrap }, { NULL });
-	x_obj_t args[x_slot_args_units(2)] = x_slot_args({ .p = NULL }, { .p = NULL });
+	x_obj_t args[x_vector_storage(2)] =
+		x_vector_set(NULL, 2, { NULL }, { NULL });
 
 	p_base = test_make_base();
 	p_int = x_mkint(p_base, (x_int_t)42);
 
 	/* x_eval takes the wrapped expression x_eval_arg builds. */
 	x_firstobj((x_obj_t *)wrap) = p_int;
-	x_slot_argobj(args, 0) = (x_obj_t *)eval_args;
+	x_vectorobj(args, 0) = (x_obj_t *)eval_args;
 	_it_should("evaluate through the eval slot",
 		p_int == SLOT(p_base, X_SLOT_EVAL, args)
 	);
 
-	x_slot_argobj(args, 0) = p_int;
+	x_vectorobj(args, 0) = p_int;
 	_it_should("evaluate through the eval-arg slot",
 		p_int == SLOT(p_base, X_SLOT_EVAL_ARG, args)
 	);
 
 	p_list = x_mklist(p_base, p_int, x_mklist(p_base, p_int, NULL));
-	x_slot_argobj(args, 0) = p_list;
+	x_vectorobj(args, 0) = p_list;
 	p_ret = SLOT(p_base, X_SLOT_EVAL_LIST, args);
 	_it_should("evaluate a list through the eval-list slot",
 		p_ret != NULL
@@ -276,7 +281,7 @@ static char *test_slots_eval(void)
 		&& NULL == x_restobj(x_restobj(p_ret))
 	);
 
-	x_slot_argobj(args, 0) = p_list;
+	x_vectorobj(args, 0) = p_list;
 	_it_should("evaluate a body through the eval-body slot",
 		p_int == SLOT(p_base, X_SLOT_EVAL_BODY, args)
 	);
@@ -287,9 +292,9 @@ static char *test_slots_eval(void)
 	x_tco_env_save(p_base);
 	p_direct = x_eval_tco_trampoline(p_base, x_eval_body_tco(p_base, p_list));
 	x_tco_env_save(p_base);
-	x_slot_argobj(args, 0) = p_list;
+	x_vectorobj(args, 0) = p_list;
 	p_ret = SLOT(p_base, X_SLOT_EVAL_BODY_TCO, args);
-	x_slot_argobj(args, 0) = p_ret;
+	x_vectorobj(args, 0) = p_ret;
 	p_ret = SLOT(p_base, X_SLOT_EVAL_TCO_TRAMPOLINE, args);
 	_it_should("evaluate a body's tail through the body-tco and trampoline slots",
 		p_int == p_ret && p_direct == p_ret
@@ -297,8 +302,8 @@ static char *test_slots_eval(void)
 
 	/* An operative's body leaves its tail and the caller's environment
 	 * for the trampoline. */
-	x_slot_argobj(args, 0) = p_list;
-	x_slot_argobj(args, 1) = x_eval_field_env(p_base);
+	x_vectorobj(args, 0) = p_list;
+	x_vectorobj(args, 1) = x_eval_field_env(p_base);
 	p_ret = SLOT(p_base, X_SLOT_EVAL_OP_BODY, args);
 	_it_should("leave an operative body's tail for the trampoline through the op-body slot",
 		NULL == p_ret
@@ -315,12 +320,13 @@ static char *test_slots_eval(void)
 static char *test_slots_call(void)
 {
 	x_obj_t *p_base, *p_prim, *p_call;
-	x_obj_t args[x_slot_args_units(1)] = x_slot_args({ .p = NULL });
+	x_obj_t args[x_vector_storage(1)] =
+		x_vector_set(NULL, 1, { NULL });
 
 	p_base = test_make_base();
 	p_prim = x_make_prim(p_base, X_OBJ_FLAG_NONE, _prim_fn);
 	p_call = x_mkspair(p_base, X_OBJ_FLAG_NONE, p_prim, NULL);
-	x_slot_argobj(args, 0) = p_call;
+	x_vectorobj(args, 0) = p_call;
 
 	_it_should("call through the callable-call slot",
 		(x_obj_t *)_replaced_answer == SLOT(p_base, X_SLOT_CALLABLE_CALL, args)
@@ -343,8 +349,8 @@ static char *test_slots_call(void)
 static char *test_slots_env(void)
 {
 	x_obj_t *p_base, *p_env, *p_child, *p_sym, *p_param, *p_val, *p_cell;
-	x_obj_t args[x_slot_args_units(3)] =
-		x_slot_args({ .p = NULL }, { .p = NULL }, { .p = NULL });
+	x_obj_t args[x_vector_storage(3)] =
+		x_vector_set(NULL, 3, { NULL }, { NULL }, { NULL });
 
 	p_base = test_make_base();
 	p_env = x_eval_field_env(p_base);
@@ -352,13 +358,13 @@ static char *test_slots_env(void)
 	p_param = x_mksymbol(p_base, "slot-spec-param");
 	p_val = x_mkint(p_base, (x_int_t)7);
 
-	x_slot_argobj(args, 0) = p_env;
-	x_slot_argobj(args, 1) = p_sym;
+	x_vectorobj(args, 0) = p_env;
+	x_vectorobj(args, 1) = p_sym;
 	_it_should("find nothing through the env-lookup slot before the name is bound",
 		NULL == SLOT(p_base, X_SLOT_ENV_LOOKUP, args)
 	);
 
-	x_slot_argobj(args, 2) = p_val;
+	x_vectorobj(args, 2) = p_val;
 	_it_should("bind through the env-bind slot",
 		p_val == SLOT(p_base, X_SLOT_ENV_BIND, args)
 	);
@@ -367,19 +373,19 @@ static char *test_slots_env(void)
 	_it_should("find the binding through the env-lookup slot",
 		p_cell != NULL
 		&& p_val == x_restobj(p_cell)
-		&& p_cell == test_env_lookup(p_base, p_env, p_sym)
+		&& p_cell == x_env_lookup(p_base, x_mksvector(p_base, 2, p_env, p_sym))
 	);
 
-	x_slot_argobj(args, 0) = x_env_bindings(p_env);
+	x_vectorobj(args, 0) = x_env_bindings(p_env);
 	_it_should("find the binding in the root's tree through the bst-lookup slot",
 		p_cell == SLOT(p_base, X_SLOT_ALIST_BST_LOOKUP, args)
 	);
 
-	x_slot_argobj(args, 0) = p_env;
-	x_slot_argobj(args, 1) = x_mklist(p_base, p_param, NULL);
-	x_slot_argobj(args, 2) = x_mklist(p_base, p_val, NULL);
+	x_vectorobj(args, 0) = p_env;
+	x_vectorobj(args, 1) = x_mklist(p_base, p_param, NULL);
+	x_vectorobj(args, 2) = x_mklist(p_base, p_val, NULL);
 	p_child = SLOT(p_base, X_SLOT_ENV_EXTEND, args);
-	p_cell = test_env_lookup(p_base, p_child, p_param);
+	p_cell = x_env_lookup(p_base, x_mksvector(p_base, 2, p_child, p_param));
 	_it_should("make a child environment through the env-extend slot",
 		p_child != NULL
 		&& p_env == x_env_parent(p_child)
@@ -408,17 +414,22 @@ static int test_on_chain(x_obj_t *p_base, x_obj_t *p_obj)
 static char *test_slots_heap(void)
 {
 	x_obj_t *p_base, *p_obj, *p_kept, *p_held, *p_lost, *p_ret;
-	x_obj_t args[x_slot_args_units(3)] =
-		x_slot_args({ .p = NULL }, { .i = 0 }, { .i = 0 });
+	x_obj_t args[x_vector_storage(3)] =
+		x_vector_set(NULL, 3, { NULL }, { NULL }, { NULL });
 	x_spair_t root = x_obj_set((x_obj_t *)x_type_pair_obj, X_OBJ_FLAG_NONE,
 		{ NULL }, { NULL });
+	/* An integer argument travels in an atom. */
+	x_satom_t flags = x_obj_set(x_type_atom_obj, X_OBJ_FLAG_NONE, { .i = 0 }),
+		units = x_obj_set(x_type_atom_obj, X_OBJ_FLAG_NONE, { .i = 0 });
 	x_obj_t **p_cell;
 
 	p_base = test_make_base();
 
-	x_slot_argobj(args, 0) = (x_obj_t *)x_type_atom_obj;
-	x_slot_argint(args, 1) = X_OBJ_FLAG_RO;
-	x_slot_argint(args, 2) = X_OBJ_LENGTH_ATOM;
+	x_vectorobj(args, 0) = (x_obj_t *)x_type_atom_obj;
+	x_vectorobj(args, 1) = (x_obj_t *)flags;
+	x_vectorobj(args, 2) = (x_obj_t *)units;
+	x_atomint((x_obj_t *)flags) = X_OBJ_FLAG_RO;
+	x_atomint((x_obj_t *)units) = X_OBJ_LENGTH_ATOM;
 	p_obj = SLOT(p_base, X_SLOT_OBJ_ALLOC, args);
 	_it_should("allocate through the obj-alloc slot",
 		p_obj != NULL
@@ -440,8 +451,9 @@ static char *test_slots_heap(void)
 	p_cell = x_heap_root_slot(p_base);
 	x_heap_root_push(p_cell, root);
 
-	x_slot_argobj(args, 0) = x_base(p_base);
-	x_slot_argint(args, 1) = X_OBJ_FLAG_MARK;
+	x_atomint((x_obj_t *)flags) = X_OBJ_FLAG_MARK;
+	x_vectorobj(args, 0) = x_base(p_base);
+	x_vectorobj(args, 1) = (x_obj_t *)flags;
 	SLOT(p_base, X_SLOT_HEAP_TREE_MARK, args);
 	_it_should("mark what the base's tree reaches through the heap-tree-mark slot",
 		X_OBJ_FLAG_MARK == (x_obj_flags(p_kept) & X_OBJ_FLAG_MARK)
@@ -453,7 +465,7 @@ static char *test_slots_heap(void)
 		0 == (x_obj_flags(p_lost) & X_OBJ_FLAG_MARK)
 	);
 
-	x_slot_argint(args, 0) = X_OBJ_FLAG_MARK;
+	x_vectorobj(args, 0) = (x_obj_t *)flags;
 	p_ret = SLOT(p_base, X_SLOT_HEAP_ROOT_CHAIN_MARK, args);
 	_it_should("mark what the root chain holds through the heap-root-chain-mark slot",
 		NULL == p_ret
@@ -461,8 +473,8 @@ static char *test_slots_heap(void)
 		&& 0 == (x_obj_flags(p_lost) & X_OBJ_FLAG_MARK)
 	);
 
-	x_slot_argobj(args, 0) = x_obj_heap(p_base);
-	x_slot_argint(args, 1) = X_OBJ_FLAG_MARK;
+	x_vectorobj(args, 0) = x_obj_heap(p_base);
+	x_vectorobj(args, 1) = (x_obj_t *)flags;
 	p_ret = SLOT(p_base, X_SLOT_HEAP_SWEEP, args);
 	_it_should("sweep through the heap-sweep slot, keeping what was marked",
 		p_base == p_ret
@@ -480,7 +492,7 @@ static char *test_slots_heap(void)
 
 	/* An object on no chain, so that freeing it leaves no chain broken. */
 	p_obj = x_obj_alloc(NULL, NULL, X_OBJ_FLAG_NONE, X_OBJ_LENGTH_ATOM);
-	x_slot_argobj(args, 0) = p_obj;
+	x_vectorobj(args, 0) = p_obj;
 	_it_should("free through the obj-free slot",
 		NULL == SLOT(p_base, X_SLOT_OBJ_FREE, args)
 	);
@@ -507,7 +519,10 @@ static char *test_slots_token(void)
 	x_obj_t *p_base, *p_buffer, *p_read, *p_direct;
 	x_char_t *buffer;
 	x_int_t label_slot = 0, label_direct = 0;
-	x_obj_t args[x_slot_args_units(2)] = x_slot_args({ .p = NULL }, { .v = NULL });
+	/* The label is written through a pointer, which travels in an atom. */
+	x_satom_t label = x_obj_set(x_type_atom_obj, X_OBJ_FLAG_NONE, { .v = NULL });
+	x_obj_t args[x_vector_storage(2)] =
+		x_vector_set(NULL, 2, { NULL }, { NULL });
 	x_spair_t delimit_args[2] = {
 		x_obj_set(NULL, X_OBJ_FLAG_NONE, { NULL }, { (x_obj_t *)(delimit_args + 1) }),
 		x_obj_set(NULL, X_OBJ_FLAG_NONE, { NULL }, { NULL }),
@@ -525,13 +540,14 @@ static char *test_slots_token(void)
 	p_buffer = x_mkbufferown(p_base, buffer);
 	p_read = x_mkpair(p_base, p_buffer, p_base);
 
-	x_slot_argobj(args, 0) = p_read;
+	x_vectorobj(args, 0) = p_read;
 	_it_should("read the end of input through the token-read slot",
 		(x_obj_t *)x_token_eof_prim == SLOT(p_base, X_SLOT_TOKEN_READ, args)
 		&& x_token_read(p_base, p_read) == SLOT(p_base, X_SLOT_TOKEN_READ, args)
 	);
 
-	x_ptr(x_slot_arg(args, 1)) = &label_slot;
+	x_atomptr((x_obj_t *)label) = &label_slot;
+	x_vectorobj(args, 1) = (x_obj_t *)label;
 	_it_should("analyse the end of input through the token-analyse slot",
 		x_token_analyse(p_base, p_read, &label_direct)
 			== SLOT(p_base, X_SLOT_TOKEN_ANALYSE, args)
@@ -540,7 +556,7 @@ static char *test_slots_token(void)
 
 	/* A delimiter moves its buffer's read position back, so each call is
 	 * given a buffer of its own holding the same character. */
-	x_slot_argobj(args, 0) = (x_obj_t *)delimit_args;
+	x_vectorobj(args, 0) = (x_obj_t *)delimit_args;
 
 	p_buffer = test_token_buffer(p_base, " ");
 	x_firstobj((x_obj_t *)delimit_args) = p_buffer;
@@ -573,11 +589,12 @@ static char *test_slots_replace(void)
 {
 	x_obj_t *p_base, *p_int;
 	x_fn_t was;
-	x_obj_t args[x_slot_args_units(1)] = x_slot_args({ .p = NULL });
+	x_obj_t args[x_vector_storage(1)] =
+		x_vector_set(NULL, 1, { NULL });
 
 	p_base = test_make_base();
 	p_int = x_mkint(p_base, (x_int_t)42);
-	x_slot_argobj(args, 0) = p_int;
+	x_vectorobj(args, 0) = p_int;
 
 	was = x_base_slot(p_base, X_SLOT_EVAL_ARG);
 	x_base_slot(p_base, X_SLOT_EVAL_ARG) = _replaced_fn;
@@ -600,6 +617,54 @@ static char *test_slots_replace(void)
 	_it_should("call the engine's routine again once the slot is put back",
 		p_int == SLOT(p_base, X_SLOT_EVAL_ARG, args)
 		&& 1 == _replaced_called
+	);
+
+	test_cleanup(p_base);
+	return NULL;
+}
+
+static char *test_slots_vector_type(void)
+{
+	x_obj_t *p_base, *p_type, *p_a, *p_b, *p_vector;
+	x_obj_t args[x_vector_storage(2)] =
+		x_vector_set(NULL, 2, { NULL }, { NULL });
+
+	p_base = test_make_base();
+	p_type = x_type_vector_register(p_base, p_base);
+
+	_it_should("give the base's slot vector the vector type",
+		p_type != NULL
+		&& p_type == x_obj_type(x_base_slots(p_base))
+		&& p_type == x_base_vector_type(p_base)
+	);
+
+	x_obj_type(args) = x_base_vector_type(p_base);
+	_it_should("label a vector in stack storage with the type, read off the slot vector",
+		x_obj_type_isvector(p_base, args)
+		&& 2 == x_vectorlength(args)
+	);
+
+	p_a = x_mkint(p_base, (x_int_t)1);
+	p_b = x_mkint(p_base, (x_int_t)2);
+	p_vector = x_mkvector(p_base, 2, p_a, p_b);
+	_it_should("make a vector of the objects it is given",
+		x_obj_type_isvector(p_base, p_vector)
+		&& 2 == x_vectorlength(p_vector)
+		&& p_a == x_vectorobj(p_vector, 0)
+		&& p_b == x_vectorobj(p_vector, 1)
+	);
+
+	_it_should("count a vector's units as its length and its elements",
+		x_vector_units(2) == x_obj_units(p_base, p_vector)
+	);
+
+	/* The collector follows a vector's elements and its length. */
+	x_heap_tree_mark(p_base, p_vector, X_OBJ_FLAG_MARK);
+	_it_should("mark a vector's elements",
+		X_OBJ_FLAG_MARK == (x_obj_flags(p_a) & X_OBJ_FLAG_MARK)
+		&& X_OBJ_FLAG_MARK == (x_obj_flags(p_b) & X_OBJ_FLAG_MARK)
+		&& X_OBJ_FLAG_MARK
+			== (x_obj_flags(x_vectorlengthobj(p_vector)) & X_OBJ_FLAG_MARK)
 	);
 
 	test_cleanup(p_base);
@@ -651,6 +716,7 @@ static char *run_tests() {
 	_run_test(test_slots_heap);
 	_run_test(test_slots_token);
 	_run_test(test_slots_replace);
+	_run_test(test_slots_vector_type);
 	_run_test(test_slots_child_base);
 
 	return NULL;

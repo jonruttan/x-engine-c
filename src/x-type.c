@@ -297,14 +297,14 @@ x_obj_t *x_type_struct_get(x_obj_t *p_base, x_obj_t *p_args)
  * struct.
  *
  * @param p_base  x_obj_t* -- Base (execution context)
- * @param p_args  x_obj_t* -- (object)
+ * @param p_args  x_obj_t* -- Argument vector: (object)
  * @return x_obj_t* -- Type name object, or NULL
  */
 x_obj_t *x_type_prim_type_name(x_obj_t *p_base, x_obj_t *p_args)
 {
 	x_obj_t *p_name, *p_obj;
 
-	if (x_obj_isnil(p_base, p_args) || x_obj_isnil(p_base, (p_obj = x_firstobj(p_args)))) {
+	if (x_obj_isnil(p_base, p_args) || x_obj_isnil(p_base, (p_obj = x_vectorobj(p_args, 0)))) {
 		return NULL;
 	}
 
@@ -424,27 +424,31 @@ int x_type_unit_label(x_int_t mask, x_int_t i, x_int_t described)
  * For custom types, reads the type's units count.
  *
  * @param p_base  x_obj_t* -- Base (execution context)
- * @param p_args  x_obj_t* -- (object)
+ * @param p_args  x_obj_t* -- Argument vector: (object)
  * @return x_obj_t* -- Integer unit count, or NULL
  */
 x_obj_t *x_type_prim_units(x_obj_t *p_base, x_obj_t *p_args)
 {
+	/* The primitives and the handler called below take a pair. */
+	x_spair_t pair_args = x_obj_set(NULL, X_OBJ_FLAG_NONE, { NULL }, { NULL });
 	x_obj_t *p_units, *p_obj;
 	x_int_t n;
 
-	if (x_obj_isnil(p_base, p_args) || x_obj_isnil(p_base, (p_obj = x_firstobj(p_args)))) {
+	if (x_obj_isnil(p_base, p_args) || x_obj_isnil(p_base, (p_obj = x_vectorobj(p_args, 0)))) {
 		return NULL;
 	}
 
+	x_firstobj((x_obj_t *)pair_args) = p_obj;
+
 	if (x_obj_type_isspair(p_obj)) {
-		return x_pair_prim_units(p_base, p_args);
+		return x_pair_prim_units(p_base, (x_obj_t *)pair_args);
 	}
 
 	/* Non-pair-tree type labels (base sentinel) fall back to atom units:
 	 * their fields must not be navigated (see x_type_op_try). */
 	if (x_obj_type_issatom(p_obj) || x_obj_isnil(p_base, x_obj_type(p_obj))
 			|| ! x_obj_type_isspair(x_obj_type(p_obj))) {
-		return x_atom_prim_units(p_base, p_args);
+		return x_atom_prim_units(p_base, (x_obj_t *)pair_args);
 	}
 
 	p_units = x_type_field_units(x_obj_type(p_obj));
@@ -484,26 +488,30 @@ x_obj_t *x_type_prim_units(x_obj_t *p_base, x_obj_t *p_args)
  * For custom types, calls the type's length hook function.
  *
  * @param p_base  x_obj_t* -- Base (execution context)
- * @param p_args  x_obj_t* -- (object)
+ * @param p_args  x_obj_t* -- Argument vector: (object)
  * @return x_obj_t* -- Integer length, or NULL
  */
 x_obj_t *x_type_prim_length(x_obj_t *p_base, x_obj_t *p_args)
 {
+	/* The primitives and the handler called below take a pair. */
+	x_spair_t pair_args = x_obj_set(NULL, X_OBJ_FLAG_NONE, { NULL }, { NULL });
 	x_obj_t *p_length, *p_obj;
 
-	if (x_obj_isnil(p_base, p_args) || x_obj_isnil(p_base, (p_obj = x_firstobj(p_args)))) {
+	if (x_obj_isnil(p_base, p_args) || x_obj_isnil(p_base, (p_obj = x_vectorobj(p_args, 0)))) {
 		return NULL;
 	}
 
+	x_firstobj((x_obj_t *)pair_args) = p_obj;
+
 	if (x_obj_type_isspair(p_obj)) {
-		return x_pair_prim_length(p_base, p_args);
+		return x_pair_prim_length(p_base, (x_obj_t *)pair_args);
 	}
 
 	/* Non-pair-tree type labels (base sentinel) fall back to atom length:
 	 * their fields must not be navigated (see x_type_op_try). */
 	if (x_obj_type_issatom(p_obj) || x_obj_isnil(p_base, x_obj_type(p_obj))
 			|| ! x_obj_type_isspair(x_obj_type(p_obj))) {
-		return x_atom_prim_length(p_base, p_args);
+		return x_atom_prim_length(p_base, (x_obj_t *)pair_args);
 	}
 
 	p_length = x_type_field_length(x_obj_type(p_obj));
@@ -512,7 +520,7 @@ x_obj_t *x_type_prim_length(x_obj_t *p_base, x_obj_t *p_args)
 		return NULL;
 	}
 
-	return (*x_atomfn(p_length))(p_base, p_args);
+	return (*x_atomfn(p_length))(p_base, (x_obj_t *)pair_args);
 }
 
 /**

@@ -88,8 +88,8 @@ x_obj_t *x_alist_assoc(x_obj_t *p_base, x_obj_t *p_args)
  */
 x_obj_t *x_alist_bst_lookup(x_obj_t *p_base, x_obj_t *p_args)
 {
-	x_obj_t *p_tree = x_slot_argobj(p_args, 0);
-	x_obj_t *p_sym = x_slot_argobj(p_args, 1);
+	x_obj_t *p_tree = x_vectorobj(p_args, 0);
+	x_obj_t *p_sym = x_vectorobj(p_args, 1);
 	x_obj_t *p_entry, *p_children;
 	int cmp;
 

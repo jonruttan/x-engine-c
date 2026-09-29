@@ -41,7 +41,6 @@
 #define STUB_X_TYPE_PRIM
 #define STUB_X_SYMBOL_FIND
 #include "helper-stubs.c"
-#include "helper-calls.c"
 
 x_obj_t *x_type_heap_mark(x_obj_t *p_base, x_obj_t *p_obj, x_obj_flag_t flags) { return NULL; }
 void x_type_heap_free(x_obj_t *p_base, x_obj_t *p_obj) {}
@@ -120,17 +119,17 @@ static char *test_env_profile_steps(void)
 	x_env_bind(p_base, p_grand, p_syms[2], p_atoms[2]);
 
 	before = _env_steps(p_base);
-	test_env_lookup(p_base, p_grand, p_syms[2]);
+	x_env_lookup(p_base, x_mksvector(p_base, 2, p_grand, p_syms[2]));
 	_it_should("a hit on an environment's only binding compares one",
 		_env_steps(p_base) - before == 1);
 
 	before = _env_steps(p_base);
-	test_env_lookup(p_base, p_grand, p_syms[3]);
+	x_env_lookup(p_base, x_mksvector(p_base, 2, p_grand, p_syms[3]));
 	_it_should("a miss compares every binding on the way to the root: the grandchild's one and the child's two",
 		_env_steps(p_base) - before == 3);
 
 	before = _env_steps(p_base);
-	test_env_lookup(p_base, p_root, p_syms[3]);
+	x_env_lookup(p_base, x_mksvector(p_base, 2, p_root, p_syms[3]));
 	_it_should("a lookup that starts at the root compares no alist binding",
 		_env_steps(p_base) - before == 0);
 

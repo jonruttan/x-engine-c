@@ -710,7 +710,9 @@ static x_spair_t s_bare_err = x_obj_set(NULL, X_OBJ_FLAG_NONE,
  */
 static x_obj_t *x_slot_eval_error(x_obj_t *p_base, x_obj_t *p_args)
 {
-	x_eval_error(p_base, x_slot_argstr(p_args, 0), x_slot_argobj(p_args, 1));
+	x_eval_error(p_base,
+		x_atomstr(x_vectorobj(p_args, 0)),
+		x_vectorobj(p_args, 1));
 
 	return NULL;
 }
@@ -725,8 +727,8 @@ static x_obj_t *x_slot_eval_error(x_obj_t *p_base, x_obj_t *p_args)
 static x_obj_t *x_slot_type_heap_mark(x_obj_t *p_base, x_obj_t *p_args)
 {
 	return x_type_heap_mark(p_base,
-		x_slot_argobj(p_args, 0),
-		(x_obj_flag_t)x_slot_argint(p_args, 1));
+		x_vectorobj(p_args, 0),
+		(x_obj_flag_t)x_atomint(x_vectorobj(p_args, 1)));
 }
 
 /**
@@ -738,7 +740,7 @@ static x_obj_t *x_slot_type_heap_mark(x_obj_t *p_base, x_obj_t *p_args)
  */
 static x_obj_t *x_slot_type_heap_free(x_obj_t *p_base, x_obj_t *p_args)
 {
-	x_type_heap_free(p_base, x_slot_argobj(p_args, 0));
+	x_type_heap_free(p_base, x_vectorobj(p_args, 0));
 
 	return NULL;
 }

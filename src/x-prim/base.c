@@ -15,6 +15,7 @@
 #include "x-alist.h"
 #include "x-eval.h"
 #include "x-eval-slots.h"
+#include "x-type/vector.h"
 #include "x-env.h"
 #include "x-heap.h"
 #include "x-type.h"
@@ -202,6 +203,7 @@ static x_obj_t *x_prim_make_base(x_obj_t *p_base, x_obj_t *p_args)
 	x_type_str_register(p_new_base, p_new_base);
 	x_type_char_register(p_new_base, p_new_base);
 	x_type_err_register(p_new_base, p_new_base);
+	x_type_vector_register(p_new_base, p_new_base);
 	x_type_whitespace_register(p_new_base, p_new_base);
 	x_type_comment_register(p_new_base, p_new_base);
 

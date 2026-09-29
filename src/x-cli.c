@@ -22,6 +22,7 @@
 
 #include "x-eval.h"
 #include "x-eval-slots.h"
+#include "x-type/vector.h"
 #include "x-heap.h"
 #include "x-prim.h"
 /* The build's release identity, generated per build by the Makefile from
@@ -301,6 +302,7 @@ x_obj_t * init(x_obj_t *p_base, x_char_t *buffer)
 	x_type_str_register(p_base, p_base);
 	x_type_char_register(p_base, p_base);
 	x_type_err_register(p_base, p_base);
+	x_type_vector_register(p_base, p_base);
 	x_type_whitespace_register(p_base, p_base);
 	x_type_comment_register(p_base, p_base);
 

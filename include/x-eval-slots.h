@@ -83,7 +83,7 @@ enum x_eval_slot_enum
 	/** x_token_read(). Arguments: (args). */
 	X_SLOT_TOKEN_READ,
 
-	/** x_token_analyse(). Arguments: (args, pointer to the label). */
+	/** x_token_analyse(). Arguments: (args, label). */
 	X_SLOT_TOKEN_ANALYSE,
 
 	/** x_token_delimit(). Arguments: (args). */
@@ -102,6 +102,21 @@ enum x_eval_slot_enum
 
 /** Fill the slots of @p p_base with the engine's and x-expr's routines. */
 x_obj_t *x_eval_slots_install(x_obj_t *p_base);
+
+/** Slot function for x_obj_alloc(). */
+x_obj_t *x_slot_obj_alloc(x_obj_t *p_base, x_obj_t *p_args);
+
+/** Slot function for x_obj_free(). */
+x_obj_t *x_slot_obj_free(x_obj_t *p_base, x_obj_t *p_args);
+
+/** Slot function for x_heap_tree_mark(). */
+x_obj_t *x_slot_heap_tree_mark(x_obj_t *p_base, x_obj_t *p_args);
+
+/** Slot function for x_heap_sweep(). */
+x_obj_t *x_slot_heap_sweep(x_obj_t *p_base, x_obj_t *p_args);
+
+/** Slot function for x_heap_root_chain_mark(). */
+x_obj_t *x_slot_heap_root_chain_mark(x_obj_t *p_base, x_obj_t *p_args);
 
 /** Slot function for x_eval(). */
 x_obj_t *x_slot_eval(x_obj_t *p_base, x_obj_t *p_args);
