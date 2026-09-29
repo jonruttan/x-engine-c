@@ -288,9 +288,8 @@ x_obj_t * init(x_obj_t *p_base, x_char_t *buffer)
 {
 	x_obj_t *p_buffer;
 
-	/* Create base object, and fill its slots. */
+	/* Create base object */
 	p_base = x_eval_make(NULL, NULL);
-	x_eval_slots_install(p_base);
 
 	/* Enable 2 metadata slots per object for source-location tracking:
 	 * slot 0 = source line, slot 1 = source file id (see x-token.c).

@@ -55,7 +55,6 @@
 #include "src/x-prim.c"
 #include "src/x-prim/type.c"
 #include "src/x-type/vector.c"
-#include "src/x-eval-slots.c"
 #include "src/x-prim/base.c"
 #include "src/x-prim/buffer.c"
 #include "src/x-prim/iter.c"
@@ -123,7 +122,6 @@ static x_obj_t *test_make_base(void)
 {
 	x_obj_t *p_base = x_eval_make(NULL, NULL);
 
-	x_eval_slots_install(p_base);
 	x_prim_register(p_base, NULL);
 
 	return p_base;
@@ -199,7 +197,7 @@ static char *test_slots_positions(void)
 	return NULL;
 }
 
-static char *test_slots_make_and_install(void)
+static char *test_slots_make(void)
 {
 	x_obj_t *p_base;
 	x_int_t i, set;
@@ -222,10 +220,6 @@ static char *test_slots_make_and_install(void)
 		&& x_token_read == x_base_slot(p_base, X_SLOT_TOKEN_READ)
 	);
 
-	_it_should("return the base from the install",
-		p_base == x_eval_slots_install(p_base)
-	);
-
 	for (set = 0, i = 0; i < X_SLOT_LEN; i++) {
 		if (x_base_slot_isset(p_base, i)) {
 			set++;
@@ -236,8 +230,17 @@ static char *test_slots_make_and_install(void)
 		X_SLOT_LEN == x_vectorlength(x_base_slots(p_base))
 	);
 
-	_it_should("fill every slot at the install",
+	_it_should("fill every slot when the base is made",
 		X_SLOT_LEN == set
+	);
+
+	_it_should("fill x-expr's positions with x-expr's routines",
+		x_obj_alloc == x_base_slot(p_base, X_SLOT_OBJ_ALLOC)
+		&& x_obj_free == x_base_slot(p_base, X_SLOT_OBJ_FREE)
+		&& x_heap_tree_mark == x_base_slot(p_base, X_SLOT_HEAP_TREE_MARK)
+		&& x_heap_sweep == x_base_slot(p_base, X_SLOT_HEAP_SWEEP)
+		&& x_heap_root_chain_mark
+			== x_base_slot(p_base, X_SLOT_HEAP_ROOT_CHAIN_MARK)
 	);
 
 	_it_should("leave the hooks as the base was made with them",
@@ -492,7 +495,7 @@ static char *test_slots_heap(void)
 	x_heap_root_pop(p_cell);
 
 	/* An object on no chain, so that freeing it leaves no chain broken. */
-	p_obj = x_obj_alloc(NULL, NULL, X_OBJ_FLAG_NONE, X_OBJ_LENGTH_ATOM);
+	p_obj = x_obj_alloc(NULL, x_autovector(NULL, 3, { NULL }, { x_autoatom(X_OBJ_FLAG_NONE) }, { x_autoatom(X_OBJ_LENGTH_ATOM) }));
 	x_vectorobj(args, 0) = p_obj;
 	_it_should("free through the obj-free slot",
 		NULL == SLOT(p_base, X_SLOT_OBJ_FREE, args)
@@ -508,6 +511,7 @@ static x_obj_t *test_token_buffer(x_obj_t *p_base, char *input)
 	x_obj_t *p_buffer;
 
 	helper_file_buffer_ptr[TEST_HELPER_FILE_STDIN] = input;
+	helper_file_buffer_remaining[TEST_HELPER_FILE_STDIN] = x_lib_strlen(input);
 	helper_file_reset();
 	p_buffer = x_mkbufferown(p_base, (x_char_t *)x_sys_malloc(X_READ_BUF_SIZE));
 	x_type_buffer_read(p_base, x_mkspair(p_base, X_OBJ_FLAG_NONE, p_buffer, NULL));
@@ -553,18 +557,22 @@ static char *test_slots_token(void)
 		&& 0 == x_atomint((x_obj_t *)label)
 	);
 
+	/* The end of input stays the answer of a base that has read it, until
+	 * its input is given back. */
+	x_atomint(x_firstobj(x_base_field_filein(p_base))) = STDIN_FILENO;
+
 	/* A delimiter moves its buffer's read position back, so each call is
 	 * given a buffer of its own holding the same character. */
 	x_vectorobj(args, 0) = (x_obj_t *)delimit_args;
 
-	p_buffer = test_token_buffer(p_base, " ");
+	p_buffer = test_token_buffer(p_base, ")");
 	x_firstobj((x_obj_t *)delimit_args) = p_buffer;
 	p_direct = x_token_delimit(p_base, x_mksvector(p_base, 1, (x_obj_t *)delimit_args));
 	_it_should("find a delimiter by the routine",
 		p_buffer == p_direct
 	);
 
-	p_buffer = test_token_buffer(p_base, " ");
+	p_buffer = test_token_buffer(p_base, ")");
 	x_firstobj((x_obj_t *)delimit_args) = p_buffer;
 	_it_should("find a delimiter through the token-delimit slot",
 		p_buffer == SLOT(p_base, X_SLOT_TOKEN_DELIMIT, args)
@@ -658,7 +666,7 @@ static char *test_slots_vector_type(void)
 	);
 
 	/* The collector follows a vector's elements and its length. */
-	x_heap_tree_mark(p_base, p_vector, X_OBJ_FLAG_MARK);
+	x_heap_tree_mark(p_base, x_autovector(NULL, 2, { p_vector }, { x_autoatom(X_OBJ_FLAG_MARK) }));
 	_it_should("mark a vector's elements",
 		X_OBJ_FLAG_MARK == (x_obj_flags(p_a) & X_OBJ_FLAG_MARK)
 		&& X_OBJ_FLAG_MARK == (x_obj_flags(p_b) & X_OBJ_FLAG_MARK)
@@ -708,7 +716,7 @@ static char *test_slots_child_base(void)
 
 static char *run_tests() {
 	_run_test(test_slots_positions);
-	_run_test(test_slots_make_and_install);
+	_run_test(test_slots_make);
 	_run_test(test_slots_eval);
 	_run_test(test_slots_call);
 	_run_test(test_slots_env);

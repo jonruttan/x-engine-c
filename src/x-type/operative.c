@@ -30,7 +30,15 @@ static x_obj_t *x_type_operative_mark(x_obj_t *p_base, x_obj_t *p_args)
 {
 	x_obj_t *p_obj = x_firstobj(p_args);
 	x_obj_flag_t flags = (x_obj_flag_t)x_firstint(x_restobj(p_args));
-	x_heap_tree_mark(p_base, x_obj(x_obj_data_i(p_obj, 1)), flags);
+	{
+		x_satom_t flags_atom =
+			x_obj_set(x_type_atom_obj, X_OBJ_FLAG_NONE, { .i = (x_int_t)flags });
+		x_obj_t heap_tree_mark_args[x_vector_storage(2)] = x_vector_set(
+			x_base_vector_type(p_base), 2,
+			{ x_obj(x_obj_data_i(p_obj, 1)) }, { (x_obj_t *)flags_atom });
+
+		x_base_call_or(p_base, X_SLOT_HEAP_TREE_MARK, x_heap_tree_mark, heap_tree_mark_args);
+	}
 	return NULL;
 }
 

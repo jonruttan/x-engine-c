@@ -621,15 +621,24 @@ x_obj_t *x_type_heap_mark(x_obj_t *p_base, x_obj_t *p_args)
 					+ (-n);
 			}
 
-			for (i = 0; i < n; i++) {
-				if (x_type_unit_label(mask, i, described)
-						!= X_TYPE_UNIT_REF) {
-					continue;
-				}
+			{
+				/* One argument vector for every unit, around the
+				 * flags atom this hook was handed. */
+				x_obj_t tree_args[x_vector_storage(2)] = x_vector_set(
+					x_base_vector_type(p_base), 2,
+					{ NULL }, { x_vectorobj(p_args, 1) });
 
-				x_heap_tree_mark(p_base,
-					x_obj(x_obj_data_i(p_obj, i)),
-					flags);
+				for (i = 0; i < n; i++) {
+					if (x_type_unit_label(mask, i, described)
+							!= X_TYPE_UNIT_REF) {
+						continue;
+					}
+
+					x_vectorobj(tree_args, 0)
+						= x_obj(x_obj_data_i(p_obj, i));
+					x_base_call_or(p_base, X_SLOT_HEAP_TREE_MARK,
+						x_heap_tree_mark, tree_args);
+				}
 			}
 			return NULL;
 		}

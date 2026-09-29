@@ -764,9 +764,9 @@ static x_spair_t s_bare_err = x_obj_set(NULL, X_OBJ_FLAG_NONE,
 	{ (x_obj_t *)&s_bare_code }, { (x_obj_t *)&s_bare_subject });
 
 /**
- * What a base is made with, by position: the hooks, and the routines that
- * take an argument vector themselves. The rest of the vector is filled by
- * x_eval_slots_install().
+ * What a base is made with, by position: the hooks and the engine's
+ * routines. x-expr fills the positions of its own routines itself (see
+ * x_base_make()).
  */
 static const x_fn_t x_eval_hooks[X_SLOT_LEN] = {
 	[X_SLOT_TYPE_NAME] = x_type_prim_type_name,

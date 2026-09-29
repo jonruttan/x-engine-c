@@ -176,10 +176,17 @@ static void x_image_alloc_pass(x_obj_t *p_base, x_image_t *img)
 		units = rec[X_IMAGE_RECORD_COUNT];
 		flags = (x_obj_flag_t)(rec[X_IMAGE_RECORD_FLAGS] & X_IMAGE_FLAGS_KEPT);
 
-		img->ix[i] = x_obj_alloc(p_base,
-			x_image_role_type(rec[X_IMAGE_RECORD_TYPE]),
-			flags | X_OBJ_FLAG_SHARED,
-			(size_t)(units < 1 ? 1 : units));
+		{
+			x_satom_t flags_atom =
+				x_obj_set(x_type_atom_obj, X_OBJ_FLAG_NONE, { .i = (x_int_t)(flags | X_OBJ_FLAG_SHARED) });
+			x_satom_t units_atom =
+				x_obj_set(x_type_atom_obj, X_OBJ_FLAG_NONE, { .i = units < 1 ? 1 : units });
+			x_obj_t obj_alloc_args[x_vector_storage(3)] = x_vector_set(
+				x_base_vector_type(p_base), 3,
+				{ x_image_role_type(rec[X_IMAGE_RECORD_TYPE]) }, { (x_obj_t *)flags_atom }, { (x_obj_t *)units_atom });
+
+			img->ix[i] = x_base_call_or(p_base, X_SLOT_OBJ_ALLOC, x_obj_alloc, obj_alloc_args);
+		}
 
 		pos += x_image_record_words(units);
 	}

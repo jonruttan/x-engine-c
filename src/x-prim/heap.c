@@ -79,6 +79,16 @@ static void x_heap_run_hooks(x_obj_t *p_base, x_obj_t *p_hooks)
  */
 static void x_heap_mark_phase(x_obj_t *p_base)
 {
+	/* One flags atom and one argument vector serve every marking pass: the
+	 * vector's first argument is set for each tree. */
+	x_satom_t flags_atom =
+		x_obj_set(x_type_atom_obj, X_OBJ_FLAG_NONE, { .i = X_OBJ_FLAG_MARK });
+	x_obj_t tree_args[x_vector_storage(2)] = x_vector_set(
+		x_base_vector_type(p_base), 2,
+		{ NULL }, { (x_obj_t *)flags_atom });
+	x_obj_t chain_args[x_vector_storage(1)] = x_vector_set(
+		x_base_vector_type(p_base), 1,
+		{ (x_obj_t *)flags_atom });
 	x_obj_t *p_roots;
 
 	if (x_base_isset(p_base)) {
@@ -86,15 +96,16 @@ static void x_heap_mark_phase(x_obj_t *p_base)
 			x_firstobj(x_base_field_heap_mark_hooks(p_base)));
 	}
 
-	x_heap_tree_mark(p_base, x_base(p_base), X_OBJ_FLAG_MARK);
-	x_heap_root_chain_mark(p_base, X_OBJ_FLAG_MARK);
+	x_vectorobj(tree_args, 0) = x_base(p_base);
+	x_base_call_or(p_base, X_SLOT_HEAP_TREE_MARK, x_heap_tree_mark, tree_args);
+	x_base_call_or(p_base, X_SLOT_HEAP_ROOT_CHAIN_MARK, x_heap_root_chain_mark, chain_args);
 
 	if (x_base_isset(p_base)) {
 		p_roots = x_firstobj(x_base_field_heap_mark_roots(p_base));
 
 		while ( ! x_obj_isnil(p_base, p_roots)) {
-			x_heap_tree_mark(p_base, x_firstobj(p_roots),
-				X_OBJ_FLAG_MARK);
+			x_vectorobj(tree_args, 0) = x_firstobj(p_roots);
+			x_base_call_or(p_base, X_SLOT_HEAP_TREE_MARK, x_heap_tree_mark, tree_args);
 			p_roots = x_restobj(p_roots);
 		}
 	}
@@ -112,7 +123,15 @@ static void x_heap_sweep_phase(x_obj_t *p_base)
 			x_firstobj(x_base_field_heap_free_hooks(p_base)));
 	}
 
-	x_heap_sweep(p_base, x_obj_heap(p_base), X_OBJ_FLAG_MARK);
+	{
+		x_satom_t flags_atom =
+			x_obj_set(x_type_atom_obj, X_OBJ_FLAG_NONE, { .i = (x_int_t)X_OBJ_FLAG_MARK });
+		x_obj_t heap_sweep_args[x_vector_storage(2)] = x_vector_set(
+			x_base_vector_type(p_base), 2,
+			{ x_obj_heap(p_base) }, { (x_obj_t *)flags_atom });
+
+		x_base_call_or(p_base, X_SLOT_HEAP_SWEEP, x_heap_sweep, heap_sweep_args);
+	}
 }
 
 /** Sweep unmarked objects from the heap (GC phase 2, low-level).
@@ -275,7 +294,15 @@ static x_obj_t *x_prim_system_mark(x_obj_t *p_base, x_obj_t *p_args)
 	x_eargs(p_base, p_args, 2, NULL, &p_obj);
 
 	/* Reuse the mark traversal with SYSTEM flag */
-	x_heap_tree_mark(p_base, p_obj, X_OBJ_FLAG_SHARED);
+	{
+		x_satom_t flags_atom =
+			x_obj_set(x_type_atom_obj, X_OBJ_FLAG_NONE, { .i = (x_int_t)X_OBJ_FLAG_SHARED });
+		x_obj_t heap_tree_mark_args[x_vector_storage(2)] = x_vector_set(
+			x_base_vector_type(p_base), 2,
+			{ p_obj }, { (x_obj_t *)flags_atom });
+
+		x_base_call_or(p_base, X_SLOT_HEAP_TREE_MARK, x_heap_tree_mark, heap_tree_mark_args);
+	}
 
 	return p_obj;
 }
@@ -350,7 +377,13 @@ static x_obj_t *x_prim_heap_tree_mark(x_obj_t *p_base, x_obj_t *p_args)
 	x_obj_t *p_obj, *p_flags;
 
 	x_eargs(p_base, p_args, 3, NULL, &p_obj, &p_flags);
-	x_heap_tree_mark(p_base, p_obj, (x_obj_flag_t)x_atomint(p_flags));
+	{
+		x_obj_t heap_tree_mark_args[x_vector_storage(2)] = x_vector_set(
+			x_base_vector_type(p_base), 2,
+			{ p_obj }, { p_flags });
+
+		x_base_call_or(p_base, X_SLOT_HEAP_TREE_MARK, x_heap_tree_mark, heap_tree_mark_args);
+	}
 
 	return p_obj;
 }

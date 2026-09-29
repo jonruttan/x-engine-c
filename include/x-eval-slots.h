@@ -7,9 +7,9 @@
  *        function vector, each at a fixed position.
  *
  * x-expr owns the first positions of the slot vector (see x-slots.h); the
- * engine's follow them. Every slot function has the one signature,
- * #x_fn_t, and takes its arguments as an argument vector: the arguments
- * of the routine it serves, in the routine's own order, after the base.
+ * engine's follow them. A slot holds the routine itself: every routine
+ * here has the one signature, #x_fn_t, and takes its arguments as an
+ * argument vector. x_eval_make() fills the slots when it makes a base.
  *
  * The positions are part of the layout contract. They are listed in
  * tools/contract/base-slots.x, which tools/check/base-slots.sh diffs
@@ -92,31 +92,6 @@ enum x_eval_slot_enum
 	/** The length of the engine's slot vector. */
 	X_SLOT_LEN
 };
-
-/** @} */
-
-/**
- * @name Slot Functions
- * @{
- */
-
-/** Fill the slots of @p p_base with the engine's and x-expr's routines. */
-x_obj_t *x_eval_slots_install(x_obj_t *p_base);
-
-/** Slot function for x_obj_alloc(). */
-x_obj_t *x_slot_obj_alloc(x_obj_t *p_base, x_obj_t *p_args);
-
-/** Slot function for x_obj_free(). */
-x_obj_t *x_slot_obj_free(x_obj_t *p_base, x_obj_t *p_args);
-
-/** Slot function for x_heap_tree_mark(). */
-x_obj_t *x_slot_heap_tree_mark(x_obj_t *p_base, x_obj_t *p_args);
-
-/** Slot function for x_heap_sweep(). */
-x_obj_t *x_slot_heap_sweep(x_obj_t *p_base, x_obj_t *p_args);
-
-/** Slot function for x_heap_root_chain_mark(). */
-x_obj_t *x_slot_heap_root_chain_mark(x_obj_t *p_base, x_obj_t *p_args);
 
 /** @} */
 

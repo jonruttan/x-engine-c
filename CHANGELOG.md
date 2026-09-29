@@ -15,12 +15,13 @@ alongside the library changes they landed with.
 
 **The base has a slot vector, and the engine's routines have slots in it.**
 The base object's first data unit holds a vector of function pointers, one
-per slot, and its second holds the tree. A slot function has the engine's one
-signature, `(x_obj_t *p_base, x_obj_t *p_args)`, and `p_args` is an argument
-vector: an object whose data units are the routine's arguments, built in
-stack storage. A routine is replaced while the engine runs by storing another
-function in its slot. There are 28 slots: x-expr's at positions 0 to 10, the
-engine's at 11 to 27.
+per slot, and its second holds the tree. A slot holds the routine itself:
+each of the 28 routines has the engine's one signature,
+`(x_obj_t *p_base, x_obj_t *p_args)`, and `p_args` is an argument vector, a
+vector whose elements are the routine's arguments. A caller builds the vector
+in stack storage and calls through the slot, so a routine is replaced while
+the engine runs by storing another function in its slot. x-expr's slots are
+at positions 0 to 10, the engine's at 11 to 27.
 
 - The positions are a contract, `tools/contract/base-slots.x`, which
   `make check-base-slots` diffs against the two headers. It is one of the
@@ -30,20 +31,29 @@ engine's at 11 to 27.
   `heap-mark-roots` and `heap-root-chain` are each two steps nearer.
 - Every base path begins with `r` where it began with `f`; `base-slots` is
   the path `f`. `tools/contract/base-paths.x` is regenerated.
-- `x_eval_make` makes a base with the six hooks set. `x_eval_slots_install`
-  fills the other 22, and the root base and both kinds of child base call
-  it. Each base has a vector of its own.
+- `x_eval_make` makes a base with every slot filled: x-expr fills the
+  positions of its own five routines, and the engine's table names the hooks
+  and the engine's routines. Each base has a vector of its own.
 - The slot vector and an argument vector are vectors: the length in the
   first data unit, the elements after it. The engine has a VECTOR type,
   `x-type/vector`, registered with the others, and the registration gives
   the base's slot vector the type. `x_mkvector` makes one from the objects
   it is given.
-- A routine takes its arguments as an argument vector and is its own slot
-  function, and its callers call through the slot. So far these are
-  `x_env_lookup`, `x_alist_bst_lookup`, and the type-name, units and length
-  hooks `x_type_prim_type_name`, `x_type_prim_units` and
-  `x_type_prim_length`. The rest have a function in front of them until they
-  are converted.
+- The routines that take an argument vector are the six hooks
+  (`x_type_prim_type_name`, `x_type_prim_units`, `x_type_prim_length`,
+  `x_eval_error`, `x_type_heap_mark`, `x_type_heap_free`), x-expr's
+  `x_obj_alloc`, `x_obj_free`, `x_heap_tree_mark`, `x_heap_sweep` and
+  `x_heap_root_chain_mark`, the evaluator's `x_eval`, `x_eval_arg`,
+  `x_eval_list`, `x_eval_body`, `x_eval_body_tco`, `x_eval_tco_trampoline`
+  and `x_eval_op_body`, the calling routines `x_callable_call`,
+  `x_callable_apply` and `x_obj_prim_call`, the environment's
+  `x_env_lookup`, `x_env_bind`, `x_env_extend` and `x_alist_bst_lookup`, and
+  the reader's `x_token_read`, `x_token_analyse` and `x_token_delimit`. An
+  integer or a string among the arguments travels in an atom.
+- A primitive and a type's handler take a pair list, as before.
+  `x_callable_prim_call` is the primitive in front of `x_callable_call`, and
+  `jit_eval_arg` keeps its `(base, expr)` shape for compiled code.
+- An engine raise calls `x_obj_error`, which calls the error slot.
 
 ## 0.2.17 — 2026-09-28
 

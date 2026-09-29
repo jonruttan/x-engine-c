@@ -55,7 +55,6 @@
 #include "src/x-prim.c"
 #include "src/x-prim/type.c"
 #include "src/x-type/vector.c"
-#include "src/x-eval-slots.c"
 #include "src/x-prim/base.c"
 #include "src/x-prim/buffer.c"
 #include "src/x-prim/iter.c"

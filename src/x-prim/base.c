@@ -96,7 +96,15 @@ static x_obj_t *x_prim_base_make_type(x_obj_t *p_base, x_obj_t *p_args)
 	 * unmarked and unpinned; the sweep freed it, and the next read
 	 * dereferenced it in x_alist_assoc. */
 	x_obj_flags(p_target) |= X_OBJ_FLAG_SHARED;
-	x_heap_tree_mark(p_base, p_type, X_OBJ_FLAG_SHARED);
+	{
+		x_satom_t flags_atom =
+			x_obj_set(x_type_atom_obj, X_OBJ_FLAG_NONE, { .i = (x_int_t)X_OBJ_FLAG_SHARED });
+		x_obj_t heap_tree_mark_args[x_vector_storage(2)] = x_vector_set(
+			x_base_vector_type(p_base), 2,
+			{ p_type }, { (x_obj_t *)flags_atom });
+
+		x_base_call_or(p_base, X_SLOT_HEAP_TREE_MARK, x_heap_tree_mark, heap_tree_mark_args);
+	}
 
 	return p_name_atom;
 }
@@ -145,8 +153,6 @@ static x_obj_t *x_prim_make_token_base(x_obj_t *p_base, x_obj_t *p_args)
 	x_obj_t *p_new = x_eval_make(NULL, NULL);
 	(void)p_args;
 
-	x_eval_slots_install(p_new);
-
 	/* Inherit the boolean singletons from the calling base, WRITING THROUGH
 	 * THE CELL.  true/false/sigint are cells (x-eval-layout.h), and
 	 * x_eval_make's own parented path assigns x_firstobj(field) for exactly
@@ -191,7 +197,6 @@ static x_obj_t *x_prim_make_base(x_obj_t *p_base, x_obj_t *p_args)
 	(void)p_args;
 
 	p_new_base = x_eval_make(NULL, NULL);
-	x_eval_slots_install(p_new_base);
 
 	/* Register types. */
 	x_type_prim_register(p_new_base, p_new_base);

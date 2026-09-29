@@ -295,7 +295,17 @@ static x_obj_t *x_prim_make_obj(x_obj_t *p_base, x_obj_t *p_args)
 	}
 
 	n = x_intval(p_n);
-	p_obj = x_obj_alloc(p_base, p_type, 0, (size_t)n);
+	{
+		x_satom_t flags_atom =
+			x_obj_set(x_type_atom_obj, X_OBJ_FLAG_NONE, { .i = X_OBJ_FLAG_NONE });
+		x_satom_t units_atom =
+			x_obj_set(x_type_atom_obj, X_OBJ_FLAG_NONE, { .i = n });
+		x_obj_t obj_alloc_args[x_vector_storage(3)] = x_vector_set(
+			x_base_vector_type(p_base), 3,
+			{ p_type }, { (x_obj_t *)flags_atom }, { (x_obj_t *)units_atom });
+
+		p_obj = x_base_call_or(p_base, X_SLOT_OBJ_ALLOC, x_obj_alloc, obj_alloc_args);
+	}
 
 	for (i = 0; i < n; i++) {
 		(&x_firstobj(p_obj))[i] = NULL;

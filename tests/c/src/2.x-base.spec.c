@@ -82,6 +82,14 @@ x_obj_t *x_eval_tco_trampoline(x_obj_t *p_base, x_obj_t *p_args) { return NULL; 
 
 x_obj_t *x_eval_op_body(x_obj_t *p_base, x_obj_t *p_args) { return NULL; }
 
+/* x_base_make names the heap's routines for their slots, so they must
+ * link. No test here reaches them. */
+x_obj_t *x_heap_tree_mark(x_obj_t *p_base, x_obj_t *p_args) { return NULL; }
+
+x_obj_t *x_heap_sweep(x_obj_t *p_base, x_obj_t *p_args) { return NULL; }
+
+x_obj_t *x_heap_root_chain_mark(x_obj_t *p_base, x_obj_t *p_args) { return NULL; }
+
 static x_obj_t *_eval_last;
 
 x_obj_t *x_eval(x_obj_t *p_base, x_obj_t *p_args)
@@ -122,7 +130,7 @@ static char *test_base_make(void)
 		! x_base_isset(p_base)
 	);
 
-	x_obj_free(NULL, p_base);
+	x_obj_free(NULL, x_autovector(NULL, 1, { p_base }));
 
 
 	p_base = x_eval_make(NULL, NULL);
