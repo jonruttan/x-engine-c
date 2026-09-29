@@ -67,6 +67,8 @@ x_obj_t *x_type_prim_struct(x_obj_t *p_base, x_obj_t *p_args);
 x_obj_t *x_type_prim_make(x_obj_t *p_base, x_obj_t *p_args);
 /** Unified call dispatch for all callable types. */
 x_obj_t *x_callable_call(x_obj_t *p_base, x_obj_t *p_args);
+/** Primitive: call a callable, given the call list as a pair. */
+x_obj_t *x_callable_prim_call(x_obj_t *p_base, x_obj_t *p_args);
 /** Unified apply dispatch with TCO trampoline support. */
 x_obj_t *x_callable_apply(x_obj_t *p_base, x_obj_t *p_args);
 

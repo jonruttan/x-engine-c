@@ -57,7 +57,7 @@ void x_callable_bind(x_obj_t *p_base, x_char_t *name, x_fn_t fn)
 			x_base_vector_type(p_base), 3,
 			{ x_eval_field_env_root(p_base) }, { p_sym }, { p_prim });
 
-		x_base_call(p_base, X_SLOT_ENV_BIND, env_bind_args);
+		x_base_call_or(p_base, X_SLOT_ENV_BIND, x_env_bind, env_bind_args);
 	}
 }
 
@@ -90,7 +90,7 @@ void x_value_bind(x_obj_t *p_base, x_char_t *name, x_obj_t *p_val)
 			x_base_vector_type(p_base), 3,
 			{ x_eval_field_env_root(p_base) }, { p_sym }, { p_val });
 
-		x_base_call(p_base, X_SLOT_ENV_BIND, env_bind_args);
+		x_base_call_or(p_base, X_SLOT_ENV_BIND, x_env_bind, env_bind_args);
 	}
 }
 

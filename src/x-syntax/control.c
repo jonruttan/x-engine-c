@@ -228,7 +228,7 @@ static x_obj_t *x_prim_guard(x_obj_t *p_base, x_obj_t *p_args)
 				x_base_vector_type(p_base), 3,
 				{ p_env }, { p_var }, { p_err });
 
-			x_base_call(p_base, X_SLOT_ENV_BIND, env_bind_args);
+			x_base_call_or(p_base, X_SLOT_ENV_BIND, x_env_bind, env_bind_args);
 		}
 		x_eval_field_env(p_base) = p_env;
 		p_result = x_eval_body(p_base, p_handler_body);

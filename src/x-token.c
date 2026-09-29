@@ -14,6 +14,7 @@
  * # Includes
  */
 #include "x-eval.h"
+#include "x-eval-slots.h"
 #include "x-heap.h"
 #include "x-obj.h"
 #include "x-token.h"
@@ -48,13 +49,16 @@ x_obj_t *x_token_delimit(x_obj_t *p_base, x_obj_t *p_args)
 	x_spair_t prim_args[1] = {
 			x_obj_set(NULL, X_OBJ_FLAG_NONE, { NULL }, { p_args }),
 		};
+	x_obj_t apply_args[x_vector_storage(1)] = x_vector_set(
+		x_base_vector_type(p_base), 1,
+		{ (x_obj_t *)prim_args });
 
 	/* Try each registered type's delimit handler against the buffer. */
 	while ( ! x_obj_isnil(p_base, p_types)) {
 		prim_arg_prim = x_type_field_delimit(x_restobj(x_firstobj(p_types)));
 
 		if ( ! x_obj_isnil(p_base, prim_arg_prim)
-			&& x_callable_apply(p_base, (x_obj_t *)prim_args) == p_buffer
+			&& x_base_call_or(p_base, X_SLOT_CALLABLE_APPLY, x_callable_apply, apply_args) == p_buffer
 		) {
 			return p_buffer;
 		}
@@ -210,7 +214,13 @@ x_obj_t *x_token_analyse(x_obj_t *p_base, x_obj_t *p_args, x_int_t *p_label)
 
 				x_atomint(arg_chr) = (x_int_t)x_bufferlastchar(p_buffer);
 				prim_arg_prim = p_analyse;
-				p_obj = x_callable_apply(p_base, (x_obj_t *)prim_args);
+				{
+					x_obj_t callable_apply_args[x_vector_storage(1)] = x_vector_set(
+						x_base_vector_type(p_base), 1,
+						{ (x_obj_t *)prim_args });
+
+					p_obj = x_base_call_or(p_base, X_SLOT_CALLABLE_APPLY, x_callable_apply, callable_apply_args);
+				}
 
 				/* Not recognized. */
 				if (x_obj_isnil(p_base, p_obj)) {
@@ -383,7 +393,13 @@ x_obj_t *x_token_read(x_obj_t *p_base, x_obj_t *p_args)
 		p_obj = NULL;
 		while ( ! x_iterempty(p_base, (x_obj_t *)read_iter)) {
 			prim_arg_prim = x_type_iter_next(p_base, (x_obj_t *)read_args);
-			p_obj = x_callable_apply(p_base, (x_obj_t *)prim_args);
+			{
+				x_obj_t callable_apply_args[x_vector_storage(1)] = x_vector_set(
+					x_base_vector_type(p_base), 1,
+					{ (x_obj_t *)prim_args });
+
+				p_obj = x_base_call_or(p_base, X_SLOT_CALLABLE_APPLY, x_callable_apply, callable_apply_args);
+			}
 
 			if ( ! x_obj_isnil(p_base, p_obj)) {
 				break;

@@ -139,15 +139,6 @@ x_obj_t *x_slot_eval_tco_trampoline(x_obj_t *p_base, x_obj_t *p_args);
 /** Slot function for x_eval_op_body(). */
 x_obj_t *x_slot_eval_op_body(x_obj_t *p_base, x_obj_t *p_args);
 
-/** Slot function for x_callable_call(). */
-x_obj_t *x_slot_callable_call(x_obj_t *p_base, x_obj_t *p_args);
-
-/** Slot function for x_callable_apply(). */
-x_obj_t *x_slot_callable_apply(x_obj_t *p_base, x_obj_t *p_args);
-
-/** Slot function for x_obj_prim_call(). */
-x_obj_t *x_slot_obj_prim_call(x_obj_t *p_base, x_obj_t *p_args);
-
 /** Slot function for x_token_read(). */
 x_obj_t *x_slot_token_read(x_obj_t *p_base, x_obj_t *p_args);
 

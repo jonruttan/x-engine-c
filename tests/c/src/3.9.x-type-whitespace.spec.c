@@ -48,6 +48,7 @@
 #define STUB_X_PRIM_REGISTER
 #define STUB_X_PRIM_SHADOW
 #define STUB_X_PROCEDURE_APPLY
+#define STUB_X_OBJ_PRIM_CALL
 #include "helper-stubs.c"
 
 

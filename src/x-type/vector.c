@@ -121,8 +121,8 @@ x_obj_t *x_type_vector_register(x_obj_t *p_base, x_obj_t *p_args)
 	p_type = x_type_struct_get(p_base, (x_obj_t *)args);
 
 	if (x_base_isset(p_base)
-			&& x_obj_isnil(p_base, x_base_vector_type(p_base))) {
-		x_base_vector_type(p_base) = p_type;
+			&& x_obj_isnil(p_base, x_obj_type(x_base_slots(p_base)))) {
+		x_obj_type(x_base_slots(p_base)) = p_type;
 	}
 
 	return p_type;

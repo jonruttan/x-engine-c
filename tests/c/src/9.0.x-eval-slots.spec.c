@@ -330,16 +330,16 @@ static char *test_slots_call(void)
 
 	_it_should("call through the callable-call slot",
 		(x_obj_t *)_replaced_answer == SLOT(p_base, X_SLOT_CALLABLE_CALL, args)
-		&& x_callable_call(p_base, p_call) == SLOT(p_base, X_SLOT_CALLABLE_CALL, args)
+		&& x_callable_call(p_base, x_mksvector(p_base, 1, p_call)) == SLOT(p_base, X_SLOT_CALLABLE_CALL, args)
 	);
 
 	_it_should("apply through the callable-apply slot",
 		(x_obj_t *)_replaced_answer == SLOT(p_base, X_SLOT_CALLABLE_APPLY, args)
-		&& x_callable_apply(p_base, p_call) == SLOT(p_base, X_SLOT_CALLABLE_APPLY, args)
+		&& x_callable_apply(p_base, x_mksvector(p_base, 1, p_call)) == SLOT(p_base, X_SLOT_CALLABLE_APPLY, args)
 	);
 
 	_it_should("call an object's type through the obj-prim-call slot",
-		x_obj_prim_call(p_base, p_call) == SLOT(p_base, X_SLOT_OBJ_PRIM_CALL, args)
+		x_obj_prim_call(p_base, x_mksvector(p_base, 1, p_call)) == SLOT(p_base, X_SLOT_OBJ_PRIM_CALL, args)
 	);
 
 	test_cleanup(p_base);

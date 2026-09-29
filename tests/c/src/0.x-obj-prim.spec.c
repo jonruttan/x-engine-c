@@ -280,13 +280,13 @@ static char *test_obj_prim_call(void)
 	x_obj_t *p_base, *p_type, *p_obj, *p_args, *p_ret;
 
 	/* NULL args returns NULL */
-	p_ret = x_obj_prim_call(NULL, NULL);
+	p_ret = x_obj_prim_call(NULL, x_mksvector(NULL, 1, NULL));
 	_it_should("return NULL for nil args",
 		NULL == p_ret);
 
 	/* nil object returns NULL */
 	p_args = x_mkspair(NULL, X_OBJ_FLAG_NONE, NULL, NULL);
-	p_ret = x_obj_prim_call(NULL, p_args);
+	p_ret = x_obj_prim_call(NULL, x_mksvector(NULL, 1, p_args));
 	_it_should("return NULL for nil object",
 		NULL == p_ret);
 
@@ -294,7 +294,7 @@ static char *test_obj_prim_call(void)
 	p_obj = x_mksatom(NULL, X_OBJ_FLAG_NONE, 0);
 	x_obj_type(p_obj) = NULL;
 	p_args = x_mkspair(NULL, X_OBJ_FLAG_NONE, p_obj, NULL);
-	p_ret = x_obj_prim_call(NULL, p_args);
+	p_ret = x_obj_prim_call(NULL, x_mksvector(NULL, 1, p_args));
 	_it_should("return NULL for NULL type",
 		NULL == p_ret);
 
@@ -305,7 +305,7 @@ static char *test_obj_prim_call(void)
 	p_args = x_mkspair(p_base, X_OBJ_FLAG_NONE, p_obj, NULL);
 
 	_test_prim_fn_calls = 0;
-	p_ret = x_obj_prim_call(p_base, p_args);
+	p_ret = x_obj_prim_call(p_base, x_mksvector(p_base, 1, p_args));
 	_it_should("return NULL when call field is nil",
 		NULL == p_ret
 		&& 0 == _test_prim_fn_calls
@@ -315,7 +315,7 @@ static char *test_obj_prim_call(void)
 	x_firstptr(x_type_field_call(p_type)) = _test_type_prim_call;
 
 	_test_prim_fn_calls = 0;
-	p_ret = x_obj_prim_call(p_base, p_args);
+	p_ret = x_obj_prim_call(p_base, x_mksvector(p_base, 1, p_args));
 	_it_should("call the fn and return result",
 		p_base == p_ret
 		&& 1 == _test_prim_fn_calls

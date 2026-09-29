@@ -185,46 +185,6 @@ x_obj_t *x_slot_eval_op_body(x_obj_t *p_base, x_obj_t *p_args)
 }
 
 /*
- * # Calling
- */
-
-/**
- * Slot function for x_callable_call().
- *
- * @param p_base  x_obj_t* -- Base (execution context)
- * @param p_args  x_obj_t* -- Argument vector: (args)
- * @return x_obj_t* -- What x_callable_call() returns
- */
-x_obj_t *x_slot_callable_call(x_obj_t *p_base, x_obj_t *p_args)
-{
-	return x_callable_call(p_base, x_vectorobj(p_args, 0));
-}
-
-/**
- * Slot function for x_callable_apply().
- *
- * @param p_base  x_obj_t* -- Base (execution context)
- * @param p_args  x_obj_t* -- Argument vector: (args)
- * @return x_obj_t* -- What x_callable_apply() returns
- */
-x_obj_t *x_slot_callable_apply(x_obj_t *p_base, x_obj_t *p_args)
-{
-	return x_callable_apply(p_base, x_vectorobj(p_args, 0));
-}
-
-/**
- * Slot function for x_obj_prim_call().
- *
- * @param p_base  x_obj_t* -- Base (execution context)
- * @param p_args  x_obj_t* -- Argument vector: (args)
- * @return x_obj_t* -- What x_obj_prim_call() returns
- */
-x_obj_t *x_slot_obj_prim_call(x_obj_t *p_base, x_obj_t *p_args)
-{
-	return x_obj_prim_call(p_base, x_vectorobj(p_args, 0));
-}
-
-/*
  * # Environments
  */
 
@@ -294,11 +254,6 @@ static const x_fn_t x_eval_slots[X_SLOT_LEN] = {
 	[X_SLOT_EVAL_BODY_TCO] = x_slot_eval_body_tco,
 	[X_SLOT_EVAL_TCO_TRAMPOLINE] = x_slot_eval_tco_trampoline,
 	[X_SLOT_EVAL_OP_BODY] = x_slot_eval_op_body,
-
-	[X_SLOT_CALLABLE_CALL] = x_slot_callable_call,
-	[X_SLOT_CALLABLE_APPLY] = x_slot_callable_apply,
-	[X_SLOT_OBJ_PRIM_CALL] = x_slot_obj_prim_call,
-
 
 	[X_SLOT_TOKEN_READ] = x_slot_token_read,
 	[X_SLOT_TOKEN_ANALYSE] = x_slot_token_analyse,

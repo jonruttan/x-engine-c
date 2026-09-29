@@ -14,6 +14,7 @@
  * # Includes
  */
 #include "x-type.h"
+#include "x-eval-slots.h"
 #include "x-eval.h"
 #include "x-heap.h"
 #include "x-obj.h"
@@ -254,7 +255,13 @@ int x_type_op_try(x_obj_t *p_base, x_char_t *op, x_obj_t *p_a, x_obj_t *p_b,
 	x_firstobj((x_obj_t *)(call + 2)) = p_b;
 	x_restobj((x_obj_t *)(call + 2)) = NULL;
 
-	*pp_result = x_callable_call(p_base, (x_obj_t *)call);
+	{
+		x_obj_t callable_call_args[x_vector_storage(1)] = x_vector_set(
+			x_base_vector_type(p_base), 1,
+			{ (x_obj_t *)call });
+
+		*pp_result = x_base_call_or(p_base, X_SLOT_CALLABLE_CALL, x_callable_call, callable_call_args);
+	}
 	return 1;
 }
 
@@ -279,7 +286,13 @@ x_obj_t *x_type_struct_get(x_obj_t *p_base, x_obj_t *p_args)
 
 	/* TODO: GC on exit, with and w/o GC structures. */
 	if (x_obj_isnil(p_base, p_type)) {
-		p_type = x_callable_call(p_base, x_restobj(p_args));
+		{
+			x_obj_t callable_call_args[x_vector_storage(1)] = x_vector_set(
+				x_base_vector_type(p_base), 1,
+				{ x_restobj(p_args) });
+
+			p_type = x_base_call_or(p_base, X_SLOT_CALLABLE_CALL, x_callable_call, callable_call_args);
+		}
 
 		if (x_base_isset(p_base)) {
 			x_eval_type_alist_extend(p_base, p_type);

@@ -333,14 +333,14 @@ static X_CALLCC_NO_ASAN x_obj_t *x_prim_callcc(x_obj_t *p_base,
 			x_base_vector_type(p_base), 3,
 			{ p_env }, { p_ptr_sym }, { p_ptr });
 
-		x_base_call(p_base, X_SLOT_ENV_BIND, env_bind_args);
+		x_base_call_or(p_base, X_SLOT_ENV_BIND, x_env_bind, env_bind_args);
 	}
 	{
 		x_obj_t env_bind_args[x_vector_storage(3)] = x_vector_set(
 			x_base_vector_type(p_base), 3,
 			{ p_env }, { p_state_sym }, { p_state });
 
-		x_base_call(p_base, X_SLOT_ENV_BIND, env_bind_args);
+		x_base_call_or(p_base, X_SLOT_ENV_BIND, x_env_bind, env_bind_args);
 	}
 
 	/* Create k as a procedure (fn). */
@@ -356,7 +356,13 @@ static X_CALLCC_NO_ASAN x_obj_t *x_prim_callcc(x_obj_t *p_base,
 	x_firstobj((x_obj_t *)(call_args + 1)) = p_k;
 	x_restobj((x_obj_t *)(call_args + 1)) = NULL;
 
-	p_result = x_callable_apply(p_base, (x_obj_t *)call_args);
+	{
+		x_obj_t callable_apply_args[x_vector_storage(1)] = x_vector_set(
+			x_base_vector_type(p_base), 1,
+			{ (x_obj_t *)call_args });
+
+		p_result = x_base_call_or(p_base, X_SLOT_CALLABLE_APPLY, x_callable_apply, callable_apply_args);
+	}
 
 	return p_result;
 }

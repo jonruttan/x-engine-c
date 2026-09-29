@@ -15,6 +15,7 @@
  */
 #include "x-eval.h"
 #include "x-eval-slots.h"
+#include "x-obj/prim.h"
 #include "x-env.h"
 #include "x-tco.h"
 #include "x-toplevel.h"
@@ -285,7 +286,13 @@ eval_start:
 
 	if ( ! x_obj_isnil(p_base, x_firstobj((x_obj_t *)prim_args))) {
 		x_restobj((x_obj_t *)prim_args) = p_args;
-		p_exp = x_callable_call(p_base, (x_obj_t *)prim_args);
+		{
+			x_obj_t callable_call_args[x_vector_storage(1)] = x_vector_set(
+				x_base_vector_type(p_base), 1,
+				{ (x_obj_t *)prim_args });
+
+			p_exp = x_base_call_or(p_base, X_SLOT_CALLABLE_CALL, x_callable_call, callable_call_args);
+		}
 
 		if (p_exp == p_args) {
 			goto eval_start;
@@ -713,6 +720,10 @@ static const x_fn_t x_eval_hooks[X_SLOT_LEN] = {
 	[X_SLOT_ERROR] = x_eval_error,
 	[X_SLOT_HEAP_MARK] = x_type_heap_mark,
 	[X_SLOT_HEAP_FREE] = x_type_heap_free,
+
+	[X_SLOT_CALLABLE_CALL] = x_callable_call,
+	[X_SLOT_CALLABLE_APPLY] = x_callable_apply,
+	[X_SLOT_OBJ_PRIM_CALL] = x_obj_prim_call,
 
 	[X_SLOT_ENV_LOOKUP] = x_env_lookup,
 	[X_SLOT_ENV_BIND] = x_env_bind,

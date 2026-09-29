@@ -124,6 +124,14 @@ x_obj_t *x_syntax_quote_register(x_obj_t *p_base, x_obj_t *p_args) { return p_ba
 x_obj_t *x_type_prim_type_name(x_obj_t *p_base, x_obj_t *p_args) { return NULL; }
 x_obj_t *x_type_prim_units(x_obj_t *p_base, x_obj_t *p_args) { return NULL; }
 x_obj_t *x_type_prim_length(x_obj_t *p_base, x_obj_t *p_args) { return NULL; }
+/* Link-only: x-eval.c's slot table names them (x-type/prim.c). */
+x_obj_t *x_callable_call(x_obj_t *p_base, x_obj_t *p_args) { return NULL; }
+x_obj_t *x_callable_apply(x_obj_t *p_base, x_obj_t *p_args) { return NULL; }
+#endif
+
+#ifdef STUB_X_OBJ_PRIM_CALL
+/* Link-only: x-eval.c's slot table names it (x-obj/prim.c). */
+x_obj_t *x_obj_prim_call(x_obj_t *p_base, x_obj_t *p_args) { return NULL; }
 #endif
 
 #ifdef STUB_X_TYPE_DISPLAY

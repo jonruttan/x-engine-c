@@ -12,6 +12,7 @@
  */
 
 #include "x-type/list.h"
+#include "x-eval-slots.h"
 #include "x-type/iter.h"
 #include "x-type/prim.h"
 #include "x-prim.h"
@@ -278,7 +279,13 @@ x_obj_t *x_type_list_eval(x_obj_t *p_base, x_obj_t *p_args)
 		return p_exp;
 	}
 
-	p_result = x_callable_call(p_base, (x_obj_t *)prim_args);
+	{
+		x_obj_t callable_call_args[x_vector_storage(1)] = x_vector_set(
+			x_base_vector_type(p_base), 1,
+			{ (x_obj_t *)prim_args });
+
+		p_result = x_base_call_or(p_base, X_SLOT_CALLABLE_CALL, x_callable_call, callable_call_args);
+	}
 	x_heap_root_pop(p_cell);
 	return p_result;
 }

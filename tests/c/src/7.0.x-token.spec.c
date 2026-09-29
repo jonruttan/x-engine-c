@@ -54,6 +54,7 @@ x_satom_t x_sexp_list_analyse_prim = x_obj_set(x_type_atom_obj, X_OBJ_FLAG_NONE,
 #define STUB_X_PRIM_SHADOW
 #define STUB_X_PROCEDURE_APPLY
 #define STUB_X_SYMBOL
+#define STUB_X_OBJ_PRIM_CALL
 #include "helper-stubs.c"
 
 

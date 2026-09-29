@@ -460,7 +460,7 @@ static char *test_prim_call_nil_call(void)
 	p_obj = x_obj_make(p_base, p_type, X_OBJ_FLAG_NONE,
 		X_OBJ_LENGTH_PAIR, NULL, NULL);
 	p_args = x_mkspair(p_base, X_OBJ_FLAG_NONE, p_obj, NULL);
-	p_ret = x_obj_prim_call(p_base, p_args);
+	p_ret = x_obj_prim_call(p_base, x_mksvector(p_base, 1, p_args));
 	_it_should("prim_call returns NULL for nil call field",
 		p_ret == NULL);
 
@@ -499,7 +499,7 @@ static char *test_prim_call_procedure(void)
 	/* Call via x_obj_prim_call — exercises procedure path */
 	p_args = x_mkspair(p_base, X_OBJ_FLAG_NONE, p_obj, NULL);
 	x_firstobj(x_eval_field_tco_expr(p_base)) = NULL;
-	p_ret = x_obj_prim_call(p_base, p_args);
+	p_ret = x_obj_prim_call(p_base, x_mksvector(p_base, 1, p_args));
 
 	/* procedure_call sets tco_expr, returns NULL */
 	_it_should("prim_call procedure path sets tco_expr",

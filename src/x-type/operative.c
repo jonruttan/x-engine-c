@@ -208,7 +208,7 @@ x_obj_t *x_type_operative_call(x_obj_t *p_base, x_obj_t *p_args)
 			x_base_vector_type(p_base), 3,
 			{ p_captured_env }, { p_params }, { p_unevaluated_args });
 
-		p_env = x_base_call(p_base, X_SLOT_ENV_EXTEND, env_extend_args);
+		p_env = x_base_call_or(p_base, X_SLOT_ENV_EXTEND, x_env_extend, env_extend_args);
 	}
 
 	/* Bind the env-param to the caller's env.  Only route from body
@@ -219,7 +219,7 @@ x_obj_t *x_type_operative_call(x_obj_t *p_base, x_obj_t *p_args)
 				x_base_vector_type(p_base), 3,
 				{ p_env }, { p_envparam }, { p_caller_env });
 
-			x_base_call(p_base, X_SLOT_ENV_BIND, env_bind_args);
+			x_base_call_or(p_base, X_SLOT_ENV_BIND, x_env_bind, env_bind_args);
 		}
 	}
 

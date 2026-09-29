@@ -11,6 +11,7 @@
  *      " "
  */
 #include "x-prim.h"
+#include "x-eval-slots.h"
 #include "x-eval.h"
 #include "x-heap.h"
 #include "x-type.h"
@@ -263,7 +264,13 @@ static void x_image_load_pass(x_obj_t *p_base, x_image_t *img)
 		x_firstobj((x_obj_t *)(args + 1)) = p_obj;
 		x_restobj((x_obj_t *)(args + 1)) = NULL;
 
-		x_callable_apply(p_base, (x_obj_t *)args);
+		{
+			x_obj_t callable_apply_args[x_vector_storage(1)] = x_vector_set(
+				x_base_vector_type(p_base), 1,
+				{ (x_obj_t *)args });
+
+			x_base_call_or(p_base, X_SLOT_CALLABLE_APPLY, x_callable_apply, callable_apply_args);
+		}
 	}
 }
 
@@ -364,7 +371,13 @@ static void x_image_save_typed(x_obj_t *p_base, x_obj_t *p_obj,
 	x_firstobj((x_obj_t *)(args + 2)) = p_buf;
 	x_restobj((x_obj_t *)(args + 2)) = NULL;
 
-	x_callable_apply(p_base, (x_obj_t *)args);
+	{
+		x_obj_t callable_apply_args[x_vector_storage(1)] = x_vector_set(
+			x_base_vector_type(p_base), 1,
+			{ (x_obj_t *)args });
+
+		x_base_call_or(p_base, X_SLOT_CALLABLE_APPLY, x_callable_apply, callable_apply_args);
+	}
 }
 
 /**
@@ -665,7 +678,13 @@ static x_int_t x_image_extern(x_image_writer_t *w, x_int_t word, x_int_t label,
 	x_firstobj((x_obj_t *)(args + 3)) = p_obj;
 	x_restobj((x_obj_t *)(args + 3)) = NULL;
 
-	p_k = x_callable_apply(w->p_base, (x_obj_t *)args);
+	{
+		x_obj_t callable_apply_args[x_vector_storage(1)] = x_vector_set(
+			x_base_vector_type(w->p_base), 1,
+			{ (x_obj_t *)args });
+
+		p_k = x_base_call_or(w->p_base, X_SLOT_CALLABLE_APPLY, x_callable_apply, callable_apply_args);
+	}
 	k = (p_k == NULL || x_obj_isnil(w->p_base, p_k)) ? 0 : x_atomint(p_k);
 
 	if (k == 0) {

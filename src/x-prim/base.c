@@ -318,7 +318,7 @@ static x_obj_t *x_prim_base_bind(x_obj_t *p_base, x_obj_t *p_args)
 			x_base_vector_type(p_target), 3,
 			{ x_eval_field_env_root(p_target) }, { p_name }, { p_val });
 
-		return x_base_call(p_target, X_SLOT_ENV_BIND, env_bind_args);
+		return x_base_call_or(p_target, X_SLOT_ENV_BIND, x_env_bind, env_bind_args);
 	}
 }
 
@@ -352,7 +352,7 @@ static x_obj_t *x_prim_define_global(x_obj_t *p_base, x_obj_t *p_args)
 			x_base_vector_type(p_base), 3,
 			{ x_eval_field_env_root(p_base) }, { p_name }, { p_val });
 
-		return x_base_call(p_base, X_SLOT_ENV_BIND, env_bind_args);
+		return x_base_call_or(p_base, X_SLOT_ENV_BIND, x_env_bind, env_bind_args);
 	}
 }
 

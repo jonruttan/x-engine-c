@@ -219,7 +219,7 @@ static x_obj_t *x_prim_type_of(x_obj_t *p_base, x_obj_t *p_args)
 	x_eargs(p_base, p_args, 2, NULL, &p_obj);
 	x_vectorobj(name_args, 0) = p_obj;
 
-	return x_base_call(p_base, X_SLOT_TYPE_NAME, name_args);
+	return x_base_call_or(p_base, X_SLOT_TYPE_NAME, x_type_prim_type_name, name_args);
 }
 
 /* (type name obj-or-handle) is pure x-lang now: boot/reflect.x mirrors the

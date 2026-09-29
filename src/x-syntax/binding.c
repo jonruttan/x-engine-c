@@ -54,7 +54,7 @@ static x_obj_t *x_prim_define(x_obj_t *p_base, x_obj_t *p_args)
 			x_base_vector_type(p_base), 3,
 			{ x_eval_field_env(p_base) }, { p_name }, { p_val });
 
-		return x_base_call(p_base, X_SLOT_ENV_BIND, env_bind_args);
+		return x_base_call_or(p_base, X_SLOT_ENV_BIND, x_env_bind, env_bind_args);
 	}
 }
 
@@ -86,7 +86,7 @@ static x_obj_t *x_prim_set(x_obj_t *p_base, x_obj_t *p_args)
 
 	x_vectorobj(lookup_args, 0) = x_eval_field_env(p_base);
 	x_vectorobj(lookup_args, 1) = p_name;
-	p_entry = x_base_call(p_base, X_SLOT_ENV_LOOKUP, lookup_args);
+	p_entry = x_base_call_or(p_base, X_SLOT_ENV_LOOKUP, x_env_lookup, lookup_args);
 	if (p_entry != NULL) {
 		x_restobj(p_entry) = p_val;
 		return p_val;

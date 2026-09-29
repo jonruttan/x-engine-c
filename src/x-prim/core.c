@@ -131,7 +131,7 @@ static x_obj_t *x_prim_apply(x_obj_t *p_base, x_obj_t *p_args)
 				x_base_vector_type(p_base), 3,
 				{ x_procenv(p_fn) }, { x_procparams(p_fn) }, { p_vals });
 
-			x_eval_field_env(p_base) = x_base_call(p_base, X_SLOT_ENV_EXTEND, env_extend_args);
+			x_eval_field_env(p_base) = x_base_call_or(p_base, X_SLOT_ENV_EXTEND, x_env_extend, env_extend_args);
 		}
 
 		/* Unroot */
@@ -145,7 +145,13 @@ static x_obj_t *x_prim_apply(x_obj_t *p_base, x_obj_t *p_args)
 	apply_args[0][X_OBJ_META_FLAGS].i = X_OBJ_FLAG_NONE;
 	x_firstobj((x_obj_t *)apply_args) = p_fn;
 	x_restobj((x_obj_t *)apply_args) = p_vals;
-	p_result = x_callable_apply(p_base, (x_obj_t *)apply_args);
+	{
+		x_obj_t callable_apply_args[x_vector_storage(1)] = x_vector_set(
+			x_base_vector_type(p_base), 1,
+			{ (x_obj_t *)apply_args });
+
+		p_result = x_base_call_or(p_base, X_SLOT_CALLABLE_APPLY, x_callable_apply, callable_apply_args);
+	}
 
 	/* Unroot */
 	x_heap_root_pop(p_cell);

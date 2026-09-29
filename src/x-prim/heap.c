@@ -11,6 +11,7 @@
  *      " "
  */
 #include "x-prim.h"
+#include "x-eval-slots.h"
 #include "x-eval.h"
 #include "x-heap.h"
 #include "x-type.h"
@@ -27,6 +28,9 @@
 static void x_heap_run_hooks(x_obj_t *p_base, x_obj_t *p_hooks)
 {
 	x_spair_t hook_args[1];
+	x_obj_t call_args[x_vector_storage(1)] = x_vector_set(
+		x_base_vector_type(p_base), 1,
+		{ (x_obj_t *)hook_args });
 
 	hook_args[0][X_OBJ_META_TYPE].p = NULL;
 	hook_args[0][X_OBJ_META_FLAGS].i = X_OBJ_FLAG_NONE;
@@ -35,7 +39,7 @@ static void x_heap_run_hooks(x_obj_t *p_base, x_obj_t *p_hooks)
 		x_firstobj((x_obj_t *)hook_args) = x_firstobj(p_hooks);
 		x_restobj((x_obj_t *)hook_args) = NULL;
 		x_eval_tco_trampoline(p_base,
-			x_obj_prim_call(p_base, (x_obj_t *)hook_args));
+			x_base_call_or(p_base, X_SLOT_OBJ_PRIM_CALL, x_obj_prim_call, call_args));
 		p_hooks = x_restobj(p_hooks);
 	}
 }

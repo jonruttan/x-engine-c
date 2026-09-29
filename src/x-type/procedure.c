@@ -204,7 +204,13 @@ x_obj_t *x_type_procedure_call(x_obj_t *p_base, x_obj_t *p_args)
 		p_combiner = x_procenv(p_proc);
 		p_call_args = x_mkspair(p_base, X_OBJ_FLAG_NONE, p_combiner, p_evaled_args);
 
-		return x_obj_prim_call(p_base, p_call_args);
+		{
+			x_obj_t obj_prim_call_args[x_vector_storage(1)] = x_vector_set(
+				x_base_vector_type(p_base), 1,
+				{ p_call_args });
+
+			return x_base_call_or(p_base, X_SLOT_OBJ_PRIM_CALL, x_obj_prim_call, obj_prim_call_args);
+		}
 	}
 
 	/* Push the caller's environment onto the save-stack; the trampoline
@@ -226,7 +232,7 @@ x_obj_t *x_type_procedure_call(x_obj_t *p_base, x_obj_t *p_args)
 			x_base_vector_type(p_base), 3,
 			{ x_procenv(p_proc) }, { x_procparams(p_proc) }, { p_evaled_args });
 
-		x_eval_field_env(p_base) = x_base_call(p_base, X_SLOT_ENV_EXTEND, env_extend_args);
+		x_eval_field_env(p_base) = x_base_call_or(p_base, X_SLOT_ENV_EXTEND, x_env_extend, env_extend_args);
 	}
 
 	return x_eval_body_tco(p_base, x_procbody(p_proc));
@@ -269,7 +275,7 @@ x_obj_t *x_type_procedure_apply(x_obj_t *p_base, x_obj_t *p_args)
 			x_base_vector_type(p_base), 3,
 			{ x_procenv(p_proc) }, { x_procparams(p_proc) }, { (x_obj_t *)&sp });
 
-		x_eval_field_env(p_base) = x_base_call(p_base, X_SLOT_ENV_EXTEND, env_extend_args);
+		x_eval_field_env(p_base) = x_base_call_or(p_base, X_SLOT_ENV_EXTEND, x_env_extend, env_extend_args);
 	}
 	}
 
