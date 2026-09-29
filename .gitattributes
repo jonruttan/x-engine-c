@@ -1,0 +1,9 @@
+# Every change adds its entry at the head of the changelog, so two branches
+# edit the same lines, and the later one is in conflict with main as soon as
+# the earlier merges.  A union merge keeps both sides' lines, in the order
+# ours then theirs, and reports no conflict.
+#
+# Read the changelog after a merge: the two entries meet with no blank line
+# between them, and a change to an entry that already exists, as opposed to
+# a new one, is merged the same way and keeps both wordings.
+CHANGELOG.md merge=union
