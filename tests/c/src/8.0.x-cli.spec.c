@@ -72,6 +72,7 @@
 #include "src/x-prim/heap.c"
 #include "src/x-prim/image.c"
 #include "src/x-prim/type.c"
+#include "src/x-eval-slots.c"
 #include "src/x-prim/base.c"
 #include "src/x-prim/buffer.c"
 #include "src/x-prim/iter.c"

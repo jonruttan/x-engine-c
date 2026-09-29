@@ -893,11 +893,12 @@ static char *test_core_set_unbound(void)
 }
 
 static int test_error_hook_called;
-static void test_error_hook(x_obj_t *p_base, x_char_t *msg, x_obj_t *p_obj)
+static x_obj_t *test_error_hook(x_obj_t *p_base, x_obj_t *p_args)
 {
 	test_error_hook_called = 1;
+
+	return NULL;
 }
-static x_satom_t test_error_hook_atom = x_obj_set(NULL, X_OBJ_FLAG_NONE, { .v = (void *)test_error_hook });
 
 static char *test_core_error_no_handler_str(void)
 {
@@ -907,7 +908,7 @@ static char *test_core_error_no_handler_str(void)
 	x_prim_register(p_base, NULL);
 
 	/* Install test error hook */
-	x_firstobj(x_base_field_hook_error(p_base)) = (x_obj_t *)test_error_hook_atom;
+	x_base_slot(p_base, X_SLOT_ERROR) = test_error_hook;
 
 	/* No guard handler; string error message */
 	test_error_hook_called = 0;

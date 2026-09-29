@@ -56,7 +56,7 @@ x_satom_t x_token_eof_prim = x_obj_set(x_type_atom_obj, X_OBJ_FLAG_NONE, { .i = 
 #ifdef STUB_X_HEAP
 #include "x-heap.h"
 x_obj_t *x_heap_mark(x_obj_t *p_base, x_obj_t *p_obj, x_obj_flag_t flags,
-	x_heap_mark_fn_t p_mark_fn) { return NULL; }
+	x_fn_t p_mark_fn) { return NULL; }
 #endif
 
 #ifdef STUB_X_OBJ_OBJ

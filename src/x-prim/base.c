@@ -14,6 +14,7 @@
 #include "x-prim.h"
 #include "x-alist.h"
 #include "x-eval.h"
+#include "x-eval-slots.h"
 #include "x-env.h"
 #include "x-heap.h"
 #include "x-type.h"
@@ -143,6 +144,8 @@ static x_obj_t *x_prim_make_token_base(x_obj_t *p_base, x_obj_t *p_args)
 	x_obj_t *p_new = x_eval_make(NULL, NULL);
 	(void)p_args;
 
+	x_eval_slots_install(p_new);
+
 	/* Inherit the boolean singletons from the calling base, WRITING THROUGH
 	 * THE CELL.  true/false/sigint are cells (x-eval-layout.h), and
 	 * x_eval_make's own parented path assigns x_firstobj(field) for exactly
@@ -187,6 +190,7 @@ static x_obj_t *x_prim_make_base(x_obj_t *p_base, x_obj_t *p_args)
 	(void)p_args;
 
 	p_new_base = x_eval_make(NULL, NULL);
+	x_eval_slots_install(p_new_base);
 
 	/* Register types. */
 	x_type_prim_register(p_new_base, p_new_base);

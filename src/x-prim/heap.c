@@ -77,7 +77,7 @@ static void x_heap_mark_phase(x_obj_t *p_base)
 			x_firstobj(x_base_field_heap_mark_hooks(p_base)));
 	}
 
-	x_heap_tree_mark(p_base, x_atomobj(p_base), X_OBJ_FLAG_MARK);
+	x_heap_tree_mark(p_base, x_base(p_base), X_OBJ_FLAG_MARK);
 	x_heap_root_chain_mark(p_base, X_OBJ_FLAG_MARK);
 
 	if (x_base_isset(p_base)) {

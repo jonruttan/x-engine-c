@@ -11,6 +11,31 @@ alongside the library changes they landed with.
 [x-lang]: https://github.com/jonruttan/x-lang
 [x-changelog]: https://github.com/jonruttan/x-lang/blob/main/CHANGELOG.md
 
+## Unreleased
+
+**The base has a slot vector, and the engine's routines have slots in it.**
+The base object's first data unit holds a vector of function pointers, one
+per slot, and its second holds the tree. A slot function has the engine's one
+signature, `(x_obj_t *p_base, x_obj_t *p_args)`, and `p_args` is an argument
+vector: an object whose data units are the routine's arguments, built in
+stack storage. A routine is replaced while the engine runs by storing another
+function in its slot. There are 28 slots: x-expr's at positions 0 to 10, the
+engine's at 11 to 27.
+
+- The positions are a contract, `tools/contract/base-slots.x`, which
+  `make check-base-slots` diffs against the two headers. It is one of the
+  gates.
+- The type-name, units, length, error, mark and free hooks are slots 0 to 5.
+  Their cells in the tree are gone, and `heap-mark-hooks`, `heap-free-hooks`,
+  `heap-mark-roots` and `heap-root-chain` are each two steps nearer.
+- Every base path begins with `r` where it began with `f`; `base-slots` is
+  the path `f`. `tools/contract/base-paths.x` is regenerated.
+- `x_eval_make` makes a base with the six hooks set. `x_eval_slots_install`
+  fills the other 22, and the root base and both kinds of child base call
+  it. Each base has a vector of its own.
+- Nothing in the engine calls a routine through its slot yet, the six hooks
+  apart. An empty slot means the engine's own routine.
+
 ## 0.2.17 — 2026-09-28
 
 **`%seq` walks its forms as an operative body is walked** ([#72]). `%seq` had

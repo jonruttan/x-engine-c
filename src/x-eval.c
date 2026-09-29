@@ -14,6 +14,7 @@
  * # Includes
  */
 #include "x-eval.h"
+#include "x-eval-slots.h"
 #include "x-env.h"
 #include "x-tco.h"
 #include "x-toplevel.h"
@@ -691,12 +692,6 @@ x_obj_t *x_eval_tco_trampoline(x_obj_t *p_base, x_obj_t *p_result)
 #define pair(X,Y)	(x_mkspair(p_base, X_OBJ_FLAG_NONE, (X), (Y)))
 #define atom(X)		(x_mksatom(p_base, X_OBJ_FLAG_NONE, (X)))
 
-static x_satom_t x_type_prim_type_name_hook =
-	x_obj_set(NULL, X_OBJ_FLAG_NONE, { .fn = x_type_prim_type_name });
-static x_satom_t x_type_prim_units_hook =
-	x_obj_set(NULL, X_OBJ_FLAG_NONE, { .fn = x_type_prim_units });
-static x_satom_t x_type_prim_length_hook =
-	x_obj_set(NULL, X_OBJ_FLAG_NONE, { .fn = x_type_prim_length });
 /* The pre-registration error value: a (code . subject) pair, laid out as
  * an ERR is, with no type label, for bases built before the type registry
  * exists.
@@ -705,22 +700,72 @@ static x_satom_t s_bare_code = x_obj_set(NULL, X_OBJ_FLAG_NONE, { .s = NULL });
 static x_satom_t s_bare_subject = x_obj_set(NULL, X_OBJ_FLAG_NONE, { .s = NULL });
 static x_spair_t s_bare_err = x_obj_set(NULL, X_OBJ_FLAG_NONE,
 	{ (x_obj_t *)&s_bare_code }, { (x_obj_t *)&s_bare_subject });
-static x_satom_t x_eval_error_hook =
-	x_obj_set(NULL, X_OBJ_FLAG_NONE, { .v = (void *)x_eval_error });
-static x_satom_t x_type_heap_mark_hook =
-	x_obj_set(NULL, X_OBJ_FLAG_NONE, { .v = (void *)x_type_heap_mark });
-static x_satom_t x_type_heap_free_hook =
-	x_obj_set(NULL, X_OBJ_FLAG_NONE, { .v = (void *)x_type_heap_free });
+
+/**
+ * The error hook: x_eval_error(), as a slot function.
+ *
+ * @param p_base  x_obj_t* -- Base (execution context)
+ * @param p_args  x_obj_t* -- Argument vector: (message, object)
+ * @return x_obj_t* -- NULL
+ */
+static x_obj_t *x_slot_eval_error(x_obj_t *p_base, x_obj_t *p_args)
+{
+	x_eval_error(p_base, x_slot_argstr(p_args, 0), x_slot_argobj(p_args, 1));
+
+	return NULL;
+}
+
+/**
+ * The mark hook: x_type_heap_mark(), as a slot function.
+ *
+ * @param p_base  x_obj_t* -- Base (execution context)
+ * @param p_args  x_obj_t* -- Argument vector: (object, flags)
+ * @return x_obj_t* -- The object to mark next, or NULL
+ */
+static x_obj_t *x_slot_type_heap_mark(x_obj_t *p_base, x_obj_t *p_args)
+{
+	return x_type_heap_mark(p_base,
+		x_slot_argobj(p_args, 0),
+		(x_obj_flag_t)x_slot_argint(p_args, 1));
+}
+
+/**
+ * The free hook: x_type_heap_free(), as a slot function.
+ *
+ * @param p_base  x_obj_t* -- Base (execution context)
+ * @param p_args  x_obj_t* -- Argument vector: (object)
+ * @return x_obj_t* -- NULL
+ */
+static x_obj_t *x_slot_type_heap_free(x_obj_t *p_base, x_obj_t *p_args)
+{
+	x_type_heap_free(p_base, x_slot_argobj(p_args, 0));
+
+	return NULL;
+}
+
+/**
+ * The hooks a base is made with, by position. The rest of the vector is
+ * filled by x_eval_slots_install().
+ */
+static const x_fn_t x_eval_hooks[X_SLOT_LEN] = {
+	[X_SLOT_TYPE_NAME] = x_type_prim_type_name,
+	[X_SLOT_UNITS] = x_type_prim_units,
+	[X_SLOT_LENGTH] = x_type_prim_length,
+	[X_SLOT_ERROR] = x_slot_eval_error,
+	[X_SLOT_HEAP_MARK] = x_slot_type_heap_mark,
+	[X_SLOT_HEAP_FREE] = x_slot_type_heap_free
+};
 
 /**
  * Create and initialize a full x-lang base object atop x-expr.
  *
  * Calls x_base_make (x-expr layer) with default file descriptors and
- * hooks, then fills in the type-system-specific slots: the env fields
+ * the hooks for its slot vector, then fills in the type-system-specific
+ * fields: the env fields
  * (the current environment and the root), the ctrl fields
  * (save-stack, error-handler, TCO slots), io-state (line counter,
  * boolean caches), extended profile counters, and project extras
- * (eval-list, token-cache, mark/free hooks, mark-roots).
+ * (eval-list, token-cache, mark-roots).
  *
  * @param p_base  x_obj_t* -- Parent base (or NULL for root)
  * @param p_args  x_obj_t* -- Unused
@@ -729,7 +774,7 @@ static x_satom_t x_type_heap_free_hook =
  * @details **x-expr vs x-lang layers.**  x_base_make (x-expr) allocates
  *          the base tree skeleton: heap fields (pools, GC state), file
  *          descriptors, buffer stack, type-alist slot, profile head
- *          (1 counter for GC cycles), and hook slots.  It leaves env,
+ *          (1 counter for GC cycles), and the slot vector.  It leaves env,
  *          ctrl, io-state, and extras as nil.  This function fills all
  *          of those in, giving the base its full evaluator personality.
  *
@@ -771,13 +816,9 @@ x_obj_t *x_eval_make(x_obj_t *p_base, x_obj_t *p_args)
 	base_cfg.filein = STDIN_FILENO;
 	base_cfg.fileout = STDOUT_FILENO;
 	base_cfg.fileerr = STDERR_FILENO;
-	base_cfg.p_hook_type_name = (x_obj_t *)x_type_prim_type_name_hook;
-	base_cfg.p_hook_units = (x_obj_t *)x_type_prim_units_hook;
-	base_cfg.p_hook_length = (x_obj_t *)x_type_prim_length_hook;
-	base_cfg.p_hook_error = (x_obj_t *)x_eval_error_hook;
 	base_cfg.obj_meta_extra = 0;
-	base_cfg.p_heap_mark = (x_obj_t *)x_type_heap_mark_hook;
-	base_cfg.p_heap_free = (x_obj_t *)x_type_heap_free_hook;
+	base_cfg.slots = X_SLOT_LEN;
+	base_cfg.p_slots = x_eval_hooks;
 
 	p_base = x_base_make(p_base, base_cfg);
 
