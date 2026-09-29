@@ -60,7 +60,7 @@ static x_obj_t *x_prim_arith_binop(x_obj_t *p_base, x_obj_t *p_args,
 		return p_result;
 
 	if (x_obj_isnil(p_base, a) || x_obj_isnil(p_base, b))
-		x_eval_error(p_base, p_err, NULL);
+		x_obj_error(p_base, p_err, NULL);
 
 	switch (*p_op) {
 	case '+': n = x_intval(a) + x_intval(b); break;
@@ -111,7 +111,7 @@ static x_obj_t *x_prim_sub(x_obj_t *p_base, x_obj_t *p_args)
 	 * layer's concern, not binary op dispatch). */
 	if (x_obj_isnil(p_base, x_args_tail(p_base, p_args, 2))) {
 		if (x_obj_isnil(p_base, a))
-			x_eval_error(p_base, (x_char_t *)"-: operand is nil", NULL);
+			x_obj_error(p_base, (x_char_t *)"-: operand is nil", NULL);
 		return x_mkint(p_base, -x_intval(a));
 	}
 
@@ -122,7 +122,7 @@ static x_obj_t *x_prim_sub(x_obj_t *p_base, x_obj_t *p_args)
 	/* Nil operands raise instead of reading x_intval(NULL) -- the same
 	 * nil-safety convention x_prim_eq already follows (#52 ruled). */
 	if (x_obj_isnil(p_base, a) || x_obj_isnil(p_base, b))
-		x_eval_error(p_base, (x_char_t *)"-: operand is nil", NULL);
+		x_obj_error(p_base, (x_char_t *)"-: operand is nil", NULL);
 
 	return x_mkint(p_base, x_intval(a) - x_intval(b));
 }
@@ -173,7 +173,7 @@ static x_obj_t *x_prim_bitnot(x_obj_t *p_base, x_obj_t *p_args)
 	x_eargs(p_base, p_args, 2, NULL, &a);
 
 	if (x_obj_isnil(p_base, a))
-		x_eval_error(p_base, (x_char_t *)"~: operand is nil", NULL);
+		x_obj_error(p_base, (x_char_t *)"~: operand is nil", NULL);
 
 	return x_mkint(p_base, ~x_intval(a));
 }

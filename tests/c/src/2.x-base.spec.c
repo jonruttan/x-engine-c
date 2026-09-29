@@ -36,8 +36,8 @@
 #define STUB_X_SYMBOL_FIND
 #include "helper-stubs.c"
 
-x_obj_t *x_type_heap_mark(x_obj_t *p_base, x_obj_t *p_obj, x_obj_flag_t flags) { return NULL; }
-void x_type_heap_free(x_obj_t *p_base, x_obj_t *p_obj) {}
+x_obj_t *x_type_heap_mark(x_obj_t *p_base, x_obj_t *p_args) { return NULL; }
+x_obj_t *x_type_heap_free(x_obj_t *p_base, x_obj_t *p_args) { return NULL; }
 
 /*
  * Controllable stubs for x_token_read/write and x_eval.
@@ -475,7 +475,7 @@ static char *test_base_error_no_handler(void)
 	helper_file_reset();
 	helper_sys_exit_status = X_SYS_EXIT_SUCCESS;
 
-	x_eval_error(NULL, "test error", NULL);
+	x_eval_error(NULL, x_mksvector(NULL, 2, x_mksatom(NULL, X_OBJ_FLAG_NONE, "test error"), NULL));
 	_it_should("write error to stderr without base",
 		s[0] != '\0');
 	_it_should("exit non-zero without base",
@@ -490,7 +490,7 @@ static char *test_base_error_no_handler(void)
 	s[0] = '\0';
 	helper_sys_exit_status = X_SYS_EXIT_SUCCESS;
 
-	x_eval_error(p_base, "base error", NULL);
+	x_eval_error(p_base, x_mksvector(p_base, 2, x_mksatom(p_base, X_OBJ_FLAG_NONE, "base error"), NULL));
 	_it_should("write error to stderr with base",
 		s[0] != '\0');
 	_it_should("exit non-zero with base",
@@ -503,7 +503,7 @@ static char *test_base_error_no_handler(void)
 	s[0] = '\0';
 	helper_sys_exit_status = X_SYS_EXIT_SUCCESS;
 
-	x_eval_error(p_base, "undef", x_mksatom(p_base, X_OBJ_FLAG_NONE, "foo"));
+	x_eval_error(p_base, x_mksvector(p_base, 2, x_mksatom(p_base, X_OBJ_FLAG_NONE, "undef"), x_mksatom(p_base, X_OBJ_FLAG_NONE, "foo")));
 	_it_should("write error with symbol",
 		s[0] != '\0');
 	_it_should("exit non-zero with symbol",
@@ -533,7 +533,7 @@ static char *test_base_error_with_handler(void)
 
 	caught = 0;
 	if (setjmp(jmp) == 0) {
-		x_eval_error(p_base, "test err", NULL);
+		x_eval_error(p_base, x_mksvector(p_base, 2, x_mksatom(p_base, X_OBJ_FLAG_NONE, "test err"), NULL));
 	} else {
 		caught = 1;
 	}
@@ -551,7 +551,7 @@ static char *test_base_error_with_handler(void)
 
 	caught = 0;
 	if (setjmp(jmp) == 0) {
-		x_eval_error(p_base, "undef", x_mksatom(p_base, X_OBJ_FLAG_NONE, "bar"));
+		x_eval_error(p_base, x_mksvector(p_base, 2, x_mksatom(p_base, X_OBJ_FLAG_NONE, "undef"), x_mksatom(p_base, X_OBJ_FLAG_NONE, "bar")));
 	} else {
 		caught = 1;
 	}

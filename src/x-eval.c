@@ -244,7 +244,7 @@ eval_start:
 		&& ! x_obj_isnil(p_base, x_firstobj(x_eval_field_error_handler(p_base))))
 	{
 		x_atomint(p_sigint) = 0;
-		x_eval_error(p_base, "STOP", NULL);
+		x_obj_error(p_base, "STOP", NULL);
 	}
 #endif
 	if (x_base_isset(p_base)) {
@@ -394,7 +394,7 @@ void x_eval_spine_guard(x_obj_t *p_base, x_obj_t *p_obj)
 	}
 
 	if ( ! is_cell) {
-		x_eval_error(p_base,
+		x_obj_error(p_base,
 			(x_char_t *)"call: improper argument list (dotted tail)",
 			NULL);
 	}
@@ -702,50 +702,6 @@ static x_spair_t s_bare_err = x_obj_set(NULL, X_OBJ_FLAG_NONE,
 	{ (x_obj_t *)&s_bare_code }, { (x_obj_t *)&s_bare_subject });
 
 /**
- * The error hook: x_eval_error(), as a slot function.
- *
- * @param p_base  x_obj_t* -- Base (execution context)
- * @param p_args  x_obj_t* -- Argument vector: (message, object)
- * @return x_obj_t* -- NULL
- */
-static x_obj_t *x_slot_eval_error(x_obj_t *p_base, x_obj_t *p_args)
-{
-	x_eval_error(p_base,
-		x_atomstr(x_vectorobj(p_args, 0)),
-		x_vectorobj(p_args, 1));
-
-	return NULL;
-}
-
-/**
- * The mark hook: x_type_heap_mark(), as a slot function.
- *
- * @param p_base  x_obj_t* -- Base (execution context)
- * @param p_args  x_obj_t* -- Argument vector: (object, flags)
- * @return x_obj_t* -- The object to mark next, or NULL
- */
-static x_obj_t *x_slot_type_heap_mark(x_obj_t *p_base, x_obj_t *p_args)
-{
-	return x_type_heap_mark(p_base,
-		x_vectorobj(p_args, 0),
-		(x_obj_flag_t)x_atomint(x_vectorobj(p_args, 1)));
-}
-
-/**
- * The free hook: x_type_heap_free(), as a slot function.
- *
- * @param p_base  x_obj_t* -- Base (execution context)
- * @param p_args  x_obj_t* -- Argument vector: (object)
- * @return x_obj_t* -- NULL
- */
-static x_obj_t *x_slot_type_heap_free(x_obj_t *p_base, x_obj_t *p_args)
-{
-	x_type_heap_free(p_base, x_vectorobj(p_args, 0));
-
-	return NULL;
-}
-
-/**
  * What a base is made with, by position: the hooks, and the routines that
  * take an argument vector themselves. The rest of the vector is filled by
  * x_eval_slots_install().
@@ -754,9 +710,9 @@ static const x_fn_t x_eval_hooks[X_SLOT_LEN] = {
 	[X_SLOT_TYPE_NAME] = x_type_prim_type_name,
 	[X_SLOT_UNITS] = x_type_prim_units,
 	[X_SLOT_LENGTH] = x_type_prim_length,
-	[X_SLOT_ERROR] = x_slot_eval_error,
-	[X_SLOT_HEAP_MARK] = x_slot_type_heap_mark,
-	[X_SLOT_HEAP_FREE] = x_slot_type_heap_free,
+	[X_SLOT_ERROR] = x_eval_error,
+	[X_SLOT_HEAP_MARK] = x_type_heap_mark,
+	[X_SLOT_HEAP_FREE] = x_type_heap_free,
 
 	[X_SLOT_ENV_LOOKUP] = x_env_lookup,
 	[X_SLOT_ENV_BIND] = x_env_bind,
@@ -903,9 +859,11 @@ x_obj_t *x_eval_make(x_obj_t *p_base, x_obj_t *p_args)
  * longjmps to the handler. Otherwise, writes the error to stderr via
  * the low-level x_error function.
  *
- * @param p_base   x_obj_t* -- Base (execution context)
- * @param message  x_char_t* -- Error message string
- * @param p_obj    x_obj_t* -- Object associated with the error (may be NULL)
+ * @param p_base  x_obj_t* -- Base (execution context)
+ * @param p_args  x_obj_t* -- Argument vector: (message, object) -- the
+ *                            error message string, in an atom, and the
+ *                            object associated with the error (may be nil)
+ * @return x_obj_t* -- NULL
  *
  * @details **Zero-allocation error path.**  When a handler is installed,
  *          the message string pointer is stored directly in a static
@@ -933,8 +891,10 @@ x_obj_t *x_eval_make(x_obj_t *p_base, x_obj_t *p_args)
  * @see x_prim_error  -- x-lang (error msg) primitive that calls this
  */
 #ifndef STUB_X_BASE_ERROR
-void x_eval_error(x_obj_t *p_base, x_char_t *message, x_obj_t *p_obj)
+x_obj_t *x_eval_error(x_obj_t *p_base, x_obj_t *p_args)
 {
+	x_char_t *message = x_atomstr(x_vectorobj(p_args, 0));
+	x_obj_t *p_obj = x_vectorobj(p_args, 1);
 	int fd;
 	x_char_t *symbol = NULL;
 	x_obj_t *p_handler;
@@ -1036,6 +996,8 @@ void x_eval_error(x_obj_t *p_base, x_char_t *message, x_obj_t *p_obj)
 	 * unbound head mid-boot yielded nil and x_type_list_eval silently
 	 * passed the form through unevaluated. */
 	x_sys_exit(X_SYS_EXIT_FAILURE);
+
+	return NULL;
 }
 #endif /* !STUB_X_BASE_ERROR */
 

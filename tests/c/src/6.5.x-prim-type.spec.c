@@ -953,8 +953,7 @@ static x_obj_t *test_error_hook_type_passthrough(x_obj_t *p_base, x_obj_t *p_arg
 	 * Second call: intercept (parent base has no handler). */
 	if (test_error_hook_called_type == 0) {
 		test_error_hook_called_type = 1;
-		x_eval_error(p_base,
-			x_atomstr(x_vectorobj(p_args, 0)), x_vectorobj(p_args, 1));
+		x_eval_error(p_base, p_args);
 	} else {
 		test_error_hook_called_type = 2;
 	}

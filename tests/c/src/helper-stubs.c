@@ -43,7 +43,7 @@ x_obj_t *x_eval_tco_trampoline(x_obj_t *p_base, x_obj_t *p_result) { return p_re
 #endif
 
 #ifdef STUB_X_BASE_ERROR
-void x_eval_error(x_obj_t *p_base, x_char_t *message, x_obj_t *p_obj) {}
+x_obj_t *x_eval_error(x_obj_t *p_base, x_obj_t *p_args) { return NULL; }
 #endif
 
 #ifdef STUB_X_TOKEN

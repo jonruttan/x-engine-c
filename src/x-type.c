@@ -241,7 +241,7 @@ int x_type_op_try(x_obj_t *p_base, x_char_t *op, x_obj_t *p_a, x_obj_t *p_b,
 			x_firstobj(x_eval_field_false(p_base));
 		return 1;
 	} else {
-		x_eval_error(p_base,          /* both registered the op: #584 */
+		x_obj_error(p_base,          /* both registered the op: #584 */
 			(x_char_t *)X_TYPE_NO_CVT_TEXT, x_type_field_name(p_tb));
 		return 0;                     /* not reached: the raise longjmps */
 	}
@@ -532,12 +532,14 @@ x_obj_t *x_type_prim_length(x_obj_t *p_base, x_obj_t *p_args)
  * a generic N-slot traversal using the units count.
  *
  * @param p_base  x_obj_t* -- Base (execution context)
- * @param p_obj   x_obj_t* -- Object being marked
- * @param flags   x_obj_flag_t -- GC mark flags
+ * @param p_args  x_obj_t* -- Argument vector: (object, flags) -- the object
+ *                            being marked, and the GC mark flags in an atom
  * @return x_obj_t* -- Data pointer for base objects, or NULL
  */
-x_obj_t *x_type_heap_mark(x_obj_t *p_base, x_obj_t *p_obj, x_obj_flag_t flags)
+x_obj_t *x_type_heap_mark(x_obj_t *p_base, x_obj_t *p_args)
 {
+	x_obj_t *p_obj = x_vectorobj(p_args, 0);
+	x_obj_flag_t flags = (x_obj_flag_t)x_atomint(x_vectorobj(p_args, 1));
 	x_obj_t *p_type = x_obj_type(p_obj);
 	x_obj_t *p_mark;
 	x_obj_t *p_units;
@@ -630,10 +632,13 @@ x_obj_t *x_type_heap_mark(x_obj_t *p_base, x_obj_t *p_obj, x_obj_flag_t flags)
  * type-specific resources before the heap cell is reclaimed.
  *
  * @param p_base  x_obj_t* -- Base (execution context)
- * @param p_obj   x_obj_t* -- Object being freed
+ * @param p_args  x_obj_t* -- Argument vector: (object) -- the object being
+ *                            freed
+ * @return x_obj_t* -- NULL
  */
-void x_type_heap_free(x_obj_t *p_base, x_obj_t *p_obj)
+x_obj_t *x_type_heap_free(x_obj_t *p_base, x_obj_t *p_args)
 {
+	x_obj_t *p_obj = x_vectorobj(p_args, 0);
 	x_obj_t *p_type = x_obj_type(p_obj);
 	x_obj_t *p_free;
 	x_spair_t a[1];
@@ -650,5 +655,7 @@ void x_type_heap_free(x_obj_t *p_base, x_obj_t *p_obj)
 			x_atomfn(p_free)(p_base, (x_obj_t *)a);
 		}
 	}
+
+	return NULL;
 }
 

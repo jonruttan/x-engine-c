@@ -713,7 +713,7 @@ static x_int_t x_image_bytes_word(x_image_writer_t *w, x_int_t word)
 	len = (word == 0) ? 0 : (x_int_t)x_lib_strlen((x_char_t *)word);
 
 	if (off + (x_int_t)sizeof(x_int_t) + len + 1 > w->blob_cap) {
-		x_eval_error(w->p_base, (x_char_t *)"image write!: blob full", NULL);
+		x_obj_error(w->p_base, (x_char_t *)"image write!: blob full", NULL);
 	}
 
 	x_lib_memcpy(w->blob + off, &len, sizeof(x_int_t));
@@ -766,7 +766,7 @@ static x_int_t x_image_type_word(x_image_writer_t *w, x_obj_t *p_obj)
 	i = x_image_table_get(&w->index, (x_int_t)p_type);
 
 	if (i == 0) {
-		x_eval_error(w->p_base, (x_char_t *)"image write!: type not imaged", p_type);
+		x_obj_error(w->p_base, (x_char_t *)"image write!: type not imaged", p_type);
 	}
 
 	return i;
@@ -783,7 +783,7 @@ static void x_image_emit_object(x_image_writer_t *w, x_obj_t *p_obj)
 	n = x_image_save(w->p_base, p_obj, w->p_buf);
 
 	if (w->table_pos + x_image_record_words(n) > w->table_cap) {
-		x_eval_error(w->p_base, (x_char_t *)"image write!: object table full", NULL);
+		x_obj_error(w->p_base, (x_char_t *)"image write!: object table full", NULL);
 	}
 
 	rec = w->table + w->table_pos;

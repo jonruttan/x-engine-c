@@ -42,8 +42,8 @@
 #define STUB_X_SYMBOL_FIND
 #include "helper-stubs.c"
 
-x_obj_t *x_type_heap_mark(x_obj_t *p_base, x_obj_t *p_obj, x_obj_flag_t flags) { return NULL; }
-void x_type_heap_free(x_obj_t *p_base, x_obj_t *p_obj) {}
+x_obj_t *x_type_heap_mark(x_obj_t *p_base, x_obj_t *p_args) { return NULL; }
+x_obj_t *x_type_heap_free(x_obj_t *p_base, x_obj_t *p_args) { return NULL; }
 
 /*
  * x-eval and x-toplevel link against the reader, the writer and eval.  No
