@@ -83,7 +83,7 @@ enum x_eval_slot_enum
 	/** x_token_read(). Arguments: (args). */
 	X_SLOT_TOKEN_READ,
 
-	/** x_token_analyse(). Arguments: (args, label). */
+	/** x_token_analyse(). Arguments: (args, label). The label is an atom the routine stores in. */
 	X_SLOT_TOKEN_ANALYSE,
 
 	/** x_token_delimit(). Arguments: (args). */
@@ -138,15 +138,6 @@ x_obj_t *x_slot_eval_tco_trampoline(x_obj_t *p_base, x_obj_t *p_args);
 
 /** Slot function for x_eval_op_body(). */
 x_obj_t *x_slot_eval_op_body(x_obj_t *p_base, x_obj_t *p_args);
-
-/** Slot function for x_token_read(). */
-x_obj_t *x_slot_token_read(x_obj_t *p_base, x_obj_t *p_args);
-
-/** Slot function for x_token_analyse(). */
-x_obj_t *x_slot_token_analyse(x_obj_t *p_base, x_obj_t *p_args);
-
-/** Slot function for x_token_delimit(). */
-x_obj_t *x_slot_token_delimit(x_obj_t *p_base, x_obj_t *p_args);
 
 /** @} */
 

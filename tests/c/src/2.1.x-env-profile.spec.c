@@ -59,6 +59,11 @@ x_obj_t *x_token_read(x_obj_t *p_base, x_obj_t *p_args)
 
 x_obj_t *x_token_write(x_obj_t *p_base, x_obj_t *p_args) { return NULL; }
 
+/* The slot table in x-eval.c names these two, so they must link. */
+x_obj_t *x_token_analyse(x_obj_t *p_base, x_obj_t *p_args) { return NULL; }
+
+x_obj_t *x_token_delimit(x_obj_t *p_base, x_obj_t *p_args) { return NULL; }
+
 x_obj_t *x_eval(x_obj_t *p_base, x_obj_t *p_args) { return NULL; }
 
 

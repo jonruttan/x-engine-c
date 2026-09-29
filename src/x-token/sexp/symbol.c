@@ -13,6 +13,7 @@
  */
 
 #include "x-token/sexp/symbol.h"
+#include "x-eval-slots.h"
 #include "x-eval.h"
 #include "x-token.h"
 #include "x-type/buffer.h"
@@ -38,8 +39,12 @@ x_obj_t *x_sexp_symbol_analyse(x_obj_t *p_base, x_obj_t *p_args)
 {
 	x_obj_t *p_buffer = x_token_read_arg_buffer(p_args),
 		*p_score = x_token_read_arg_score(p_args);
+	x_obj_t delimit_args[x_vector_storage(1)] = x_vector_set(
+		x_base_vector_type(p_base), 1,
+		{ p_args });
 
-	if (x_obj_isnil(p_base, x_token_delimit(p_base, p_args))) {
+	if (x_obj_isnil(p_base, x_base_call_or(p_base, X_SLOT_TOKEN_DELIMIT,
+			x_token_delimit, delimit_args))) {
 		return p_args;
 	}
 

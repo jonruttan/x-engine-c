@@ -725,6 +725,10 @@ static const x_fn_t x_eval_hooks[X_SLOT_LEN] = {
 	[X_SLOT_CALLABLE_APPLY] = x_callable_apply,
 	[X_SLOT_OBJ_PRIM_CALL] = x_obj_prim_call,
 
+	[X_SLOT_TOKEN_READ] = x_token_read,
+	[X_SLOT_TOKEN_ANALYSE] = x_token_analyse,
+	[X_SLOT_TOKEN_DELIMIT] = x_token_delimit,
+
 	[X_SLOT_ENV_LOOKUP] = x_env_lookup,
 	[X_SLOT_ENV_BIND] = x_env_bind,
 /* The child a call makes is the evaluator's business, and a unit test that
@@ -1134,7 +1138,13 @@ x_obj_t *x_eval_load(x_obj_t *p_base, x_obj_t *p_args)
 	x_toplevel_enter(p_base, &top);
 
 	for (;;) {
-		p_exp = x_token_read(p_base, (x_obj_t *)read_args);
+		{
+			x_obj_t token_read_args[x_vector_storage(1)] = x_vector_set(
+				x_base_vector_type(p_base), 1,
+				{ (x_obj_t *)read_args });
+
+			p_exp = x_base_call_or(p_base, X_SLOT_TOKEN_READ, x_token_read, token_read_args);
+		}
 		/* Break on the EOF SENTINEL, not on nil: nil is the value a
 		 * top-level `()` reads as, and breaking on it used to end the
 		 * load there, silently skipping the rest of the file. */

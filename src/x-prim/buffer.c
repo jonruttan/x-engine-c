@@ -12,6 +12,7 @@
  *      " "
  */
 #include "x-prim.h"
+#include "x-eval-slots.h"
 #include "x-eval.h"
 #include "x-heap.h"
 #include "x-type.h"
@@ -125,7 +126,13 @@ static x_obj_t *x_prim_token_read_string(x_obj_t *p_base, x_obj_t *p_args)
 	x_restobj((x_obj_t *)read_args) = p_token_base;
 
 	for (;;) {
-		p_token = x_token_read(p_token_base, (x_obj_t *)read_args);
+		{
+			x_obj_t token_read_args[x_vector_storage(1)] = x_vector_set(
+				x_base_vector_type(p_token_base), 1,
+				{ (x_obj_t *)read_args });
+
+			p_token = x_base_call_or(p_token_base, X_SLOT_TOKEN_READ, x_token_read, token_read_args);
+		}
 
 		/* Clean exhaustion of the string.  Checked BEFORE the nil
 		 * break so the two stay distinct; the nil break itself is
@@ -181,7 +188,13 @@ static x_obj_t *x_prim_token_read(x_obj_t *p_base, x_obj_t *p_args)
 
 	x_type_buffer_retain(p_base, (x_obj_t *)read_args);
 
-	p_obj = x_token_read(p_base, (x_obj_t *)read_args);
+	{
+		x_obj_t token_read_args[x_vector_storage(1)] = x_vector_set(
+			x_base_vector_type(p_base), 1,
+			{ (x_obj_t *)read_args });
+
+		p_obj = x_base_call_or(p_base, X_SLOT_TOKEN_READ, x_token_read, token_read_args);
+	}
 
 	/* Map the EOF sentinel to nil at this boundary: x-lang reader
 	 * handlers (quasi/lit, logo's block loop) test (null? ...) for

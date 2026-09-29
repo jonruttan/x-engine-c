@@ -218,6 +218,8 @@ static char *test_slots_make_and_install(void)
 	_it_should("make a base with the routines that take an argument vector set",
 		x_env_lookup == x_base_slot(p_base, X_SLOT_ENV_LOOKUP)
 		&& x_alist_bst_lookup == x_base_slot(p_base, X_SLOT_ALIST_BST_LOOKUP)
+		&& x_callable_call == x_base_slot(p_base, X_SLOT_CALLABLE_CALL)
+		&& x_token_read == x_base_slot(p_base, X_SLOT_TOKEN_READ)
 	);
 
 	_it_should("return the base from the install",
@@ -517,9 +519,7 @@ static char *test_slots_token(void)
 {
 	x_obj_t *p_base, *p_buffer, *p_read, *p_direct;
 	x_char_t *buffer;
-	x_int_t label_slot = 0, label_direct = 0;
-	/* The label is written through a pointer, which travels in an atom. */
-	x_satom_t label = x_obj_set(x_type_atom_obj, X_OBJ_FLAG_NONE, { .v = NULL });
+	x_satom_t label = x_obj_set(x_type_atom_obj, X_OBJ_FLAG_NONE, { .i = 0 });
 	x_obj_t args[x_vector_storage(2)] =
 		x_vector_set(NULL, 2, { NULL }, { NULL });
 	x_spair_t delimit_args[2] = {
@@ -542,15 +542,15 @@ static char *test_slots_token(void)
 	x_vectorobj(args, 0) = p_read;
 	_it_should("read the end of input through the token-read slot",
 		(x_obj_t *)x_token_eof_prim == SLOT(p_base, X_SLOT_TOKEN_READ, args)
-		&& x_token_read(p_base, p_read) == SLOT(p_base, X_SLOT_TOKEN_READ, args)
+		&& x_token_read(p_base, x_mksvector(p_base, 1, p_read)) == SLOT(p_base, X_SLOT_TOKEN_READ, args)
 	);
 
-	x_atomptr((x_obj_t *)label) = &label_slot;
+	/* The analysis stores the label it declares in the atom it is given. */
+	x_atomint((x_obj_t *)label) = 7;
 	x_vectorobj(args, 1) = (x_obj_t *)label;
 	_it_should("analyse the end of input through the token-analyse slot",
-		x_token_analyse(p_base, p_read, &label_direct)
-			== SLOT(p_base, X_SLOT_TOKEN_ANALYSE, args)
-		&& label_direct == label_slot
+		NULL == SLOT(p_base, X_SLOT_TOKEN_ANALYSE, args)
+		&& 0 == x_atomint((x_obj_t *)label)
 	);
 
 	/* A delimiter moves its buffer's read position back, so each call is
@@ -559,7 +559,7 @@ static char *test_slots_token(void)
 
 	p_buffer = test_token_buffer(p_base, " ");
 	x_firstobj((x_obj_t *)delimit_args) = p_buffer;
-	p_direct = x_token_delimit(p_base, (x_obj_t *)delimit_args);
+	p_direct = x_token_delimit(p_base, x_mksvector(p_base, 1, (x_obj_t *)delimit_args));
 	_it_should("find a delimiter by the routine",
 		p_buffer == p_direct
 	);
@@ -572,7 +572,7 @@ static char *test_slots_token(void)
 
 	p_buffer = test_token_buffer(p_base, "A");
 	x_firstobj((x_obj_t *)delimit_args) = p_buffer;
-	p_direct = x_token_delimit(p_base, (x_obj_t *)delimit_args);
+	p_direct = x_token_delimit(p_base, x_mksvector(p_base, 1, (x_obj_t *)delimit_args));
 	p_buffer = test_token_buffer(p_base, "A");
 	x_firstobj((x_obj_t *)delimit_args) = p_buffer;
 	_it_should("answer for a letter through the token-delimit slot as the routine does",

@@ -189,48 +189,6 @@ x_obj_t *x_slot_eval_op_body(x_obj_t *p_base, x_obj_t *p_args)
  */
 
 /*
- * # The Reader
- */
-
-/**
- * Slot function for x_token_read().
- *
- * @param p_base  x_obj_t* -- Base (execution context)
- * @param p_args  x_obj_t* -- Argument vector: (args)
- * @return x_obj_t* -- What x_token_read() returns
- */
-x_obj_t *x_slot_token_read(x_obj_t *p_base, x_obj_t *p_args)
-{
-	return x_token_read(p_base, x_vectorobj(p_args, 0));
-}
-
-/**
- * Slot function for x_token_analyse().
- *
- * @param p_base  x_obj_t* -- Base (execution context)
- * @param p_args  x_obj_t* -- Argument vector: (args, pointer to the label)
- * @return x_obj_t* -- What x_token_analyse() returns
- */
-x_obj_t *x_slot_token_analyse(x_obj_t *p_base, x_obj_t *p_args)
-{
-	return x_token_analyse(p_base,
-		x_vectorobj(p_args, 0),
-		(x_int_t *)x_atomptr(x_vectorobj(p_args, 1)));
-}
-
-/**
- * Slot function for x_token_delimit().
- *
- * @param p_base  x_obj_t* -- Base (execution context)
- * @param p_args  x_obj_t* -- Argument vector: (args)
- * @return x_obj_t* -- What x_token_delimit() returns
- */
-x_obj_t *x_slot_token_delimit(x_obj_t *p_base, x_obj_t *p_args)
-{
-	return x_token_delimit(p_base, x_vectorobj(p_args, 0));
-}
-
-/*
  * # The Table
  */
 
@@ -253,11 +211,7 @@ static const x_fn_t x_eval_slots[X_SLOT_LEN] = {
 	[X_SLOT_EVAL_BODY] = x_slot_eval_body,
 	[X_SLOT_EVAL_BODY_TCO] = x_slot_eval_body_tco,
 	[X_SLOT_EVAL_TCO_TRAMPOLINE] = x_slot_eval_tco_trampoline,
-	[X_SLOT_EVAL_OP_BODY] = x_slot_eval_op_body,
-
-	[X_SLOT_TOKEN_READ] = x_slot_token_read,
-	[X_SLOT_TOKEN_ANALYSE] = x_slot_token_analyse,
-	[X_SLOT_TOKEN_DELIMIT] = x_slot_token_delimit
+	[X_SLOT_EVAL_OP_BODY] = x_slot_eval_op_body
 };
 
 /**

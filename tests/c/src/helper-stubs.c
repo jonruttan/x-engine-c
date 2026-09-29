@@ -49,6 +49,9 @@ x_obj_t *x_eval_error(x_obj_t *p_base, x_obj_t *p_args) { return NULL; }
 #ifdef STUB_X_TOKEN
 x_obj_t *x_token_read(x_obj_t *p_base, x_obj_t *p_args) { return NULL; }
 x_obj_t *x_token_write(x_obj_t *p_base, x_obj_t *p_args) { return NULL; }
+/* The slot table in x-eval.c names these two, so they must link. */
+x_obj_t *x_token_analyse(x_obj_t *p_base, x_obj_t *p_args) { return NULL; }
+x_obj_t *x_token_delimit(x_obj_t *p_base, x_obj_t *p_args) { return NULL; }
 /* The clean-EOF sentinel x_eval_load compares against (x-token.c). */
 x_satom_t x_token_eof_prim = x_obj_set(x_type_atom_obj, X_OBJ_FLAG_NONE, { .i = 0 });
 #endif
@@ -144,14 +147,6 @@ x_obj_t *x_type_write(x_obj_t *p_base, x_obj_t *p_args) { return NULL; }
 
 #ifdef STUB_X_TOKEN_DISPLAY
 x_obj_t *x_token_display(x_obj_t *p_base, x_obj_t *p_args) { return NULL; }
-#endif
-
-#ifdef STUB_X_TOKEN_ANALYSE
-x_obj_t *x_token_analyse(x_obj_t *p_base, x_obj_t *p_args, x_int_t *p_label) { if (p_label) *p_label = 0; return NULL; }
-#endif
-
-#ifdef STUB_X_TOKEN_DELIMIT
-x_obj_t *x_token_delimit(x_obj_t *p_base, x_obj_t *p_args) { return NULL; }
 #endif
 
 #ifdef STUB_X_PROCEDURE_APPLY
