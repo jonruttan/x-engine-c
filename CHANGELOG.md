@@ -13,7 +13,10 @@ alongside the library changes they landed with.
 
 ## Unreleased
 
-**The base has a slot vector, and the engine's routines have slots in it.**
+## 0.2.18 — 2026-09-30
+
+**The base has a slot vector, and the engine's routines have slots in it**
+([#76]).
 The base object's first data unit holds a vector of function pointers, one
 per slot, and its second holds the tree. A slot holds the routine itself:
 each of the 27 routines has the engine's one signature,
@@ -60,6 +63,10 @@ storing another function in its slot. x-expr's slots are at positions 0 to
 - A call with no base reaches the routine by name (`x_base_call_or`): the
   types are registered on a nil base before one exists.
 - An engine raise calls `x_obj_error`, which calls the error slot.
+- The cost, measured on x-lang's helium boot from source and on a loop of
+  300,000 calls, darwin/arm64: about 7% more user time than 0.2.17.
+
+[#76]: https://github.com/jonruttan/x-engine-c/pull/76
 
 ## 0.2.17 — 2026-09-28
 
