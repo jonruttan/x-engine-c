@@ -13,7 +13,7 @@ alongside the library changes they landed with.
 
 ## Unreleased
 
-**The slot vector is the engine's** ([#N]). The base's slot vector, the vector
+**The slot vector is the engine's** ([#81]). The base's slot vector, the vector
 layout it has and the routines in it moved out of x-expr, which is back at
 4c0b3bc, before its #14: a library of atoms, pairs and a heap has no
 evaluator routines to call through. In this engine:
@@ -39,7 +39,7 @@ evaluator routines to call through. In this engine:
   type of the word each argument travels in. `tools/contract/base-paths.x` is
   regenerated: every path begins with `f` again, and `slots` is a path.
 
-[#N]: https://github.com/jonruttan/x-engine-c/pull/N
+[#81]: https://github.com/jonruttan/x-engine-c/pull/81
 
 ## 0.2.18 — 2026-09-30
 
