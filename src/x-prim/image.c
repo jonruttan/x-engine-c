@@ -176,7 +176,7 @@ static void x_image_alloc_pass(x_obj_t *p_base, x_image_t *img)
 		units = rec[X_IMAGE_RECORD_COUNT];
 		flags = (x_obj_flag_t)(rec[X_IMAGE_RECORD_FLAGS] & X_IMAGE_FLAGS_KEPT);
 
-		img->ix[i] = x_base_call_or(p_base, X_SLOT_OBJ_ALLOC, x_obj_alloc, x_argrun({ .p = x_image_role_type(rec[X_IMAGE_RECORD_TYPE]) }, { .i = (flags | X_OBJ_FLAG_SHARED) }, { .i = units < 1 ? 1 : units }));
+		img->ix[i] = x_obj_alloc(p_base, x_image_role_type(rec[X_IMAGE_RECORD_TYPE]), (x_obj_flag_t)(flags | X_OBJ_FLAG_SHARED), (size_t)(units < 1 ? 1 : units));
 
 		pos += x_image_record_words(units);
 	}
@@ -261,7 +261,7 @@ static void x_image_load_pass(x_obj_t *p_base, x_image_t *img)
 		x_firstobj((x_obj_t *)(args + 1)) = p_obj;
 		x_restobj((x_obj_t *)(args + 1)) = NULL;
 
-		x_base_call_or(p_base, X_SLOT_CALLABLE_APPLY, x_callable_apply, x_argrun({ .p = (x_obj_t *)args }));
+		x_eval_call_or(p_base, X_SLOT_CALLABLE_APPLY, x_callable_apply, x_argrun({ .p = (x_obj_t *)args }));
 	}
 }
 
@@ -362,7 +362,7 @@ static void x_image_save_typed(x_obj_t *p_base, x_obj_t *p_obj,
 	x_firstobj((x_obj_t *)(args + 2)) = p_buf;
 	x_restobj((x_obj_t *)(args + 2)) = NULL;
 
-	x_base_call_or(p_base, X_SLOT_CALLABLE_APPLY, x_callable_apply, x_argrun({ .p = (x_obj_t *)args }));
+	x_eval_call_or(p_base, X_SLOT_CALLABLE_APPLY, x_callable_apply, x_argrun({ .p = (x_obj_t *)args }));
 }
 
 /**
@@ -666,7 +666,7 @@ static x_int_t x_image_extern(x_image_writer_t *w, x_int_t word, x_int_t label,
 	{
 		x_obj_t callable_apply_args[1] = { { .p = (x_obj_t *)args } };
 
-		p_k = x_base_call_or(w->p_base, X_SLOT_CALLABLE_APPLY, x_callable_apply, callable_apply_args);
+		p_k = x_eval_call_or(w->p_base, X_SLOT_CALLABLE_APPLY, x_callable_apply, callable_apply_args);
 	}
 	k = (p_k == NULL || x_obj_isnil(w->p_base, p_k)) ? 0 : x_atomint(p_k);
 

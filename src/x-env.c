@@ -98,7 +98,7 @@ x_obj_t *x_env_lookup(x_obj_t *p_base, x_obj_t *p_args)
 		if (x_env_isroot(p_base, p_env)) {
 			tree_args[0].p = x_env_bindings(p_env);
 			tree_args[1].p = p_sym;
-			p_entry = x_base_call_or(p_base, X_SLOT_ALIST_BST_LOOKUP, x_alist_bst_lookup, tree_args);
+			p_entry = x_eval_call_or(p_base, X_SLOT_ALIST_BST_LOOKUP, x_alist_bst_lookup, tree_args);
 			if ( ! x_obj_isnil(p_base, p_entry)) {
 				return p_entry;
 			}
@@ -106,7 +106,7 @@ x_obj_t *x_env_lookup(x_obj_t *p_base, x_obj_t *p_args)
 			p_own = x_env_own_symbol(p_base, p_sym);
 			if (p_own != NULL && p_own != p_sym) {
 				tree_args[1].p = p_own;
-				p_entry = x_base_call_or(p_base, X_SLOT_ALIST_BST_LOOKUP, x_alist_bst_lookup, tree_args);
+				p_entry = x_eval_call_or(p_base, X_SLOT_ALIST_BST_LOOKUP, x_alist_bst_lookup, tree_args);
 				if ( ! x_obj_isnil(p_base, p_entry)) {
 					return p_entry;
 				}
@@ -160,7 +160,7 @@ x_obj_t *x_env_bind(x_obj_t *p_base, x_obj_t *p_args)
 
 	if (x_env_isroot(p_base, p_env)) {
 		tree_args[0].p = x_env_bindings(p_env);
-		p_cell = x_base_call_or(p_base, X_SLOT_ALIST_BST_LOOKUP, x_alist_bst_lookup, tree_args);
+		p_cell = x_eval_call_or(p_base, X_SLOT_ALIST_BST_LOOKUP, x_alist_bst_lookup, tree_args);
 		if ( ! x_obj_isnil(p_base, p_cell)) {
 			x_restobj(p_cell) = p_val;
 			return p_val;

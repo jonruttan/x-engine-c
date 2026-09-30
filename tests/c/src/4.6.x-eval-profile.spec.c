@@ -30,6 +30,7 @@
 #include "src/x-alist.c"
 #include "ext/x-expr/src/x-base.c"
 #include "src/x-eval.c"
+#include "src/x-vector.c"
 #include "src/x-env.c"
 #include "src/x-tco.c"
 #include "src/x-toplevel.c"
@@ -267,7 +268,7 @@ static char *test_count_survives_sweep(void)
 	x_obj_flags(p_obj) |= (X_OBJ_EVALS_MAX << X_OBJ_EVALS_SHIFT)
 		| X_OBJ_FLAG_MARK;
 
-	x_heap_sweep(p_base, x_argrun({ .p = p_obj }, { .i = X_OBJ_FLAG_MARK }));
+	x_heap_sweep(p_base, p_obj, X_OBJ_FLAG_MARK);
 	_it_should("a sweep that keeps an object clears its mark",
 		(x_obj_flags(p_obj) & X_OBJ_FLAG_MARK) == 0);
 	_it_should("and leaves its count whole",
@@ -287,7 +288,7 @@ static char *test_count_keeps_trace(void)
 
 	p_base = x_eval_make(NULL, NULL);
 	p_obj = x_mksatom(p_base, X_OBJ_FLAG_NONE, 7);
-	x_heap_tree_mark(p_base, x_argrun({ .p = p_obj }, { .i = X_OBJ_FLAG_TRACE }));
+	x_heap_tree_mark(p_base, p_obj, X_OBJ_FLAG_TRACE);
 
 	x_eval(p_base, x_argrun({ .p = p_obj }));
 	x_eval(p_base, x_argrun({ .p = p_obj }));

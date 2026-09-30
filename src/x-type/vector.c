@@ -44,7 +44,7 @@ x_obj_t *x_make_vector(x_obj_t *p_base, x_obj_flag_t flags, x_int_t length, ...)
 	x_int_t i;
 	va_list ap;
 
-	p_obj = x_base_call_or(p_base, X_SLOT_OBJ_ALLOC, x_obj_alloc, x_argrun({ .p = p_type }, { .i = flags }, { .i = x_vector_units(length) }));
+	p_obj = x_obj_alloc(p_base, p_type, flags, (size_t)x_vector_units(length));
 
 	/* Every unit holds an object or nil before the length is allocated:
 	 * the elements are stored first, and the length unit is nil until its
@@ -103,7 +103,6 @@ x_obj_t *x_type_vector_struct(x_obj_t *p_base, x_obj_t *p_args)
  * Register (or retrieve) the VECTOR type in the type alist.
  *
  * Calls x_type_struct_get() with the VECTOR name and struct constructor,
- * and gives the base's slot vector the type if it has none.
  *
  * @param p_base  Base (execution context).
  * @param p_args  Unused.
@@ -118,11 +117,6 @@ x_obj_t *x_type_vector_register(x_obj_t *p_base, x_obj_t *p_args)
 	};
 
 	p_type = x_type_struct_get(p_base, (x_obj_t *)args);
-
-	if (x_base_isset(p_base)
-			&& x_obj_isnil(p_base, x_obj_type(x_base_slots(p_base)))) {
-		x_obj_type(x_base_slots(p_base)) = p_type;
-	}
 
 	return p_type;
 }

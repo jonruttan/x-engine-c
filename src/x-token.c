@@ -57,7 +57,7 @@ x_obj_t *x_token_delimit(x_obj_t *p_base, x_obj_t *p_args)
 		prim_arg_prim = x_type_field_delimit(x_restobj(x_firstobj(p_types)));
 
 		if ( ! x_obj_isnil(p_base, prim_arg_prim)
-			&& x_base_call_or(p_base, X_SLOT_CALLABLE_APPLY, x_callable_apply, apply_args) == p_buffer
+			&& x_eval_call_or(p_base, X_SLOT_CALLABLE_APPLY, x_callable_apply, apply_args) == p_buffer
 		) {
 			return p_buffer;
 		}
@@ -215,7 +215,7 @@ x_obj_t *x_token_analyse(x_obj_t *p_base, x_obj_t *p_args)
 
 				x_atomint(arg_chr) = (x_int_t)x_bufferlastchar(p_buffer);
 				prim_arg_prim = p_analyse;
-				p_obj = x_base_call_or(p_base, X_SLOT_CALLABLE_APPLY, x_callable_apply, x_argrun({ .p = (x_obj_t *)prim_args }));
+				p_obj = x_eval_call_or(p_base, X_SLOT_CALLABLE_APPLY, x_callable_apply, x_argrun({ .p = (x_obj_t *)prim_args }));
 
 				/* Not recognized. */
 				if (x_obj_isnil(p_base, p_obj)) {
@@ -315,7 +315,7 @@ x_obj_t *x_token_read(x_obj_t *p_base, x_obj_t *p_args)
 		};
 
 	for (;;) {
-		p_entry = x_base_call_or(p_base, X_SLOT_TOKEN_ANALYSE, x_token_analyse, analyse_args);
+		p_entry = x_eval_call_or(p_base, X_SLOT_TOKEN_ANALYSE, x_token_analyse, analyse_args);
 		label = analyse_args[1].i;
 
 		/* No token and NOTHING consumed: end of input (or input no
@@ -393,7 +393,7 @@ x_obj_t *x_token_read(x_obj_t *p_base, x_obj_t *p_args)
 		p_obj = NULL;
 		while ( ! x_iterempty(p_base, (x_obj_t *)read_iter)) {
 			prim_arg_prim = x_type_iter_next(p_base, (x_obj_t *)read_args);
-			p_obj = x_base_call_or(p_base, X_SLOT_CALLABLE_APPLY, x_callable_apply, x_argrun({ .p = (x_obj_t *)prim_args }));
+			p_obj = x_eval_call_or(p_base, X_SLOT_CALLABLE_APPLY, x_callable_apply, x_argrun({ .p = (x_obj_t *)prim_args }));
 
 			if ( ! x_obj_isnil(p_base, p_obj)) {
 				break;

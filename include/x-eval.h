@@ -199,7 +199,7 @@ x_obj_t *x_eval_buffer_push(x_obj_t *p_base, x_obj_t *p_buffer);
 x_obj_t *x_eval_load(x_obj_t *p_base, x_obj_t *p_args);
 
 /** Signal an error with the given message and irritant object. */
-x_obj_t *x_eval_error(x_obj_t *p_base, x_obj_t *p_args);
+void x_eval_error(x_obj_t *p_base, x_char_t *message, x_obj_t *p_obj);
 
 /** @name Argument Access Macros
  *  @{ */

@@ -36,7 +36,8 @@
         (pair (slot save-stack)
               (cell error-handler))
         (pair (cell tco-expr)
-              (cell tco-env)))))
+              (pair (cell tco-env)
+                    (slot slots))))))
   (todo io-meta))
 
 ; --- io fields: type-alist cell + io-state ---
