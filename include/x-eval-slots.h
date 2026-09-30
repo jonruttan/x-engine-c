@@ -16,7 +16,7 @@
  * tools/contract/base-slots.x, which tools/check/base-slots.sh diffs
  * against the two headers; a language that replaces a routine reads its
  * position from there. Each slot's comment gives its arguments and the
- * kind of word each travels in: an object, an integer or a string.
+ * label of the word each travels in: an object, an integer or a string.
  *
  * @author Jon Ruttan (jonruttan@gmail.com)
  * @copyright 2026 Jon Ruttan
@@ -41,55 +41,55 @@
  */
 enum x_eval_slot_enum
 {
-	/** x_eval(). Arguments: (expression). Kinds: (object). */
+	/** x_eval(). Arguments: (expression). Labels: (object). */
 	X_SLOT_EVAL = X_SLOT_EXPR_LEN,
 
-	/** x_eval_list(). Arguments: (args). Kinds: (object). */
+	/** x_eval_list(). Arguments: (args). Labels: (object). */
 	X_SLOT_EVAL_LIST,
 
-	/** x_eval_body(). Arguments: (body). Kinds: (object). */
+	/** x_eval_body(). Arguments: (body). Labels: (object). */
 	X_SLOT_EVAL_BODY,
 
-	/** x_eval_body_tco(). Arguments: (body). Kinds: (object). */
+	/** x_eval_body_tco(). Arguments: (body). Labels: (object). */
 	X_SLOT_EVAL_BODY_TCO,
 
-	/** x_eval_tco_trampoline(). Arguments: (result). Kinds: (object). */
+	/** x_eval_tco_trampoline(). Arguments: (result). Labels: (object). */
 	X_SLOT_EVAL_TCO_TRAMPOLINE,
 
-	/** x_eval_op_body(). Arguments: (body, caller). Kinds: (object, object). */
+	/** x_eval_op_body(). Arguments: (body, caller). Labels: (object, object). */
 	X_SLOT_EVAL_OP_BODY,
 
-	/** x_callable_call(). Arguments: (args). Kinds: (object). */
+	/** x_callable_call(). Arguments: (args). Labels: (object). */
 	X_SLOT_CALLABLE_CALL,
 
-	/** x_callable_apply(). Arguments: (args). Kinds: (object). */
+	/** x_callable_apply(). Arguments: (args). Labels: (object). */
 	X_SLOT_CALLABLE_APPLY,
 
-	/** x_obj_prim_call(). Arguments: (args). Kinds: (object). */
+	/** x_obj_prim_call(). Arguments: (args). Labels: (object). */
 	X_SLOT_OBJ_PRIM_CALL,
 
-	/** x_env_lookup(). Arguments: (env, symbol). Kinds: (object, object). */
+	/** x_env_lookup(). Arguments: (env, symbol). Labels: (object, object). */
 	X_SLOT_ENV_LOOKUP,
 
 	/** x_env_bind(). Arguments: (env, symbol, value).
-	 *  Kinds: (object, object, object). */
+	 *  Labels: (object, object, object). */
 	X_SLOT_ENV_BIND,
 
 	/** x_env_extend(). Arguments: (parent, params, values).
-	 *  Kinds: (object, object, object). */
+	 *  Labels: (object, object, object). */
 	X_SLOT_ENV_EXTEND,
 
-	/** x_alist_bst_lookup(). Arguments: (tree, symbol). Kinds: (object, object). */
+	/** x_alist_bst_lookup(). Arguments: (tree, symbol). Labels: (object, object). */
 	X_SLOT_ALIST_BST_LOOKUP,
 
-	/** x_token_read(). Arguments: (args). Kinds: (object). */
+	/** x_token_read(). Arguments: (args). Labels: (object). */
 	X_SLOT_TOKEN_READ,
 
-	/** x_token_analyse(). Arguments: (args, label). Kinds: (object, integer).
+	/** x_token_analyse(). Arguments: (args, label). Labels: (object, integer).
 	 *  The routine stores the label it declares in the second word. */
 	X_SLOT_TOKEN_ANALYSE,
 
-	/** x_token_delimit(). Arguments: (args). Kinds: (object). */
+	/** x_token_delimit(). Arguments: (args). Labels: (object). */
 	X_SLOT_TOKEN_DELIMIT,
 
 	/** The length of the engine's slot vector. */
