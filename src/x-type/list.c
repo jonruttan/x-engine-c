@@ -157,13 +157,7 @@ x_obj_t *x_type_list_call(x_obj_t *p_base, x_obj_t *p_args)
 		return NULL;
 	}
 
-	{
-		x_obj_t eval_arg_args[x_vector_storage(1)] = x_vector_set(
-			x_base_vector_type(p_base), 1,
-			{ x_firstobj(vals) });
-
-		arg1 = x_base_call_or(p_base, X_SLOT_EVAL_ARG, x_eval_arg, eval_arg_args);
-	}
+	arg1 = x_base_call_or(p_base, X_SLOT_EVAL, x_eval, x_argrun({ .p = x_firstobj(vals) }));
 	vals = x_restobj(vals);
 
 	if (! x_obj_isnil(p_base, vals)) {
@@ -172,13 +166,7 @@ x_obj_t *x_type_list_call(x_obj_t *p_base, x_obj_t *p_args)
 		p_result = NULL;
 		p_tail = NULL;
 
-		{
-			x_obj_t eval_arg_args[x_vector_storage(1)] = x_vector_set(
-				x_base_vector_type(p_base), 1,
-				{ x_firstobj(vals) });
-
-			arg2 = x_base_call_or(p_base, X_SLOT_EVAL_ARG, x_eval_arg, eval_arg_args);
-		}
+		arg2 = x_base_call_or(p_base, X_SLOT_EVAL, x_eval, x_argrun({ .p = x_firstobj(vals) }));
 		len = x_atomint(arg2);
 
 		/* Walk to start position. */
@@ -246,11 +234,7 @@ x_obj_t *x_type_list_eval(x_obj_t *p_base, x_obj_t *p_args)
 {
 	x_obj_t *p_exp = x_firstobj(x_eval_arg_exp(p_args)), *p_proc, *p_result;
 	x_obj_t **p_cell = x_heap_root_slot(p_base);
-	x_satom_t first_atom = x_obj_set(NULL, X_OBJ_FLAG_NONE, { x_firstobj(p_exp) });
-	x_spair_t eval_args[1] = {
-		x_obj_set(NULL, X_OBJ_FLAG_NONE, { first_atom }, { NULL })
-	},
-	proc_exp = x_obj_set(NULL, X_OBJ_FLAG_NONE, { NULL }, { x_restobj(p_exp) }),
+	x_spair_t proc_exp = x_obj_set(NULL, X_OBJ_FLAG_NONE, { NULL }, { x_restobj(p_exp) }),
 	prim_args = x_obj_set(NULL, X_OBJ_FLAG_NONE, { NULL }, { (x_obj_t *)proc_exp }),
 	root = x_obj_set((x_obj_t *)x_type_pair_obj, X_OBJ_FLAG_NONE,
 		{ NULL }, { NULL });
@@ -263,13 +247,7 @@ x_obj_t *x_type_list_eval(x_obj_t *p_base, x_obj_t *p_args)
 	x_heap_root_push(p_cell, root);
 
 	/* Eval first to resolve operator (e.g. symbol -> prim). */
-	{
-		x_obj_t eval_call_args[x_vector_storage(1)] = x_vector_set(
-			x_base_vector_type(p_base), 1,
-			{ (x_obj_t *)eval_args });
-
-		p_proc = x_base_call_or(p_base, X_SLOT_EVAL, x_eval, eval_call_args);
-	}
+	p_proc = x_base_call_or(p_base, X_SLOT_EVAL, x_eval, x_argrun({ .p = x_firstobj(p_exp) }));
 
 	if (x_obj_isnil(p_base, p_proc)) {
 		x_heap_root_pop(p_cell);
@@ -297,13 +275,7 @@ x_obj_t *x_type_list_eval(x_obj_t *p_base, x_obj_t *p_args)
 		return p_exp;
 	}
 
-	{
-		x_obj_t callable_call_args[x_vector_storage(1)] = x_vector_set(
-			x_base_vector_type(p_base), 1,
-			{ (x_obj_t *)prim_args });
-
-		p_result = x_base_call_or(p_base, X_SLOT_CALLABLE_CALL, x_callable_call, callable_call_args);
-	}
+	p_result = x_base_call_or(p_base, X_SLOT_CALLABLE_CALL, x_callable_call, x_argrun({ .p = (x_obj_t *)prim_args }));
 	x_heap_root_pop(p_cell);
 	return p_result;
 }

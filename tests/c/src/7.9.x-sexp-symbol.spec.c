@@ -230,21 +230,21 @@ static char *test_sexp_symbol_read_token(void)
 	p_buffer = x_mkbuffer(p_base, buffer);
 	p_args = x_mkspair(p_base, X_OBJ_FLAG_NONE, p_buffer, p_base);
 
-	p_obj = x_token_read(p_base, x_mksvector(p_base, 1, p_args));
+	p_obj = x_token_read(p_base, x_argrun({ .p = p_args }));
 	_it_should("return a Symbol object with the value set",
 		x_obj_type_issymbol(p_base, p_obj)
 		&& 0 == x_lib_strcmp("@ABC", x_symbolval(p_obj))
 	);
 
 	p_symbol = p_obj;
-	p_obj = x_token_read(p_base, x_mksvector(p_base, 1, p_args));
+	p_obj = x_token_read(p_base, x_argrun({ .p = p_args }));
 	_it_should("return the same Symbol object with the value set",
 		x_obj_type_issymbol(p_base, p_obj)
 		&& 0 == x_lib_strcmp("@ABC", x_symbolval(p_obj))
 		&& p_symbol == p_obj
 	);
 
-	p_obj = x_token_read(p_base, x_mksvector(p_base, 1, p_args));
+	p_obj = x_token_read(p_base, x_argrun({ .p = p_args }));
 	_it_should("return a second Symbol object with the value set",
 		x_obj_type_issymbol(p_base, p_obj)
 		&& 0 == x_lib_strcmp("DEF", x_symbolval(p_obj))

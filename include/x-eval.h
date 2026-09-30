@@ -209,9 +209,6 @@ x_obj_t *x_eval_error(x_obj_t *p_base, x_obj_t *p_args);
 /** Evaluate an expression in the current environment (TCO trampoline). */
 x_obj_t *x_eval(x_obj_t *p_base, x_obj_t *p_args);
 
-/** Evaluate a single argument expression. */
-x_obj_t *x_eval_arg(x_obj_t *p_base, x_obj_t *p_args);
-
 /** @name Evaluation Entry Points
  * @{ */
 

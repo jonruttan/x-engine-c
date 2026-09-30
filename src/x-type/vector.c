@@ -44,17 +44,7 @@ x_obj_t *x_make_vector(x_obj_t *p_base, x_obj_flag_t flags, x_int_t length, ...)
 	x_int_t i;
 	va_list ap;
 
-	{
-		x_satom_t flags_atom =
-			x_obj_set(x_type_atom_obj, X_OBJ_FLAG_NONE, { .i = (x_int_t)flags });
-		x_satom_t units_atom =
-			x_obj_set(x_type_atom_obj, X_OBJ_FLAG_NONE, { .i = x_vector_units(length) });
-		x_obj_t obj_alloc_args[x_vector_storage(3)] = x_vector_set(
-			x_base_vector_type(p_base), 3,
-			{ p_type }, { (x_obj_t *)flags_atom }, { (x_obj_t *)units_atom });
-
-		p_obj = x_base_call_or(p_base, X_SLOT_OBJ_ALLOC, x_obj_alloc, obj_alloc_args);
-	}
+	p_obj = x_base_call_or(p_base, X_SLOT_OBJ_ALLOC, x_obj_alloc, x_argrun({ .p = p_type }, { .i = flags }, { .i = x_vector_units(length) }));
 
 	/* Every unit holds an object or nil before the length is allocated:
 	 * the elements are stored first, and the length unit is nil until its

@@ -11,11 +11,10 @@
  * its units as one leading unit, the length, and a payload counted by it,
  * every unit a reference.
  *
- * An argument vector is a vector, and so is a base's slot vector: the
- * registration gives the slot vector the type. The slot vector's elements
- * are function pointers, which the collector must not follow, and it does
- * not reach them: the slot vector is the base's first data unit, outside
- * the tree the collector marks from.
+ * A base's slot vector is a vector: the registration gives it the type.
+ * Its elements are function pointers, which the collector must not follow,
+ * and it does not reach them: the slot vector is the base's first data
+ * unit, outside the tree the collector marks from.
  *
  * @author Jon Ruttan (jonruttan@gmail.com)
  * @copyright 2026 Jon Ruttan

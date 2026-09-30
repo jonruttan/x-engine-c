@@ -148,13 +148,7 @@ x_obj_t *x_type_iter_next(x_obj_t *p_base, x_obj_t *p_args)
 	x_firstobj((x_obj_t *)(cell + 1)) = x_iterval(p_iter);
 	x_restobj((x_obj_t *)(cell + 1)) = NULL;
 
-	{
-		x_obj_t callable_apply_args[x_vector_storage(1)] = x_vector_set(
-			x_base_vector_type(p_base), 1,
-			{ (x_obj_t *)cell });
-
-		p_obj = x_base_call_or(p_base, X_SLOT_CALLABLE_APPLY, x_callable_apply, callable_apply_args);
-	}
+	p_obj = x_base_call_or(p_base, X_SLOT_CALLABLE_APPLY, x_callable_apply, x_argrun({ .p = (x_obj_t *)cell }));
 	if (x_obj_isnil(p_base, p_obj)) {
 		x_iterval(p_iter) = NULL;
 		return NULL;
@@ -200,13 +194,7 @@ x_obj_t *x_type_iter_step(x_obj_t *p_base, x_obj_t *p_args)
 		cell[1][X_OBJ_META_FLAGS].i = X_OBJ_FLAG_NONE;
 		x_firstobj((x_obj_t *)(cell + 1)) = x_iterval(p_iter);
 		x_restobj((x_obj_t *)(cell + 1)) = NULL;
-		{
-			x_obj_t callable_apply_args[x_vector_storage(1)] = x_vector_set(
-				x_base_vector_type(p_base), 1,
-				{ (x_obj_t *)cell });
-
-			p_obj = x_base_call_or(p_base, X_SLOT_CALLABLE_APPLY, x_callable_apply, callable_apply_args);
-		}
+		p_obj = x_base_call_or(p_base, X_SLOT_CALLABLE_APPLY, x_callable_apply, x_argrun({ .p = (x_obj_t *)cell }));
 		if (x_obj_isnil(p_base, p_obj)) {
 			return NULL;
 		}

@@ -42,12 +42,12 @@ x_obj_t *x_env_make(x_obj_t *p_base, x_obj_t *p_parent);
 /** The @c (name . value) cell binding a symbol in an environment or an
  *  ancestor, or NULL when no environment on the chain binds it.  Names are
  *  found by identity; a symbol interned in another base stands for this
- *  base's own symbol of its spelling.  Argument vector: (env, symbol). */
+ *  base's own symbol of its spelling.  Argument run: (env, symbol). */
 x_obj_t *x_env_lookup(x_obj_t *p_base, x_obj_t *p_args);
 
 /** Bind a symbol to a value in an environment itself: an existing binding
  *  there is updated in place, otherwise one is added.  Never touches a
- *  parent.  Returns the value.  Argument vector: (env, symbol, value). */
+ *  parent.  Returns the value.  Argument run: (env, symbol, value). */
 x_obj_t *x_env_bind(x_obj_t *p_base, x_obj_t *p_args);
 
 /** Make a child of an environment with parameters bound to values: the

@@ -13,44 +13,43 @@
 ; The slot vector is a vector: its first data unit holds its length, and slot
 ; I is its element I, in data unit I + 1.
 ;
-; A slot function has the engine's one signature, (base args), and args is an
-; argument vector: a vector whose elements are the routine's arguments, in the
-; order the third element of a row gives them.  Each argument is an object; an
-; integer or a string travels in an atom.
+; A routine in a slot has the engine's one signature, (base args), and args
+; is an argument run: a run of datum words, one per argument, in the order
+; the third element of a row gives them.  The fourth element gives the kind
+; of word each argument travels in: object, integer or string.
 ;
 ; FORMAT (rigid, one entry per line -- the awk parses the same bytes):
-;   (position name (argument...))
+;   (position name (argument...) (kind...))
 ; Positions 0 to 10 are x-expr's (ext/x-expr/include/x-slots.h); the rest are
 ; the engine's (include/x-eval-slots.h).
 ; Regenerate with: sh tools/check/base-slots.sh --gen
 
 (def %base-slots (lit (
-  (0 type-name (object))
-  (1 units (object))
-  (2 length (object))
-  (3 error (message object))
-  (4 heap-mark (object flags))
-  (5 heap-free (object))
-  (6 obj-alloc (type flags units))
-  (7 obj-free (object))
-  (8 heap-tree-mark (object flags))
-  (9 heap-sweep (object flags))
-  (10 heap-root-chain-mark (flags))
-  (11 eval (args))
-  (12 eval-arg (arg))
-  (13 eval-list (args))
-  (14 eval-body (body))
-  (15 eval-body-tco (body))
-  (16 eval-tco-trampoline (result))
-  (17 eval-op-body (body caller))
-  (18 callable-call (args))
-  (19 callable-apply (args))
-  (20 obj-prim-call (args))
-  (21 env-lookup (env symbol))
-  (22 env-bind (env symbol value))
-  (23 env-extend (parent params values))
-  (24 alist-bst-lookup (tree symbol))
-  (25 token-read (args))
-  (26 token-analyse (args label))
-  (27 token-delimit (args))
+  (0 type-name (object) (object))
+  (1 units (object) (object))
+  (2 length (object) (object))
+  (3 error (message object) (string object))
+  (4 heap-mark (object flags) (object integer))
+  (5 heap-free (object) (object))
+  (6 obj-alloc (type flags units) (object integer integer))
+  (7 obj-free (object) (object))
+  (8 heap-tree-mark (object flags) (object integer))
+  (9 heap-sweep (object flags) (object integer))
+  (10 heap-root-chain-mark (flags) (integer))
+  (11 eval (expression) (object))
+  (12 eval-list (args) (object))
+  (13 eval-body (body) (object))
+  (14 eval-body-tco (body) (object))
+  (15 eval-tco-trampoline (result) (object))
+  (16 eval-op-body (body caller) (object object))
+  (17 callable-call (args) (object))
+  (18 callable-apply (args) (object))
+  (19 obj-prim-call (args) (object))
+  (20 env-lookup (env symbol) (object object))
+  (21 env-bind (env symbol value) (object object object))
+  (22 env-extend (parent params values) (object object object))
+  (23 alist-bst-lookup (tree symbol) (object object))
+  (24 token-read (args) (object))
+  (25 token-analyse (args label) (object integer))
+  (26 token-delimit (args) (object))
 )))

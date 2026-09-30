@@ -160,26 +160,14 @@ x_obj_t *x_type_str_call(x_obj_t *p_base, x_obj_t *p_args)
 		return x_mkint(p_base, x_lib_strlen(x_strval(proc)));
 	}
 
-	{
-		x_obj_t eval_arg_args[x_vector_storage(1)] = x_vector_set(
-			x_base_vector_type(p_base), 1,
-			{ x_firstobj(vals) });
-
-		arg1 = x_base_call_or(p_base, X_SLOT_EVAL_ARG, x_eval_arg, eval_arg_args);
-	}
+	arg1 = x_base_call_or(p_base, X_SLOT_EVAL, x_eval, x_argrun({ .p = x_firstobj(vals) }));
 	vals = x_restobj(vals);
 
 	if (! x_obj_isnil(p_base, vals)) {
 		/* Slice: (str start len) -> substring */
 		start = x_atomint(arg1);
 
-		{
-			x_obj_t eval_arg_args[x_vector_storage(1)] = x_vector_set(
-				x_base_vector_type(p_base), 1,
-				{ x_firstobj(vals) });
-
-			arg2 = x_base_call_or(p_base, X_SLOT_EVAL_ARG, x_eval_arg, eval_arg_args);
-		}
+		arg2 = x_base_call_or(p_base, X_SLOT_EVAL, x_eval, x_argrun({ .p = x_firstobj(vals) }));
 
 		return x_mkstr(p_base, x_lib_strndup(x_strval(proc) + start, x_atomint(arg2)));
 	}

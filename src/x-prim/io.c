@@ -72,13 +72,7 @@ static x_obj_t *x_prim_read_expr_raw(x_obj_t *p_base)
 	x_firstobj((x_obj_t *)read_args) = p_buffer;
 	x_restobj((x_obj_t *)read_args) = p_base;
 
-	{
-		x_obj_t token_read_args[x_vector_storage(1)] = x_vector_set(
-			x_base_vector_type(p_base), 1,
-			{ (x_obj_t *)read_args });
-
-		return x_base_call_or(p_base, X_SLOT_TOKEN_READ, x_token_read, token_read_args);
-	}
+	return x_base_call_or(p_base, X_SLOT_TOKEN_READ, x_token_read, x_argrun({ .p = (x_obj_t *)read_args }));
 }
 
 /** Read one s-expression from stdin.
@@ -171,13 +165,7 @@ x_obj_t *x_prim_repl(x_obj_t *p_base, x_obj_t *p_args)
 			continue;
 		/* The freshly read form is this frame's only reference. */
 		x_firstobj((x_obj_t *)root) = p_exp;
-		{
-			x_obj_t eval_arg_args[x_vector_storage(1)] = x_vector_set(
-				x_base_vector_type(p_base), 1,
-				{ p_exp });
-
-			x_base_call_or(p_base, X_SLOT_EVAL_ARG, x_eval_arg, eval_arg_args);
-		}
+		x_base_call_or(p_base, X_SLOT_EVAL, x_eval, x_argrun({ .p = p_exp }));
 	}
 
 	x_heap_root_pop(p_cell);

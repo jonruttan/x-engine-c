@@ -319,13 +319,13 @@ static char *test_sexp_char_read_token(void)
 	p_buffer = x_mkbuffer(p_base, buffer);
 	p_args = x_mkspair(p_base, X_OBJ_FLAG_NONE, p_buffer, p_base);
 
-	p_obj = x_token_read(p_base, x_mksvector(p_base, 1, p_args));
+	p_obj = x_token_read(p_base, x_argrun({ .p = p_args }));
 	_it_should("return the @ character",
 		x_obj_type_ischar(p_base, p_obj)
 		&& '@' == x_charval(p_obj)
 	);
 
-	p_obj = x_token_read(p_base, x_mksvector(p_base, 1, p_args));
+	p_obj = x_token_read(p_base, x_argrun({ .p = p_args }));
 	_it_should("return the A character",
 		x_obj_type_ischar(p_base, p_obj)
 		&& 'A' == x_charval(p_obj)
@@ -425,7 +425,7 @@ static char *test_sexp_char_read_named_token(void)
 	p_buffer = x_mkbuffer(p_base, buffer);
 	p_args = x_mkspair(p_base, X_OBJ_FLAG_NONE, p_buffer, p_base);
 
-	p_obj = x_token_read(p_base, x_mksvector(p_base, 1, p_args));
+	p_obj = x_token_read(p_base, x_argrun({ .p = p_args }));
 	_it_should("return a char for tokenized #\\newline",
 		x_obj_type_ischar(p_base, p_obj)
 	);

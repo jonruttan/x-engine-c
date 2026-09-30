@@ -96,15 +96,7 @@ static x_obj_t *x_prim_base_make_type(x_obj_t *p_base, x_obj_t *p_args)
 	 * unmarked and unpinned; the sweep freed it, and the next read
 	 * dereferenced it in x_alist_assoc. */
 	x_obj_flags(p_target) |= X_OBJ_FLAG_SHARED;
-	{
-		x_satom_t flags_atom =
-			x_obj_set(x_type_atom_obj, X_OBJ_FLAG_NONE, { .i = (x_int_t)X_OBJ_FLAG_SHARED });
-		x_obj_t heap_tree_mark_args[x_vector_storage(2)] = x_vector_set(
-			x_base_vector_type(p_base), 2,
-			{ p_type }, { (x_obj_t *)flags_atom });
-
-		x_base_call_or(p_base, X_SLOT_HEAP_TREE_MARK, x_heap_tree_mark, heap_tree_mark_args);
-	}
+	x_base_call_or(p_base, X_SLOT_HEAP_TREE_MARK, x_heap_tree_mark, x_argrun({ .p = p_type }, { .i = X_OBJ_FLAG_SHARED }));
 
 	return p_name_atom;
 }
@@ -268,13 +260,7 @@ static x_obj_t *x_prim_base_eval(x_obj_t *p_base, x_obj_t *p_args)
 		p_handler, x_eval_field_error_handler(p_target));
 
 	if (setjmp(jmp) == 0) {
-		{
-			x_obj_t eval_arg_args[x_vector_storage(1)] = x_vector_set(
-				x_base_vector_type(p_target), 1,
-				{ p_expr });
-
-			p_result = x_base_call_or(p_target, X_SLOT_EVAL_ARG, x_eval_arg, eval_arg_args);
-		}
+		p_result = x_base_call_or(p_target, X_SLOT_EVAL, x_eval, x_argrun({ .p = p_expr }));
 	} else {
 		p_err = x_error_handler_error(p_handler);
 
@@ -324,13 +310,7 @@ static x_obj_t *x_prim_base_bind(x_obj_t *p_base, x_obj_t *p_args)
 
 	x_eargs(p_base, p_args, 4, NULL, &p_target, &p_name, &p_val);
 
-	{
-		x_obj_t env_bind_args[x_vector_storage(3)] = x_vector_set(
-			x_base_vector_type(p_target), 3,
-			{ x_eval_field_env_root(p_target) }, { p_name }, { p_val });
-
-		return x_base_call_or(p_target, X_SLOT_ENV_BIND, x_env_bind, env_bind_args);
-	}
+	return x_base_call_or(p_target, X_SLOT_ENV_BIND, x_env_bind, x_argrun({ .p = x_eval_field_env_root(p_target) }, { .p = p_name }, { .p = p_val }));
 }
 
 
@@ -358,13 +338,7 @@ static x_obj_t *x_prim_define_global(x_obj_t *p_base, x_obj_t *p_args)
 
 	x_eargs(p_base, p_args, 3, NULL, &p_name, &p_val);
 
-	{
-		x_obj_t env_bind_args[x_vector_storage(3)] = x_vector_set(
-			x_base_vector_type(p_base), 3,
-			{ x_eval_field_env_root(p_base) }, { p_name }, { p_val });
-
-		return x_base_call_or(p_base, X_SLOT_ENV_BIND, x_env_bind, env_bind_args);
-	}
+	return x_base_call_or(p_base, X_SLOT_ENV_BIND, x_env_bind, x_argrun({ .p = x_eval_field_env_root(p_base) }, { .p = p_name }, { .p = p_val }));
 }
 
 /** Register the sandbox base primitives. */

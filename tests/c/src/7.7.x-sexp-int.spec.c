@@ -551,31 +551,31 @@ static char *test_sexp_int_read_token(void)
 	p_buffer = x_mkbuffer(p_base, buffer);
 	p_args = x_mkspair(p_base, X_OBJ_FLAG_NONE, p_buffer, p_base);
 
-	p_obj = x_token_read(p_base, x_mksvector(p_base, 1, p_args));
+	p_obj = x_token_read(p_base, x_argrun({ .p = p_args }));
 	_it_should("return 1",
 		x_obj_type_isint(p_base, p_obj)
 		&& 1 == x_intval(p_obj)
 	);
 
-	p_obj = x_token_read(p_base, x_mksvector(p_base, 1, p_args));
+	p_obj = x_token_read(p_base, x_argrun({ .p = p_args }));
 	_it_should("return 2",
 		x_obj_type_isint(p_base, p_obj)
 		&& 2 == x_intval(p_obj)
 	);
 
-	p_obj = x_token_read(p_base, x_mksvector(p_base, 1, p_args));
+	p_obj = x_token_read(p_base, x_argrun({ .p = p_args }));
 	_it_should("return -3",
 		x_obj_type_isint(p_base, p_obj)
 		&& -3 == x_intval(p_obj)
 	);
 
-	p_obj = x_token_read(p_base, x_mksvector(p_base, 1, p_args));
+	p_obj = x_token_read(p_base, x_argrun({ .p = p_args }));
 	_it_should("return 14",
 		x_obj_type_isint(p_base, p_obj)
 		&& 14 == x_intval(p_obj)
 	);
 
-	p_obj = x_token_read(p_base, x_mksvector(p_base, 1, p_args));
+	p_obj = x_token_read(p_base, x_argrun({ .p = p_args }));
 	_it_should("return -15",
 		x_obj_type_isint(p_base, p_obj)
 		&& -15 == x_intval(p_obj)

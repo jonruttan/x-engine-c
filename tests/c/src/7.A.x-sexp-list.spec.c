@@ -232,7 +232,7 @@ static char *test_sexp_list_read(void)
 	p_args = x_mkpair(p_base, p_buffer, p_base);
 
 	/* Read (42) */
-	p_obj = x_token_read(p_base, x_mksvector(p_base, 1, p_args));
+	p_obj = x_token_read(p_base, x_argrun({ .p = p_args }));
 	_it_should("return a list for (42)",
 		x_obj_type_islist(p_base, p_obj)
 	);
@@ -244,7 +244,7 @@ static char *test_sexp_list_read(void)
 	);
 
 	/* Read (1 2 3) — multi-element list */
-	p_obj = x_token_read(p_base, x_mksvector(p_base, 1, p_args));
+	p_obj = x_token_read(p_base, x_argrun({ .p = p_args }));
 	_it_should("return a list for (1 2 3)",
 		x_obj_type_islist(p_base, p_obj)
 	);
@@ -262,7 +262,7 @@ static char *test_sexp_list_read(void)
 	);
 
 	/* Read (1 . 2) — dotted pair */
-	p_obj = x_token_read(p_base, x_mksvector(p_base, 1, p_args));
+	p_obj = x_token_read(p_base, x_argrun({ .p = p_args }));
 	_it_should("return a list for (1 . 2)",
 		x_obj_type_islist(p_base, p_obj)
 	);
@@ -274,7 +274,7 @@ static char *test_sexp_list_read(void)
 	);
 
 	/* Read () — empty list */
-	p_obj = x_token_read(p_base, x_mksvector(p_base, 1, p_args));
+	p_obj = x_token_read(p_base, x_argrun({ .p = p_args }));
 	_it_should("return nil for ()",
 		x_obj_isnil(p_base, p_obj)
 	);
@@ -282,7 +282,7 @@ static char *test_sexp_list_read(void)
 	/* Read past the end — clean EOF is the SENTINEL, not nil (#156):
 	 * nil is a VALUE (the () just read); conflating the two made the
 	 * list loop spin and () terminate loads. */
-	p_obj = x_token_read(p_base, x_mksvector(p_base, 1, p_args));
+	p_obj = x_token_read(p_base, x_argrun({ .p = p_args }));
 	_it_should("return the EOF sentinel at end of input",
 		(x_obj_t *)x_token_eof_prim == p_obj
 	);
@@ -334,7 +334,7 @@ static char *test_sexp_list_read_truncated_one(const char *s)
 
 	caught = 0;
 	if (setjmp(jmp) == 0) {
-		x_token_read(p_base, x_mksvector(p_base, 1, p_args));
+		x_token_read(p_base, x_argrun({ .p = p_args }));
 	} else {
 		caught = 1;
 	}

@@ -213,11 +213,10 @@ static x_obj_t *x_prim_typep(x_obj_t *p_base, x_obj_t *p_args)
 static x_obj_t *x_prim_type_of(x_obj_t *p_base, x_obj_t *p_args)
 {
 	x_obj_t *p_obj;
-	x_obj_t name_args[x_vector_storage(1)] =
-		x_vector_set(x_base_vector_type(p_base), 1, { NULL });
+	x_obj_t name_args[1] = { { .p = NULL } };
 
 	x_eargs(p_base, p_args, 2, NULL, &p_obj);
-	x_vectorobj(name_args, 0) = p_obj;
+	name_args[0].p = p_obj;
 
 	return x_base_call_or(p_base, X_SLOT_TYPE_NAME, x_type_prim_type_name, name_args);
 }
@@ -295,17 +294,7 @@ static x_obj_t *x_prim_make_obj(x_obj_t *p_base, x_obj_t *p_args)
 	}
 
 	n = x_intval(p_n);
-	{
-		x_satom_t flags_atom =
-			x_obj_set(x_type_atom_obj, X_OBJ_FLAG_NONE, { .i = X_OBJ_FLAG_NONE });
-		x_satom_t units_atom =
-			x_obj_set(x_type_atom_obj, X_OBJ_FLAG_NONE, { .i = n });
-		x_obj_t obj_alloc_args[x_vector_storage(3)] = x_vector_set(
-			x_base_vector_type(p_base), 3,
-			{ p_type }, { (x_obj_t *)flags_atom }, { (x_obj_t *)units_atom });
-
-		p_obj = x_base_call_or(p_base, X_SLOT_OBJ_ALLOC, x_obj_alloc, obj_alloc_args);
-	}
+	p_obj = x_base_call_or(p_base, X_SLOT_OBJ_ALLOC, x_obj_alloc, x_argrun({ .p = p_type }, { .i = X_OBJ_FLAG_NONE }, { .i = n }));
 
 	for (i = 0; i < n; i++) {
 		(&x_firstobj(p_obj))[i] = NULL;

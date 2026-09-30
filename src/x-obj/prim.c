@@ -68,13 +68,13 @@ x_obj_t *x_obj_prim_make(x_obj_t *p_base, x_obj_t *p_args)
  * list.
  *
  * @param p_base  x_obj_t* -- Base (execution context)
- * @param p_args  x_obj_t* -- Argument vector: (call) -- the call list,
+ * @param p_args  x_obj_t* -- Argument run: (call) -- the call list,
  *                            (callable . args)
  * @return Result of the call, or NULL if no call handler
  */
 x_obj_t *x_obj_prim_call(x_obj_t *p_base, x_obj_t *p_args)
 {
-	x_obj_t *p_list = x_obj_isnil(p_base, p_args) ? NULL : x_vectorobj(p_args, 0);
+	x_obj_t *p_list = x_obj_isnil(p_base, p_args) ? NULL : x_obj(p_args[0]);
 	x_obj_t *p_call, *p_obj;
 	/* Procedure-dispatch stack pair; filled at use (needs p_call). */
 	x_spair_t closure_args;

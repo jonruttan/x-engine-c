@@ -46,15 +46,7 @@ static x_obj_t *x_type_procedure_mark(x_obj_t *p_base, x_obj_t *p_args)
 {
 	x_obj_t *p_obj = x_firstobj(p_args);
 	x_obj_flag_t flags = (x_obj_flag_t)x_firstint(x_restobj(p_args));
-	{
-		x_satom_t flags_atom =
-			x_obj_set(x_type_atom_obj, X_OBJ_FLAG_NONE, { .i = (x_int_t)flags });
-		x_obj_t heap_tree_mark_args[x_vector_storage(2)] = x_vector_set(
-			x_base_vector_type(p_base), 2,
-			{ x_obj(x_obj_data_i(p_obj, 1)) }, { (x_obj_t *)flags_atom });
-
-		x_base_call_or(p_base, X_SLOT_HEAP_TREE_MARK, x_heap_tree_mark, heap_tree_mark_args);
-	}
+	x_base_call_or(p_base, X_SLOT_HEAP_TREE_MARK, x_heap_tree_mark, x_argrun({ .p = x_obj(x_obj_data_i(p_obj, 1)) }, { .i = flags }));
 	return NULL;
 }
 
@@ -205,26 +197,14 @@ x_obj_t *x_type_procedure_call(x_obj_t *p_base, x_obj_t *p_args)
 	x_spair_t sp;
 
 	/* Eval each argument in the current env. */
-	{
-		x_obj_t eval_list_args[x_vector_storage(1)] = x_vector_set(
-			x_base_vector_type(p_base), 1,
-			{ p_unevaluated_args });
-
-		p_evaled_args = x_base_call_or(p_base, X_SLOT_EVAL_LIST, x_eval_list, eval_list_args);
-	}
+	p_evaled_args = x_base_call_or(p_base, X_SLOT_EVAL_LIST, x_eval_list, x_argrun({ .p = p_unevaluated_args }));
 
 	/* Wrapped combiner: dispatch to underlying combiner with eval'd args. */
 	if (x_obj_flags(p_proc) & X_OBJ_FLAG_WRAP) {
 		p_combiner = x_procenv(p_proc);
 		p_call_args = x_mkspair(p_base, X_OBJ_FLAG_NONE, p_combiner, p_evaled_args);
 
-		{
-			x_obj_t obj_prim_call_args[x_vector_storage(1)] = x_vector_set(
-				x_base_vector_type(p_base), 1,
-				{ p_call_args });
-
-			return x_base_call_or(p_base, X_SLOT_OBJ_PRIM_CALL, x_obj_prim_call, obj_prim_call_args);
-		}
+		return x_base_call_or(p_base, X_SLOT_OBJ_PRIM_CALL, x_obj_prim_call, x_argrun({ .p = p_call_args }));
 	}
 
 	/* Push the caller's environment onto the save-stack; the trampoline
@@ -241,21 +221,9 @@ x_obj_t *x_type_procedure_call(x_obj_t *p_base, x_obj_t *p_args)
 	p_evaled_args = (x_obj_t *)&sp;
 
 	/* The body runs in a child of the closure's environment. */
-	{
-		x_obj_t env_extend_args[x_vector_storage(3)] = x_vector_set(
-			x_base_vector_type(p_base), 3,
-			{ x_procenv(p_proc) }, { x_procparams(p_proc) }, { p_evaled_args });
+	x_eval_field_env(p_base) = x_base_call_or(p_base, X_SLOT_ENV_EXTEND, x_env_extend, x_argrun({ .p = x_procenv(p_proc) }, { .p = x_procparams(p_proc) }, { .p = p_evaled_args }));
 
-		x_eval_field_env(p_base) = x_base_call_or(p_base, X_SLOT_ENV_EXTEND, x_env_extend, env_extend_args);
-	}
-
-	{
-		x_obj_t eval_body_tco_args[x_vector_storage(1)] = x_vector_set(
-			x_base_vector_type(p_base), 1,
-			{ x_procbody(p_proc) });
-
-		return x_base_call_or(p_base, X_SLOT_EVAL_BODY_TCO, x_eval_body_tco, eval_body_tco_args);
-	}
+	return x_base_call_or(p_base, X_SLOT_EVAL_BODY_TCO, x_eval_body_tco, x_argrun({ .p = x_procbody(p_proc) }));
 }
 
 /**
@@ -290,22 +258,10 @@ x_obj_t *x_type_procedure_apply(x_obj_t *p_base, x_obj_t *p_args)
 	{
 	x_spair_t sp = x_obj_set(NULL, X_OBJ_FLAG_NONE,
 		{ p_proc }, { x_restobj(p_args) });
-	{
-		x_obj_t env_extend_args[x_vector_storage(3)] = x_vector_set(
-			x_base_vector_type(p_base), 3,
-			{ x_procenv(p_proc) }, { x_procparams(p_proc) }, { (x_obj_t *)&sp });
-
-		x_eval_field_env(p_base) = x_base_call_or(p_base, X_SLOT_ENV_EXTEND, x_env_extend, env_extend_args);
-	}
+	x_eval_field_env(p_base) = x_base_call_or(p_base, X_SLOT_ENV_EXTEND, x_env_extend, x_argrun({ .p = x_procenv(p_proc) }, { .p = x_procparams(p_proc) }, { .p = (x_obj_t *)&sp }));
 	}
 
-	{
-		x_obj_t eval_body_args[x_vector_storage(1)] = x_vector_set(
-			x_base_vector_type(p_base), 1,
-			{ x_procbody(p_proc) });
-
-		p_result = x_base_call_or(p_base, X_SLOT_EVAL_BODY, x_eval_body, eval_body_args);
-	}
+	p_result = x_base_call_or(p_base, X_SLOT_EVAL_BODY, x_eval_body, x_argrun({ .p = x_procbody(p_proc) }));
 
 	x_eval_field_env(p_base) = p_saved_env;
 

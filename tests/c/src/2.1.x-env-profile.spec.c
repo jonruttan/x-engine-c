@@ -66,8 +66,6 @@ x_obj_t *x_token_delimit(x_obj_t *p_base, x_obj_t *p_args) { return NULL; }
 
 /* The slot table in x-eval.c names the evaluator's other routines, so they
  * must link. No test here reaches them. */
-x_obj_t *x_eval_arg(x_obj_t *p_base, x_obj_t *p_args) { return NULL; }
-
 x_obj_t *x_eval_list(x_obj_t *p_base, x_obj_t *p_args) { return NULL; }
 
 x_obj_t *x_eval_body(x_obj_t *p_base, x_obj_t *p_args) { return NULL; }
@@ -141,23 +139,23 @@ static char *test_env_profile_steps(void)
 
 	/* The child holds two bindings and the grandchild one. */
 	p_child = x_env_make(p_base, p_root);
-	x_env_bind(p_base, x_mksvector(p_base, 3, p_child, p_syms[0], p_atoms[0]));
-	x_env_bind(p_base, x_mksvector(p_base, 3, p_child, p_syms[1], p_atoms[1]));
+	x_env_bind(p_base, x_argrun({ .p = p_child }, { .p = p_syms[0] }, { .p = p_atoms[0] }));
+	x_env_bind(p_base, x_argrun({ .p = p_child }, { .p = p_syms[1] }, { .p = p_atoms[1] }));
 	p_grand = x_env_make(p_base, p_child);
-	x_env_bind(p_base, x_mksvector(p_base, 3, p_grand, p_syms[2], p_atoms[2]));
+	x_env_bind(p_base, x_argrun({ .p = p_grand }, { .p = p_syms[2] }, { .p = p_atoms[2] }));
 
 	before = _env_steps(p_base);
-	x_env_lookup(p_base, x_mksvector(p_base, 2, p_grand, p_syms[2]));
+	x_env_lookup(p_base, x_argrun({ .p = p_grand }, { .p = p_syms[2] }));
 	_it_should("a hit on an environment's only binding compares one",
 		_env_steps(p_base) - before == 1);
 
 	before = _env_steps(p_base);
-	x_env_lookup(p_base, x_mksvector(p_base, 2, p_grand, p_syms[3]));
+	x_env_lookup(p_base, x_argrun({ .p = p_grand }, { .p = p_syms[3] }));
 	_it_should("a miss compares every binding on the way to the root: the grandchild's one and the child's two",
 		_env_steps(p_base) - before == 3);
 
 	before = _env_steps(p_base);
-	x_env_lookup(p_base, x_mksvector(p_base, 2, p_root, p_syms[3]));
+	x_env_lookup(p_base, x_argrun({ .p = p_root }, { .p = p_syms[3] }));
 	_it_should("a lookup that starts at the root compares no alist binding",
 		_env_steps(p_base) - before == 0);
 

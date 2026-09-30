@@ -225,7 +225,7 @@ static char *test_procedure_call_wrapped(void)
 	/* WRAP path calls x_obj_prim_call on the combiner; the operative now
 	 * defers its body's tail via tco_expr (O(1) C stack), so drive the
 	 * trampoline to resolve it. */
-	p_result = x_eval_tco_trampoline(p_base, x_mksvector(p_base, 1, x_type_procedure_call(p_base, p_args)));
+	p_result = x_eval_tco_trampoline(p_base, x_argrun({ .p = x_type_procedure_call(p_base, p_args) }));
 
 	_it_should("wrapped combiner dispatches to operative and returns its value",
 		p_result != NULL && x_atomint(p_result) == 77);

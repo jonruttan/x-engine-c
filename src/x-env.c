@@ -83,22 +83,21 @@ static x_obj_t *x_env_own_symbol(x_obj_t *p_base, x_obj_t *p_sym)
  * this one cell adds.
  *
  * @param p_base  x_obj_t* -- Base (execution context)
- * @param p_args  x_obj_t* -- Argument vector: (env, symbol) -- the
+ * @param p_args  x_obj_t* -- Argument run: (env, symbol) -- the
  *                            environment to start from, and the symbol
  * @return x_obj_t* -- The @c (name . value) cell, or NULL when unbound
  */
 x_obj_t *x_env_lookup(x_obj_t *p_base, x_obj_t *p_args)
 {
-	x_obj_t *p_env = x_vectorobj(p_args, 0);
-	x_obj_t *p_sym = x_vectorobj(p_args, 1);
+	x_obj_t *p_env = x_obj(p_args[0]);
+	x_obj_t *p_sym = x_obj(p_args[1]);
 	x_obj_t *p_cell, *p_entry, *p_own;
-	x_obj_t tree_args[x_vector_storage(2)] =
-		x_vector_set(x_base_vector_type(p_base), 2, { NULL }, { NULL });
+	x_obj_t tree_args[2] = { { .p = NULL }, { .p = NULL } };
 
 	for (; ! x_obj_isnil(p_base, p_env); p_env = x_env_parent(p_env)) {
 		if (x_env_isroot(p_base, p_env)) {
-			x_vectorobj(tree_args, 0) = x_env_bindings(p_env);
-			x_vectorobj(tree_args, 1) = p_sym;
+			tree_args[0].p = x_env_bindings(p_env);
+			tree_args[1].p = p_sym;
 			p_entry = x_base_call_or(p_base, X_SLOT_ALIST_BST_LOOKUP, x_alist_bst_lookup, tree_args);
 			if ( ! x_obj_isnil(p_base, p_entry)) {
 				return p_entry;
@@ -106,7 +105,7 @@ x_obj_t *x_env_lookup(x_obj_t *p_base, x_obj_t *p_args)
 
 			p_own = x_env_own_symbol(p_base, p_sym);
 			if (p_own != NULL && p_own != p_sym) {
-				x_vectorobj(tree_args, 1) = p_own;
+				tree_args[1].p = p_own;
 				p_entry = x_base_call_or(p_base, X_SLOT_ALIST_BST_LOOKUP, x_alist_bst_lookup, tree_args);
 				if ( ! x_obj_isnil(p_base, p_entry)) {
 					return p_entry;
@@ -142,7 +141,7 @@ x_obj_t *x_env_lookup(x_obj_t *p_base, x_obj_t *p_args)
  * `base bind` are this on a root.
  *
  * @param p_base  x_obj_t* -- Base (execution context)
- * @param p_args  x_obj_t* -- Argument vector: (env, symbol, value) -- the
+ * @param p_args  x_obj_t* -- Argument run: (env, symbol, value) -- the
  *                            environment to bind in, the symbol, the value
  * @return x_obj_t* -- The value
  *
@@ -153,15 +152,14 @@ x_obj_t *x_env_lookup(x_obj_t *p_base, x_obj_t *p_args)
  */
 x_obj_t *x_env_bind(x_obj_t *p_base, x_obj_t *p_args)
 {
-	x_obj_t *p_env = x_vectorobj(p_args, 0);
-	x_obj_t *p_sym = x_vectorobj(p_args, 1);
-	x_obj_t *p_val = x_vectorobj(p_args, 2);
+	x_obj_t *p_env = x_obj(p_args[0]);
+	x_obj_t *p_sym = x_obj(p_args[1]);
+	x_obj_t *p_val = x_obj(p_args[2]);
 	x_obj_t *p_cell, *p_pair;
-	x_obj_t tree_args[x_vector_storage(2)] =
-		x_vector_set(x_base_vector_type(p_base), 2, { NULL }, { p_sym });
+	x_obj_t tree_args[2] = { { .p = NULL }, { .p = p_sym } };
 
 	if (x_env_isroot(p_base, p_env)) {
-		x_vectorobj(tree_args, 0) = x_env_bindings(p_env);
+		tree_args[0].p = x_env_bindings(p_env);
 		p_cell = x_base_call_or(p_base, X_SLOT_ALIST_BST_LOOKUP, x_alist_bst_lookup, tree_args);
 		if ( ! x_obj_isnil(p_base, p_cell)) {
 			x_restobj(p_cell) = p_val;
@@ -206,7 +204,7 @@ x_obj_t *x_env_bind(x_obj_t *p_base, x_obj_t *p_args)
  * parameter to one value, then the rest.
  *
  * @param p_base  x_obj_t* -- Base (execution context)
- * @param p_args  x_obj_t* -- Argument vector: (parent, params, values) --
+ * @param p_args  x_obj_t* -- Argument run: (parent, params, values) --
  *                            the environment the new one is a child of,
  *                            the parameter list (or a single symbol for
  *                            variadic), and the value list
@@ -227,9 +225,9 @@ x_obj_t *x_env_bind(x_obj_t *p_base, x_obj_t *p_args)
  */
 x_obj_t *x_env_extend(x_obj_t *p_base, x_obj_t *p_args)
 {
-	x_obj_t *p_parent = x_vectorobj(p_args, 0);
-	x_obj_t *p_params = x_vectorobj(p_args, 1);
-	x_obj_t *p_vals = x_vectorobj(p_args, 2);
+	x_obj_t *p_parent = x_obj(p_args[0]);
+	x_obj_t *p_params = x_obj(p_args[1]);
+	x_obj_t *p_vals = x_obj(p_args[2]);
 	x_obj_t *p_env = x_env_make(p_base, p_parent);
 	x_obj_t *p_pair;
 	x_obj_t *p_val;

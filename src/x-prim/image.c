@@ -176,17 +176,7 @@ static void x_image_alloc_pass(x_obj_t *p_base, x_image_t *img)
 		units = rec[X_IMAGE_RECORD_COUNT];
 		flags = (x_obj_flag_t)(rec[X_IMAGE_RECORD_FLAGS] & X_IMAGE_FLAGS_KEPT);
 
-		{
-			x_satom_t flags_atom =
-				x_obj_set(x_type_atom_obj, X_OBJ_FLAG_NONE, { .i = (x_int_t)(flags | X_OBJ_FLAG_SHARED) });
-			x_satom_t units_atom =
-				x_obj_set(x_type_atom_obj, X_OBJ_FLAG_NONE, { .i = units < 1 ? 1 : units });
-			x_obj_t obj_alloc_args[x_vector_storage(3)] = x_vector_set(
-				x_base_vector_type(p_base), 3,
-				{ x_image_role_type(rec[X_IMAGE_RECORD_TYPE]) }, { (x_obj_t *)flags_atom }, { (x_obj_t *)units_atom });
-
-			img->ix[i] = x_base_call_or(p_base, X_SLOT_OBJ_ALLOC, x_obj_alloc, obj_alloc_args);
-		}
+		img->ix[i] = x_base_call_or(p_base, X_SLOT_OBJ_ALLOC, x_obj_alloc, x_argrun({ .p = x_image_role_type(rec[X_IMAGE_RECORD_TYPE]) }, { .i = (flags | X_OBJ_FLAG_SHARED) }, { .i = units < 1 ? 1 : units }));
 
 		pos += x_image_record_words(units);
 	}
@@ -271,13 +261,7 @@ static void x_image_load_pass(x_obj_t *p_base, x_image_t *img)
 		x_firstobj((x_obj_t *)(args + 1)) = p_obj;
 		x_restobj((x_obj_t *)(args + 1)) = NULL;
 
-		{
-			x_obj_t callable_apply_args[x_vector_storage(1)] = x_vector_set(
-				x_base_vector_type(p_base), 1,
-				{ (x_obj_t *)args });
-
-			x_base_call_or(p_base, X_SLOT_CALLABLE_APPLY, x_callable_apply, callable_apply_args);
-		}
+		x_base_call_or(p_base, X_SLOT_CALLABLE_APPLY, x_callable_apply, x_argrun({ .p = (x_obj_t *)args }));
 	}
 }
 
@@ -378,13 +362,7 @@ static void x_image_save_typed(x_obj_t *p_base, x_obj_t *p_obj,
 	x_firstobj((x_obj_t *)(args + 2)) = p_buf;
 	x_restobj((x_obj_t *)(args + 2)) = NULL;
 
-	{
-		x_obj_t callable_apply_args[x_vector_storage(1)] = x_vector_set(
-			x_base_vector_type(p_base), 1,
-			{ (x_obj_t *)args });
-
-		x_base_call_or(p_base, X_SLOT_CALLABLE_APPLY, x_callable_apply, callable_apply_args);
-	}
+	x_base_call_or(p_base, X_SLOT_CALLABLE_APPLY, x_callable_apply, x_argrun({ .p = (x_obj_t *)args }));
 }
 
 /**
@@ -686,9 +664,7 @@ static x_int_t x_image_extern(x_image_writer_t *w, x_int_t word, x_int_t label,
 	x_restobj((x_obj_t *)(args + 3)) = NULL;
 
 	{
-		x_obj_t callable_apply_args[x_vector_storage(1)] = x_vector_set(
-			x_base_vector_type(w->p_base), 1,
-			{ (x_obj_t *)args });
+		x_obj_t callable_apply_args[1] = { { .p = (x_obj_t *)args } };
 
 		p_k = x_base_call_or(w->p_base, X_SLOT_CALLABLE_APPLY, x_callable_apply, callable_apply_args);
 	}

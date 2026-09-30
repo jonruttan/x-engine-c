@@ -126,12 +126,12 @@ x_obj_t *x_type_prim_make(x_obj_t *p_base, x_obj_t *p_args)
  * list itself, or its rest.
  *
  * @param p_base  Base (execution context).
- * @param p_args  Argument vector: (call) -- the call list, (callable . args).
+ * @param p_args  Argument run: (call) -- the call list, (callable . args).
  * @return Result of the called function.
  */
 x_obj_t *x_callable_call(x_obj_t *p_base, x_obj_t *p_args)
 {
-	x_obj_t *p_call = x_vectorobj(p_args, 0);
+	x_obj_t *p_call = x_obj(p_args[0]);
 	x_obj_t *p_fn = x_firstobj(p_call);
 
 	/* Satom: type-internal handler (read/write/display) — no self */
@@ -148,7 +148,7 @@ x_obj_t *x_callable_call(x_obj_t *p_base, x_obj_t *p_args)
  *
  * The call handler of the PRIMITIVE type. A handler is called with a
  * pair, as every primitive is; this one puts the call list in an
- * argument vector and calls x_callable_call() through its slot.
+ * argument run and calls x_callable_call() through its slot.
  *
  * @param p_base  Base (execution context).
  * @param p_args  The call list: (callable . args).
@@ -156,11 +156,7 @@ x_obj_t *x_callable_call(x_obj_t *p_base, x_obj_t *p_args)
  */
 x_obj_t *x_callable_prim_call(x_obj_t *p_base, x_obj_t *p_args)
 {
-	x_obj_t call_args[x_vector_storage(1)] = x_vector_set(
-		x_base_vector_type(p_base), 1,
-		{ p_args });
-
-	return x_base_call_or(p_base, X_SLOT_CALLABLE_CALL, x_callable_call, call_args);
+	return x_base_call_or(p_base, X_SLOT_CALLABLE_CALL, x_callable_call, x_argrun({ .p = p_args }));
 }
 
 /**
@@ -170,7 +166,7 @@ x_obj_t *x_callable_prim_call(x_obj_t *p_base, x_obj_t *p_args)
  * (args already evaluated) and a trampoline for operatives.
  *
  * @param p_base  Base (execution context).
- * @param p_args  Argument vector: (call) -- the call list, (callable . args).
+ * @param p_args  Argument run: (call) -- the call list, (callable . args).
  * @return Result of the applied function.
  *
  * @see x_callable_call
@@ -178,7 +174,7 @@ x_obj_t *x_callable_prim_call(x_obj_t *p_base, x_obj_t *p_args)
  */
 x_obj_t *x_callable_apply(x_obj_t *p_base, x_obj_t *p_args)
 {
-	x_obj_t *p_call = x_vectorobj(p_args, 0);
+	x_obj_t *p_call = x_obj(p_args[0]);
 	x_obj_t *p_fn = x_firstobj(p_call);
 
 	/* Satom: type-internal handler — no self */
@@ -193,13 +189,7 @@ x_obj_t *x_callable_apply(x_obj_t *p_base, x_obj_t *p_args)
 
 	/* Operative via apply: trampoline for TCO */
 	if (x_primval(p_fn) == (x_fn_t)x_type_operative_call) {
-		{
-			x_obj_t eval_tco_trampoline_args[x_vector_storage(1)] = x_vector_set(
-				x_base_vector_type(p_base), 1,
-				{ x_type_operative_call(p_base, p_call) });
-
-			return x_base_call_or(p_base, X_SLOT_EVAL_TCO_TRAMPOLINE, x_eval_tco_trampoline, eval_tco_trampoline_args);
-		}
+		return x_base_call_or(p_base, X_SLOT_EVAL_TCO_TRAMPOLINE, x_eval_tco_trampoline, x_argrun({ .p = x_type_operative_call(p_base, p_call) }));
 	}
 
 	/* C prim: call through fn-ptr with (fn . args) */

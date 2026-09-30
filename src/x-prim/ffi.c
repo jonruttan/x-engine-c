@@ -84,13 +84,7 @@ static x_obj_t *x_prim_ptr_call(x_obj_t *p_base, x_obj_t *p_args)
 
 	while (!x_obj_isnil(p_base, p_args) && i < 7) {
 		x_eval_spine_guard(p_base, p_args);	/* dotted tail (#487) */
-		{
-			x_obj_t eval_arg_args[x_vector_storage(1)] = x_vector_set(
-				x_base_vector_type(p_base), 1,
-				{ x_firstobj(p_args) });
-
-			arg = x_base_call_or(p_base, X_SLOT_EVAL_ARG, x_eval_arg, eval_arg_args);
-		}
+		arg = x_base_call_or(p_base, X_SLOT_EVAL, x_eval, x_argrun({ .p = x_firstobj(p_args) }));
 		if (x_obj_isnil(p_base, arg))
 			/* nil = NULL (the settled model): a nil arg is the NULL
 			 * pointer/zero, filling its own slot (#244). */

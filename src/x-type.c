@@ -255,13 +255,7 @@ int x_type_op_try(x_obj_t *p_base, x_char_t *op, x_obj_t *p_a, x_obj_t *p_b,
 	x_firstobj((x_obj_t *)(call + 2)) = p_b;
 	x_restobj((x_obj_t *)(call + 2)) = NULL;
 
-	{
-		x_obj_t callable_call_args[x_vector_storage(1)] = x_vector_set(
-			x_base_vector_type(p_base), 1,
-			{ (x_obj_t *)call });
-
-		*pp_result = x_base_call_or(p_base, X_SLOT_CALLABLE_CALL, x_callable_call, callable_call_args);
-	}
+	*pp_result = x_base_call_or(p_base, X_SLOT_CALLABLE_CALL, x_callable_call, x_argrun({ .p = (x_obj_t *)call }));
 	return 1;
 }
 
@@ -286,13 +280,7 @@ x_obj_t *x_type_struct_get(x_obj_t *p_base, x_obj_t *p_args)
 
 	/* TODO: GC on exit, with and w/o GC structures. */
 	if (x_obj_isnil(p_base, p_type)) {
-		{
-			x_obj_t callable_call_args[x_vector_storage(1)] = x_vector_set(
-				x_base_vector_type(p_base), 1,
-				{ x_restobj(p_args) });
-
-			p_type = x_base_call_or(p_base, X_SLOT_CALLABLE_CALL, x_callable_call, callable_call_args);
-		}
+		p_type = x_base_call_or(p_base, X_SLOT_CALLABLE_CALL, x_callable_call, x_argrun({ .p = x_restobj(p_args) }));
 
 		if (x_base_isset(p_base)) {
 			x_eval_type_alist_extend(p_base, p_type);
@@ -310,14 +298,14 @@ x_obj_t *x_type_struct_get(x_obj_t *p_base, x_obj_t *p_args)
  * struct.
  *
  * @param p_base  x_obj_t* -- Base (execution context)
- * @param p_args  x_obj_t* -- Argument vector: (object)
+ * @param p_args  x_obj_t* -- Argument run: (object)
  * @return x_obj_t* -- Type name object, or NULL
  */
 x_obj_t *x_type_prim_type_name(x_obj_t *p_base, x_obj_t *p_args)
 {
 	x_obj_t *p_name, *p_obj;
 
-	if (x_obj_isnil(p_base, p_args) || x_obj_isnil(p_base, (p_obj = x_vectorobj(p_args, 0)))) {
+	if (x_obj_isnil(p_base, p_args) || x_obj_isnil(p_base, (p_obj = x_obj(p_args[0])))) {
 		return NULL;
 	}
 
@@ -437,7 +425,7 @@ int x_type_unit_label(x_int_t mask, x_int_t i, x_int_t described)
  * For custom types, reads the type's units count.
  *
  * @param p_base  x_obj_t* -- Base (execution context)
- * @param p_args  x_obj_t* -- Argument vector: (object)
+ * @param p_args  x_obj_t* -- Argument run: (object)
  * @return x_obj_t* -- Integer unit count, or NULL
  */
 x_obj_t *x_type_prim_units(x_obj_t *p_base, x_obj_t *p_args)
@@ -447,7 +435,7 @@ x_obj_t *x_type_prim_units(x_obj_t *p_base, x_obj_t *p_args)
 	x_obj_t *p_units, *p_obj;
 	x_int_t n;
 
-	if (x_obj_isnil(p_base, p_args) || x_obj_isnil(p_base, (p_obj = x_vectorobj(p_args, 0)))) {
+	if (x_obj_isnil(p_base, p_args) || x_obj_isnil(p_base, (p_obj = x_obj(p_args[0])))) {
 		return NULL;
 	}
 
@@ -501,7 +489,7 @@ x_obj_t *x_type_prim_units(x_obj_t *p_base, x_obj_t *p_args)
  * For custom types, calls the type's length hook function.
  *
  * @param p_base  x_obj_t* -- Base (execution context)
- * @param p_args  x_obj_t* -- Argument vector: (object)
+ * @param p_args  x_obj_t* -- Argument run: (object)
  * @return x_obj_t* -- Integer length, or NULL
  */
 x_obj_t *x_type_prim_length(x_obj_t *p_base, x_obj_t *p_args)
@@ -510,7 +498,7 @@ x_obj_t *x_type_prim_length(x_obj_t *p_base, x_obj_t *p_args)
 	x_spair_t pair_args = x_obj_set(NULL, X_OBJ_FLAG_NONE, { NULL }, { NULL });
 	x_obj_t *p_length, *p_obj;
 
-	if (x_obj_isnil(p_base, p_args) || x_obj_isnil(p_base, (p_obj = x_vectorobj(p_args, 0)))) {
+	if (x_obj_isnil(p_base, p_args) || x_obj_isnil(p_base, (p_obj = x_obj(p_args[0])))) {
 		return NULL;
 	}
 
@@ -545,14 +533,14 @@ x_obj_t *x_type_prim_length(x_obj_t *p_base, x_obj_t *p_args)
  * a generic N-slot traversal using the units count.
  *
  * @param p_base  x_obj_t* -- Base (execution context)
- * @param p_args  x_obj_t* -- Argument vector: (object, flags) -- the object
- *                            being marked, and the GC mark flags in an atom
+ * @param p_args  x_obj_t* -- Argument run: (object, flags) -- the object
+ *                            being marked, and the GC mark flags
  * @return x_obj_t* -- Data pointer for base objects, or NULL
  */
 x_obj_t *x_type_heap_mark(x_obj_t *p_base, x_obj_t *p_args)
 {
-	x_obj_t *p_obj = x_vectorobj(p_args, 0);
-	x_obj_flag_t flags = (x_obj_flag_t)x_atomint(x_vectorobj(p_args, 1));
+	x_obj_t *p_obj = x_obj(p_args[0]);
+	x_obj_flag_t flags = (x_obj_flag_t)p_args[1].i;
 	x_obj_t *p_type = x_obj_type(p_obj);
 	x_obj_t *p_mark;
 	x_obj_t *p_units;
@@ -622,11 +610,8 @@ x_obj_t *x_type_heap_mark(x_obj_t *p_base, x_obj_t *p_args)
 			}
 
 			{
-				/* One argument vector for every unit, around the
-				 * flags atom this hook was handed. */
-				x_obj_t tree_args[x_vector_storage(2)] = x_vector_set(
-					x_base_vector_type(p_base), 2,
-					{ NULL }, { x_vectorobj(p_args, 1) });
+				/* One argument run for every unit. */
+				x_obj_t tree_args[2] = { { .p = NULL }, { .i = flags } };
 
 				for (i = 0; i < n; i++) {
 					if (x_type_unit_label(mask, i, described)
@@ -634,10 +619,9 @@ x_obj_t *x_type_heap_mark(x_obj_t *p_base, x_obj_t *p_args)
 						continue;
 					}
 
-					x_vectorobj(tree_args, 0)
+					tree_args[0].p
 						= x_obj(x_obj_data_i(p_obj, i));
-					x_base_call_or(p_base, X_SLOT_HEAP_TREE_MARK,
-						x_heap_tree_mark, tree_args);
+					x_base_call_or(p_base, X_SLOT_HEAP_TREE_MARK, x_heap_tree_mark, tree_args);
 				}
 			}
 			return NULL;
@@ -654,13 +638,13 @@ x_obj_t *x_type_heap_mark(x_obj_t *p_base, x_obj_t *p_args)
  * type-specific resources before the heap cell is reclaimed.
  *
  * @param p_base  x_obj_t* -- Base (execution context)
- * @param p_args  x_obj_t* -- Argument vector: (object) -- the object being
+ * @param p_args  x_obj_t* -- Argument run: (object) -- the object being
  *                            freed
  * @return x_obj_t* -- NULL
  */
 x_obj_t *x_type_heap_free(x_obj_t *p_base, x_obj_t *p_args)
 {
-	x_obj_t *p_obj = x_vectorobj(p_args, 0);
+	x_obj_t *p_obj = x_obj(p_args[0]);
 	x_obj_t *p_type = x_obj_type(p_obj);
 	x_obj_t *p_free;
 	x_spair_t a[1];
