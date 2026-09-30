@@ -348,7 +348,8 @@ static x_obj_t *x_prim_heap_tree_mark(x_obj_t *p_base, x_obj_t *p_args)
 	x_obj_t *p_obj, *p_flags;
 
 	x_eargs(p_base, p_args, 3, NULL, &p_obj, &p_flags);
-	x_base_call_or(p_base, X_SLOT_HEAP_TREE_MARK, x_heap_tree_mark, x_argrun({ .p = p_obj }, { .p = p_flags }));
+	x_base_call_or(p_base, X_SLOT_HEAP_TREE_MARK, x_heap_tree_mark,
+		x_argrun({ .p = p_obj }, { .i = x_atomint(p_flags) }));
 
 	return p_obj;
 }
