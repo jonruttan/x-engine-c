@@ -15,11 +15,11 @@
 ;
 ; A routine in a slot has the engine's one signature, (base args), and args
 ; is an argument run: a run of datum words, one per argument, in the order
-; the third element of a row gives them.  The fourth element gives the kind
-; of word each argument travels in: object, integer or string.
+; the third element of a row gives them.  The fourth element gives the label
+; of the word each argument travels in: object, integer or string.
 ;
 ; FORMAT (rigid, one entry per line -- the awk parses the same bytes):
-;   (position name (argument...) (kind...))
+;   (position name (argument...) (label...))
 ; Positions 0 to 10 are x-expr's (ext/x-expr/include/x-slots.h); the rest are
 ; the engine's (include/x-eval-slots.h).
 ; Regenerate with: sh tools/check/base-slots.sh --gen

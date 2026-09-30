@@ -29,8 +29,8 @@ storing another function in its slot. x-expr's slots are at positions 0 to
 
 - The positions are a contract, `tools/contract/base-slots.x`, which
   `make check-base-slots` diffs against the two headers. A row gives the
-  slot's arguments and the kind of word each travels in. It is one of the
-  gates.
+  slot's arguments and the label of the word each travels in. It is one of
+  the gates.
 - The type-name, units, length, error, mark and free hooks are slots 0 to 5.
   Their cells in the tree are gone, and `heap-mark-hooks`, `heap-free-hooks`,
   `heap-mark-roots` and `heap-root-chain` are each two steps nearer.
@@ -59,7 +59,7 @@ storing another function in its slot. x-expr's slots are at positions 0 to
   expression for `x_eval`, which now wraps it itself.
 - A primitive and a type's handler take a pair list, as before.
   `x_callable_prim_call` is the primitive in front of `x_callable_call`, and
-  `jit_eval_arg` keeps its `(base, expr)` shape for compiled code.
+  `jit_eval_arg` keeps its `(base, expr)` signature for compiled code.
 - A call with no base reaches the routine by name (`x_base_call_or`): the
   types are registered on a nil base before one exists.
 - An engine raise calls `x_obj_error`, which calls the error slot.
