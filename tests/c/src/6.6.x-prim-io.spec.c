@@ -291,6 +291,39 @@ static char *test_io_heap_mark_sweep_collect(void)
 	return NULL;
 }
 
+/* (heap tree-mark! obj flags) marks with the flags it is given, and with
+ * nothing else: the flags reach the collector's walk as the integer the
+ * caller passed, not as the object that carried it. */
+static char *test_io_heap_tree_mark(void)
+{
+	x_obj_t *p_base, *p_obj, *p_args, *p_ret;
+	x_obj_flag_t before;
+
+	p_base = x_eval_make(NULL, NULL);
+	x_prim_register(p_base, NULL);
+
+	p_obj = x_mkint(p_base, 1);
+	before = x_obj_flags(p_obj);
+	p_args = x_mkspair(p_base, X_OBJ_FLAG_NONE, NULL,
+		x_mkspair(p_base, X_OBJ_FLAG_NONE, p_obj,
+		x_mkspair(p_base, X_OBJ_FLAG_NONE, x_mkint(p_base, X_OBJ_FLAG_TRACE), NULL)));
+
+	p_ret = x_prim_heap_tree_mark(p_base, p_args);
+	_it_should("answer the object marked from", p_obj == p_ret);
+	_it_should("set the flag given, and only that flag",
+		(before | X_OBJ_FLAG_TRACE) == x_obj_flags(p_obj));
+
+	p_args = x_mkspair(p_base, X_OBJ_FLAG_NONE, NULL,
+		x_mkspair(p_base, X_OBJ_FLAG_NONE, p_obj,
+		x_mkspair(p_base, X_OBJ_FLAG_NONE, x_mkint(p_base, X_OBJ_FLAG_4), NULL)));
+	x_prim_heap_tree_mark(p_base, p_args);
+	_it_should("set another flag when given another",
+		(before | X_OBJ_FLAG_TRACE | X_OBJ_FLAG_4) == x_obj_flags(p_obj));
+
+	test_cleanup(p_base);
+	return NULL;
+}
+
 static char *test_io_repl(void)
 {
 	x_obj_t *p_base;
@@ -324,6 +357,7 @@ static char *run_tests() {
 	_run_test(test_io_read_char_eof);
 	_run_test(test_io_clock);
 	_run_test(test_io_heap_mark_sweep_collect);
+	_run_test(test_io_heap_tree_mark);
 	_run_test(test_io_read_expr);
 	_run_test(test_io_read_expr_eof);
 	_run_test(test_io_repl);
