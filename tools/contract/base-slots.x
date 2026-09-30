@@ -4,11 +4,11 @@
 ; an object whose data units are function pointers, one per slot, and a routine
 ; the engine calls through a slot is replaced by storing another function in
 ; it.  This is the fourth layout contract, after tools/contract/base-layout.x,
-; tools/contract/obj-layout.x and tools/contract/base-paths.x.  Consumed:
-;   1. by X at runtime: a position is read from here, never from a literal
-;   2. tools/check/base-slots.sh (make check-base-slots) -- reads the positions
-;      from the two headers and diffs, so a slot that moves fails the build
-;      before anything runs
+; tools/contract/obj-layout.x and tools/contract/base-paths.x.  Consumed by
+; tools/check/base-slots.sh (make check-base-slots), which reads the positions
+; from the two headers and diffs, so a slot that moves fails the build before
+; anything runs.  A language that replaces a routine reads its position from
+; here, never from a literal.
 ;
 ; The slot vector is a vector: its first data unit holds its length, and slot
 ; I is its element I, in data unit I + 1.

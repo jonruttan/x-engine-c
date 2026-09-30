@@ -14,9 +14,9 @@
  *
  * The positions are part of the layout contract. They are listed in
  * tools/contract/base-slots.x, which tools/check/base-slots.sh diffs
- * against the two headers, and which x-lang reads a position from. Each
- * slot's comment gives its arguments and the kind of word each travels
- * in: an object, an integer or a string.
+ * against the two headers; a language that replaces a routine reads its
+ * position from there. Each slot's comment gives its arguments and the
+ * kind of word each travels in: an object, an integer or a string.
  *
  * @author Jon Ruttan (jonruttan@gmail.com)
  * @copyright 2026 Jon Ruttan
