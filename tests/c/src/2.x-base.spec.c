@@ -20,6 +20,7 @@
 #include "ext/x-expr/src/x-base.c"
 #define X_EVAL_OWN
 #include "src/x-eval.c"
+#include "src/x-vector.c"
 #include "src/x-env.c"
 #include "src/x-tco.c"
 #include "src/x-toplevel.c"
@@ -37,8 +38,8 @@
 #define STUB_X_OBJ_PRIM_CALL
 #include "helper-stubs.c"
 
-x_obj_t *x_type_heap_mark(x_obj_t *p_base, x_obj_t *p_args) { return NULL; }
-x_obj_t *x_type_heap_free(x_obj_t *p_base, x_obj_t *p_args) { return NULL; }
+x_obj_t *x_type_heap_mark(x_obj_t *p_base, x_obj_t *p_obj, x_obj_flag_t flags) { return NULL; }
+void x_type_heap_free(x_obj_t *p_base, x_obj_t *p_obj) { }
 
 /*
  * Controllable stubs for x_token_read/write and x_eval.
@@ -80,13 +81,13 @@ x_obj_t *x_eval_tco_trampoline(x_obj_t *p_base, x_obj_t *p_args) { return NULL; 
 
 x_obj_t *x_eval_op_body(x_obj_t *p_base, x_obj_t *p_args) { return NULL; }
 
-/* x_base_make names the heap's routines for their slots, so they must
+/* The engine's sources call the heap's routines by name, so they must
  * link. No test here reaches them. */
-x_obj_t *x_heap_tree_mark(x_obj_t *p_base, x_obj_t *p_args) { return NULL; }
+x_obj_t *x_heap_tree_mark(x_obj_t *p_base, x_obj_t *p_obj, x_obj_flag_t flags) { return NULL; }
 
-x_obj_t *x_heap_sweep(x_obj_t *p_base, x_obj_t *p_args) { return NULL; }
+x_obj_t *x_heap_sweep(x_obj_t *p_base, x_obj_t *p_obj, x_obj_flag_t flags) { return NULL; }
 
-x_obj_t *x_heap_root_chain_mark(x_obj_t *p_base, x_obj_t *p_args) { return NULL; }
+x_obj_t *x_heap_root_chain_mark(x_obj_t *p_base, x_obj_flag_t flags) { return NULL; }
 
 static x_obj_t *_eval_last;
 
@@ -128,7 +129,7 @@ static char *test_base_make(void)
 		! x_base_isset(p_base)
 	);
 
-	x_obj_free(NULL, x_argrun({ .p = p_base }));
+	x_obj_free(NULL, p_base);
 
 
 	p_base = x_eval_make(NULL, NULL);
@@ -501,7 +502,7 @@ static char *test_base_error_no_handler(void)
 	helper_file_reset();
 	helper_sys_exit_status = X_SYS_EXIT_SUCCESS;
 
-	x_eval_error(NULL, x_argrun({ .s = "test error" }, { .p = NULL }));
+	x_eval_error(NULL, (x_char_t *)"test error", NULL);
 	_it_should("write error to stderr without base",
 		s[0] != '\0');
 	_it_should("exit non-zero without base",
@@ -516,7 +517,7 @@ static char *test_base_error_no_handler(void)
 	s[0] = '\0';
 	helper_sys_exit_status = X_SYS_EXIT_SUCCESS;
 
-	x_eval_error(p_base, x_argrun({ .s = "base error" }, { .p = NULL }));
+	x_eval_error(p_base, (x_char_t *)"base error", NULL);
 	_it_should("write error to stderr with base",
 		s[0] != '\0');
 	_it_should("exit non-zero with base",
@@ -529,7 +530,7 @@ static char *test_base_error_no_handler(void)
 	s[0] = '\0';
 	helper_sys_exit_status = X_SYS_EXIT_SUCCESS;
 
-	x_eval_error(p_base, x_argrun({ .s = "undef" }, { .p = x_mksatom(p_base, X_OBJ_FLAG_NONE, "foo") }));
+	x_eval_error(p_base, (x_char_t *)"undef", x_mksatom(p_base, X_OBJ_FLAG_NONE, "foo"));
 	_it_should("write error with symbol",
 		s[0] != '\0');
 	_it_should("exit non-zero with symbol",
@@ -559,7 +560,7 @@ static char *test_base_error_with_handler(void)
 
 	caught = 0;
 	if (setjmp(jmp) == 0) {
-		x_eval_error(p_base, x_argrun({ .s = "test err" }, { .p = NULL }));
+		x_eval_error(p_base, (x_char_t *)"test err", NULL);
 	} else {
 		caught = 1;
 	}
@@ -577,7 +578,7 @@ static char *test_base_error_with_handler(void)
 
 	caught = 0;
 	if (setjmp(jmp) == 0) {
-		x_eval_error(p_base, x_argrun({ .s = "undef" }, { .p = x_mksatom(p_base, X_OBJ_FLAG_NONE, "bar") }));
+		x_eval_error(p_base, (x_char_t *)"undef", x_mksatom(p_base, X_OBJ_FLAG_NONE, "bar"));
 	} else {
 		caught = 1;
 	}

@@ -41,7 +41,7 @@ x_obj_t *x_sexp_symbol_analyse(x_obj_t *p_base, x_obj_t *p_args)
 		*p_score = x_token_read_arg_score(p_args);
 	x_obj_t delimit_args[1] = { { .p = p_args } };
 
-	if (x_obj_isnil(p_base, x_base_call_or(p_base, X_SLOT_TOKEN_DELIMIT, x_token_delimit, delimit_args))) {
+	if (x_obj_isnil(p_base, x_eval_call_or(p_base, X_SLOT_TOKEN_DELIMIT, x_token_delimit, delimit_args))) {
 		return p_args;
 	}
 

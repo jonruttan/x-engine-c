@@ -13,6 +13,34 @@ alongside the library changes they landed with.
 
 ## Unreleased
 
+**The slot vector is the engine's** ([#N]). The base's slot vector, the vector
+layout it has and the routines in it moved out of x-expr, which is back at
+4c0b3bc, before its #14: a library of atoms, pairs and a heap has no
+evaluator routines to call through. In this engine:
+
+- The slot vector is the `slots` field of the base's tree
+  (`tools/contract/base-layout.x`, under `ctrl`); `x_eval_make` makes it and
+  fills every slot from the engine's table. It holds the sixteen engine
+  routines, numbered from 0; `X_SLOT_LEN` is 16.
+- The calls are `x_eval_call` and `x_eval_call_or`, the slot `x_eval_slot`,
+  and `x_eval_slots_isset` says whether a base is one the engine made with a
+  vector in it. `x_argrun` is unchanged. A routine in a slot still takes an
+  argument run.
+- The vector layout is `include/x-vector.h` and `src/x-vector.c`:
+  `x_vector_make`, `x_mksvector`, the static lengths, and `x_slots_make`.
+- x-expr's routines are called by name again -- `x_obj_alloc`,
+  `x_heap_tree_mark`, `x_heap_sweep`, `x_heap_root_chain_mark` -- and x-expr
+  reaches the engine through the hooks `x_base_make` takes, as before 0.2.18:
+  `x_eval_error`, `x_type_heap_mark` and `x_type_heap_free` have their hook
+  signatures back, and the type-name, units and length hooks take a pair
+  list.
+- `tools/contract/base-slots.x` lists the sixteen positions and
+  `tools/check/base-slots.sh` reads one header; a row's fourth element is the
+  type of the word each argument travels in. `tools/contract/base-paths.x` is
+  regenerated: every path begins with `f` again, and `slots` is a path.
+
+[#N]: https://github.com/jonruttan/x-engine-c/pull/N
+
 ## 0.2.18 — 2026-09-30
 
 **The base has a slot vector, and the engine's routines have slots in it**

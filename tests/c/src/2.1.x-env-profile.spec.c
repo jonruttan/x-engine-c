@@ -26,6 +26,7 @@
 #include "ext/x-expr/src/x-base.c"
 #define X_EVAL_OWN
 #include "src/x-eval.c"
+#include "src/x-vector.c"
 #include "src/x-env.c"
 #include "src/x-tco.c"
 #include "src/x-toplevel.c"
@@ -43,8 +44,8 @@
 #define STUB_X_OBJ_PRIM_CALL
 #include "helper-stubs.c"
 
-x_obj_t *x_type_heap_mark(x_obj_t *p_base, x_obj_t *p_args) { return NULL; }
-x_obj_t *x_type_heap_free(x_obj_t *p_base, x_obj_t *p_args) { return NULL; }
+x_obj_t *x_type_heap_mark(x_obj_t *p_base, x_obj_t *p_obj, x_obj_flag_t flags) { return NULL; }
+void x_type_heap_free(x_obj_t *p_base, x_obj_t *p_obj) { }
 
 /*
  * x-eval and x-toplevel link against the reader, the writer and eval.  No
@@ -76,13 +77,13 @@ x_obj_t *x_eval_tco_trampoline(x_obj_t *p_base, x_obj_t *p_args) { return NULL; 
 
 x_obj_t *x_eval_op_body(x_obj_t *p_base, x_obj_t *p_args) { return NULL; }
 
-/* x_base_make names the heap's routines for their slots, so they must
+/* The engine's sources call the heap's routines by name, so they must
  * link. No test here reaches them. */
-x_obj_t *x_heap_tree_mark(x_obj_t *p_base, x_obj_t *p_args) { return NULL; }
+x_obj_t *x_heap_tree_mark(x_obj_t *p_base, x_obj_t *p_obj, x_obj_flag_t flags) { return NULL; }
 
-x_obj_t *x_heap_sweep(x_obj_t *p_base, x_obj_t *p_args) { return NULL; }
+x_obj_t *x_heap_sweep(x_obj_t *p_base, x_obj_t *p_obj, x_obj_flag_t flags) { return NULL; }
 
-x_obj_t *x_heap_root_chain_mark(x_obj_t *p_base, x_obj_t *p_args) { return NULL; }
+x_obj_t *x_heap_root_chain_mark(x_obj_t *p_base, x_obj_flag_t flags) { return NULL; }
 
 x_obj_t *x_eval(x_obj_t *p_base, x_obj_t *p_args) { return NULL; }
 

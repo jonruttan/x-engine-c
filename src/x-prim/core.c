@@ -96,7 +96,7 @@ static x_obj_t *x_prim_apply(x_obj_t *p_base, x_obj_t *p_args)
 	 * once the operands exist. */
 	x_restobj((x_obj_t *)root) = p_fn;
 	x_heap_root_push(p_cell, root);
-	p_evaled = x_base_call_or(p_base, X_SLOT_EVAL_LIST, x_eval_list, x_argrun({ .p = x_args_tail(p_base, p_args, 2) }));
+	p_evaled = x_eval_call_or(p_base, X_SLOT_EVAL_LIST, x_eval_list, x_argrun({ .p = x_args_tail(p_base, p_args, 2) }));
 
 	/* Build combined arg list: prefix args prepended to tail list.
 	 * (apply f a b '(c d)) -> p_evaled = (a b (c d))
@@ -126,12 +126,12 @@ static x_obj_t *x_prim_apply(x_obj_t *p_base, x_obj_t *p_args)
 		x_tco_env_save(p_base);
 
 		p_vals = x_mkspair(p_base, X_OBJ_FLAG_NONE, p_fn, p_vals);
-		x_eval_field_env(p_base) = x_base_call_or(p_base, X_SLOT_ENV_EXTEND, x_env_extend, x_argrun({ .p = x_procenv(p_fn) }, { .p = x_procparams(p_fn) }, { .p = p_vals }));
+		x_eval_field_env(p_base) = x_eval_call_or(p_base, X_SLOT_ENV_EXTEND, x_env_extend, x_argrun({ .p = x_procenv(p_fn) }, { .p = x_procparams(p_fn) }, { .p = p_vals }));
 
 		/* Unroot */
 		x_heap_root_pop(p_cell);
 
-		return x_base_call_or(p_base, X_SLOT_EVAL_BODY_TCO, x_eval_body_tco, x_argrun({ .p = x_procbody(p_fn) }));
+		return x_eval_call_or(p_base, X_SLOT_EVAL_BODY_TCO, x_eval_body_tco, x_argrun({ .p = x_procbody(p_fn) }));
 	}
 
 	/* Operative / C primitive: delegate to type dispatch. */
@@ -139,7 +139,7 @@ static x_obj_t *x_prim_apply(x_obj_t *p_base, x_obj_t *p_args)
 	apply_args[0][X_OBJ_META_FLAGS].i = X_OBJ_FLAG_NONE;
 	x_firstobj((x_obj_t *)apply_args) = p_fn;
 	x_restobj((x_obj_t *)apply_args) = p_vals;
-	p_result = x_base_call_or(p_base, X_SLOT_CALLABLE_APPLY, x_callable_apply, x_argrun({ .p = (x_obj_t *)apply_args }));
+	p_result = x_eval_call_or(p_base, X_SLOT_CALLABLE_APPLY, x_callable_apply, x_argrun({ .p = (x_obj_t *)apply_args }));
 
 	/* Unroot */
 	x_heap_root_pop(p_cell);
@@ -174,12 +174,12 @@ static x_obj_t *x_prim_eval(x_obj_t *p_base, x_obj_t *p_args)
 	if ( ! x_obj_isnil(p_base, p_env_arg)) {
 		/* eval with env: the caller's environment rides the save-stack
 		 * (a rooted place) while the given one is current. */
-		p_env = x_base_call_or(p_base, X_SLOT_EVAL, x_eval, x_argrun({ .p = x_firstobj(p_env_arg) }));
+		p_env = x_eval_call_or(p_base, X_SLOT_EVAL, x_eval, x_argrun({ .p = x_firstobj(p_env_arg) }));
 
 		x_tco_env_save(p_base);
 
 		x_eval_field_env(p_base) = p_env;
-		p_result = x_base_call_or(p_base, X_SLOT_EVAL, x_eval, x_argrun({ .p = p_expr }));
+		p_result = x_eval_call_or(p_base, X_SLOT_EVAL, x_eval, x_argrun({ .p = p_expr }));
 
 		x_tco_restore(p_base, x_firstobj(x_eval_field_save_stack(p_base)));
 		x_eval_field_save_stack(p_base)
@@ -216,7 +216,7 @@ static x_obj_t *x_prim_eval_immediate(x_obj_t *p_base, x_obj_t *p_args)
 	 * is itself a closure under the entry's frames, and a def the user
 	 * types must bind for the base. */
 	x_toplevel_enter(p_base, &top);
-	p_result = x_base_call_or(p_base, X_SLOT_EVAL, x_eval, x_argrun({ .p = p_expr }));
+	p_result = x_eval_call_or(p_base, X_SLOT_EVAL, x_eval, x_argrun({ .p = p_expr }));
 	x_toplevel_leave(p_base, &top);
 
 	return p_result;
@@ -298,7 +298,7 @@ static x_obj_t *x_prim_atomic(x_obj_t *p_base, x_obj_t *p_args)
 		x_eval_spine_guard(p_base, p_args);
 		x_firstobj((x_obj_t *)root) = p_args;
 
-		p_result = x_base_call_or(p_base, X_SLOT_EVAL, x_eval, x_argrun({ .p = x_firstobj(p_args) }));
+		p_result = x_eval_call_or(p_base, X_SLOT_EVAL, x_eval, x_argrun({ .p = x_firstobj(p_args) }));
 
 		p_args = x_restobj(p_args);
 	}

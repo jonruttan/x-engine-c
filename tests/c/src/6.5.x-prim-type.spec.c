@@ -21,6 +21,7 @@
 #include "src/x-alist.c"
 #include "ext/x-expr/src/x-base.c"
 #include "src/x-eval.c"
+#include "src/x-vector.c"
 #include "src/x-env.c"
 #include "src/x-tco.c"
 #include "src/x-toplevel.c"
@@ -946,19 +947,20 @@ static char *test_type_make_instance_nil_type(void)
 }
 
 static int test_error_hook_called_type;
-static x_obj_t *test_error_hook_type_passthrough(x_obj_t *p_base, x_obj_t *p_args)
+static void test_error_hook_type_passthrough(x_obj_t *p_base, x_char_t *msg, x_obj_t *p_obj)
 {
 	/* First call: delegate to x_eval_error (triggers longjmp in target).
 	 * Second call: intercept (parent base has no handler). */
 	if (test_error_hook_called_type == 0) {
 		test_error_hook_called_type = 1;
-		x_eval_error(p_base, p_args);
+		x_eval_error(p_base, msg, p_obj);
 	} else {
 		test_error_hook_called_type = 2;
 	}
 
-	return NULL;
 }
+static x_satom_t test_error_hook_passthrough_atom = x_obj_set(NULL, X_OBJ_FLAG_NONE,
+	{ .v = (void *)test_error_hook_type_passthrough });
 
 static char *test_type_base_eval_error_no_parent(void)
 {
@@ -979,8 +981,8 @@ static char *test_type_base_eval_error_no_parent(void)
 	}
 
 	/* Install passthrough error hook on both bases */
-	x_base_slot(p_base, X_SLOT_ERROR) = test_error_hook_type_passthrough;
-	x_base_slot(p_target, X_SLOT_ERROR) = test_error_hook_type_passthrough;
+	x_firstobj(x_base_field_hook_error(p_base)) = (x_obj_t *)test_error_hook_passthrough_atom;
+	x_firstobj(x_base_field_hook_error(p_target)) = (x_obj_t *)test_error_hook_passthrough_atom;
 
 	/* Hook passes first error to x_eval_error (longjmp in target),
 	 * intercepts second error (parent has no handler, line 292). */

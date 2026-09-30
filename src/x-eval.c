@@ -118,7 +118,7 @@ x_obj_t *x_eval_op_body(x_obj_t *p_base, x_obj_t *p_args)
 		}
 
 		x_restobj((x_obj_t *)root) = p_body;
-		x_base_call_or(p_base, X_SLOT_EVAL, x_eval, x_argrun({ .p = x_firstobj(p_body) }));
+		x_eval_call_or(p_base, X_SLOT_EVAL, x_eval, x_argrun({ .p = x_firstobj(p_body) }));
 
 		p_body = x_restobj(p_body);
 	}
@@ -297,7 +297,7 @@ eval_start:
 
 	if ( ! x_obj_isnil(p_base, x_firstobj((x_obj_t *)prim_args))) {
 		x_restobj((x_obj_t *)prim_args) = p_args;
-		p_exp = x_base_call_or(p_base, X_SLOT_CALLABLE_CALL, x_callable_call, x_argrun({ .p = (x_obj_t *)prim_args }));
+		p_exp = x_eval_call_or(p_base, X_SLOT_CALLABLE_CALL, x_callable_call, x_argrun({ .p = (x_obj_t *)prim_args }));
 
 		if (p_exp == p_args) {
 			goto eval_start;
@@ -471,10 +471,10 @@ x_obj_t *x_eval_list(x_obj_t *p_base, x_obj_t *p_vector)
 	x_firstobj((x_obj_t *)root) = p_args;
 	x_heap_root_push(p_cell, root);
 
-	p_val = x_base_call_or(p_base, X_SLOT_EVAL, x_eval, x_argrun({ .p = x_firstobj(p_args) }));
+	p_val = x_eval_call_or(p_base, X_SLOT_EVAL, x_eval, x_argrun({ .p = x_firstobj(p_args) }));
 	x_restobj((x_obj_t *)root) = p_val;
 
-	p_rest = x_base_call_or(p_base, X_SLOT_EVAL_LIST, x_eval_list, x_argrun({ .p = x_restobj(p_args) }));
+	p_rest = x_eval_call_or(p_base, X_SLOT_EVAL_LIST, x_eval_list, x_argrun({ .p = x_restobj(p_args) }));
 
 	x_heap_root_pop(p_cell);
 
@@ -517,7 +517,7 @@ x_obj_t *x_eval_body(x_obj_t *p_base, x_obj_t *p_args)
 #endif
 		x_firstobj((x_obj_t *)root) = p_body;
 
-		p_result = x_base_call_or(p_base, X_SLOT_EVAL, x_eval, x_argrun({ .p = x_firstobj(p_body) }));
+		p_result = x_eval_call_or(p_base, X_SLOT_EVAL, x_eval, x_argrun({ .p = x_firstobj(p_body) }));
 
 		p_body = x_restobj(p_body);
 	}
@@ -619,7 +619,7 @@ x_obj_t *x_eval_body_tco(x_obj_t *p_base, x_obj_t *p_args)
 
 		x_firstobj((x_obj_t *)root) = p_body;
 
-		p_result = x_base_call_or(p_base, X_SLOT_EVAL, x_eval, x_argrun({ .p = x_firstobj(p_body) }));
+		p_result = x_eval_call_or(p_base, X_SLOT_EVAL, x_eval, x_argrun({ .p = x_firstobj(p_body) }));
 
 		p_body = x_restobj(p_body);
 	}
@@ -676,7 +676,7 @@ x_obj_t *x_eval_tco_trampoline(x_obj_t *p_base, x_obj_t *p_args)
 
 		x_firstobj(x_eval_field_tco_expr(p_base)) = NULL;
 		x_firstobj(x_eval_field_tco_env(p_base)) = NULL;
-		p_result = x_base_call_or(p_base, X_SLOT_EVAL, x_eval, x_argrun({ .p = p_tco }));
+		p_result = x_eval_call_or(p_base, X_SLOT_EVAL, x_eval, x_argrun({ .p = p_tco }));
 	}
 
 	x_eval_tco_apply(p_base, p_tco_env);
@@ -703,19 +703,27 @@ static x_satom_t s_bare_subject = x_obj_set(NULL, X_OBJ_FLAG_NONE, { .s = NULL }
 static x_spair_t s_bare_err = x_obj_set(NULL, X_OBJ_FLAG_NONE,
 	{ (x_obj_t *)&s_bare_code }, { (x_obj_t *)&s_bare_subject });
 
-/**
- * What a base is made with, by position: the hooks and the engine's
- * routines. x-expr fills the positions of its own routines itself (see
- * x_base_make()).
- */
-static const x_fn_t x_eval_hooks[X_SLOT_LEN] = {
-	[X_SLOT_TYPE_NAME] = x_type_prim_type_name,
-	[X_SLOT_UNITS] = x_type_prim_units,
-	[X_SLOT_LENGTH] = x_type_prim_length,
-	[X_SLOT_ERROR] = x_eval_error,
-	[X_SLOT_HEAP_MARK] = x_type_heap_mark,
-	[X_SLOT_HEAP_FREE] = x_type_heap_free,
+/* The hooks x-expr calls the engine through (see x_base_make()): the
+ * type-name, units and length hooks take a pair list, the error hook and
+ * the heap mark and free hooks their own signatures. */
+static x_satom_t x_type_prim_type_name_hook =
+	x_obj_set(NULL, X_OBJ_FLAG_NONE, { .fn = x_type_prim_type_name });
+static x_satom_t x_type_prim_units_hook =
+	x_obj_set(NULL, X_OBJ_FLAG_NONE, { .fn = x_type_prim_units });
+static x_satom_t x_type_prim_length_hook =
+	x_obj_set(NULL, X_OBJ_FLAG_NONE, { .fn = x_type_prim_length });
+static x_satom_t x_eval_error_hook =
+	x_obj_set(NULL, X_OBJ_FLAG_NONE, { .v = (void *)x_eval_error });
+static x_satom_t x_type_heap_mark_hook =
+	x_obj_set(NULL, X_OBJ_FLAG_NONE, { .v = (void *)x_type_heap_mark });
+static x_satom_t x_type_heap_free_hook =
+	x_obj_set(NULL, X_OBJ_FLAG_NONE, { .v = (void *)x_type_heap_free });
 
+/**
+ * The routines the slot vector starts with, by position (see
+ * x-eval-slots.h).  x_eval_make() fills a base's vector from this table.
+ */
+static const x_fn_t x_eval_slot_fns[X_SLOT_LEN] = {
 	[X_SLOT_EVAL] = x_eval,
 	[X_SLOT_EVAL_LIST] = x_eval_list,
 	[X_SLOT_EVAL_BODY] = x_eval_body,
@@ -797,13 +805,18 @@ x_obj_t *x_eval_make(x_obj_t *p_base, x_obj_t *p_args)
 {
 	x_obj_t *p_parent = p_base;
 	struct x_base_t base_cfg;
+	x_int_t i;
 
 	base_cfg.filein = STDIN_FILENO;
 	base_cfg.fileout = STDOUT_FILENO;
 	base_cfg.fileerr = STDERR_FILENO;
 	base_cfg.obj_meta_extra = 0;
-	base_cfg.slots = X_SLOT_LEN;
-	base_cfg.p_slots = x_eval_hooks;
+	base_cfg.p_hook_type_name = (x_obj_t *)x_type_prim_type_name_hook;
+	base_cfg.p_hook_units = (x_obj_t *)x_type_prim_units_hook;
+	base_cfg.p_hook_length = (x_obj_t *)x_type_prim_length_hook;
+	base_cfg.p_hook_error = (x_obj_t *)x_eval_error_hook;
+	base_cfg.p_heap_mark = (x_obj_t *)x_type_heap_mark_hook;
+	base_cfg.p_heap_free = (x_obj_t *)x_type_heap_free_hook;
 
 	p_base = x_base_make(p_base, base_cfg);
 
@@ -817,6 +830,16 @@ x_obj_t *x_eval_make(x_obj_t *p_base, x_obj_t *p_args)
 #define X_EVAL_BUILD_TREE
 #include "x-eval-layout.h"
 #undef X_EVAL_BUILD_TREE
+
+	/* The slot vector, every slot filled from the table above.  A slot
+	 * left NULL there stays empty. */
+	x_eval_field_slots(p_base) = x_slots_make(p_base, X_SLOT_LEN);
+
+	for (i = 0; i < X_SLOT_LEN; i++) {
+		if (x_eval_slot_fns[i] != NULL) {
+			x_eval_slot(p_base, i) = x_eval_slot_fns[i];
+		}
+	}
 
 	/* The root environment: an empty tree with no parent.  It is both the
 	 * base's root and the environment evaluation starts in; every child
@@ -908,10 +931,8 @@ x_obj_t *x_eval_make(x_obj_t *p_base, x_obj_t *p_args)
  * @see x_prim_error  -- x-lang (error msg) primitive that calls this
  */
 #ifndef STUB_X_BASE_ERROR
-x_obj_t *x_eval_error(x_obj_t *p_base, x_obj_t *p_args)
+void x_eval_error(x_obj_t *p_base, x_char_t *message, x_obj_t *p_obj)
 {
-	x_char_t *message = p_args[0].s;
-	x_obj_t *p_obj = x_obj(p_args[1]);
 	int fd;
 	x_char_t *symbol = NULL;
 	x_obj_t *p_handler;
@@ -1014,7 +1035,7 @@ x_obj_t *x_eval_error(x_obj_t *p_base, x_obj_t *p_args)
 	 * passed the form through unevaluated. */
 	x_sys_exit(X_SYS_EXIT_FAILURE);
 
-	return NULL;
+	return;
 }
 #endif /* !STUB_X_BASE_ERROR */
 
@@ -1136,13 +1157,13 @@ x_obj_t *x_eval_load(x_obj_t *p_base, x_obj_t *p_args)
 	x_toplevel_enter(p_base, &top);
 
 	for (;;) {
-		p_exp = x_base_call_or(p_base, X_SLOT_TOKEN_READ, x_token_read, x_argrun({ .p = (x_obj_t *)read_args }));
+		p_exp = x_eval_call_or(p_base, X_SLOT_TOKEN_READ, x_token_read, x_argrun({ .p = (x_obj_t *)read_args }));
 		/* Break on the EOF SENTINEL, not on nil: nil is the value a
 		 * top-level `()` reads as, and breaking on it used to end the
 		 * load there, silently skipping the rest of the file. */
 		if (p_exp == (x_obj_t *)x_token_eof_prim) break;
 
-		p_result = x_base_call_or(p_base, X_SLOT_EVAL, x_eval, x_argrun({ .p = p_exp }));
+		p_result = x_eval_call_or(p_base, X_SLOT_EVAL, x_eval, x_argrun({ .p = p_exp }));
 	}
 
 	x_toplevel_leave(p_base, &top);

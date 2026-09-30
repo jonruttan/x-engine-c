@@ -328,8 +328,8 @@ static X_CALLCC_NO_ASAN x_obj_t *x_prim_callcc(x_obj_t *p_base,
 	/* env: a child of the current environment holding %cc-ptr and
 	 * %cc-state, the closure's own. */
 	p_env = x_env_make(p_base, x_eval_field_env(p_base));
-	x_base_call_or(p_base, X_SLOT_ENV_BIND, x_env_bind, x_argrun({ .p = p_env }, { .p = p_ptr_sym }, { .p = p_ptr }));
-	x_base_call_or(p_base, X_SLOT_ENV_BIND, x_env_bind, x_argrun({ .p = p_env }, { .p = p_state_sym }, { .p = p_state }));
+	x_eval_call_or(p_base, X_SLOT_ENV_BIND, x_env_bind, x_argrun({ .p = p_env }, { .p = p_ptr_sym }, { .p = p_ptr }));
+	x_eval_call_or(p_base, X_SLOT_ENV_BIND, x_env_bind, x_argrun({ .p = p_env }, { .p = p_state_sym }, { .p = p_state }));
 
 	/* Create k as a procedure (fn). */
 	p_k = x_mkproc(p_base, p_params, p_body, p_env);
@@ -344,7 +344,7 @@ static X_CALLCC_NO_ASAN x_obj_t *x_prim_callcc(x_obj_t *p_base,
 	x_firstobj((x_obj_t *)(call_args + 1)) = p_k;
 	x_restobj((x_obj_t *)(call_args + 1)) = NULL;
 
-	p_result = x_base_call_or(p_base, X_SLOT_CALLABLE_APPLY, x_callable_apply, x_argrun({ .p = (x_obj_t *)call_args }));
+	p_result = x_eval_call_or(p_base, X_SLOT_CALLABLE_APPLY, x_callable_apply, x_argrun({ .p = (x_obj_t *)call_args }));
 
 	return p_result;
 }

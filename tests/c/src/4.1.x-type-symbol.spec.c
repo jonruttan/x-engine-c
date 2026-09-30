@@ -26,6 +26,7 @@
 #include "src/x-type.c"
 #include "src/x-type/iter.c"
 #include "src/x-eval.c"
+#include "src/x-vector.c"
 #include "src/x-env.c"
 #include "src/x-tco.c"
 #include "src/x-toplevel.c"

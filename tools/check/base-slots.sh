@@ -1,20 +1,19 @@
 #!/bin/sh
 # tools/check/base-slots.sh -- source half of the base-slots contract.
 #
-# The positions in the base's slot vector are the members of two enums:
-# x_slot_enum in ext/x-expr/include/x-slots.h, which x-expr owns, and
-# x_eval_slot_enum in include/x-eval-slots.h, which follows it.  Each member
-# is documented with the arguments its routine takes and the kind of word
-# each travels in.  This scan reads the members in order, numbers them, and
+# The positions in the base's slot vector are the members of one enum,
+# x_eval_slot_enum in include/x-eval-slots.h.  Each member is documented
+# with the arguments its routine takes and the type of the word each
+# travels in.  This scan reads the members in order, numbers them, and
 # diffs the result against the committed descriptor
 # tools/contract/base-slots.x, which x-lang reads a position from.
 #
-# A member is a line `X_SLOT_NAME,` or `X_SLOT_NAME = ...,`; the two length
-# members, X_SLOT_EXPR_LEN and X_SLOT_LEN, are not slots.  The arguments and
-# kinds are read from the comment above the member, which says
-# `Arguments: (a, b).` and `Kinds: (object, integer).`  A member whose
-# comment lacks either sentence fails the scan, so a slot cannot be added
-# without saying what it takes.
+# A member is a line `X_SLOT_NAME,` or `X_SLOT_NAME = ...,`; the length
+# member, X_SLOT_LEN, is not a slot.  The arguments and types are read
+# from the comment above the member, which says `Arguments: (a, b).` and
+# `Types: (object, integer).`  A member whose comment lacks either
+# sentence fails the scan, so a slot cannot be added without saying what
+# it takes.
 #
 # Usage:  sh tools/check/base-slots.sh          # check (diff, exit 1 on drift)
 #         sh tools/check/base-slots.sh --gen    # print descriptor entries
@@ -49,30 +48,29 @@ function xname(c) {
 	sub(/^.*Arguments: /, "", args)
 	sub(/\)\..*$/, ")", args)
 	have = 1
-	kinds = ""
+	types = ""
 }
-/Kinds: \(/ {
-	kinds = $0
-	sub(/^.*Kinds: /, "", kinds)
-	sub(/\)\..*$/, ")", kinds)
+/Types: \(/ {
+	types = $0
+	sub(/^.*Types: /, "", types)
+	sub(/\)\..*$/, ")", types)
 	next
 }
 /^\tX_SLOT_[A-Z_]+[ \t]*(=[^,]*)?,?[ \t]*$/ {
 	name = $1
 	sub(/,$/, "", name)
 	if (name ~ /_LEN$/) { have = 0; next }
-	if (!have || kinds == "") {
-		printf "FAIL: slot %s has no `Arguments: (...)` and `Kinds: (...)`" \
+	if (!have || types == "") {
+		printf "FAIL: slot %s has no `Arguments: (...)` and `Types: (...)`" \
 			" sentences in its comment.\n", name > "/dev/stderr"
 		bad = 1
 		next
 	}
-	printf "(%d %s (%s) (%s))\n", n++, xname(name), xargs(args), xargs(kinds)
+	printf "(%d %s (%s) (%s))\n", n++, xname(name), xargs(args), xargs(types)
 	have = 0
 }
 END { if (bad) exit 1 }
-' "$ROOT/ext/x-expr/include/x-slots.h" \
-  "$ROOT/include/x-eval-slots.h"
+' "$ROOT/include/x-eval-slots.h"
 }
 
 # extract runs outside a pipeline so a failure (exit 1) is not swallowed by

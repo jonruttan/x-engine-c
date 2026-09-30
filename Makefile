@@ -456,8 +456,8 @@ check-base-paths: ## Diff the base-field macro chains against tools/contract/bas
 .PHONY: check-base-paths
 
 # The base-slots contract: the positions in the base's slot vector, read from
-# the two enums (x-expr's x-slots.h, then x-eval-slots.h), must match
-# tools/contract/base-slots.x, which x-lang reads a position from.
+# the enum in include/x-eval-slots.h, must match tools/contract/base-slots.x,
+# which x-lang reads a position from.
 check-base-slots: ## Diff the slot positions against tools/contract/base-slots.x
 	sh tools/check/base-slots.sh
 .PHONY: check-base-slots

@@ -157,7 +157,7 @@ x_obj_t *x_type_list_call(x_obj_t *p_base, x_obj_t *p_args)
 		return NULL;
 	}
 
-	arg1 = x_base_call_or(p_base, X_SLOT_EVAL, x_eval, x_argrun({ .p = x_firstobj(vals) }));
+	arg1 = x_eval_call_or(p_base, X_SLOT_EVAL, x_eval, x_argrun({ .p = x_firstobj(vals) }));
 	vals = x_restobj(vals);
 
 	if (! x_obj_isnil(p_base, vals)) {
@@ -166,7 +166,7 @@ x_obj_t *x_type_list_call(x_obj_t *p_base, x_obj_t *p_args)
 		p_result = NULL;
 		p_tail = NULL;
 
-		arg2 = x_base_call_or(p_base, X_SLOT_EVAL, x_eval, x_argrun({ .p = x_firstobj(vals) }));
+		arg2 = x_eval_call_or(p_base, X_SLOT_EVAL, x_eval, x_argrun({ .p = x_firstobj(vals) }));
 		len = x_atomint(arg2);
 
 		/* Walk to start position. */
@@ -247,7 +247,7 @@ x_obj_t *x_type_list_eval(x_obj_t *p_base, x_obj_t *p_args)
 	x_heap_root_push(p_cell, root);
 
 	/* Eval first to resolve operator (e.g. symbol -> prim). */
-	p_proc = x_base_call_or(p_base, X_SLOT_EVAL, x_eval, x_argrun({ .p = x_firstobj(p_exp) }));
+	p_proc = x_eval_call_or(p_base, X_SLOT_EVAL, x_eval, x_argrun({ .p = x_firstobj(p_exp) }));
 
 	if (x_obj_isnil(p_base, p_proc)) {
 		x_heap_root_pop(p_cell);
@@ -275,7 +275,7 @@ x_obj_t *x_type_list_eval(x_obj_t *p_base, x_obj_t *p_args)
 		return p_exp;
 	}
 
-	p_result = x_base_call_or(p_base, X_SLOT_CALLABLE_CALL, x_callable_call, x_argrun({ .p = (x_obj_t *)prim_args }));
+	p_result = x_eval_call_or(p_base, X_SLOT_CALLABLE_CALL, x_callable_call, x_argrun({ .p = (x_obj_t *)prim_args }));
 	x_heap_root_pop(p_cell);
 	return p_result;
 }

@@ -96,7 +96,7 @@ static x_obj_t *x_sexp_list_read_next(x_obj_t *p_base, x_obj_t *p_args)
 	x_obj_t *p_obj;
 	x_obj_t read_args[1] = { { .p = p_args } };
 
-	p_obj = x_base_call_or(p_base, X_SLOT_TOKEN_READ, x_token_read, read_args);
+	p_obj = x_eval_call_or(p_base, X_SLOT_TOKEN_READ, x_token_read, read_args);
 
 	if (p_obj == (x_obj_t *)x_token_eof_prim) {
 		x_obj_error(p_base, (x_char_t *)"Unterminated input", NULL);

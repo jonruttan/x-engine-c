@@ -126,7 +126,7 @@ static x_obj_t *x_prim_token_read_string(x_obj_t *p_base, x_obj_t *p_args)
 	x_restobj((x_obj_t *)read_args) = p_token_base;
 
 	for (;;) {
-		p_token = x_base_call_or(p_token_base, X_SLOT_TOKEN_READ, x_token_read, x_argrun({ .p = (x_obj_t *)read_args }));
+		p_token = x_eval_call_or(p_token_base, X_SLOT_TOKEN_READ, x_token_read, x_argrun({ .p = (x_obj_t *)read_args }));
 
 		/* Clean exhaustion of the string.  Checked BEFORE the nil
 		 * break so the two stay distinct; the nil break itself is
@@ -182,7 +182,7 @@ static x_obj_t *x_prim_token_read(x_obj_t *p_base, x_obj_t *p_args)
 
 	x_type_buffer_retain(p_base, (x_obj_t *)read_args);
 
-	p_obj = x_base_call_or(p_base, X_SLOT_TOKEN_READ, x_token_read, x_argrun({ .p = (x_obj_t *)read_args }));
+	p_obj = x_eval_call_or(p_base, X_SLOT_TOKEN_READ, x_token_read, x_argrun({ .p = (x_obj_t *)read_args }));
 
 	/* Map the EOF sentinel to nil at this boundary: x-lang reader
 	 * handlers (quasi/lit, logo's block loop) test (null? ...) for
@@ -211,7 +211,7 @@ static x_obj_t *x_prim_buffer_make(x_obj_t *p_base, x_obj_t *p_args)
 		x_obj_t eval_arg_args[1] = { { .p = x_firstobj(p_rest) } };
 
 		flags = (x_obj_flag_t)x_intval(
-			x_base_call_or(p_base, X_SLOT_EVAL, x_eval, eval_arg_args));
+			x_eval_call_or(p_base, X_SLOT_EVAL, x_eval, eval_arg_args));
 	}
 
 	return x_make_buffer(p_base, flags, x_strval(p_str));

@@ -44,7 +44,7 @@ x_obj_t *x_eval_op_body(x_obj_t *p_base, x_obj_t *p_args) { return NULL; }
 #endif
 
 #ifdef STUB_X_BASE_ERROR
-x_obj_t *x_eval_error(x_obj_t *p_base, x_obj_t *p_args) { return NULL; }
+void x_eval_error(x_obj_t *p_base, x_char_t *message, x_obj_t *p_obj) { }
 #endif
 
 #ifdef STUB_X_TOKEN

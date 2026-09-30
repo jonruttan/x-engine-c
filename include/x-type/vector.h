@@ -11,10 +11,10 @@
  * its units as one leading unit, the length, and a payload counted by it,
  * every unit a reference.
  *
- * A base's slot vector is a vector: the registration gives it the type.
- * Its elements are function pointers, which the collector must not follow,
- * and it does not reach them: the slot vector is the base's first data
- * unit, outside the tree the collector marks from.
+ * A base's slot vector has this layout and no type. Its elements are
+ * function pointers, which the collector must not follow: the vector sits
+ * in the base's tree, where the mark reaches it, and an object with no type
+ * is marked and not descended.
  *
  * @author Jon Ruttan (jonruttan@gmail.com)
  * @copyright 2026 Jon Ruttan
