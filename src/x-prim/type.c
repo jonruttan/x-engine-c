@@ -24,6 +24,7 @@
  * # Includes
  */
 #include "x-prim.h"
+#include "x-eval-slots.h"
 #include "x-alist.h"
 #include "x-eval.h"
 #include "x-heap.h"
@@ -202,7 +203,7 @@ static x_obj_t *x_prim_typep(x_obj_t *p_base, x_obj_t *p_args)
  *
  * x-lang form: @code (type-of obj) @endcode
  *
- * Delegates to the C-level x_type_prim_type_name to retrieve the type's
+ * Calls the type-name hook through its slot to retrieve the type's
  * name atom, which serves as the canonical handle for type operations.
  *
  * @param p_base  Base (execution context).
@@ -212,15 +213,12 @@ static x_obj_t *x_prim_typep(x_obj_t *p_base, x_obj_t *p_args)
 static x_obj_t *x_prim_type_of(x_obj_t *p_base, x_obj_t *p_args)
 {
 	x_obj_t *p_obj;
-	x_spair_t name_args[1] = {
-		x_obj_set(NULL, X_OBJ_FLAG_NONE, { NULL }, { NULL })
-	};
+	x_obj_t name_args[1] = { { .p = NULL } };
 
 	x_eargs(p_base, p_args, 2, NULL, &p_obj);
-	x_firstobj((x_obj_t *)name_args) = p_obj;
-	x_restobj((x_obj_t *)name_args) = p_base;
+	name_args[0].p = p_obj;
 
-	return x_type_prim_type_name(p_base, (x_obj_t *)name_args);
+	return x_base_call_or(p_base, X_SLOT_TYPE_NAME, x_type_prim_type_name, name_args);
 }
 
 /* (type name obj-or-handle) is pure x-lang now: boot/reflect.x mirrors the
@@ -296,7 +294,7 @@ static x_obj_t *x_prim_make_obj(x_obj_t *p_base, x_obj_t *p_args)
 	}
 
 	n = x_intval(p_n);
-	p_obj = x_obj_alloc(p_base, p_type, 0, (size_t)n);
+	p_obj = x_base_call_or(p_base, X_SLOT_OBJ_ALLOC, x_obj_alloc, x_argrun({ .p = p_type }, { .i = X_OBJ_FLAG_NONE }, { .i = n }));
 
 	for (i = 0; i < n; i++) {
 		(&x_firstobj(p_obj))[i] = NULL;

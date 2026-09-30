@@ -105,13 +105,13 @@ static char *test_obj_prim_make(void)
 		&& x_atomint(p_flags) == x_obj_flags(p_ret)
 		&& x_atomint(p_vals[0]) == x_atomint(p_ret)
 	);
-	x_obj_free(NULL, p_obj);
-	x_obj_free(NULL, p_flags);
-	x_obj_free(NULL, p_vals[0]);
-	x_obj_free(NULL, p_args[2]);
-	x_obj_free(NULL, p_args[1]);
-	x_obj_free(NULL, p_args[0]);
-	x_obj_free(NULL, p_ret);
+	x_obj_free(NULL, x_argrun({ .p = p_obj }));
+	x_obj_free(NULL, x_argrun({ .p = p_flags }));
+	x_obj_free(NULL, x_argrun({ .p = p_vals[0] }));
+	x_obj_free(NULL, x_argrun({ .p = p_args[2] }));
+	x_obj_free(NULL, x_argrun({ .p = p_args[1] }));
+	x_obj_free(NULL, x_argrun({ .p = p_args[0] }));
+	x_obj_free(NULL, x_argrun({ .p = p_ret }));
 
 	p_obj = x_mkspair(NULL, X_OBJ_FLAG_NONE, 0, 0);
 	p_flags = x_mksatom(NULL, X_OBJ_FLAG_NONE, 0xf0);
@@ -130,15 +130,15 @@ static char *test_obj_prim_make(void)
 		&& x_atomint(p_vals[0]) == x_firstint(p_ret)
 		&& x_atomint(p_vals[1]) == x_restint(p_ret)
 	);
-	x_obj_free(NULL, p_obj);
-	x_obj_free(NULL, p_flags);
-	x_obj_free(NULL, p_vals[1]);
-	x_obj_free(NULL, p_vals[0]);
-	x_obj_free(NULL, p_args[3]);
-	x_obj_free(NULL, p_args[2]);
-	x_obj_free(NULL, p_args[1]);
-	x_obj_free(NULL, p_args[0]);
-	x_obj_free(NULL, p_ret);
+	x_obj_free(NULL, x_argrun({ .p = p_obj }));
+	x_obj_free(NULL, x_argrun({ .p = p_flags }));
+	x_obj_free(NULL, x_argrun({ .p = p_vals[1] }));
+	x_obj_free(NULL, x_argrun({ .p = p_vals[0] }));
+	x_obj_free(NULL, x_argrun({ .p = p_args[3] }));
+	x_obj_free(NULL, x_argrun({ .p = p_args[2] }));
+	x_obj_free(NULL, x_argrun({ .p = p_args[1] }));
+	x_obj_free(NULL, x_argrun({ .p = p_args[0] }));
+	x_obj_free(NULL, x_argrun({ .p = p_ret }));
 
 
 	p_base = x_mksatom(NULL, X_OBJ_FLAG_NONE, 0);
@@ -157,14 +157,14 @@ static char *test_obj_prim_make(void)
 		&& x_atomint(p_flags) == x_obj_flags(p_ret)
 		&& x_atomint(p_vals[0]) == x_atomint(p_ret)
 	);
-	x_obj_free(NULL, p_obj);
-	x_obj_free(NULL, p_flags);
-	x_obj_free(NULL, p_vals[0]);
-	x_obj_free(NULL, p_args[2]);
-	x_obj_free(NULL, p_args[1]);
-	x_obj_free(NULL, p_args[0]);
-	x_obj_free(NULL, p_ret);
-	x_obj_free(NULL, p_base);
+	x_obj_free(NULL, x_argrun({ .p = p_obj }));
+	x_obj_free(NULL, x_argrun({ .p = p_flags }));
+	x_obj_free(NULL, x_argrun({ .p = p_vals[0] }));
+	x_obj_free(NULL, x_argrun({ .p = p_args[2] }));
+	x_obj_free(NULL, x_argrun({ .p = p_args[1] }));
+	x_obj_free(NULL, x_argrun({ .p = p_args[0] }));
+	x_obj_free(NULL, x_argrun({ .p = p_ret }));
+	x_obj_free(NULL, x_argrun({ .p = p_base }));
 
 	p_base = x_mksatom(NULL, X_OBJ_FLAG_NONE, 0);
 	p_obj = x_mkspair(NULL, X_OBJ_FLAG_NONE, 0, 0);
@@ -184,16 +184,16 @@ static char *test_obj_prim_make(void)
 		&& x_atomint(p_vals[0]) == x_firstint(p_ret)
 		&& x_atomint(p_vals[1]) == x_restint(p_ret)
 	);
-	x_obj_free(NULL, p_obj);
-	x_obj_free(NULL, p_flags);
-	x_obj_free(NULL, p_vals[1]);
-	x_obj_free(NULL, p_vals[0]);
-	x_obj_free(NULL, p_args[3]);
-	x_obj_free(NULL, p_args[2]);
-	x_obj_free(NULL, p_args[1]);
-	x_obj_free(NULL, p_args[0]);
-	x_obj_free(NULL, p_ret);
-	x_obj_free(NULL, p_base);
+	x_obj_free(NULL, x_argrun({ .p = p_obj }));
+	x_obj_free(NULL, x_argrun({ .p = p_flags }));
+	x_obj_free(NULL, x_argrun({ .p = p_vals[1] }));
+	x_obj_free(NULL, x_argrun({ .p = p_vals[0] }));
+	x_obj_free(NULL, x_argrun({ .p = p_args[3] }));
+	x_obj_free(NULL, x_argrun({ .p = p_args[2] }));
+	x_obj_free(NULL, x_argrun({ .p = p_args[1] }));
+	x_obj_free(NULL, x_argrun({ .p = p_args[0] }));
+	x_obj_free(NULL, x_argrun({ .p = p_ret }));
+	x_obj_free(NULL, x_argrun({ .p = p_base }));
 
 	return NULL;
 }
@@ -211,8 +211,8 @@ static char *test_obj_prim_make_null_type(void)
 	p_ret = x_obj_prim_make(NULL, p_args);
 	_it_should("return NULL when object type is nil",
 		NULL == p_ret);
-	x_obj_free(NULL, p_args);
-	x_obj_free(NULL, p_obj);
+	x_obj_free(NULL, x_argrun({ .p = p_args }));
+	x_obj_free(NULL, x_argrun({ .p = p_obj }));
 
 	return NULL;
 }
@@ -280,13 +280,13 @@ static char *test_obj_prim_call(void)
 	x_obj_t *p_base, *p_type, *p_obj, *p_args, *p_ret;
 
 	/* NULL args returns NULL */
-	p_ret = x_obj_prim_call(NULL, NULL);
+	p_ret = x_obj_prim_call(NULL, x_argrun({ .p = NULL }));
 	_it_should("return NULL for nil args",
 		NULL == p_ret);
 
 	/* nil object returns NULL */
 	p_args = x_mkspair(NULL, X_OBJ_FLAG_NONE, NULL, NULL);
-	p_ret = x_obj_prim_call(NULL, p_args);
+	p_ret = x_obj_prim_call(NULL, x_argrun({ .p = p_args }));
 	_it_should("return NULL for nil object",
 		NULL == p_ret);
 
@@ -294,7 +294,7 @@ static char *test_obj_prim_call(void)
 	p_obj = x_mksatom(NULL, X_OBJ_FLAG_NONE, 0);
 	x_obj_type(p_obj) = NULL;
 	p_args = x_mkspair(NULL, X_OBJ_FLAG_NONE, p_obj, NULL);
-	p_ret = x_obj_prim_call(NULL, p_args);
+	p_ret = x_obj_prim_call(NULL, x_argrun({ .p = p_args }));
 	_it_should("return NULL for NULL type",
 		NULL == p_ret);
 
@@ -305,7 +305,7 @@ static char *test_obj_prim_call(void)
 	p_args = x_mkspair(p_base, X_OBJ_FLAG_NONE, p_obj, NULL);
 
 	_test_prim_fn_calls = 0;
-	p_ret = x_obj_prim_call(p_base, p_args);
+	p_ret = x_obj_prim_call(p_base, x_argrun({ .p = p_args }));
 	_it_should("return NULL when call field is nil",
 		NULL == p_ret
 		&& 0 == _test_prim_fn_calls
@@ -315,7 +315,7 @@ static char *test_obj_prim_call(void)
 	x_firstptr(x_type_field_call(p_type)) = _test_type_prim_call;
 
 	_test_prim_fn_calls = 0;
-	p_ret = x_obj_prim_call(p_base, p_args);
+	p_ret = x_obj_prim_call(p_base, x_argrun({ .p = p_args }));
 	_it_should("call the fn and return result",
 		p_base == p_ret
 		&& 1 == _test_prim_fn_calls
@@ -473,7 +473,7 @@ static char *test_obj_alloc_fail(void)
 	/* Set allocator to always fail */
 	helper_set_alloc(MEM_ERROR);
 
-	p_ret = x_obj_alloc(NULL, NULL, X_OBJ_FLAG_NONE, 1);
+	p_ret = x_obj_alloc(NULL, x_argrun({ .p = NULL }, { .i = X_OBJ_FLAG_NONE }, { .i = 1 }));
 	_it_should("alloc returns NULL on malloc failure",
 		NULL == p_ret);
 

@@ -34,21 +34,25 @@ x_obj_t *x_make_list(x_obj_t *p_base, x_obj_flag_t flags, void *p1, void *p2)
 #endif
 
 #ifdef STUB_X_EVAL
-x_obj_t *x_eval(x_obj_t *p_base, x_obj_t *p_obj) { return NULL; }
-x_obj_t *x_eval_arg(x_obj_t *p_base, x_obj_t *p_arg) { return p_arg; }
-x_obj_t *x_eval_list(x_obj_t *p_base, x_obj_t *p_args) { return p_args; }
-x_obj_t *x_eval_body(x_obj_t *p_base, x_obj_t *p_body) { return NULL; }
-x_obj_t *x_eval_body_tco(x_obj_t *p_base, x_obj_t *p_body) { return NULL; }
-x_obj_t *x_eval_tco_trampoline(x_obj_t *p_base, x_obj_t *p_result) { return p_result; }
+/* Each takes an argument vector, as the routine it stands for does. */
+x_obj_t *x_eval(x_obj_t *p_base, x_obj_t *p_args) { return x_obj(p_args[0]); }
+x_obj_t *x_eval_list(x_obj_t *p_base, x_obj_t *p_args) { return x_obj(p_args[0]); }
+x_obj_t *x_eval_body(x_obj_t *p_base, x_obj_t *p_args) { return NULL; }
+x_obj_t *x_eval_body_tco(x_obj_t *p_base, x_obj_t *p_args) { return NULL; }
+x_obj_t *x_eval_tco_trampoline(x_obj_t *p_base, x_obj_t *p_args) { return x_obj(p_args[0]); }
+x_obj_t *x_eval_op_body(x_obj_t *p_base, x_obj_t *p_args) { return NULL; }
 #endif
 
 #ifdef STUB_X_BASE_ERROR
-void x_eval_error(x_obj_t *p_base, x_char_t *message, x_obj_t *p_obj) {}
+x_obj_t *x_eval_error(x_obj_t *p_base, x_obj_t *p_args) { return NULL; }
 #endif
 
 #ifdef STUB_X_TOKEN
 x_obj_t *x_token_read(x_obj_t *p_base, x_obj_t *p_args) { return NULL; }
 x_obj_t *x_token_write(x_obj_t *p_base, x_obj_t *p_args) { return NULL; }
+/* The slot table in x-eval.c names these two, so they must link. */
+x_obj_t *x_token_analyse(x_obj_t *p_base, x_obj_t *p_args) { return NULL; }
+x_obj_t *x_token_delimit(x_obj_t *p_base, x_obj_t *p_args) { return NULL; }
 /* The clean-EOF sentinel x_eval_load compares against (x-token.c). */
 x_satom_t x_token_eof_prim = x_obj_set(x_type_atom_obj, X_OBJ_FLAG_NONE, { .i = 0 });
 #endif
@@ -56,7 +60,7 @@ x_satom_t x_token_eof_prim = x_obj_set(x_type_atom_obj, X_OBJ_FLAG_NONE, { .i = 
 #ifdef STUB_X_HEAP
 #include "x-heap.h"
 x_obj_t *x_heap_mark(x_obj_t *p_base, x_obj_t *p_obj, x_obj_flag_t flags,
-	x_heap_mark_fn_t p_mark_fn) { return NULL; }
+	x_fn_t p_mark_fn) { return NULL; }
 #endif
 
 #ifdef STUB_X_OBJ_OBJ
@@ -124,6 +128,14 @@ x_obj_t *x_syntax_quote_register(x_obj_t *p_base, x_obj_t *p_args) { return p_ba
 x_obj_t *x_type_prim_type_name(x_obj_t *p_base, x_obj_t *p_args) { return NULL; }
 x_obj_t *x_type_prim_units(x_obj_t *p_base, x_obj_t *p_args) { return NULL; }
 x_obj_t *x_type_prim_length(x_obj_t *p_base, x_obj_t *p_args) { return NULL; }
+/* Link-only: x-eval.c's slot table names them (x-type/prim.c). */
+x_obj_t *x_callable_call(x_obj_t *p_base, x_obj_t *p_args) { return NULL; }
+x_obj_t *x_callable_apply(x_obj_t *p_base, x_obj_t *p_args) { return NULL; }
+#endif
+
+#ifdef STUB_X_OBJ_PRIM_CALL
+/* Link-only: x-eval.c's slot table names it (x-obj/prim.c). */
+x_obj_t *x_obj_prim_call(x_obj_t *p_base, x_obj_t *p_args) { return NULL; }
 #endif
 
 #ifdef STUB_X_TYPE_DISPLAY
@@ -136,14 +148,6 @@ x_obj_t *x_type_write(x_obj_t *p_base, x_obj_t *p_args) { return NULL; }
 
 #ifdef STUB_X_TOKEN_DISPLAY
 x_obj_t *x_token_display(x_obj_t *p_base, x_obj_t *p_args) { return NULL; }
-#endif
-
-#ifdef STUB_X_TOKEN_ANALYSE
-x_obj_t *x_token_analyse(x_obj_t *p_base, x_obj_t *p_args, x_int_t *p_label) { if (p_label) *p_label = 0; return NULL; }
-#endif
-
-#ifdef STUB_X_TOKEN_DELIMIT
-x_obj_t *x_token_delimit(x_obj_t *p_base, x_obj_t *p_args) { return NULL; }
 #endif
 
 #ifdef STUB_X_PROCEDURE_APPLY

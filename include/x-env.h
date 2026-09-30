@@ -39,21 +39,20 @@
 /** Make an empty environment whose parent is @p p_parent (nil for a root). */
 x_obj_t *x_env_make(x_obj_t *p_base, x_obj_t *p_parent);
 
-/** The @c (name . value) cell binding @p p_sym in @p p_env or an ancestor,
- *  or NULL when no environment on the chain binds it.  Names are found by
- *  identity; a symbol interned in another base stands for this base's own
- *  symbol of its spelling. */
-x_obj_t *x_env_lookup(x_obj_t *p_base, x_obj_t *p_env, x_obj_t *p_sym);
+/** The @c (name . value) cell binding a symbol in an environment or an
+ *  ancestor, or NULL when no environment on the chain binds it.  Names are
+ *  found by identity; a symbol interned in another base stands for this
+ *  base's own symbol of its spelling.  Argument run: (env, symbol). */
+x_obj_t *x_env_lookup(x_obj_t *p_base, x_obj_t *p_args);
 
-/** Bind @p p_sym to @p p_val in @p p_env itself: an existing binding there
- *  is updated in place, otherwise one is added.  Never touches a parent.
- *  Returns @p p_val. */
-x_obj_t *x_env_bind(x_obj_t *p_base, x_obj_t *p_env,
-	x_obj_t *p_sym, x_obj_t *p_val);
+/** Bind a symbol to a value in an environment itself: an existing binding
+ *  there is updated in place, otherwise one is added.  Never touches a
+ *  parent.  Returns the value.  Argument run: (env, symbol, value). */
+x_obj_t *x_env_bind(x_obj_t *p_base, x_obj_t *p_args);
 
-/** Make a child of @p p_parent with @p p_params bound to @p p_vals: the
- *  environment a procedure body or an operative body runs in. */
-x_obj_t *x_env_extend(x_obj_t *p_base, x_obj_t *p_parent,
-	x_obj_t *p_params, x_obj_t *p_vals);
+/** Make a child of an environment with parameters bound to values: the
+ *  environment a procedure body or an operative body runs in.  Argument
+ *  vector: (parent, params, values). */
+x_obj_t *x_env_extend(x_obj_t *p_base, x_obj_t *p_args);
 
 #endif /* X_ENV_H */

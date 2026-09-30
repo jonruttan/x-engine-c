@@ -354,7 +354,7 @@ x_obj_t *x_type_buffer_read(x_obj_t *p_base, x_obj_t *p_args)
 					? x_firstobj(x_eval_field_sigint(p_base)) : NULL;
 				if (p_sigint == NULL
 						|| *(volatile x_int_t *)&x_atomint(p_sigint) == 0) {
-					x_eval_error(p_base, (x_char_t *)"Input read failed", NULL);
+					x_obj_error(p_base, (x_char_t *)"Input read failed", NULL);
 				}
 			}
 

@@ -12,6 +12,7 @@
  *      " "
  */
 #include "x-type/procedure.h"
+#include "x-eval-slots.h"
 #include "x-eval.h"
 #include "x-env.h"
 #include "x-tco.h"
@@ -45,7 +46,7 @@ static x_obj_t *x_type_procedure_mark(x_obj_t *p_base, x_obj_t *p_args)
 {
 	x_obj_t *p_obj = x_firstobj(p_args);
 	x_obj_flag_t flags = (x_obj_flag_t)x_firstint(x_restobj(p_args));
-	x_heap_tree_mark(p_base, x_obj(x_obj_data_i(p_obj, 1)), flags);
+	x_base_call_or(p_base, X_SLOT_HEAP_TREE_MARK, x_heap_tree_mark, x_argrun({ .p = x_obj(x_obj_data_i(p_obj, 1)) }, { .i = flags }));
 	return NULL;
 }
 
@@ -196,14 +197,14 @@ x_obj_t *x_type_procedure_call(x_obj_t *p_base, x_obj_t *p_args)
 	x_spair_t sp;
 
 	/* Eval each argument in the current env. */
-	p_evaled_args = x_eval_list(p_base, p_unevaluated_args);
+	p_evaled_args = x_base_call_or(p_base, X_SLOT_EVAL_LIST, x_eval_list, x_argrun({ .p = p_unevaluated_args }));
 
 	/* Wrapped combiner: dispatch to underlying combiner with eval'd args. */
 	if (x_obj_flags(p_proc) & X_OBJ_FLAG_WRAP) {
 		p_combiner = x_procenv(p_proc);
 		p_call_args = x_mkspair(p_base, X_OBJ_FLAG_NONE, p_combiner, p_evaled_args);
 
-		return x_obj_prim_call(p_base, p_call_args);
+		return x_base_call_or(p_base, X_SLOT_OBJ_PRIM_CALL, x_obj_prim_call, x_argrun({ .p = p_call_args }));
 	}
 
 	/* Push the caller's environment onto the save-stack; the trampoline
@@ -220,11 +221,9 @@ x_obj_t *x_type_procedure_call(x_obj_t *p_base, x_obj_t *p_args)
 	p_evaled_args = (x_obj_t *)&sp;
 
 	/* The body runs in a child of the closure's environment. */
-	x_eval_field_env(p_base) = x_env_extend(
-		p_base, x_procenv(p_proc), x_procparams(p_proc),
-		p_evaled_args);
+	x_eval_field_env(p_base) = x_base_call_or(p_base, X_SLOT_ENV_EXTEND, x_env_extend, x_argrun({ .p = x_procenv(p_proc) }, { .p = x_procparams(p_proc) }, { .p = p_evaled_args }));
 
-	return x_eval_body_tco(p_base, x_procbody(p_proc));
+	return x_base_call_or(p_base, X_SLOT_EVAL_BODY_TCO, x_eval_body_tco, x_argrun({ .p = x_procbody(p_proc) }));
 }
 
 /**
@@ -259,12 +258,10 @@ x_obj_t *x_type_procedure_apply(x_obj_t *p_base, x_obj_t *p_args)
 	{
 	x_spair_t sp = x_obj_set(NULL, X_OBJ_FLAG_NONE,
 		{ p_proc }, { x_restobj(p_args) });
-	x_eval_field_env(p_base) = x_env_extend(
-		p_base, x_procenv(p_proc), x_procparams(p_proc),
-		(x_obj_t *)&sp);
+	x_eval_field_env(p_base) = x_base_call_or(p_base, X_SLOT_ENV_EXTEND, x_env_extend, x_argrun({ .p = x_procenv(p_proc) }, { .p = x_procparams(p_proc) }, { .p = (x_obj_t *)&sp }));
 	}
 
-	p_result = x_eval_body(p_base, x_procbody(p_proc));
+	p_result = x_base_call_or(p_base, X_SLOT_EVAL_BODY, x_eval_body, x_argrun({ .p = x_procbody(p_proc) }));
 
 	x_eval_field_env(p_base) = p_saved_env;
 

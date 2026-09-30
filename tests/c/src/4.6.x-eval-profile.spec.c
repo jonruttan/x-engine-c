@@ -143,9 +143,9 @@ static char *test_eval_counts(void)
 	_it_should("a fresh object's count reads zero",
 		x_obj_evals(p_obj) == 0);
 
-	x_eval_arg(p_base, p_obj);
-	x_eval_arg(p_base, p_obj);
-	x_eval_arg(p_base, p_obj);
+	x_eval(p_base, x_argrun({ .p = p_obj }));
+	x_eval(p_base, x_argrun({ .p = p_obj }));
+	x_eval(p_base, x_argrun({ .p = p_obj }));
 	_it_should("each evaluation of an object counts one",
 		x_obj_evals(p_obj) == 3);
 	_it_should("the count leaves every flag bit alone but COV",
@@ -153,9 +153,9 @@ static char *test_eval_counts(void)
 	_it_should("an odd count leaves TRACE clear: nothing looks traced",
 		(x_obj_flags(p_obj) & X_OBJ_FLAG_TRACE) == 0);
 
-	x_eval_arg(p_base, NULL);
+	x_eval(p_base, x_argrun({ .p = NULL }));
 	_it_should("a nil expression has nothing to count and is still nil",
-		x_eval_arg(p_base, NULL) == NULL);
+		x_eval(p_base, x_argrun({ .p = NULL })) == NULL);
 
 	test_cleanup(p_base);
 
@@ -172,8 +172,8 @@ static char *test_body_counts(void)
 	p_base = x_eval_make(NULL, NULL);
 	p_body = _body3(p_base, p_forms);
 
-	x_eval_body(p_base, p_body);
-	x_eval_body(p_base, p_body);
+	x_eval_body(p_base, x_argrun({ .p = p_body }));
+	x_eval_body(p_base, x_argrun({ .p = p_body }));
 	_it_should("x_eval_body counts each body cell once a walk",
 		x_obj_evals(p_body) == 2
 		&& x_obj_evals(x_restobj(p_body)) == 2
@@ -208,7 +208,7 @@ static char *test_procedure_counts(void)
 
 	for (i = 0; i < 4; i++) {
 		x_type_procedure_call(p_base, p_args);
-		x_eval_tco_trampoline(p_base, NULL);
+		x_eval_tco_trampoline(p_base, x_argrun({ .p = NULL }));
 	}
 	_it_should("a called procedure's first body cell counts its calls",
 		x_obj_evals(p_body) == 4);
@@ -239,11 +239,11 @@ static char *test_count_saturates(void)
 	p_obj = x_mksatom(p_base, X_OBJ_FLAG_NONE, 7);
 	x_obj_flags(p_obj) |= (X_OBJ_EVALS_MAX - 1) << X_OBJ_EVALS_SHIFT;
 
-	x_eval_arg(p_base, p_obj);
+	x_eval(p_base, x_argrun({ .p = p_obj }));
 	_it_should("a count one short of the maximum reaches it",
 		x_obj_evals(p_obj) == X_OBJ_EVALS_MAX);
 
-	x_eval_arg(p_base, p_obj);
+	x_eval(p_base, x_argrun({ .p = p_obj }));
 	_it_should("and stops there instead of wrapping",
 		x_obj_evals(p_obj) == X_OBJ_EVALS_MAX);
 	_it_should("nothing spills past the count's top bit",
@@ -267,7 +267,7 @@ static char *test_count_survives_sweep(void)
 	x_obj_flags(p_obj) |= (X_OBJ_EVALS_MAX << X_OBJ_EVALS_SHIFT)
 		| X_OBJ_FLAG_MARK;
 
-	x_heap_sweep(p_base, p_obj, X_OBJ_FLAG_MARK);
+	x_heap_sweep(p_base, x_argrun({ .p = p_obj }, { .i = X_OBJ_FLAG_MARK }));
 	_it_should("a sweep that keeps an object clears its mark",
 		(x_obj_flags(p_obj) & X_OBJ_FLAG_MARK) == 0);
 	_it_should("and leaves its count whole",
@@ -287,10 +287,10 @@ static char *test_count_keeps_trace(void)
 
 	p_base = x_eval_make(NULL, NULL);
 	p_obj = x_mksatom(p_base, X_OBJ_FLAG_NONE, 7);
-	x_heap_tree_mark(p_base, p_obj, X_OBJ_FLAG_TRACE);
+	x_heap_tree_mark(p_base, x_argrun({ .p = p_obj }, { .i = X_OBJ_FLAG_TRACE }));
 
-	x_eval_arg(p_base, p_obj);
-	x_eval_arg(p_base, p_obj);
+	x_eval(p_base, x_argrun({ .p = p_obj }));
+	x_eval(p_base, x_argrun({ .p = p_obj }));
 	_it_should("a traced object counts as any other",
 		x_obj_evals(p_obj) == 2);
 	_it_should("and stays traced",
@@ -317,7 +317,7 @@ static char *test_cov_agrees(void)
 	p_reached = x_mksatom(p_base, X_OBJ_FLAG_NONE, 1);
 	p_not = x_mksatom(p_base, X_OBJ_FLAG_NONE, 2);
 
-	x_eval_arg(p_base, p_reached);
+	x_eval(p_base, x_argrun({ .p = p_reached }));
 	_it_should("an object evaluation reached carries COV and a count",
 		(x_obj_flags(p_reached) & X_OBJ_FLAG_COV)
 		&& x_obj_evals(p_reached) == 1);

@@ -54,6 +54,7 @@ x_satom_t x_sexp_list_analyse_prim = x_obj_set(x_type_atom_obj, X_OBJ_FLAG_NONE,
 #define STUB_X_PRIM_SHADOW
 #define STUB_X_PROCEDURE_APPLY
 #define STUB_X_SYMBOL
+#define STUB_X_OBJ_PRIM_CALL
 #include "helper-stubs.c"
 
 
@@ -321,7 +322,7 @@ static char *test_token_delimit(void)
 		};
 		p_args = (x_obj_t *)delimit_args;
 
-		p_obj = x_token_delimit(p_base2, p_args);
+		p_obj = x_token_delimit(p_base2, x_argrun({ .p = p_args }));
 		_it_should("delimit returns buffer for space",
 			p_obj == p_buffer);
 
@@ -331,7 +332,7 @@ static char *test_token_delimit(void)
 		x_type_buffer_reset(p_base, x_mkspair(p_base, X_OBJ_FLAG_NONE, p_buffer, NULL));
 		x_type_buffer_read(p_base, x_mkspair(p_base, X_OBJ_FLAG_NONE, p_buffer, NULL));
 
-		p_obj = x_token_delimit(p_base2, p_args);
+		p_obj = x_token_delimit(p_base2, x_argrun({ .p = p_args }));
 		_it_should("delimit returns NULL for non-delimiter",
 			x_obj_isnil(p_base, p_obj));
 	}
@@ -386,17 +387,17 @@ static char *test_token_read(void)
 	p_buffer = x_mkbufferown(p_base, buffer);
 	p_args = x_mkpair(p_base, p_buffer, p_base);
 
-	p_obj = x_token_read(p_base2, p_args);
+	p_obj = x_token_read(p_base2, x_argrun({ .p = p_args }));
   	_it_should("return a TYPE1 token",
 		x_obj_type_issatom(p_obj)
 		&& 0 == strcmp("@AA", x_atomstr(p_obj)));
 
-	p_obj = x_token_read(p_base2, p_args);
+	p_obj = x_token_read(p_base2, x_argrun({ .p = p_args }));
   	_it_should("return a CATCHALL token",
 		x_obj_type_issatom(p_obj)
 		&& 'B' == x_atomchar(p_obj));
 
-	p_obj = x_token_read(p_base2, p_args);
+	p_obj = x_token_read(p_base2, x_argrun({ .p = p_args }));
   	_it_should("return a TYPE1 token",
 		x_obj_type_issatom(p_obj)
 		&& 0 == strcmp("@AA", x_atomstr(p_obj)));
@@ -433,7 +434,7 @@ static char *test_token_read_eof(void)
 	p_buffer = x_mkbufferown(p_base, buffer);
 	p_args = x_mkpair(p_base, p_buffer, p_base);
 
-	p_obj = x_token_read(p_base2, p_args);
+	p_obj = x_token_read(p_base2, x_argrun({ .p = p_args }));
 	_it_should("return the EOF sentinel on empty input",
 		(x_obj_t *)x_token_eof_prim == p_obj);
 
@@ -447,7 +448,7 @@ static char *test_token_read_eof(void)
 
 		p_ro_args = x_mkpair(p_base, p_ro_buffer, p_base);
 
-		p_obj = x_token_read(p_base2, p_ro_args);
+		p_obj = x_token_read(p_base2, x_argrun({ .p = p_ro_args }));
 		_it_should("return token from RO buffer",
 			! x_obj_isnil(p_base, p_obj));
 	}
@@ -482,7 +483,7 @@ static char *test_token_read_null_reader(void)
 	p_args = x_mkpair(p_base, p_buffer, p_base);
 
 	/* Reader returns NULL → x_token_read returns NULL */
-	p_obj = x_token_read(p_base2, p_args);
+	p_obj = x_token_read(p_base2, x_argrun({ .p = p_args }));
 	_it_should("read returns NULL when reader returns NULL",
 		x_obj_isnil(p_base, p_obj));
 
@@ -519,7 +520,7 @@ static char *test_token_read_ro_eof(void)
 	p_args = x_mkpair(p_base, p_ro_buffer, p_base);
 
 	/* This exercises RO EOF break (line 129) and catchall auto-score. */
-	p_obj = x_token_read(p_base2, p_args);
+	p_obj = x_token_read(p_base2, x_argrun({ .p = p_args }));
 	_it_should("RO EOF read returns a token",
 		! x_obj_isnil(p_base, p_obj));
 
@@ -604,7 +605,7 @@ static char *test_token_read_label(void)
 	p_buffer = x_mkbufferro(p_base, buf_k);
 	x_bufferwrite(p_buffer) = x_bufferval(p_buffer) + 4;
 	p_args = x_mkpair(p_base, p_buffer, p_base);
-	p_obj = x_token_read(p_base, p_args);
+	p_obj = x_token_read(p_base, x_argrun({ .p = p_args }));
 	_it_should("a declared label reaches the reader as an atom cell, and the span is whole",
 		! x_obj_isnil(p_base, p_obj)
 		&& x_atomint(x_firstobj(p_obj)) == 3
@@ -615,7 +616,7 @@ static char *test_token_read_label(void)
 	p_buffer = x_mkbufferro(p_base, buf_n);
 	x_bufferwrite(p_buffer) = x_bufferval(p_buffer) + 1;
 	p_args = x_mkpair(p_base, p_buffer, p_base);
-	p_obj = x_token_read(p_base, p_args);
+	p_obj = x_token_read(p_base, x_argrun({ .p = p_args }));
 	_it_should("no declared label hands the reader nil",
 		! x_obj_isnil(p_base, p_obj)
 		&& x_atomint(x_firstobj(p_obj)) == 1

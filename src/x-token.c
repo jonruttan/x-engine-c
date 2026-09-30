@@ -14,6 +14,7 @@
  * # Includes
  */
 #include "x-eval.h"
+#include "x-eval-slots.h"
 #include "x-heap.h"
 #include "x-obj.h"
 #include "x-token.h"
@@ -43,18 +44,20 @@
  */
 x_obj_t *x_token_delimit(x_obj_t *p_base, x_obj_t *p_args)
 {
-	x_obj_t *p_buffer = x_firstobj(p_args),
+	x_obj_t *p_read = x_obj(p_args[0]);
+	x_obj_t *p_buffer = x_firstobj(p_read),
 		*p_types = x_firstobj(x_eval_field_type_alist(p_base));
 	x_spair_t prim_args[1] = {
-			x_obj_set(NULL, X_OBJ_FLAG_NONE, { NULL }, { p_args }),
+			x_obj_set(NULL, X_OBJ_FLAG_NONE, { NULL }, { p_read }),
 		};
+	x_obj_t apply_args[1] = { { .p = (x_obj_t *)prim_args } };
 
 	/* Try each registered type's delimit handler against the buffer. */
 	while ( ! x_obj_isnil(p_base, p_types)) {
 		prim_arg_prim = x_type_field_delimit(x_restobj(x_firstobj(p_types)));
 
 		if ( ! x_obj_isnil(p_base, prim_arg_prim)
-			&& x_callable_apply(p_base, (x_obj_t *)prim_args) == p_buffer
+			&& x_base_call_or(p_base, X_SLOT_CALLABLE_APPLY, x_callable_apply, apply_args) == p_buffer
 		) {
 			return p_buffer;
 		}
@@ -87,8 +90,9 @@ x_satom_t x_token_eof_prim = x_obj_set(x_type_atom_obj, X_OBJ_FLAG_NONE, { .v = 
  *
  * @param p_base  x_obj_t* -- Base (execution context)
  * @param p_args  x_obj_t* -- (buffer . base) pair
- * @param p_label  x_int_t* -- Out: the label the winning handler declared
- *                          through the label cell (0 when none)
+ *                 The second argument is an atom, and the routine stores
+ *                 in it the label the winning handler declared through
+ *                 the label cell (0 when none)
  * @return x_obj_t* -- Winning type alist entry (name . type-struct),
  *                      or NULL if no type matched
  *
@@ -96,16 +100,17 @@ x_satom_t x_token_eof_prim = x_obj_set(x_type_atom_obj, X_OBJ_FLAG_NONE, { .v = 
  *       fallback scores negative, sexp/symbol.c, so any positive match
  *       wins over it). The absolute value determines advancement.
  */
-x_obj_t *x_token_analyse(x_obj_t *p_base, x_obj_t *p_args, x_int_t *p_label)
+x_obj_t *x_token_analyse(x_obj_t *p_base, x_obj_t *p_args)
 {
+	x_obj_t *p_read = x_obj(p_args[0]);
 	x_int_t i_best, i_consumed;
-	x_obj_t *p_buffer = x_firstobj(p_args), *p_winner, *p_entry, *p_analyse, *p_analyse_slot, *p_obj;
+	x_obj_t *p_buffer = x_firstobj(p_read), *p_winner, *p_entry, *p_analyse, *p_analyse_slot, *p_obj;
 	x_satom_t chr = x_obj_set(NULL, X_OBJ_FLAG_NONE, { .c = '\0' } ),
 		arg_chr = x_obj_set(NULL, X_OBJ_FLAG_NONE, { .i = 0 });
 	x_spair_t
 		/* THE LABEL CELL hangs off the score's rest (x-token.h): a state
 		 * declares what it accepted with a set-cell-int! on (rest score),
-		 * and the winner's value goes out through p_label.  Reset per
+		 * and the winner's value goes out through the run's second word.  Reset per
 		 * handler with the score, so a handler that declares a label and
 		 * then loses the tie leaves nothing behind. */
 		label = x_obj_set(NULL, X_OBJ_FLAG_NONE, { .i = 0 }, { NULL }),
@@ -154,7 +159,7 @@ x_obj_t *x_token_analyse(x_obj_t *p_base, x_obj_t *p_args, x_int_t *p_label)
 	/* Cycle through all types, tracking the winning type entry. */
 	p_winner = NULL;
 	i_best = 0;
-	*p_label = 0;
+	p_args[1].i = 0;
 
 	while ( ! x_iterempty(p_base, (x_obj_t *)type_iter)) {
 		p_entry = x_type_iter_next(p_base, (x_obj_t *)iter_args);
@@ -210,7 +215,7 @@ x_obj_t *x_token_analyse(x_obj_t *p_base, x_obj_t *p_args, x_int_t *p_label)
 
 				x_atomint(arg_chr) = (x_int_t)x_bufferlastchar(p_buffer);
 				prim_arg_prim = p_analyse;
-				p_obj = x_callable_apply(p_base, (x_obj_t *)prim_args);
+				p_obj = x_base_call_or(p_base, X_SLOT_CALLABLE_APPLY, x_callable_apply, x_argrun({ .p = (x_obj_t *)prim_args }));
 
 				/* Not recognized. */
 				if (x_obj_isnil(p_base, p_obj)) {
@@ -228,7 +233,7 @@ x_obj_t *x_token_analyse(x_obj_t *p_base, x_obj_t *p_args, x_int_t *p_label)
 					if (x_firstint(p_score) >= i_best || (i_best < 1 && x_firstint(p_score) <= i_best)) {
 						i_best = x_firstint(p_score);
 						p_winner = p_entry;
-						*p_label = x_firstint((x_obj_t *)label);
+						p_args[1].i = x_firstint((x_obj_t *)label);
 					}
 
 					x_bufferread(p_buffer) = x_bufferval(p_buffer);
@@ -253,7 +258,7 @@ x_obj_t *x_token_analyse(x_obj_t *p_base, x_obj_t *p_args, x_int_t *p_label)
 				if (i_score >= i_best || (i_best < 1 && i_score <= i_best)) {
 					i_best = i_score;
 					p_winner = p_entry;
-					*p_label = x_firstint((x_obj_t *)label);
+					p_args[1].i = x_firstint((x_obj_t *)label);
 				}
 			}
 
@@ -278,16 +283,20 @@ x_obj_t *x_token_analyse(x_obj_t *p_base, x_obj_t *p_args, x_int_t *p_label)
  * created objects when meta tracking is enabled.
  *
  * @param p_base  x_obj_t* -- Base (execution context)
- * @param p_args  x_obj_t* -- (buffer . base) pair
+ * @param p_args  x_obj_t* -- Argument run: (read-args) -- the
+ *                            (buffer . base) pair
  * @return x_obj_t* -- Parsed object; NULL when the token read a nil
  *         VALUE (`()`) or every reader declined; x_token_eof_prim at
  *         clean end of input (zero consumption).
  */
 x_obj_t *x_token_read(x_obj_t *p_base, x_obj_t *p_args)
 {
-	x_obj_t *p_buffer = x_firstobj(p_args), *p_entry, *p_read, *p_obj;
+	x_obj_t *p_read_args = x_obj(p_args[0]);
+	x_obj_t *p_buffer = x_firstobj(p_read_args), *p_entry, *p_read, *p_obj;
 	x_char_t *p_scan;
 	x_int_t line, file, label;
+	/* The analysis stores the label it declares in the run's second word. */
+	x_obj_t analyse_args[2] = { { .p = p_read_args }, { .i = 0 } };
 	x_spair_t buffer_args[3] = {
 			x_obj_set(NULL, X_OBJ_FLAG_NONE, { p_buffer }, { (x_obj_t *)(buffer_args + 1) }),
 			x_obj_set(NULL, X_OBJ_FLAG_NONE, { NULL }, { NULL }),
@@ -306,7 +315,8 @@ x_obj_t *x_token_read(x_obj_t *p_base, x_obj_t *p_args)
 		};
 
 	for (;;) {
-		p_entry = x_token_analyse(p_base, p_args, &label);
+		p_entry = x_base_call_or(p_base, X_SLOT_TOKEN_ANALYSE, x_token_analyse, analyse_args);
+		label = analyse_args[1].i;
 
 		/* No token and NOTHING consumed: end of input (or input no
 		 * analyser recognizes -- indistinguishable here).  Return the
@@ -383,7 +393,7 @@ x_obj_t *x_token_read(x_obj_t *p_base, x_obj_t *p_args)
 		p_obj = NULL;
 		while ( ! x_iterempty(p_base, (x_obj_t *)read_iter)) {
 			prim_arg_prim = x_type_iter_next(p_base, (x_obj_t *)read_args);
-			p_obj = x_callable_apply(p_base, (x_obj_t *)prim_args);
+			p_obj = x_base_call_or(p_base, X_SLOT_CALLABLE_APPLY, x_callable_apply, x_argrun({ .p = (x_obj_t *)prim_args }));
 
 			if ( ! x_obj_isnil(p_base, p_obj)) {
 				break;

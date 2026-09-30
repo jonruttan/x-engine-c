@@ -44,6 +44,7 @@
 #define STUB_X_TOKEN_DISPLAY
 #define STUB_X_PROCEDURE_APPLY
 #define STUB_X_SYMBOL
+#define STUB_X_OBJ_PRIM_CALL
 #include "helper-stubs.c"
 
 
@@ -85,9 +86,12 @@ x_obj_t *test_type_eval(x_obj_t *p_base, x_obj_t *p_args)
 	return p_obj;
 }
 
+/* An object of the SKIP type holds the expression to evaluate in its
+ * place: the handler stores it in the cell x_eval evaluates from, and
+ * answers the args to ask for another pass. */
 x_obj_t *test_type_skip(x_obj_t *p_base, x_obj_t *p_args)
 {
-	x_0(p_args) = x_10(p_args);
+	x_firstobj(x_0(p_args)) = x_firstobj(x_00(p_args));
 
 	return p_args;
 }
@@ -119,7 +123,7 @@ static char *test_eval(void)
 	};
 
 	p_args = x_mkpair(NULL, x_mkpair(NULL, NULL, NULL), NULL);
-	p_ret = x_eval(NULL, p_args);
+	p_ret = x_eval(NULL, x_argrun({ .p = x_firstobj(x_firstobj(p_args)) }));
 	_it_should("evalute nil as nil", x_obj_isnil(NULL, p_ret));
 
 	x_sys_free(x_firstobj(p_args));
@@ -129,7 +133,7 @@ static char *test_eval(void)
 	p_base = x_eval_make(NULL, NULL);
 	p_obj = x_mksatom(p_base, X_OBJ_FLAG_NONE, i);
 	p_args = x_mkpair(p_base, x_mkpair(p_base, p_obj, p_base), p_base);
-	p_ret = x_eval(p_base, p_args);
+	p_ret = x_eval(p_base, x_argrun({ .p = x_firstobj(x_firstobj(p_args)) }));
 	_it_should("evaluate simple types as themselves",
 		x_obj_type_issatom(p_ret)
 		&& p_obj == p_ret
@@ -142,7 +146,7 @@ static char *test_eval(void)
 	p_type = x_type_struct_make(p_base, types[0]);
 	p_obj = x_obj_make(p_base, p_type, X_OBJ_FLAG_NONE, X_OBJ_LENGTH_ATOM, i);
 	p_args = x_mkpair(p_base, x_mkpair(p_base, p_obj, p_base), p_base);
-	p_ret = x_eval(p_base, p_args);
+	p_ret = x_eval(p_base, x_argrun({ .p = x_firstobj(x_firstobj(p_args)) }));
 	_it_should("evalute complex type's eval function",
 		p_type == x_obj_type(p_ret)
 		&& p_obj == p_ret
@@ -155,7 +159,7 @@ static char *test_eval(void)
 	p_type = x_type_struct_make(p_base, types[1]);
 	p_obj = x_obj_make(p_base, p_type, X_OBJ_FLAG_NONE, X_OBJ_LENGTH_ATOM, i);
 	p_args = x_mkpair(p_base, x_mkpair(p_base, p_obj, p_base), p_base);
-	p_ret = x_eval(p_base, p_args);
+	p_ret = x_eval(p_base, x_argrun({ .p = x_firstobj(x_firstobj(p_args)) }));
 	_it_should("evaluate complex type's eval function",
 		p_type == x_obj_type(p_ret)
 		&& ~i == x_firstint(p_ret)
@@ -164,18 +168,14 @@ static char *test_eval(void)
 	test_cleanup(p_base);
 
 
+	/* Two SKIP objects in a chain, the last holding the atom. */
 	p_base = x_eval_make(NULL, NULL);
 	p_type = x_type_struct_make(p_base, types[2]);
 	p_obj = x_mksatom(p_base, X_OBJ_FLAG_NONE, i);
-	p_args = x_mkpair(p_base,
-		x_mkpair(p_base,
-			x_obj_make(p_base, p_type, X_OBJ_FLAG_NONE, X_OBJ_LENGTH_ATOM, 0),
-			x_mkpair(p_base,
-				x_obj_make(p_base, p_type, X_OBJ_FLAG_NONE, X_OBJ_LENGTH_ATOM, 0),
-				x_mkpair(p_base, p_obj, p_base))),
-		p_base);
-	p_ret = x_eval(p_base, p_args);
-	_it_should("evaluate complex type's eval function",
+	p_args = x_obj_make(p_base, p_type, X_OBJ_FLAG_NONE, X_OBJ_LENGTH_ATOM,
+		x_obj_make(p_base, p_type, X_OBJ_FLAG_NONE, X_OBJ_LENGTH_ATOM, p_obj));
+	p_ret = x_eval(p_base, x_argrun({ .p = p_args }));
+	_it_should("evaluate again when a type's eval function asks for another pass",
 		x_obj_type_issatom(p_ret)
 		&& p_obj == p_ret
 	);
@@ -186,7 +186,7 @@ static char *test_eval(void)
 	p_base = x_eval_make(NULL, NULL);
 	p_obj = x_mksatom(p_base, X_OBJ_FLAG_NONE, i);
 	p_args = x_mkpair(p_base, x_mkpair(p_base, p_obj, p_base), p_base);
-	p_ret = x_eval(p_base, p_args);
+	p_ret = x_eval(p_base, x_argrun({ .p = x_firstobj(x_firstobj(p_args)) }));
 	_it_should("evaluate unevaluated expressions as themselves",
 		x_obj_type_issatom(p_ret)
 		&& p_obj == p_ret
@@ -268,7 +268,7 @@ static char *test_eval_tco(void)
 		x_mkspair(p_base, X_OBJ_FLAG_NONE, p_obj, NULL), NULL);
 
 	tco_eval_calls = 0;
-	p_ret = x_eval(p_base, p_args);
+	p_ret = x_eval(p_base, x_argrun({ .p = x_firstobj(x_firstobj(p_args)) }));
 	_it_should("bounce via TCO and return bounced result",
 		p_ret == test_tco_result);
 	_it_should("call eval fn once (bounce resolves to self-eval)",
@@ -306,7 +306,7 @@ static char *test_eval_tco(void)
 			NULL);
 
 		tco_eval_calls = 0;
-		p_ret = x_eval(p_base, p_args);
+		p_ret = x_eval(p_base, x_argrun({ .p = x_firstobj(x_firstobj(p_args)) }));
 
 		/* After TCO bounce resolves, env should NOT be restored
 		 * because tco_env was set before the trampoline started
@@ -326,7 +326,7 @@ static char *test_eval_nil_base(void)
 
 	/* nil expression returns NULL */
 	p_args = x_mkspair(NULL, X_OBJ_FLAG_NONE, x_mkspair(NULL, X_OBJ_FLAG_NONE, NULL, NULL), NULL);
-	p_ret = x_eval(NULL, p_args);
+	p_ret = x_eval(NULL, x_argrun({ .p = x_firstobj(x_firstobj(p_args)) }));
 	_it_should("return NULL for nil expression",
 		p_ret == NULL);
 
@@ -364,7 +364,7 @@ static char *test_eval_tco_env_restore(void)
 
 	test_tco_env_to_set = p_restore_env;
 	tco_eval_calls = 0;
-	p_ret = x_eval(p_base, p_args);
+	p_ret = x_eval(p_base, x_argrun({ .p = x_firstobj(x_firstobj(p_args)) }));
 
 	_it_should("TCO two-bounce returns correct result",
 		p_ret == test_tco_result);

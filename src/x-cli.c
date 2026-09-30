@@ -21,6 +21,8 @@
 #define _GNU_SOURCE
 
 #include "x-eval.h"
+#include "x-eval-slots.h"
+#include "x-type/vector.h"
 #include "x-heap.h"
 #include "x-prim.h"
 /* The build's release identity, generated per build by the Makefile from
@@ -83,7 +85,7 @@ static x_obj_t *x_prim_syscall(x_obj_t *p_base, x_obj_t *p_args)
 
 	while ( ! x_obj_isnil(p_base, p_args) && i < 7) {
 		x_eval_spine_guard(p_base, p_args);	/* dotted tail (#487) */
-		arg = x_eval_arg(p_base, x_firstobj(p_args));
+		arg = x_base_call_or(p_base, X_SLOT_EVAL, x_eval, x_argrun({ .p = x_firstobj(p_args) }));
 
 		if (x_obj_isnil(p_base, arg)) {
 			/* nil = NULL (the settled model): a nil arg is the NULL
@@ -280,7 +282,7 @@ x_obj_t * init(x_obj_t *p_base, x_char_t *buffer)
 {
 	x_obj_t *p_buffer;
 
-	/* Create base object. */
+	/* Create base object */
 	p_base = x_eval_make(NULL, NULL);
 
 	/* Enable 2 metadata slots per object for source-location tracking:
@@ -299,6 +301,7 @@ x_obj_t * init(x_obj_t *p_base, x_char_t *buffer)
 	x_type_str_register(p_base, p_base);
 	x_type_char_register(p_base, p_base);
 	x_type_err_register(p_base, p_base);
+	x_type_vector_register(p_base, p_base);
 	x_type_whitespace_register(p_base, p_base);
 	x_type_comment_register(p_base, p_base);
 

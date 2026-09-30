@@ -80,7 +80,7 @@ long jit_atomint(x_obj_t *p)
  */
 x_obj_t *jit_eval_arg(x_obj_t *p_base, x_obj_t *p_expr)
 {
-	return x_eval_arg(p_base, p_expr);
+	return x_base_call_or(p_base, X_SLOT_EVAL, x_eval, x_argrun({ .p = p_expr }));
 }
 
 /**
@@ -204,7 +204,7 @@ long jit_buffer_last_char(x_obj_t *buffer)
  */
 x_obj_t *jit_make_prim(x_obj_t *p_base, x_obj_t *p_args)
 {
-	x_obj_t *p_addr = x_eval_arg(p_base, x_01(p_args));
+	x_obj_t *p_addr = x_base_call_or(p_base, X_SLOT_EVAL, x_eval, x_argrun({ .p = x_01(p_args) }));
 
 	return x_make_prim(p_base, X_OBJ_FLAG_NONE, (x_fn_t)x_ptrval(p_addr));
 }

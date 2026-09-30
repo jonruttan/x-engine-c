@@ -63,7 +63,7 @@ x_obj_t *x_token_delimit(x_obj_t *p_base, x_obj_t *p_obj);
 
 /** Run per-type analysis on a completed token buffer.  Writes the winning
  *  handler's declared label (0 when none) through @p p_label. */
-x_obj_t *x_token_analyse(x_obj_t *p_base, x_obj_t *p_obj, x_int_t *p_label);
+x_obj_t *x_token_analyse(x_obj_t *p_base, x_obj_t *p_args);
 
 /** Read a single token from the input stream. */
 x_obj_t *x_token_read(x_obj_t *p_base, x_obj_t *p_obj);

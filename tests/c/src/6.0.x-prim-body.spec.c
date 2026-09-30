@@ -112,14 +112,14 @@ static char *test_body_eval(void)
 
 	/* nil body returns NULL */
 	p_base = x_eval_make(NULL, NULL);
-	p_result = x_eval_body(p_base, NULL);
+	p_result = x_eval_body(p_base, x_argrun({ .p = NULL }));
 	_it_should("return NULL for nil body", p_result == NULL);
 	test_cleanup(p_base);
 
 	/* single self-evaluating form returns it */
 	p_base = x_eval_make(NULL, NULL);
 	p_body = x_mkspair(p_base, X_OBJ_FLAG_NONE, x_mksatom(p_base, X_OBJ_FLAG_NONE, 42), NULL);
-	p_result = x_eval_body(p_base, p_body);
+	p_result = x_eval_body(p_base, x_argrun({ .p = p_body }));
 	_it_should("return single form's value",
 		p_result != NULL && x_atomint(p_result) == 42);
 	test_cleanup(p_base);
@@ -129,7 +129,7 @@ static char *test_body_eval(void)
 	p_body = x_mkspair(p_base, X_OBJ_FLAG_NONE, x_mksatom(p_base, X_OBJ_FLAG_NONE, 10),
 		x_mkspair(p_base, X_OBJ_FLAG_NONE, x_mksatom(p_base, X_OBJ_FLAG_NONE, 20),
 		x_mkspair(p_base, X_OBJ_FLAG_NONE, x_mksatom(p_base, X_OBJ_FLAG_NONE, 30), NULL)));
-	p_result = x_eval_body(p_base, p_body);
+	p_result = x_eval_body(p_base, x_argrun({ .p = p_body }));
 	_it_should("return last form's value in multi-form body",
 		p_result != NULL && x_atomint(p_result) == 30);
 	test_cleanup(p_base);
@@ -151,7 +151,7 @@ static char *test_body_eval_tco(void)
 	x_eval_field_save_stack(p_base) = x_mkspair(p_base, X_OBJ_FLAG_NONE,
 		p_saved_env, x_eval_field_save_stack(p_base));
 	x_eval_field_env(p_base) = NULL;
-	p_result = x_eval_body_tco(p_base, NULL);
+	p_result = x_eval_body_tco(p_base, x_argrun({ .p = NULL }));
 	_it_should("restore env for nil body",
 		x_eval_field_env(p_base) == p_saved_env);
 	_it_should("return NULL for nil body (tco)", p_result == NULL);
@@ -164,7 +164,7 @@ static char *test_body_eval_tco(void)
 		p_saved_env, x_eval_field_save_stack(p_base));
 	p_body = x_mkspair(p_base, X_OBJ_FLAG_NONE, x_mksatom(p_base, X_OBJ_FLAG_NONE, 42), NULL);
 	x_firstobj(x_eval_field_tco_env(p_base)) = NULL;
-	p_result = x_eval_body_tco(p_base, p_body);
+	p_result = x_eval_body_tco(p_base, x_argrun({ .p = p_body }));
 	_it_should("set tco_expr for single form",
 		x_firstobj(x_eval_field_tco_expr(p_base)) != NULL
 		&& x_atomint(x_firstobj(x_eval_field_tco_expr(p_base))) == 42);
@@ -181,7 +181,7 @@ static char *test_body_eval_tco(void)
 	x_eval_field_save_stack(p_base) = x_mkspair(p_base, X_OBJ_FLAG_NONE,
 		p_saved_env, x_eval_field_save_stack(p_base));
 	p_body = x_mkspair(p_base, X_OBJ_FLAG_NONE, NULL, NULL);
-	p_result = x_eval_body_tco(p_base, p_body);
+	p_result = x_eval_body_tco(p_base, x_argrun({ .p = p_body }));
 	_it_should("restore env for nil last form",
 		x_eval_field_env(p_base) == p_saved_env);
 	_it_should("return NULL for nil last form", p_result == NULL);
@@ -198,7 +198,7 @@ static char *test_body_eval_tco(void)
 		x_mkspair(p_base, X_OBJ_FLAG_NONE, x_mksatom(p_base, X_OBJ_FLAG_NONE, 20),
 		x_mkspair(p_base, X_OBJ_FLAG_NONE, x_mksatom(p_base, X_OBJ_FLAG_NONE, 30), NULL)));
 	x_firstobj(x_eval_field_tco_env(p_base)) = NULL;
-	p_result = x_eval_body_tco(p_base, p_body);
+	p_result = x_eval_body_tco(p_base, x_argrun({ .p = p_body }));
 	_it_should("set tco_expr to last form in multi-form body (tco)",
 		x_firstobj(x_eval_field_tco_expr(p_base)) != NULL
 		&& x_atomint(x_firstobj(x_eval_field_tco_expr(p_base))) == 30);
@@ -218,7 +218,7 @@ static char *test_body_eval_tco(void)
 			p_saved_env, x_eval_field_save_stack(p_base));
 		p_body = x_mkspair(p_base, X_OBJ_FLAG_NONE, x_mksatom(p_base, X_OBJ_FLAG_NONE, 42), NULL);
 		x_firstobj(x_eval_field_tco_env(p_base)) = p_existing_tco_env;
-		p_result = x_eval_body_tco(p_base, p_body);
+		p_result = x_eval_body_tco(p_base, x_argrun({ .p = p_body }));
 		_it_should("not overwrite existing tco_env",
 			x_firstobj(x_eval_field_tco_env(p_base)) == p_existing_tco_env);
 		x_firstobj(x_eval_field_tco_expr(p_base)) = NULL;
@@ -241,7 +241,7 @@ static char *test_tco_trampoline(void)
 	p_base = x_eval_make(NULL, NULL);
 	p_initial = x_mksatom(p_base, X_OBJ_FLAG_NONE, 42);
 	x_firstobj(x_eval_field_tco_expr(p_base)) = NULL;
-	p_result = x_eval_tco_trampoline(p_base, p_initial);
+	p_result = x_eval_tco_trampoline(p_base, x_argrun({ .p = p_initial }));
 	_it_should("return p_result when no tco_expr",
 		p_result == p_initial);
 	test_cleanup(p_base);
@@ -250,7 +250,7 @@ static char *test_tco_trampoline(void)
 	p_base = x_eval_make(NULL, NULL);
 	x_firstobj(x_eval_field_tco_expr(p_base)) = x_mksatom(p_base, X_OBJ_FLAG_NONE, 99);
 	x_firstobj(x_eval_field_tco_env(p_base)) = NULL;
-	p_result = x_eval_tco_trampoline(p_base, NULL);
+	p_result = x_eval_tco_trampoline(p_base, x_argrun({ .p = NULL }));
 	_it_should("evaluate single tco_expr",
 		p_result != NULL && x_atomint(p_result) == 99);
 	test_cleanup(p_base);
@@ -263,7 +263,7 @@ static char *test_tco_trampoline(void)
 		x_firstobj(x_eval_field_tco_expr(p_base)) = x_mksatom(p_base, X_OBJ_FLAG_NONE, 55);
 		x_firstobj(x_eval_field_tco_env(p_base)) = p_env;
 		x_eval_field_env(p_base) = NULL;
-		p_result = x_eval_tco_trampoline(p_base, NULL);
+		p_result = x_eval_tco_trampoline(p_base, x_argrun({ .p = NULL }));
 		_it_should("restore env from tco_env",
 			x_eval_field_env(p_base) == p_env);
 	}
@@ -273,7 +273,7 @@ static char *test_tco_trampoline(void)
 }
 
 /*
- * ## x_eval_arg
+ * ## x_eval with an expression
  */
 static char *test_eval_arg(void)
 {
@@ -281,14 +281,14 @@ static char *test_eval_arg(void)
 
 	/* self-evaluating atom passes through eval */
 	p_base = x_eval_make(NULL, NULL);
-	p_result = x_eval_arg(p_base, x_mksatom(p_base, X_OBJ_FLAG_NONE, 42));
+	p_result = x_eval(p_base, x_argrun({ .p = x_mksatom(p_base, X_OBJ_FLAG_NONE, 42) }));
 	_it_should("eval_arg returns self-evaluating atom",
 		p_result != NULL && x_atomint(p_result) == 42);
 	test_cleanup(p_base);
 
 	/* nil arg returns NULL */
 	p_base = x_eval_make(NULL, NULL);
-	p_result = x_eval_arg(p_base, NULL);
+	p_result = x_eval(p_base, x_argrun({ .p = NULL }));
 	_it_should("eval_arg returns NULL for nil", p_result == NULL);
 	test_cleanup(p_base);
 
@@ -304,14 +304,14 @@ static char *test_evlis(void)
 
 	/* nil list returns NULL */
 	p_base = x_eval_make(NULL, NULL);
-	p_result = x_eval_list(p_base, NULL);
+	p_result = x_eval_list(p_base, x_argrun({ .p = NULL }));
 	_it_should("evlis returns NULL for nil", p_result == NULL);
 	test_cleanup(p_base);
 
 	/* single-element list */
 	p_base = x_eval_make(NULL, NULL);
 	p_args = x_mklist(p_base, x_mksatom(p_base, X_OBJ_FLAG_NONE, 7), NULL);
-	p_result = x_eval_list(p_base, p_args);
+	p_result = x_eval_list(p_base, x_argrun({ .p = p_args }));
 	_it_should("evlis single element",
 		p_result != NULL && x_atomint(x_firstobj(p_result)) == 7);
 	_it_should("evlis single element rest is nil",
@@ -323,7 +323,7 @@ static char *test_evlis(void)
 	p_args = x_mklist(p_base, x_mksatom(p_base, X_OBJ_FLAG_NONE, 1),
 		x_mklist(p_base, x_mksatom(p_base, X_OBJ_FLAG_NONE, 2),
 		x_mklist(p_base, x_mksatom(p_base, X_OBJ_FLAG_NONE, 3), NULL)));
-	p_result = x_eval_list(p_base, p_args);
+	p_result = x_eval_list(p_base, x_argrun({ .p = p_args }));
 	_it_should("evlis multi first", x_atomint(x_firstobj(p_result)) == 1);
 	_it_should("evlis multi second",
 		x_atomint(x_firstobj(x_restobj(p_result))) == 2);
@@ -344,7 +344,7 @@ static char *test_multiple_extend(void)
 	/* nil params: a fresh, empty child of env */
 	p_base = x_eval_make(NULL, NULL);
 	p_env = x_env_make(p_base, NULL);
-	p_result = x_env_extend(p_base, p_env, NULL, NULL);
+	p_result = x_env_extend(p_base, x_argrun({ .p = p_env }, { .p = NULL }, { .p = NULL }));
 	_it_should("nil params makes an empty child of env",
 		p_result != p_env
 		&& x_env_parent(p_result) == p_env
@@ -356,7 +356,7 @@ static char *test_multiple_extend(void)
 	p_env = NULL;
 	p_params = x_mkspair(p_base, X_OBJ_FLAG_NONE, x_mksatom(p_base, X_OBJ_FLAG_NONE, 1), NULL);
 	p_vals = x_mkspair(p_base, X_OBJ_FLAG_NONE, x_mksatom(p_base, X_OBJ_FLAG_NONE, 10), NULL);
-	p_result = x_env_extend(p_base, p_env, p_params, p_vals);
+	p_result = x_env_extend(p_base, x_argrun({ .p = p_env }, { .p = p_params }, { .p = p_vals }));
 	p_bindings = x_env_bindings(p_result);
 	_it_should("single binding: key is 1",
 		x_atomint(x_firstobj(x_firstobj(p_bindings))) == 1);
@@ -373,7 +373,7 @@ static char *test_multiple_extend(void)
 		x_mkspair(p_base, X_OBJ_FLAG_NONE, x_mksatom(p_base, X_OBJ_FLAG_NONE, 2), NULL));
 	p_vals = x_mkspair(p_base, X_OBJ_FLAG_NONE, x_mksatom(p_base, X_OBJ_FLAG_NONE, 10),
 		x_mkspair(p_base, X_OBJ_FLAG_NONE, x_mksatom(p_base, X_OBJ_FLAG_NONE, 20), NULL));
-	p_result = x_env_extend(p_base, p_env, p_params, p_vals);
+	p_result = x_env_extend(p_base, x_argrun({ .p = p_env }, { .p = p_params }, { .p = p_vals }));
 	p_bindings = x_env_bindings(p_result);
 	_it_should("multi binding: first entry key is 2",
 		x_atomint(x_firstobj(x_firstobj(p_bindings))) == 2);
@@ -389,7 +389,7 @@ static char *test_multiple_extend(void)
 	p_params = x_mksymbol(p_base, (x_char_t *)"rest");
 	p_vals = x_mkspair(p_base, X_OBJ_FLAG_NONE, x_mksatom(p_base, X_OBJ_FLAG_NONE, 1),
 		x_mkspair(p_base, X_OBJ_FLAG_NONE, x_mksatom(p_base, X_OBJ_FLAG_NONE, 2), NULL));
-	p_result = x_env_extend(p_base, p_env, p_params, p_vals);
+	p_result = x_env_extend(p_base, x_argrun({ .p = p_env }, { .p = p_params }, { .p = p_vals }));
 	p_bindings = x_env_bindings(p_result);
 	_it_should("variadic: val is entire list",
 		x_restobj(x_firstobj(p_bindings)) == p_vals);
@@ -410,7 +410,7 @@ static char *test_bind(void)
 	x_callable_bind(p_base, (x_char_t *)"test-fn", x_eval_body);
 	p_env = x_eval_field_env_root(p_base);
 	_it_should("bind fills the root", ! x_obj_isnil(p_base, x_env_bindings(p_env)));
-	p_entry = x_env_lookup(p_base, p_env, x_mksymbol(p_base, (x_char_t *)"test-fn"));
+	p_entry = x_env_lookup(p_base, x_argrun({ .p = p_env }, { .p = x_mksymbol(p_base, (x_char_t *)"test-fn") }));
 	_it_should("bind: the name is found in the root",
 		p_entry != NULL && x_obj_type_issymbol(p_base, x_firstobj(p_entry)));
 	_it_should("bind: val is prim",
@@ -460,7 +460,7 @@ static char *test_prim_call_nil_call(void)
 	p_obj = x_obj_make(p_base, p_type, X_OBJ_FLAG_NONE,
 		X_OBJ_LENGTH_PAIR, NULL, NULL);
 	p_args = x_mkspair(p_base, X_OBJ_FLAG_NONE, p_obj, NULL);
-	p_ret = x_obj_prim_call(p_base, p_args);
+	p_ret = x_obj_prim_call(p_base, x_argrun({ .p = p_args }));
 	_it_should("prim_call returns NULL for nil call field",
 		p_ret == NULL);
 
@@ -499,7 +499,7 @@ static char *test_prim_call_procedure(void)
 	/* Call via x_obj_prim_call — exercises procedure path */
 	p_args = x_mkspair(p_base, X_OBJ_FLAG_NONE, p_obj, NULL);
 	x_firstobj(x_eval_field_tco_expr(p_base)) = NULL;
-	p_ret = x_obj_prim_call(p_base, p_args);
+	p_ret = x_obj_prim_call(p_base, x_argrun({ .p = p_args }));
 
 	/* procedure_call sets tco_expr, returns NULL */
 	_it_should("prim_call procedure path sets tco_expr",

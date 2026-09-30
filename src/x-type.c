@@ -14,6 +14,7 @@
  * # Includes
  */
 #include "x-type.h"
+#include "x-eval-slots.h"
 #include "x-eval.h"
 #include "x-heap.h"
 #include "x-obj.h"
@@ -241,7 +242,7 @@ int x_type_op_try(x_obj_t *p_base, x_char_t *op, x_obj_t *p_a, x_obj_t *p_b,
 			x_firstobj(x_eval_field_false(p_base));
 		return 1;
 	} else {
-		x_eval_error(p_base,          /* both registered the op: #584 */
+		x_obj_error(p_base,          /* both registered the op: #584 */
 			(x_char_t *)X_TYPE_NO_CVT_TEXT, x_type_field_name(p_tb));
 		return 0;                     /* not reached: the raise longjmps */
 	}
@@ -254,7 +255,7 @@ int x_type_op_try(x_obj_t *p_base, x_char_t *op, x_obj_t *p_a, x_obj_t *p_b,
 	x_firstobj((x_obj_t *)(call + 2)) = p_b;
 	x_restobj((x_obj_t *)(call + 2)) = NULL;
 
-	*pp_result = x_callable_call(p_base, (x_obj_t *)call);
+	*pp_result = x_base_call_or(p_base, X_SLOT_CALLABLE_CALL, x_callable_call, x_argrun({ .p = (x_obj_t *)call }));
 	return 1;
 }
 
@@ -279,7 +280,7 @@ x_obj_t *x_type_struct_get(x_obj_t *p_base, x_obj_t *p_args)
 
 	/* TODO: GC on exit, with and w/o GC structures. */
 	if (x_obj_isnil(p_base, p_type)) {
-		p_type = x_callable_call(p_base, x_restobj(p_args));
+		p_type = x_base_call_or(p_base, X_SLOT_CALLABLE_CALL, x_callable_call, x_argrun({ .p = x_restobj(p_args) }));
 
 		if (x_base_isset(p_base)) {
 			x_eval_type_alist_extend(p_base, p_type);
@@ -297,14 +298,14 @@ x_obj_t *x_type_struct_get(x_obj_t *p_base, x_obj_t *p_args)
  * struct.
  *
  * @param p_base  x_obj_t* -- Base (execution context)
- * @param p_args  x_obj_t* -- (object)
+ * @param p_args  x_obj_t* -- Argument run: (object)
  * @return x_obj_t* -- Type name object, or NULL
  */
 x_obj_t *x_type_prim_type_name(x_obj_t *p_base, x_obj_t *p_args)
 {
 	x_obj_t *p_name, *p_obj;
 
-	if (x_obj_isnil(p_base, p_args) || x_obj_isnil(p_base, (p_obj = x_firstobj(p_args)))) {
+	if (x_obj_isnil(p_base, p_args) || x_obj_isnil(p_base, (p_obj = x_obj(p_args[0])))) {
 		return NULL;
 	}
 
@@ -424,27 +425,31 @@ int x_type_unit_label(x_int_t mask, x_int_t i, x_int_t described)
  * For custom types, reads the type's units count.
  *
  * @param p_base  x_obj_t* -- Base (execution context)
- * @param p_args  x_obj_t* -- (object)
+ * @param p_args  x_obj_t* -- Argument run: (object)
  * @return x_obj_t* -- Integer unit count, or NULL
  */
 x_obj_t *x_type_prim_units(x_obj_t *p_base, x_obj_t *p_args)
 {
+	/* The primitives and the handler called below take a pair. */
+	x_spair_t pair_args = x_obj_set(NULL, X_OBJ_FLAG_NONE, { NULL }, { NULL });
 	x_obj_t *p_units, *p_obj;
 	x_int_t n;
 
-	if (x_obj_isnil(p_base, p_args) || x_obj_isnil(p_base, (p_obj = x_firstobj(p_args)))) {
+	if (x_obj_isnil(p_base, p_args) || x_obj_isnil(p_base, (p_obj = x_obj(p_args[0])))) {
 		return NULL;
 	}
 
+	x_firstobj((x_obj_t *)pair_args) = p_obj;
+
 	if (x_obj_type_isspair(p_obj)) {
-		return x_pair_prim_units(p_base, p_args);
+		return x_pair_prim_units(p_base, (x_obj_t *)pair_args);
 	}
 
 	/* Non-pair-tree type labels (base sentinel) fall back to atom units:
 	 * their fields must not be navigated (see x_type_op_try). */
 	if (x_obj_type_issatom(p_obj) || x_obj_isnil(p_base, x_obj_type(p_obj))
 			|| ! x_obj_type_isspair(x_obj_type(p_obj))) {
-		return x_atom_prim_units(p_base, p_args);
+		return x_atom_prim_units(p_base, (x_obj_t *)pair_args);
 	}
 
 	p_units = x_type_field_units(x_obj_type(p_obj));
@@ -484,26 +489,30 @@ x_obj_t *x_type_prim_units(x_obj_t *p_base, x_obj_t *p_args)
  * For custom types, calls the type's length hook function.
  *
  * @param p_base  x_obj_t* -- Base (execution context)
- * @param p_args  x_obj_t* -- (object)
+ * @param p_args  x_obj_t* -- Argument run: (object)
  * @return x_obj_t* -- Integer length, or NULL
  */
 x_obj_t *x_type_prim_length(x_obj_t *p_base, x_obj_t *p_args)
 {
+	/* The primitives and the handler called below take a pair. */
+	x_spair_t pair_args = x_obj_set(NULL, X_OBJ_FLAG_NONE, { NULL }, { NULL });
 	x_obj_t *p_length, *p_obj;
 
-	if (x_obj_isnil(p_base, p_args) || x_obj_isnil(p_base, (p_obj = x_firstobj(p_args)))) {
+	if (x_obj_isnil(p_base, p_args) || x_obj_isnil(p_base, (p_obj = x_obj(p_args[0])))) {
 		return NULL;
 	}
 
+	x_firstobj((x_obj_t *)pair_args) = p_obj;
+
 	if (x_obj_type_isspair(p_obj)) {
-		return x_pair_prim_length(p_base, p_args);
+		return x_pair_prim_length(p_base, (x_obj_t *)pair_args);
 	}
 
 	/* Non-pair-tree type labels (base sentinel) fall back to atom length:
 	 * their fields must not be navigated (see x_type_op_try). */
 	if (x_obj_type_issatom(p_obj) || x_obj_isnil(p_base, x_obj_type(p_obj))
 			|| ! x_obj_type_isspair(x_obj_type(p_obj))) {
-		return x_atom_prim_length(p_base, p_args);
+		return x_atom_prim_length(p_base, (x_obj_t *)pair_args);
 	}
 
 	p_length = x_type_field_length(x_obj_type(p_obj));
@@ -512,7 +521,7 @@ x_obj_t *x_type_prim_length(x_obj_t *p_base, x_obj_t *p_args)
 		return NULL;
 	}
 
-	return (*x_atomfn(p_length))(p_base, p_args);
+	return (*x_atomfn(p_length))(p_base, (x_obj_t *)pair_args);
 }
 
 /**
@@ -524,12 +533,14 @@ x_obj_t *x_type_prim_length(x_obj_t *p_base, x_obj_t *p_args)
  * a generic N-slot traversal using the units count.
  *
  * @param p_base  x_obj_t* -- Base (execution context)
- * @param p_obj   x_obj_t* -- Object being marked
- * @param flags   x_obj_flag_t -- GC mark flags
+ * @param p_args  x_obj_t* -- Argument run: (object, flags) -- the object
+ *                            being marked, and the GC mark flags
  * @return x_obj_t* -- Data pointer for base objects, or NULL
  */
-x_obj_t *x_type_heap_mark(x_obj_t *p_base, x_obj_t *p_obj, x_obj_flag_t flags)
+x_obj_t *x_type_heap_mark(x_obj_t *p_base, x_obj_t *p_args)
 {
+	x_obj_t *p_obj = x_obj(p_args[0]);
+	x_obj_flag_t flags = (x_obj_flag_t)p_args[1].i;
 	x_obj_t *p_type = x_obj_type(p_obj);
 	x_obj_t *p_mark;
 	x_obj_t *p_units;
@@ -542,7 +553,7 @@ x_obj_t *x_type_heap_mark(x_obj_t *p_base, x_obj_t *p_obj, x_obj_flag_t flags)
 	/* Child base objects (e.g. %sh-base): traverse their pair tree
 	 * so type alist entries, env, etc. are not freed by GC. */
 	if (p_type == (x_obj_t *)&x_eval_obj) {
-		return x_atomobj(p_obj);
+		return x_base(p_obj);
 	}
 
 	if (p_type != NULL && x_obj_type_isspair(p_type)) {
@@ -598,15 +609,20 @@ x_obj_t *x_type_heap_mark(x_obj_t *p_base, x_obj_t *p_obj, x_obj_flag_t flags)
 					+ (-n);
 			}
 
-			for (i = 0; i < n; i++) {
-				if (x_type_unit_label(mask, i, described)
-						!= X_TYPE_UNIT_REF) {
-					continue;
-				}
+			{
+				/* One argument run for every unit. */
+				x_obj_t tree_args[2] = { { .p = NULL }, { .i = flags } };
 
-				x_heap_tree_mark(p_base,
-					x_obj(x_obj_data_i(p_obj, i)),
-					flags);
+				for (i = 0; i < n; i++) {
+					if (x_type_unit_label(mask, i, described)
+							!= X_TYPE_UNIT_REF) {
+						continue;
+					}
+
+					tree_args[0].p
+						= x_obj(x_obj_data_i(p_obj, i));
+					x_base_call_or(p_base, X_SLOT_HEAP_TREE_MARK, x_heap_tree_mark, tree_args);
+				}
 			}
 			return NULL;
 		}
@@ -622,10 +638,13 @@ x_obj_t *x_type_heap_mark(x_obj_t *p_base, x_obj_t *p_obj, x_obj_flag_t flags)
  * type-specific resources before the heap cell is reclaimed.
  *
  * @param p_base  x_obj_t* -- Base (execution context)
- * @param p_obj   x_obj_t* -- Object being freed
+ * @param p_args  x_obj_t* -- Argument run: (object) -- the object being
+ *                            freed
+ * @return x_obj_t* -- NULL
  */
-void x_type_heap_free(x_obj_t *p_base, x_obj_t *p_obj)
+x_obj_t *x_type_heap_free(x_obj_t *p_base, x_obj_t *p_args)
 {
+	x_obj_t *p_obj = x_obj(p_args[0]);
 	x_obj_t *p_type = x_obj_type(p_obj);
 	x_obj_t *p_free;
 	x_spair_t a[1];
@@ -642,5 +661,7 @@ void x_type_heap_free(x_obj_t *p_base, x_obj_t *p_obj)
 			x_atomfn(p_free)(p_base, (x_obj_t *)a);
 		}
 	}
+
+	return NULL;
 }
 

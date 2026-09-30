@@ -86,6 +86,7 @@
 #include "src/x-prim/heap.c"
 #include "src/x-prim/image.c"
 #include "src/x-prim/type.c"
+#include "src/x-type/vector.c"
 #include "src/x-prim/base.c"
 #include "src/x-prim/buffer.c"
 #include "src/x-prim/iter.c"
@@ -192,10 +193,7 @@ static char *test_load_keeps_the_includer_across_a_collect(void)
 	x_callable_bind(p_base, (x_char_t *)"heap-collect", x_prim_heap_collect);
 
 	p_sym = x_make_symbol(p_base, X_OBJ_FLAG_NONE, (x_char_t *)"includer-local");
-	p_frame = x_env_extend(p_base,
-		x_eval_field_env(p_base),
-		x_mklist(p_base, p_sym, NULL),
-		x_mklist(p_base, x_mkint(p_base, 7), NULL));
+	p_frame = x_env_extend(p_base, x_argrun({ .p = x_eval_field_env(p_base) }, { .p = x_mklist(p_base, p_sym, NULL) }, { .p = x_mklist(p_base, x_mkint(p_base, 7), NULL) }));
 	x_eval_field_env(p_base) = p_frame;
 	p_binding = x_firstobj(x_env_bindings(p_frame));
 
@@ -291,10 +289,7 @@ static char *test_load_still_binds_top_level_defs_globally(void)
 	p_base = init(NULL, buffer);
 
 	p_sym = x_make_symbol(p_base, X_OBJ_FLAG_NONE, (x_char_t *)"includer-local");
-	p_frame = x_env_extend(p_base,
-		x_eval_field_env(p_base),
-		x_mklist(p_base, p_sym, NULL),
-		x_mklist(p_base, x_mkint(p_base, 7), NULL));
+	p_frame = x_env_extend(p_base, x_argrun({ .p = x_eval_field_env(p_base) }, { .p = x_mklist(p_base, p_sym, NULL) }, { .p = x_mklist(p_base, x_mkint(p_base, 7), NULL) }));
 	x_eval_field_env(p_base) = p_frame;
 	x_tco_env_save(p_base);
 
@@ -306,8 +301,7 @@ static char *test_load_still_binds_top_level_defs_globally(void)
 		x_firstobj(x_firstobj(x_env_bindings(p_frame))) == p_sym
 		&& x_obj_isnil(p_base, x_restobj(x_env_bindings(p_frame))));
 
-	p_entry = x_env_lookup(p_base, x_eval_field_env_root(p_base),
-		x_make_symbol(p_base, X_OBJ_FLAG_NONE, (x_char_t *)"loaded-global"));
+	p_entry = x_env_lookup(p_base, x_argrun({ .p = x_eval_field_env_root(p_base) }, { .p = x_make_symbol(p_base, X_OBJ_FLAG_NONE, (x_char_t *)"loaded-global") }));
 	_it_should("the loaded def is in the root",
 		p_entry != NULL
 		&& x_intval(x_restobj(p_entry)) == 42);

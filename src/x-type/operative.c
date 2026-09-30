@@ -12,6 +12,7 @@
  *      " "
  */
 #include "x-type/operative.h"
+#include "x-eval-slots.h"
 #include "x-eval.h"
 #include "x-env.h"
 #include "x-heap.h"
@@ -29,7 +30,7 @@ static x_obj_t *x_type_operative_mark(x_obj_t *p_base, x_obj_t *p_args)
 {
 	x_obj_t *p_obj = x_firstobj(p_args);
 	x_obj_flag_t flags = (x_obj_flag_t)x_firstint(x_restobj(p_args));
-	x_heap_tree_mark(p_base, x_obj(x_obj_data_i(p_obj, 1)), flags);
+	x_base_call_or(p_base, X_SLOT_HEAP_TREE_MARK, x_heap_tree_mark, x_argrun({ .p = x_obj(x_obj_data_i(p_obj, 1)) }, { .i = flags }));
 	return NULL;
 }
 
@@ -202,13 +203,12 @@ x_obj_t *x_type_operative_call(x_obj_t *p_base, x_obj_t *p_args)
 
 	/* The body's environment: a child of the captured one, with the
 	 * formals bound to the unevaluated args. */
-	p_env = x_env_extend(
-		p_base, p_captured_env, p_params, p_unevaluated_args);
+	p_env = x_base_call_or(p_base, X_SLOT_ENV_EXTEND, x_env_extend, x_argrun({ .p = p_captured_env }, { .p = p_params }, { .p = p_unevaluated_args }));
 
 	/* Bind the env-param to the caller's env.  Only route from body
 	 * back into caller's scope (via eval/tail-eval). */
 	if ( ! x_obj_isnil(p_base, p_envparam)) {
-		x_env_bind(p_base, p_env, p_envparam, p_caller_env);
+		x_base_call_or(p_base, X_SLOT_ENV_BIND, x_env_bind, x_argrun({ .p = p_env }, { .p = p_envparam }, { .p = p_caller_env }));
 	}
 
 	x_eval_field_env(p_base) = p_env;
@@ -219,5 +219,5 @@ x_obj_t *x_type_operative_call(x_obj_t *p_base, x_obj_t *p_args)
 	 * on op) no longer accumulates a frame per level.  x_eval_op_body sets
 	 * tco_expr and the caller's environment in tco_env; the trampoline
 	 * makes it current again after the tail. */
-	return x_eval_op_body(p_base, p_body, p_caller_env);
+	return x_base_call_or(p_base, X_SLOT_EVAL_OP_BODY, x_eval_op_body, x_argrun({ .p = p_body }, { .p = p_caller_env }));
 }

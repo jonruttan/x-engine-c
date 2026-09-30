@@ -48,6 +48,7 @@
 #define STUB_X_PRIM_REGISTER
 #define STUB_X_PRIM_SHADOW
 #define STUB_X_PROCEDURE_APPLY
+#define STUB_X_OBJ_PRIM_CALL
 #include "helper-stubs.c"
 
 
@@ -180,13 +181,13 @@ static char *test_iterempty(void)
 	_it_should("return true when Iter is empty",
 		1 == x_iterempty(NULL, p_obj)
 	);
-	x_obj_free(NULL, p_obj);
+	x_obj_free(NULL, x_argrun({ .p = p_obj }));
 
 	p_obj = x_mkiter(NULL, NULL, (void *)1);
 	_it_should("return false when Iter is not empty",
 		0 == x_iterempty(NULL, p_obj)
 	);
-	x_obj_free(NULL, p_obj);
+	x_obj_free(NULL, x_argrun({ .p = p_obj }));
 
 	return NULL;
 }

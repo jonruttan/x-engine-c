@@ -51,6 +51,7 @@
 #define STUB_X_PRIM_REGISTER
 #define STUB_X_PRIM_SHADOW
 #define STUB_X_PROCEDURE_APPLY
+#define STUB_X_OBJ_PRIM_CALL
 #include "helper-stubs.c"
 
 
@@ -261,7 +262,7 @@ static char *test_type_buffer_save_load(void)
 	/* What the loader hands the load: an outer of three units over a fresh
 	 * copy of the bytes, an inner holding the saved words. */
 	copy = x_lib_strndup((x_char_t *)"hello", 5);
-	p_outer = x_obj_alloc(p_base, x_obj_type(p_buffer), X_OBJ_FLAG_NONE, 3);
+	p_outer = x_obj_alloc(p_base, x_argrun({ .p = x_obj_type(p_buffer) }, { .i = X_OBJ_FLAG_NONE }, { .i = 3 }));
 	x_firststr(p_outer) = copy;
 	x_restobj(p_outer) = p_inner;
 	x_obj_data_i(p_outer, 2).i = outer[6];

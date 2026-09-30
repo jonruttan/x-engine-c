@@ -12,13 +12,14 @@
  */
 
 #include "x-type/prim.h"
+#include "x-eval-slots.h"
 #include "x-type/procedure.h"
 #include "x-type/operative.h"
 #include "x-eval.h"
 
 x_satom_t x_type_prim_name = x_obj_set(x_type_atom_obj, X_OBJ_FLAG_NONE, { .s = (x_char_t *)X_TYPE_PRIM_NAME }),
 	x_type_prim_make_prim = x_obj_set(x_type_atom_obj, X_OBJ_FLAG_NONE, { (x_obj_t *)&x_type_prim_make }),
-	x_callable_call_prim = x_obj_set(x_type_atom_obj, X_OBJ_FLAG_NONE, { (x_obj_t *)&x_callable_call }),
+	x_callable_call_prim = x_obj_set(x_type_atom_obj, X_OBJ_FLAG_NONE, { (x_obj_t *)&x_callable_prim_call }),
 	x_type_prim_struct_prim = x_obj_set(x_type_atom_obj, X_OBJ_FLAG_NONE, { (x_obj_t *)&x_type_prim_struct });
 
 /**
@@ -121,21 +122,41 @@ x_obj_t *x_type_prim_make(x_obj_t *p_base, x_obj_t *p_args)
  * - C primitives (spair): fn-ptr is the C function itself.
  * - Type handlers (satom): fn-ptr is a type-internal handler (no self-passing).
  *
+ * What is called is a primitive or a handler, and takes a pair: the call
+ * list itself, or its rest.
+ *
  * @param p_base  Base (execution context).
- * @param p_args  Argument list: (callable . args).
+ * @param p_args  Argument run: (call) -- the call list, (callable . args).
  * @return Result of the called function.
  */
 x_obj_t *x_callable_call(x_obj_t *p_base, x_obj_t *p_args)
 {
-	x_obj_t *p_fn = x_firstobj(p_args);
+	x_obj_t *p_call = x_obj(p_args[0]);
+	x_obj_t *p_fn = x_firstobj(p_call);
 
 	/* Satom: type-internal handler (read/write/display) — no self */
 	if (x_obj_type_issatom(p_fn)) {
-		return (*x_primval(p_fn))(p_base, x_restobj(p_args));
+		return (*x_primval(p_fn))(p_base, x_restobj(p_call));
 	}
 
 	/* All spair callables: call through fn-ptr with (fn . args) */
-	return (*x_primval(p_fn))(p_base, p_args);
+	return (*x_primval(p_fn))(p_base, p_call);
+}
+
+/**
+ * Primitive: call a callable, given the call list as a pair.
+ *
+ * The call handler of the PRIMITIVE type. A handler is called with a
+ * pair, as every primitive is; this one puts the call list in an
+ * argument run and calls x_callable_call() through its slot.
+ *
+ * @param p_base  Base (execution context).
+ * @param p_args  The call list: (callable . args).
+ * @return Result of the called function.
+ */
+x_obj_t *x_callable_prim_call(x_obj_t *p_base, x_obj_t *p_args)
+{
+	return x_base_call_or(p_base, X_SLOT_CALLABLE_CALL, x_callable_call, x_argrun({ .p = p_args }));
 }
 
 /**
@@ -145,7 +166,7 @@ x_obj_t *x_callable_call(x_obj_t *p_base, x_obj_t *p_args)
  * (args already evaluated) and a trampoline for operatives.
  *
  * @param p_base  Base (execution context).
- * @param p_args  Argument list: (callable . args).
+ * @param p_args  Argument run: (call) -- the call list, (callable . args).
  * @return Result of the applied function.
  *
  * @see x_callable_call
@@ -153,24 +174,24 @@ x_obj_t *x_callable_call(x_obj_t *p_base, x_obj_t *p_args)
  */
 x_obj_t *x_callable_apply(x_obj_t *p_base, x_obj_t *p_args)
 {
-	x_obj_t *p_fn = x_firstobj(p_args);
+	x_obj_t *p_call = x_obj(p_args[0]);
+	x_obj_t *p_fn = x_firstobj(p_call);
 
 	/* Satom: type-internal handler — no self */
 	if (x_obj_type_issatom(p_fn)) {
-		return (*x_primval(p_fn))(p_base, x_restobj(p_args));
+		return (*x_primval(p_fn))(p_base, x_restobj(p_call));
 	}
 
 	/* Procedure: non-TCO apply path (args already evaluated) */
 	if (x_primval(p_fn) == (x_fn_t)x_type_procedure_call) {
-		return x_type_procedure_apply(p_base, p_args);
+		return x_type_procedure_apply(p_base, p_call);
 	}
 
 	/* Operative via apply: trampoline for TCO */
 	if (x_primval(p_fn) == (x_fn_t)x_type_operative_call) {
-		return x_eval_tco_trampoline(p_base,
-			x_type_operative_call(p_base, p_args));
+		return x_base_call_or(p_base, X_SLOT_EVAL_TCO_TRAMPOLINE, x_eval_tco_trampoline, x_argrun({ .p = x_type_operative_call(p_base, p_call) }));
 	}
 
 	/* C prim: call through fn-ptr with (fn . args) */
-	return (*x_primval(p_fn))(p_base, p_args);
+	return (*x_primval(p_fn))(p_base, p_call);
 }

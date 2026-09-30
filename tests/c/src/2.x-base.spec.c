@@ -34,10 +34,11 @@
 #define STUB_X_STR
 #define STUB_X_TYPE_PRIM
 #define STUB_X_SYMBOL_FIND
+#define STUB_X_OBJ_PRIM_CALL
 #include "helper-stubs.c"
 
-x_obj_t *x_type_heap_mark(x_obj_t *p_base, x_obj_t *p_obj, x_obj_flag_t flags) { return NULL; }
-void x_type_heap_free(x_obj_t *p_base, x_obj_t *p_obj) {}
+x_obj_t *x_type_heap_mark(x_obj_t *p_base, x_obj_t *p_args) { return NULL; }
+x_obj_t *x_type_heap_free(x_obj_t *p_base, x_obj_t *p_args) { return NULL; }
 
 /*
  * Controllable stubs for x_token_read/write and x_eval.
@@ -62,11 +63,36 @@ x_obj_t *x_token_read(x_obj_t *p_base, x_obj_t *p_args)
 
 x_obj_t *x_token_write(x_obj_t *p_base, x_obj_t *p_args) { return NULL; }
 
+/* The slot table in x-eval.c names these two, so they must link. */
+x_obj_t *x_token_analyse(x_obj_t *p_base, x_obj_t *p_args) { return NULL; }
+
+x_obj_t *x_token_delimit(x_obj_t *p_base, x_obj_t *p_args) { return NULL; }
+
+/* The slot table in x-eval.c names the evaluator's other routines, so they
+ * must link. No test here reaches them. */
+x_obj_t *x_eval_list(x_obj_t *p_base, x_obj_t *p_args) { return NULL; }
+
+x_obj_t *x_eval_body(x_obj_t *p_base, x_obj_t *p_args) { return NULL; }
+
+x_obj_t *x_eval_body_tco(x_obj_t *p_base, x_obj_t *p_args) { return NULL; }
+
+x_obj_t *x_eval_tco_trampoline(x_obj_t *p_base, x_obj_t *p_args) { return NULL; }
+
+x_obj_t *x_eval_op_body(x_obj_t *p_base, x_obj_t *p_args) { return NULL; }
+
+/* x_base_make names the heap's routines for their slots, so they must
+ * link. No test here reaches them. */
+x_obj_t *x_heap_tree_mark(x_obj_t *p_base, x_obj_t *p_args) { return NULL; }
+
+x_obj_t *x_heap_sweep(x_obj_t *p_base, x_obj_t *p_args) { return NULL; }
+
+x_obj_t *x_heap_root_chain_mark(x_obj_t *p_base, x_obj_t *p_args) { return NULL; }
+
 static x_obj_t *_eval_last;
 
 x_obj_t *x_eval(x_obj_t *p_base, x_obj_t *p_args)
 {
-	_eval_last = x_firstobj(x_firstobj(p_args));
+	_eval_last = x_obj(p_args[0]);
 	return _eval_last;
 }
 
@@ -102,7 +128,7 @@ static char *test_base_make(void)
 		! x_base_isset(p_base)
 	);
 
-	x_obj_free(NULL, p_base);
+	x_obj_free(NULL, x_argrun({ .p = p_base }));
 
 
 	p_base = x_eval_make(NULL, NULL);
@@ -345,30 +371,30 @@ static char *test_base_env(void)
 		&& x_env_parent(p_child) == p_root
 		&& ! x_env_isroot(p_base, p_child));
 	_it_should("an unbound name is NULL, not an error",
-		x_env_lookup(p_base, p_child, p_syms[1]) == NULL);
+		x_env_lookup(p_base, x_argrun({ .p = p_child }, { .p = p_syms[1] })) == NULL);
 
-	x_env_bind(p_base, p_child, p_syms[1], p_atoms[1]);
+	x_env_bind(p_base, x_argrun({ .p = p_child }, { .p = p_syms[1] }, { .p = p_atoms[1] }));
 	_it_should("a child binding is an alist cell in the child",
 		x_obj_type_isspair(x_env_bindings(p_child))
 		&& x_firstobj(x_firstobj(x_env_bindings(p_child))) == p_syms[1]
 		&& x_restobj(x_firstobj(x_env_bindings(p_child))) == p_atoms[1]);
 	_it_should("the binding is found from the child",
-		x_restobj(x_env_lookup(p_base, p_child, p_syms[1])) == p_atoms[1]);
+		x_restobj(x_env_lookup(p_base, x_argrun({ .p = p_child }, { .p = p_syms[1] }))) == p_atoms[1]);
 
-	x_env_bind(p_base, p_child, p_syms[0], p_atoms[2]);
-	x_env_bind(p_base, p_child, p_syms[0], p_atoms[1]);
+	x_env_bind(p_base, x_argrun({ .p = p_child }, { .p = p_syms[0] }, { .p = p_atoms[2] }));
+	x_env_bind(p_base, x_argrun({ .p = p_child }, { .p = p_syms[0] }, { .p = p_atoms[1] }));
 	_it_should("rebinding in the same environment updates in place",
-		x_restobj(x_env_lookup(p_base, p_child, p_syms[0])) == p_atoms[1]
+		x_restobj(x_env_lookup(p_base, x_argrun({ .p = p_child }, { .p = p_syms[0] }))) == p_atoms[1]
 		&& x_restobj(x_env_bindings(p_child)) != NULL
 		&& x_obj_isnil(p_base, x_restobj(x_restobj(x_env_bindings(p_child)))));
 
 	p_grand = x_env_make(p_base, p_child);
-	x_env_bind(p_base, p_grand, p_syms[0], p_atoms[2]);
+	x_env_bind(p_base, x_argrun({ .p = p_grand }, { .p = p_syms[0] }, { .p = p_atoms[2] }));
 	_it_should("a grandchild's binding shadows the child's without touching it",
-		x_restobj(x_env_lookup(p_base, p_grand, p_syms[0])) == p_atoms[2]
-		&& x_restobj(x_env_lookup(p_base, p_child, p_syms[0])) == p_atoms[1]);
+		x_restobj(x_env_lookup(p_base, x_argrun({ .p = p_grand }, { .p = p_syms[0] }))) == p_atoms[2]
+		&& x_restobj(x_env_lookup(p_base, x_argrun({ .p = p_child }, { .p = p_syms[0] }))) == p_atoms[1]);
 	_it_should("a grandchild sees the child's other binding through the parent",
-		x_restobj(x_env_lookup(p_base, p_grand, p_syms[1])) == p_atoms[1]);
+		x_restobj(x_env_lookup(p_base, x_argrun({ .p = p_grand }, { .p = p_syms[1] }))) == p_atoms[1]);
 
 	x_sys_free(p_base);
 	return NULL;
@@ -475,7 +501,7 @@ static char *test_base_error_no_handler(void)
 	helper_file_reset();
 	helper_sys_exit_status = X_SYS_EXIT_SUCCESS;
 
-	x_eval_error(NULL, "test error", NULL);
+	x_eval_error(NULL, x_argrun({ .s = "test error" }, { .p = NULL }));
 	_it_should("write error to stderr without base",
 		s[0] != '\0');
 	_it_should("exit non-zero without base",
@@ -490,7 +516,7 @@ static char *test_base_error_no_handler(void)
 	s[0] = '\0';
 	helper_sys_exit_status = X_SYS_EXIT_SUCCESS;
 
-	x_eval_error(p_base, "base error", NULL);
+	x_eval_error(p_base, x_argrun({ .s = "base error" }, { .p = NULL }));
 	_it_should("write error to stderr with base",
 		s[0] != '\0');
 	_it_should("exit non-zero with base",
@@ -503,7 +529,7 @@ static char *test_base_error_no_handler(void)
 	s[0] = '\0';
 	helper_sys_exit_status = X_SYS_EXIT_SUCCESS;
 
-	x_eval_error(p_base, "undef", x_mksatom(p_base, X_OBJ_FLAG_NONE, "foo"));
+	x_eval_error(p_base, x_argrun({ .s = "undef" }, { .p = x_mksatom(p_base, X_OBJ_FLAG_NONE, "foo") }));
 	_it_should("write error with symbol",
 		s[0] != '\0');
 	_it_should("exit non-zero with symbol",
@@ -533,7 +559,7 @@ static char *test_base_error_with_handler(void)
 
 	caught = 0;
 	if (setjmp(jmp) == 0) {
-		x_eval_error(p_base, "test err", NULL);
+		x_eval_error(p_base, x_argrun({ .s = "test err" }, { .p = NULL }));
 	} else {
 		caught = 1;
 	}
@@ -551,7 +577,7 @@ static char *test_base_error_with_handler(void)
 
 	caught = 0;
 	if (setjmp(jmp) == 0) {
-		x_eval_error(p_base, "undef", x_mksatom(p_base, X_OBJ_FLAG_NONE, "bar"));
+		x_eval_error(p_base, x_argrun({ .s = "undef" }, { .p = x_mksatom(p_base, X_OBJ_FLAG_NONE, "bar") }));
 	} else {
 		caught = 1;
 	}

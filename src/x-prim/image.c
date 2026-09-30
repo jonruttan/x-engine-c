@@ -11,6 +11,7 @@
  *      " "
  */
 #include "x-prim.h"
+#include "x-eval-slots.h"
 #include "x-eval.h"
 #include "x-heap.h"
 #include "x-type.h"
@@ -175,10 +176,7 @@ static void x_image_alloc_pass(x_obj_t *p_base, x_image_t *img)
 		units = rec[X_IMAGE_RECORD_COUNT];
 		flags = (x_obj_flag_t)(rec[X_IMAGE_RECORD_FLAGS] & X_IMAGE_FLAGS_KEPT);
 
-		img->ix[i] = x_obj_alloc(p_base,
-			x_image_role_type(rec[X_IMAGE_RECORD_TYPE]),
-			flags | X_OBJ_FLAG_SHARED,
-			(size_t)(units < 1 ? 1 : units));
+		img->ix[i] = x_base_call_or(p_base, X_SLOT_OBJ_ALLOC, x_obj_alloc, x_argrun({ .p = x_image_role_type(rec[X_IMAGE_RECORD_TYPE]) }, { .i = (flags | X_OBJ_FLAG_SHARED) }, { .i = units < 1 ? 1 : units }));
 
 		pos += x_image_record_words(units);
 	}
@@ -263,7 +261,7 @@ static void x_image_load_pass(x_obj_t *p_base, x_image_t *img)
 		x_firstobj((x_obj_t *)(args + 1)) = p_obj;
 		x_restobj((x_obj_t *)(args + 1)) = NULL;
 
-		x_callable_apply(p_base, (x_obj_t *)args);
+		x_base_call_or(p_base, X_SLOT_CALLABLE_APPLY, x_callable_apply, x_argrun({ .p = (x_obj_t *)args }));
 	}
 }
 
@@ -364,7 +362,7 @@ static void x_image_save_typed(x_obj_t *p_base, x_obj_t *p_obj,
 	x_firstobj((x_obj_t *)(args + 2)) = p_buf;
 	x_restobj((x_obj_t *)(args + 2)) = NULL;
 
-	x_callable_apply(p_base, (x_obj_t *)args);
+	x_base_call_or(p_base, X_SLOT_CALLABLE_APPLY, x_callable_apply, x_argrun({ .p = (x_obj_t *)args }));
 }
 
 /**
@@ -665,7 +663,11 @@ static x_int_t x_image_extern(x_image_writer_t *w, x_int_t word, x_int_t label,
 	x_firstobj((x_obj_t *)(args + 3)) = p_obj;
 	x_restobj((x_obj_t *)(args + 3)) = NULL;
 
-	p_k = x_callable_apply(w->p_base, (x_obj_t *)args);
+	{
+		x_obj_t callable_apply_args[1] = { { .p = (x_obj_t *)args } };
+
+		p_k = x_base_call_or(w->p_base, X_SLOT_CALLABLE_APPLY, x_callable_apply, callable_apply_args);
+	}
 	k = (p_k == NULL || x_obj_isnil(w->p_base, p_k)) ? 0 : x_atomint(p_k);
 
 	if (k == 0) {
@@ -713,7 +715,7 @@ static x_int_t x_image_bytes_word(x_image_writer_t *w, x_int_t word)
 	len = (word == 0) ? 0 : (x_int_t)x_lib_strlen((x_char_t *)word);
 
 	if (off + (x_int_t)sizeof(x_int_t) + len + 1 > w->blob_cap) {
-		x_eval_error(w->p_base, (x_char_t *)"image write!: blob full", NULL);
+		x_obj_error(w->p_base, (x_char_t *)"image write!: blob full", NULL);
 	}
 
 	x_lib_memcpy(w->blob + off, &len, sizeof(x_int_t));
@@ -766,7 +768,7 @@ static x_int_t x_image_type_word(x_image_writer_t *w, x_obj_t *p_obj)
 	i = x_image_table_get(&w->index, (x_int_t)p_type);
 
 	if (i == 0) {
-		x_eval_error(w->p_base, (x_char_t *)"image write!: type not imaged", p_type);
+		x_obj_error(w->p_base, (x_char_t *)"image write!: type not imaged", p_type);
 	}
 
 	return i;
@@ -783,7 +785,7 @@ static void x_image_emit_object(x_image_writer_t *w, x_obj_t *p_obj)
 	n = x_image_save(w->p_base, p_obj, w->p_buf);
 
 	if (w->table_pos + x_image_record_words(n) > w->table_cap) {
-		x_eval_error(w->p_base, (x_char_t *)"image write!: object table full", NULL);
+		x_obj_error(w->p_base, (x_char_t *)"image write!: object table full", NULL);
 	}
 
 	rec = w->table + w->table_pos;

@@ -11,6 +11,7 @@
  *      " "
  */
 #include "x-env.h"
+#include "x-eval-slots.h"
 #include "x-alist.h"
 #include "x-type/list.h"
 #include "x-type/symbol.h"
@@ -82,26 +83,30 @@ static x_obj_t *x_env_own_symbol(x_obj_t *p_base, x_obj_t *p_sym)
  * this one cell adds.
  *
  * @param p_base  x_obj_t* -- Base (execution context)
- * @param p_env   x_obj_t* -- The environment to start from
- * @param p_sym   x_obj_t* -- The symbol
+ * @param p_args  x_obj_t* -- Argument run: (env, symbol) -- the
+ *                            environment to start from, and the symbol
  * @return x_obj_t* -- The @c (name . value) cell, or NULL when unbound
  */
-x_obj_t *x_env_lookup(x_obj_t *p_base, x_obj_t *p_env, x_obj_t *p_sym)
+x_obj_t *x_env_lookup(x_obj_t *p_base, x_obj_t *p_args)
 {
+	x_obj_t *p_env = x_obj(p_args[0]);
+	x_obj_t *p_sym = x_obj(p_args[1]);
 	x_obj_t *p_cell, *p_entry, *p_own;
+	x_obj_t tree_args[2] = { { .p = NULL }, { .p = NULL } };
 
 	for (; ! x_obj_isnil(p_base, p_env); p_env = x_env_parent(p_env)) {
 		if (x_env_isroot(p_base, p_env)) {
-			p_entry = x_alist_bst_lookup(p_base,
-				x_env_bindings(p_env), p_sym);
+			tree_args[0].p = x_env_bindings(p_env);
+			tree_args[1].p = p_sym;
+			p_entry = x_base_call_or(p_base, X_SLOT_ALIST_BST_LOOKUP, x_alist_bst_lookup, tree_args);
 			if ( ! x_obj_isnil(p_base, p_entry)) {
 				return p_entry;
 			}
 
 			p_own = x_env_own_symbol(p_base, p_sym);
 			if (p_own != NULL && p_own != p_sym) {
-				p_entry = x_alist_bst_lookup(p_base,
-					x_env_bindings(p_env), p_own);
+				tree_args[1].p = p_own;
+				p_entry = x_base_call_or(p_base, X_SLOT_ALIST_BST_LOOKUP, x_alist_bst_lookup, tree_args);
 				if ( ! x_obj_isnil(p_base, p_entry)) {
 					return p_entry;
 				}
@@ -136,23 +141,26 @@ x_obj_t *x_env_lookup(x_obj_t *p_base, x_obj_t *p_env, x_obj_t *p_sym)
  * `base bind` are this on a root.
  *
  * @param p_base  x_obj_t* -- Base (execution context)
- * @param p_env   x_obj_t* -- The environment to bind in
- * @param p_sym   x_obj_t* -- The symbol
- * @param p_val   x_obj_t* -- The value
- * @return x_obj_t* -- @p p_val
+ * @param p_args  x_obj_t* -- Argument run: (env, symbol, value) -- the
+ *                            environment to bind in, the symbol, the value
+ * @return x_obj_t* -- The value
  *
  * @note The tree insert mutates in place (x_alist_bst_insert), so every
  *       closure whose chain reaches this root sees the new binding at its
  *       next lookup -- a top-level definition made after a closure was
  *       created is visible to it, as it must be.
  */
-x_obj_t *x_env_bind(x_obj_t *p_base, x_obj_t *p_env,
-	x_obj_t *p_sym, x_obj_t *p_val)
+x_obj_t *x_env_bind(x_obj_t *p_base, x_obj_t *p_args)
 {
+	x_obj_t *p_env = x_obj(p_args[0]);
+	x_obj_t *p_sym = x_obj(p_args[1]);
+	x_obj_t *p_val = x_obj(p_args[2]);
 	x_obj_t *p_cell, *p_pair;
+	x_obj_t tree_args[2] = { { .p = NULL }, { .p = p_sym } };
 
 	if (x_env_isroot(p_base, p_env)) {
-		p_cell = x_alist_bst_lookup(p_base, x_env_bindings(p_env), p_sym);
+		tree_args[0].p = x_env_bindings(p_env);
+		p_cell = x_base_call_or(p_base, X_SLOT_ALIST_BST_LOOKUP, x_alist_bst_lookup, tree_args);
 		if ( ! x_obj_isnil(p_base, p_cell)) {
 			x_restobj(p_cell) = p_val;
 			return p_val;
@@ -195,10 +203,11 @@ x_obj_t *x_env_bind(x_obj_t *p_base, x_obj_t *p_env,
  * the entire remaining value list, (2) base -- no more params, (3) one
  * parameter to one value, then the rest.
  *
- * @param p_base   x_obj_t* -- Base (execution context)
- * @param p_parent x_obj_t* -- The environment the new one is a child of
- * @param p_params x_obj_t* -- Parameter list (or single symbol for variadic)
- * @param p_vals   x_obj_t* -- Value list
+ * @param p_base  x_obj_t* -- Base (execution context)
+ * @param p_args  x_obj_t* -- Argument run: (parent, params, values) --
+ *                            the environment the new one is a child of,
+ *                            the parameter list (or a single symbol for
+ *                            variadic), and the value list
  * @return x_obj_t* -- The new environment
  *
  * @details **The parent is never modified.**  The bindings are new cells
@@ -214,9 +223,11 @@ x_obj_t *x_env_bind(x_obj_t *p_base, x_obj_t *p_env,
  * @see x_env_bind        -- `def`, the same binder one name at a time
  * @see x_eval_body_tco   -- saves/restores env around a body
  */
-x_obj_t *x_env_extend(x_obj_t *p_base, x_obj_t *p_parent,
-	x_obj_t *p_params, x_obj_t *p_vals)
+x_obj_t *x_env_extend(x_obj_t *p_base, x_obj_t *p_args)
 {
+	x_obj_t *p_parent = x_obj(p_args[0]);
+	x_obj_t *p_params = x_obj(p_args[1]);
+	x_obj_t *p_vals = x_obj(p_args[2]);
 	x_obj_t *p_env = x_env_make(p_base, p_parent);
 	x_obj_t *p_pair;
 	x_obj_t *p_val;

@@ -13,6 +13,7 @@
 #include "x-prim.h"
 #include "x-alist.h"
 #include "x-eval.h"
+#include "x-eval-slots.h"
 #include "x-env.h"
 #include "x-type/symbol.h"
 
@@ -45,10 +46,9 @@ static x_obj_t *x_prim_define(x_obj_t *p_base, x_obj_t *p_args)
 	x_obj_t *p_name, *p_val;
 
 	x_args(p_base, p_args, 2, NULL, &p_name);
-	p_val = x_eval_arg(p_base,
-		x_eval_spine_first(p_base, x_args_tail(p_base, p_args, 2)));
+	p_val = x_base_call_or(p_base, X_SLOT_EVAL, x_eval, x_argrun({ .p = x_eval_spine_first(p_base, x_args_tail(p_base, p_args, 2)) }));
 
-	return x_env_bind(p_base, x_eval_field_env(p_base), p_name, p_val);
+	return x_base_call_or(p_base, X_SLOT_ENV_BIND, x_env_bind, x_argrun({ .p = x_eval_field_env(p_base) }, { .p = p_name }, { .p = p_val }));
 }
 
 /**
@@ -68,14 +68,16 @@ static x_obj_t *x_prim_define(x_obj_t *p_base, x_obj_t *p_args)
 static x_obj_t *x_prim_set(x_obj_t *p_base, x_obj_t *p_args)
 {
 	x_obj_t *p_name, *p_val, *p_entry;
+	x_obj_t lookup_args[2] = { { .p = NULL }, { .p = NULL } };
 	/* Error-path name wrapper; filled only when the lookup misses. */
 	x_satom_t sym_name;
 
 	x_args(p_base, p_args, 2, NULL, &p_name);
-	p_val = x_eval_arg(p_base,
-		x_eval_spine_first(p_base, x_args_tail(p_base, p_args, 2)));
+	p_val = x_base_call_or(p_base, X_SLOT_EVAL, x_eval, x_argrun({ .p = x_eval_spine_first(p_base, x_args_tail(p_base, p_args, 2)) }));
 
-	p_entry = x_env_lookup(p_base, x_eval_field_env(p_base), p_name);
+	lookup_args[0].p = x_eval_field_env(p_base);
+	lookup_args[1].p = p_name;
+	p_entry = x_base_call_or(p_base, X_SLOT_ENV_LOOKUP, x_env_lookup, lookup_args);
 	if (p_entry != NULL) {
 		x_restobj(p_entry) = p_val;
 		return p_val;

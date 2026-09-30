@@ -12,6 +12,7 @@
  *      " "
  */
 #include "x-obj.h"
+#include "x-eval-slots.h"
 #include "x-type.h"
 #include "x-type/procedure.h"
 
@@ -63,18 +64,23 @@ x_obj_t *x_obj_prim_make(x_obj_t *p_base, x_obj_t *p_args)
  * For procedure-typed call handlers, invokes via x_type_procedure_call
  * to support closures as type callbacks.
  *
+ * The handler is a primitive or a closure, and takes a pair: the call
+ * list.
+ *
  * @param p_base  x_obj_t* -- Base (execution context)
- * @param p_args  x_obj_t* -- (callable . args)
+ * @param p_args  x_obj_t* -- Argument run: (call) -- the call list,
+ *                            (callable . args)
  * @return Result of the call, or NULL if no call handler
  */
 x_obj_t *x_obj_prim_call(x_obj_t *p_base, x_obj_t *p_args)
 {
+	x_obj_t *p_list = x_obj_isnil(p_base, p_args) ? NULL : x_obj(p_args[0]);
 	x_obj_t *p_call, *p_obj;
 	/* Procedure-dispatch stack pair; filled at use (needs p_call). */
 	x_spair_t closure_args;
 
 	/* TODO: Move argument checks to Lisp layer. */
-	if (x_obj_isnil(p_base, p_args) || x_obj_isnil(p_base, (p_obj = x_firstobj(p_args)))) {
+	if (x_obj_isnil(p_base, p_list) || x_obj_isnil(p_base, (p_obj = x_firstobj(p_list)))) {
 		return NULL;
 	}
 
@@ -92,7 +98,7 @@ x_obj_t *x_obj_prim_call(x_obj_t *p_base, x_obj_t *p_args)
 		closure_args[X_OBJ_META_TYPE].p = NULL;
 		closure_args[X_OBJ_META_FLAGS].i = X_OBJ_FLAG_NONE;
 		x_firstobj((x_obj_t *)closure_args) = p_call;
-		x_restobj((x_obj_t *)closure_args) = p_args;
+		x_restobj((x_obj_t *)closure_args) = p_list;
 		return x_type_procedure_call(p_base, (x_obj_t *)&closure_args);
 	}
 
@@ -100,5 +106,5 @@ x_obj_t *x_obj_prim_call(x_obj_t *p_base, x_obj_t *p_args)
 		return NULL;
 	}
 
-	return (*x_atomfn(p_call))(p_base, p_args);
+	return (*x_atomfn(p_call))(p_base, p_list);
 }

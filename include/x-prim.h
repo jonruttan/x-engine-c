@@ -24,7 +24,7 @@
 
 #include "x-obj.h"
 #include "x-heap.h"
-#include "x-eval.h"	/* x_eval_arg: the x_eargs helper below evaluates args */
+#include "x-eval.h"	/* the x_eargs helper below evaluates args through the eval slot */
 #include <stdarg.h>
 
 
@@ -117,7 +117,7 @@ static void __attribute__((unused)) x_eargs(x_obj_t *p_base, x_obj_t *p_args, in
 		 * path, exactly as it does for the C frames a longjmp cuts. */
 		x_eval_spine_guard(p_base, p_args);
 		if (slot != NULL) {
-			*slot = x_eval_arg(p_base, x_firstobj(p_args));
+			*slot = x_base_call_or(p_base, X_SLOT_EVAL, x_eval, x_argrun({ .p = x_firstobj(p_args) }));
 			if (held < 4) {
 				x_obj_data_i((x_obj_t *)roots[held >> 1], held & 1).p = *slot;
 				held++;

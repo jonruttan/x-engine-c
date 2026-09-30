@@ -14,6 +14,7 @@
  * # Includes
  */
 #include "x-prim.h"
+#include "x-eval-slots.h"
 #include "x-eval.h"
 #include "x-heap.h"
 #include "x-token.h"
@@ -71,7 +72,7 @@ static x_obj_t *x_prim_read_expr_raw(x_obj_t *p_base)
 	x_firstobj((x_obj_t *)read_args) = p_buffer;
 	x_restobj((x_obj_t *)read_args) = p_base;
 
-	return x_token_read(p_base, (x_obj_t *)read_args);
+	return x_base_call_or(p_base, X_SLOT_TOKEN_READ, x_token_read, x_argrun({ .p = (x_obj_t *)read_args }));
 }
 
 /** Read one s-expression from stdin.
@@ -164,7 +165,7 @@ x_obj_t *x_prim_repl(x_obj_t *p_base, x_obj_t *p_args)
 			continue;
 		/* The freshly read form is this frame's only reference. */
 		x_firstobj((x_obj_t *)root) = p_exp;
-		x_eval_arg(p_base, p_exp);
+		x_base_call_or(p_base, X_SLOT_EVAL, x_eval, x_argrun({ .p = p_exp }));
 	}
 
 	x_heap_root_pop(p_cell);

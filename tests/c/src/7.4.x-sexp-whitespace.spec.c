@@ -53,6 +53,7 @@
 #define STUB_X_SYMBOL
 #define STUB_X_PRIM_SHADOW
 #define STUB_X_PROCEDURE_APPLY
+#define STUB_X_OBJ_PRIM_CALL
 #include "helper-stubs.c"
 
 
@@ -286,13 +287,13 @@ static char *test_sexp_whitespace_read_token(void)
 	p_buffer = x_mkbuffer(p_base, buffer);
 	p_args = x_mkspair(p_base, X_OBJ_FLAG_NONE, p_buffer, p_base);
 
-	p_obj = x_token_read(p_base, p_args);
+	p_obj = x_token_read(p_base, x_argrun({ .p = p_args }));
 	_it_should("return a String object with the value set",
 		x_obj_type_isstr(p_base, p_obj)
 		&& 0 == x_lib_strcmp("@ABC", x_strval(p_obj))
 	);
 
-	p_obj = x_token_read(p_base, p_args);
+	p_obj = x_token_read(p_base, x_argrun({ .p = p_args }));
 	_it_should("return a second String object with the value set",
 		x_obj_type_isstr(p_base, p_obj)
 		&& 0 == x_lib_strcmp("DEF", x_strval(p_obj))

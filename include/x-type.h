@@ -306,10 +306,10 @@ x_obj_t *x_type_prim_length(x_obj_t *p_base, x_obj_t *p_args);
  * @{ */
 
 /** GC mark callback -- mark a typed object and its contents. */
-x_obj_t *x_type_heap_mark(x_obj_t *p_base, x_obj_t *p_obj, x_obj_flag_t flags);
+x_obj_t *x_type_heap_mark(x_obj_t *p_base, x_obj_t *p_args);
 
 /** GC free callback -- free a typed object's resources. */
-void x_type_heap_free(x_obj_t *p_base, x_obj_t *p_obj);
+x_obj_t *x_type_heap_free(x_obj_t *p_base, x_obj_t *p_args);
 
 /** @} */
 

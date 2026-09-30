@@ -40,10 +40,11 @@
 #define STUB_X_STR
 #define STUB_X_TYPE_PRIM
 #define STUB_X_SYMBOL_FIND
+#define STUB_X_OBJ_PRIM_CALL
 #include "helper-stubs.c"
 
-x_obj_t *x_type_heap_mark(x_obj_t *p_base, x_obj_t *p_obj, x_obj_flag_t flags) { return NULL; }
-void x_type_heap_free(x_obj_t *p_base, x_obj_t *p_obj) {}
+x_obj_t *x_type_heap_mark(x_obj_t *p_base, x_obj_t *p_args) { return NULL; }
+x_obj_t *x_type_heap_free(x_obj_t *p_base, x_obj_t *p_args) { return NULL; }
 
 /*
  * x-eval and x-toplevel link against the reader, the writer and eval.  No
@@ -57,6 +58,31 @@ x_obj_t *x_token_read(x_obj_t *p_base, x_obj_t *p_args)
 }
 
 x_obj_t *x_token_write(x_obj_t *p_base, x_obj_t *p_args) { return NULL; }
+
+/* The slot table in x-eval.c names these two, so they must link. */
+x_obj_t *x_token_analyse(x_obj_t *p_base, x_obj_t *p_args) { return NULL; }
+
+x_obj_t *x_token_delimit(x_obj_t *p_base, x_obj_t *p_args) { return NULL; }
+
+/* The slot table in x-eval.c names the evaluator's other routines, so they
+ * must link. No test here reaches them. */
+x_obj_t *x_eval_list(x_obj_t *p_base, x_obj_t *p_args) { return NULL; }
+
+x_obj_t *x_eval_body(x_obj_t *p_base, x_obj_t *p_args) { return NULL; }
+
+x_obj_t *x_eval_body_tco(x_obj_t *p_base, x_obj_t *p_args) { return NULL; }
+
+x_obj_t *x_eval_tco_trampoline(x_obj_t *p_base, x_obj_t *p_args) { return NULL; }
+
+x_obj_t *x_eval_op_body(x_obj_t *p_base, x_obj_t *p_args) { return NULL; }
+
+/* x_base_make names the heap's routines for their slots, so they must
+ * link. No test here reaches them. */
+x_obj_t *x_heap_tree_mark(x_obj_t *p_base, x_obj_t *p_args) { return NULL; }
+
+x_obj_t *x_heap_sweep(x_obj_t *p_base, x_obj_t *p_args) { return NULL; }
+
+x_obj_t *x_heap_root_chain_mark(x_obj_t *p_base, x_obj_t *p_args) { return NULL; }
 
 x_obj_t *x_eval(x_obj_t *p_base, x_obj_t *p_args) { return NULL; }
 
@@ -113,23 +139,23 @@ static char *test_env_profile_steps(void)
 
 	/* The child holds two bindings and the grandchild one. */
 	p_child = x_env_make(p_base, p_root);
-	x_env_bind(p_base, p_child, p_syms[0], p_atoms[0]);
-	x_env_bind(p_base, p_child, p_syms[1], p_atoms[1]);
+	x_env_bind(p_base, x_argrun({ .p = p_child }, { .p = p_syms[0] }, { .p = p_atoms[0] }));
+	x_env_bind(p_base, x_argrun({ .p = p_child }, { .p = p_syms[1] }, { .p = p_atoms[1] }));
 	p_grand = x_env_make(p_base, p_child);
-	x_env_bind(p_base, p_grand, p_syms[2], p_atoms[2]);
+	x_env_bind(p_base, x_argrun({ .p = p_grand }, { .p = p_syms[2] }, { .p = p_atoms[2] }));
 
 	before = _env_steps(p_base);
-	x_env_lookup(p_base, p_grand, p_syms[2]);
+	x_env_lookup(p_base, x_argrun({ .p = p_grand }, { .p = p_syms[2] }));
 	_it_should("a hit on an environment's only binding compares one",
 		_env_steps(p_base) - before == 1);
 
 	before = _env_steps(p_base);
-	x_env_lookup(p_base, p_grand, p_syms[3]);
+	x_env_lookup(p_base, x_argrun({ .p = p_grand }, { .p = p_syms[3] }));
 	_it_should("a miss compares every binding on the way to the root: the grandchild's one and the child's two",
 		_env_steps(p_base) - before == 3);
 
 	before = _env_steps(p_base);
-	x_env_lookup(p_base, p_root, p_syms[3]);
+	x_env_lookup(p_base, x_argrun({ .p = p_root }, { .p = p_syms[3] }));
 	_it_should("a lookup that starts at the root compares no alist binding",
 		_env_steps(p_base) - before == 0);
 

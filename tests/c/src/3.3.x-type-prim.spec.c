@@ -283,8 +283,10 @@ static char *test_type_prim_struct(void)
 		NULL == x_type_field_length(p_type)
 	);
 
+	/* A handler is called with a pair: the type's is the primitive that
+	 * takes one, which calls x_callable_call through its slot. */
 	_it_should("set the Call primitive",
-		x_callable_call == x_primval(x_type_field_call(p_type))
+		x_callable_prim_call == x_primval(x_type_field_call(p_type))
 	);
 
 	_it_should("not set the Eval primitive",
@@ -427,7 +429,7 @@ static char *test_type_prim_call(void)
 	p_count = x_mksatom(NULL, X_OBJ_FLAG_NONE, 0);
 	p_args = x_mkspair(NULL, X_OBJ_FLAG_NONE, p_call, x_mkspair(NULL, X_OBJ_FLAG_NONE, p_count, NULL));
 
-	p_obj = x_callable_call(NULL, p_args);
+	p_obj = x_callable_call(NULL, x_argrun({ .p = p_args }));
 	_it_should("call the test function and return the incremented argument",
 		p_count == p_obj
 		&& 1 == x_firstint(p_count)
@@ -474,7 +476,7 @@ static char *test_type_prim_call_procedure(void)
 	p_obj = make_typed_obj(p_base, (x_char_t *)X_TYPE_PROCEDURE_NAME, 1);
 	p_args = x_mkspair(p_base, X_OBJ_FLAG_NONE, p_obj, NULL);
 
-	p_ret = x_obj_prim_call(p_base, p_args);
+	p_ret = x_obj_prim_call(p_base, x_argrun({ .p = p_args }));
 	_it_should("dispatch procedure to stub and return NULL",
 		NULL == p_ret);
 
@@ -491,7 +493,7 @@ static char *test_type_prim_call_operative(void)
 	p_obj = make_typed_obj(p_base, (x_char_t *)X_TYPE_OPERATIVE_NAME, 1);
 	p_args = x_mkspair(p_base, X_OBJ_FLAG_NONE, p_obj, NULL);
 
-	p_ret = x_obj_prim_call(p_base, p_args);
+	p_ret = x_obj_prim_call(p_base, x_argrun({ .p = p_args }));
 	_it_should("dispatch operative to stub and return NULL",
 		NULL == p_ret);
 
@@ -526,7 +528,7 @@ static char *test_type_prim_apply_procedure(void)
 
 	p_args = x_mkspair(p_base, X_OBJ_FLAG_NONE, p_obj, NULL);
 
-	p_ret = x_callable_apply(p_base, p_args);
+	p_ret = x_callable_apply(p_base, x_argrun({ .p = p_args }));
 	_it_should("apply procedure via stub and return NULL",
 		NULL == p_ret);
 	_it_should("restore the environment after apply",
@@ -547,7 +549,7 @@ static char *test_type_prim_apply_operative(void)
 	x_primval(p_obj) = (x_fn_t)x_type_operative_call;
 	p_args = x_mkspair(p_base, X_OBJ_FLAG_NONE, p_obj, NULL);
 
-	p_ret = x_callable_apply(p_base, p_args);
+	p_ret = x_callable_apply(p_base, x_argrun({ .p = p_args }));
 	_it_should("apply operative via stub and return NULL",
 		NULL == p_ret);
 
