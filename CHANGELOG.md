@@ -14,6 +14,7 @@ alongside the library changes they landed with.
 ## Unreleased
 
 ## 0.2.19 — 2026-10-01
+
 **Any signal can be caught and its arrival read back** ([#84]). `(signal
 catch N)` installs a handler for signal N that records the arrival in a
 static flag and does nothing else; `(signal take N)` answers 1 if N arrived
