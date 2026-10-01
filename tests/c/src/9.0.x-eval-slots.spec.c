@@ -313,6 +313,24 @@ static char *test_slots_call(void)
 		x_obj_prim_call(p_base, x_argrun({ .p = p_call })) == SLOT(p_base, X_SLOT_OBJ_PRIM_CALL, args)
 	);
 
+	/* A call form whose head is a primitive reaches the callable-call
+	 * slot once, with the call list itself: the PRIMITIVE type's own
+	 * call handler is not run.  The list type's eval handler is called
+	 * directly, since x_eval reaches it through the same slot. */
+	x_eval_slot(p_base, X_SLOT_CALLABLE_CALL) = _replaced_fn;
+	_replaced_called = 0;
+	_replaced_args = NULL;
+	_it_should("evaluate a primitive's call form through one callable-call slot call",
+		(x_obj_t *)_replaced_answer
+			== x_type_list_eval(p_base, x_mkspair(p_base, X_OBJ_FLAG_NONE,
+				x_mksatom(p_base, X_OBJ_FLAG_NONE, x_mklist(p_base, p_prim, NULL)),
+				NULL))
+		&& 1 == _replaced_called
+		&& _replaced_args != NULL
+		&& p_prim == x_firstobj(x_obj(_replaced_args[0]))
+	);
+	x_eval_slot(p_base, X_SLOT_CALLABLE_CALL) = x_callable_call;
+
 	test_cleanup(p_base);
 	return NULL;
 }

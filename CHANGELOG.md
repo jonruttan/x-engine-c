@@ -24,6 +24,18 @@ that names no signal, or a signal that cannot be caught, answers -1 from
 catch. Both are in the default build, beside SIGINT's, under `X_SIGNAL`.
 
 [#84]: https://github.com/jonruttan/x-engine-c/pull/84
+**A call through a slot costs less** ([#83]). The evaluator, symbol lookup,
+argument evaluation and the call path call through the slot without the
+test for a base and a vector, which they always have; the test stays where
+a call can come before a base has its vector. A call form whose head is a
+primitive goes to the callable-call slot directly, not through the
+PRIMITIVE type's call handler, which only handed it back; a type whose call
+handler was replaced takes the full path. Measured in retired instructions
+on x-lang's helium boot and on a loop of 300,000 calls, darwin/arm64, the
+cost of the slot vector over 0.2.17 falls from 2.7% and 3.3% to 1.6% and
+1.6%.
+
+[#83]: https://github.com/jonruttan/x-engine-c/pull/83
 
 ## 0.2.18 — 2026-09-30
 
