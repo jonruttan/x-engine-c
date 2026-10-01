@@ -13,6 +13,16 @@ alongside the library changes they landed with.
 
 ## Unreleased
 
+**Any signal can be caught and its arrival read back** ([#PR]). `(signal
+catch N)` installs a handler for signal N that records the arrival in a
+static flag and does nothing else; `(signal take N)` answers 1 if N arrived
+since the last take, clearing the record, and 0 otherwise. What an arrival
+means is the caller's to decide, so the handler stays C and the policy
+stays in x. As SIGINT's handler does, it does not restart an interrupted
+read or poll, so a program waiting for input wakes up to look. A number
+that names no signal, or a signal that cannot be caught, answers -1 from
+catch. Both are in the default build, beside SIGINT's, under `X_SIGNAL`.
+
 ## 0.2.18 — 2026-09-30
 
 **The base holds a slot vector, and the engine's routines are called
