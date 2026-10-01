@@ -275,7 +275,18 @@ x_obj_t *x_type_list_eval(x_obj_t *p_base, x_obj_t *p_args)
 		return p_exp;
 	}
 
-	p_result = x_eval_call(p_base, X_SLOT_CALLABLE_CALL, x_argrun({ .p = (x_obj_t *)prim_args }));
+	/* A primitive's call handler is the PRIMITIVE type's own, which only
+	 * hands the call list back to the callable-call slot: go there
+	 * directly.  A type whose call handler was replaced takes the full
+	 * path through its handler. */
+	if (x_firstobj((x_obj_t *)prim_args) == (x_obj_t *)x_callable_call_prim) {
+		p_result = x_eval_call(p_base, X_SLOT_CALLABLE_CALL,
+			x_argrun({ .p = (x_obj_t *)proc_exp }));
+	} else {
+		p_result = x_eval_call(p_base, X_SLOT_CALLABLE_CALL,
+			x_argrun({ .p = (x_obj_t *)prim_args }));
+	}
+
 	x_heap_root_pop(p_cell);
 	return p_result;
 }
