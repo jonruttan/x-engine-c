@@ -35,6 +35,8 @@ x_obj_t *x_obj_prim_dump(x_obj_t *p_base, x_obj_t *p_args);
 
 /** Invoke an object's type-dispatch call handler. */
 x_obj_t *x_obj_prim_call(x_obj_t *p_base, x_obj_t *p_args);
+/** Allocate an object, the routine in the slot vector. Arguments: (type, flags, units). */
+x_obj_t *x_eval_alloc(x_obj_t *p_base, x_obj_t *p_args);
 /** Evaluate an object via its type's eval handler. */
 x_obj_t *x_obj_prim_eval(x_obj_t *p_base, x_obj_t *p_args);
 /** Convert an object to a different type. */

@@ -1,9 +1,9 @@
 ; tools/contract/base-slots.x — the positions in the base's slot vector.
 ;
-; SINGLE SOURCE OF TRUTH for the slot vector: the base's `slots` field holds
-; a vector whose elements are function pointers, one per slot, and a routine
-; the engine calls through a slot is replaced by storing another function in
-; it.  This is the fourth layout contract, after tools/contract/base-layout.x,
+; SINGLE SOURCE OF TRUTH for the slot vector: the base object's first data
+; unit holds a vector whose elements are function pointers, one per slot, and
+; a routine the engine calls through a slot is replaced by storing another
+; function in it.  This is the fourth layout contract, after tools/contract/base-layout.x,
 ; tools/contract/obj-layout.x and tools/contract/base-paths.x.  Consumed by
 ; tools/check/base-slots.sh (make check-base-slots), which reads the positions
 ; from include/x-eval-slots.h and diffs, so a slot that moves fails the build
@@ -39,4 +39,7 @@
   (13 token-read (args) (object))
   (14 token-analyse (args label) (object integer))
   (15 token-delimit (args) (object))
+  (16 heap-mark () ())
+  (17 heap-sweep () ())
+  (18 obj-alloc (type flags units) (object integer integer))
 )))

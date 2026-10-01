@@ -141,7 +141,7 @@ static char *test_obj_prim_make(void)
 	x_obj_free(NULL, p_ret);
 
 
-	p_base = x_mksatom(NULL, X_OBJ_FLAG_NONE, 0);
+	p_base = x_mkspair(NULL, X_OBJ_FLAG_NONE, NULL, NULL);
 	p_obj = x_mksatom(p_base, X_OBJ_FLAG_NONE, 0);
 	p_flags = x_mksatom(p_base, X_OBJ_FLAG_NONE, 0xf0);
 	p_vals[0] = x_mksatom(p_base, X_OBJ_FLAG_NONE, 10);
@@ -166,7 +166,7 @@ static char *test_obj_prim_make(void)
 	x_obj_free(NULL, p_ret);
 	x_obj_free(NULL, p_base);
 
-	p_base = x_mksatom(NULL, X_OBJ_FLAG_NONE, 0);
+	p_base = x_mkspair(NULL, X_OBJ_FLAG_NONE, NULL, NULL);
 	p_obj = x_mkspair(NULL, X_OBJ_FLAG_NONE, 0, 0);
 	p_flags = x_mksatom(p_base, X_OBJ_FLAG_NONE, 0xf0);
 	p_vals[0] = x_mksatom(p_base, X_OBJ_FLAG_NONE, 10);
@@ -223,7 +223,7 @@ static char *test_obj_prim_make_custom_nil_name(void)
 
 	helper_alloc_reset();
 
-	p_base = x_mksatom(NULL, X_OBJ_FLAG_NONE, 0);
+	p_base = x_mkspair(NULL, X_OBJ_FLAG_NONE, NULL, NULL);
 	p_type = _test_make_type(p_base);
 	p_obj = x_obj_make(p_base, p_type, X_OBJ_FLAG_NONE, X_OBJ_LENGTH_ATOM, 0);
 
@@ -252,7 +252,7 @@ static char *test_obj_prim_make_custom_with_make_fn(void)
 
 	helper_alloc_reset();
 
-	p_base = x_mksatom(NULL, X_OBJ_FLAG_NONE, 0);
+	p_base = x_mkspair(NULL, X_OBJ_FLAG_NONE, NULL, NULL);
 	p_type = _test_make_type(p_base);
 	p_obj = x_obj_make(p_base, p_type, X_OBJ_FLAG_NONE, X_OBJ_LENGTH_ATOM, 0);
 
@@ -299,7 +299,7 @@ static char *test_obj_prim_call(void)
 		NULL == p_ret);
 
 	/* Typed object with NULL call field returns NULL */
-	p_base = x_mksatom(NULL, X_OBJ_FLAG_NONE, 0);
+	p_base = x_mkspair(NULL, X_OBJ_FLAG_NONE, NULL, NULL);
 	p_type = _test_make_type(p_base);
 	p_obj = x_obj_make(p_base, p_type, X_OBJ_FLAG_NONE, X_OBJ_LENGTH_ATOM, _test_prim_fn);
 	p_args = x_mkspair(p_base, X_OBJ_FLAG_NONE, p_obj, NULL);
@@ -360,7 +360,7 @@ static char *test_obj_prim_units_typed(void)
 	x_obj_t *p_ret;
 
 	helper_alloc_reset();
-	p_base = x_mksatom(NULL, X_OBJ_FLAG_NONE, 0);
+	p_base = x_mkspair(NULL, X_OBJ_FLAG_NONE, NULL, NULL);
 	p_type = _test_make_type(p_base);
 	p_obj = x_obj_make(p_base, p_type, X_OBJ_FLAG_NONE,
 		X_OBJ_LENGTH_ATOM, 42);
@@ -400,7 +400,7 @@ static char *test_obj_prim_length_satom(void)
 	x_int_t len;
 
 	helper_alloc_reset();
-	p_base = x_mksatom(NULL, X_OBJ_FLAG_NONE, 0);
+	p_base = x_mkspair(NULL, X_OBJ_FLAG_NONE, NULL, NULL);
 	p_obj = x_mksatom(p_base, X_OBJ_FLAG_NONE, 42);
 
 	{
@@ -426,7 +426,7 @@ static char *test_obj_prim_length_spair(void)
 	x_int_t len;
 
 	helper_alloc_reset();
-	p_base = x_mksatom(NULL, X_OBJ_FLAG_NONE, 0);
+	p_base = x_mkspair(NULL, X_OBJ_FLAG_NONE, NULL, NULL);
 	p_obj = x_mkspair(p_base, X_OBJ_FLAG_NONE, NULL, NULL);
 
 	{
@@ -451,7 +451,7 @@ static char *test_obj_prim_length_typed(void)
 	x_obj_t *p_ret;
 
 	helper_alloc_reset();
-	p_base = x_mksatom(NULL, X_OBJ_FLAG_NONE, 0);
+	p_base = x_mkspair(NULL, X_OBJ_FLAG_NONE, NULL, NULL);
 	p_type = _test_make_type(p_base);
 	p_obj = x_obj_make(p_base, p_type, X_OBJ_FLAG_NONE,
 		X_OBJ_LENGTH_ATOM, 42);

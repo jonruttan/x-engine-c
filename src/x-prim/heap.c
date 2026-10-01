@@ -67,12 +67,16 @@ static void x_heap_run_hooks(x_obj_t *p_base, x_obj_t *p_hooks)
  *        a transient cell allocated *after* the mark is unmarked, so an
  *        intervening sweep frees it while the evaluator is still
  *        traversing it (see x_prim_heap_collect).
+ *  A routine in the base's slot vector (X_SLOT_HEAP_MARK): a base may
+ *  have a mark phase of its own.
+ *
+ *  @param p_base  Base (execution context).
+ *  @param p_args  Unused: the run has no words.
+ *  @return NULL.
  *  @see x_heap_sweep_phase
  */
-static void x_heap_mark_phase(x_obj_t *p_base)
+x_obj_t *x_heap_mark_phase(x_obj_t *p_base, x_obj_t *p_args)
 {
-	/* One argument run serves every marking pass: its first word is set
-	 * for each tree. */
 	x_obj_t *p_roots;
 
 	if (x_base_isset(p_base)) {
@@ -91,14 +95,20 @@ static void x_heap_mark_phase(x_obj_t *p_base)
 			p_roots = x_restobj(p_roots);
 		}
 	}
+
+	return NULL;
 }
 
 /** Sweep phase: fire free hooks, then reclaim unmarked objects (GC phase
  *  2).  x_heap_sweep also clears the mark flag on retained objects, readying
- *  them for the next cycle.
+ *  them for the next cycle.  A routine in the base's slot vector
+ *  (X_SLOT_HEAP_SWEEP).
+ *  @param p_base  Base (execution context).
+ *  @param p_args  Unused: the run has no words.
+ *  @return NULL.
  *  @see x_heap_mark_phase
  */
-static void x_heap_sweep_phase(x_obj_t *p_base)
+x_obj_t *x_heap_sweep_phase(x_obj_t *p_base, x_obj_t *p_args)
 {
 	if (x_base_isset(p_base)) {
 		x_heap_run_hooks(p_base,
@@ -106,6 +116,8 @@ static void x_heap_sweep_phase(x_obj_t *p_base)
 	}
 
 	x_heap_sweep(p_base, x_obj_heap(p_base), X_OBJ_FLAG_MARK);
+
+	return NULL;
 }
 
 /** Sweep unmarked objects from the heap (GC phase 2, low-level).
@@ -132,7 +144,7 @@ static x_obj_t *x_prim_heap_sweep(x_obj_t *p_base, x_obj_t *p_args)
 		x_atomint(x_firstobj(x_eval_field_profile_gc_runs(p_base)))++;
 #endif
 
-	x_heap_sweep_phase(p_base);
+	x_eval_call_or(p_base, X_SLOT_HEAP_SWEEP, x_heap_sweep_phase, NULL);
 
 	return NULL;
 }
@@ -213,7 +225,7 @@ static x_obj_t *x_prim_alloc_limit(x_obj_t *p_base, x_obj_t *p_args)
 static x_obj_t *x_prim_heap_mark(x_obj_t *p_base, x_obj_t *p_args)
 {
 	(void)p_args;
-	x_heap_mark_phase(p_base);
+	x_eval_call_or(p_base, X_SLOT_HEAP_MARK, x_heap_mark_phase, NULL);
 
 	return NULL;
 }
@@ -247,8 +259,8 @@ static x_obj_t *x_prim_heap_collect(x_obj_t *p_base, x_obj_t *p_args)
 		x_atomint(x_firstobj(x_eval_field_profile_gc_runs(p_base)))++;
 #endif
 
-	x_heap_mark_phase(p_base);
-	x_heap_sweep_phase(p_base);
+	x_eval_call_or(p_base, X_SLOT_HEAP_MARK, x_heap_mark_phase, NULL);
+	x_eval_call_or(p_base, X_SLOT_HEAP_SWEEP, x_heap_sweep_phase, NULL);
 
 	return NULL;
 }

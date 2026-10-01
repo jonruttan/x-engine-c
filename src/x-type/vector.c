@@ -16,6 +16,8 @@
 #include "x-type/vector.h"
 #include "x-type/int.h"
 #include "x-eval.h"
+#include "x-eval-slots.h"
+#include "x-obj/prim.h"
 
 x_satom_t x_type_vector_name = x_obj_set(x_type_atom_obj, X_OBJ_FLAG_NONE, { .s = (x_char_t *)X_TYPE_VECTOR_NAME }),
 	x_type_vector_length_prim = x_obj_set(x_type_atom_obj, X_OBJ_FLAG_NONE, { (x_obj_t *)&x_type_vector_length }),
@@ -44,7 +46,8 @@ x_obj_t *x_make_vector(x_obj_t *p_base, x_obj_flag_t flags, x_int_t length, ...)
 	x_int_t i;
 	va_list ap;
 
-	p_obj = x_obj_alloc(p_base, p_type, flags, (size_t)x_vector_units(length));
+	p_obj = x_eval_call_or(p_base, X_SLOT_OBJ_ALLOC, x_eval_alloc,
+		x_argrun({ .p = p_type }, { .i = (x_int_t)flags }, { .i = x_vector_units(length) }));
 
 	/* Every unit holds an object or nil before the length is allocated:
 	 * the elements are stored first, and the length unit is nil until its

@@ -240,6 +240,11 @@ x_obj_t *x_prim_io_register(x_obj_t *p_base, x_obj_t *p_args);
 /** Register the GC primitives (heap-*, alloc-limit!, gc-pin!). */
 x_obj_t *x_prim_heap_register(x_obj_t *p_base, x_obj_t *p_args);
 
+/** The collector's mark phase, a routine in the slot vector. Arguments: (). */
+x_obj_t *x_heap_mark_phase(x_obj_t *p_base, x_obj_t *p_args);
+/** The collector's sweep phase, a routine in the slot vector. Arguments: (). */
+x_obj_t *x_heap_sweep_phase(x_obj_t *p_base, x_obj_t *p_args);
+
 /** Register the state-image primitives (image save!, image rebuild!). */
 x_obj_t *x_prim_image_register(x_obj_t *p_base, x_obj_t *p_args);
 

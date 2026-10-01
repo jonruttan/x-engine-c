@@ -56,7 +56,7 @@ static char *test_alist_extend(void)
 {
 	x_obj_t *p_base, *p_alist, *p_atoms[3], *p_args;
 
-	p_base = x_mksatom(NULL, X_OBJ_FLAG_NONE, 0);
+	p_base = x_mkspair(NULL, X_OBJ_FLAG_NONE, NULL, NULL);
 
 	p_atoms[0] = x_mksatom(p_base, X_OBJ_FLAG_NONE, 1);
 	p_atoms[1] = x_mksatom(p_base, X_OBJ_FLAG_NONE, 2);
@@ -102,7 +102,7 @@ static char *test_alist_assoc(void)
 	x_obj_t *p_base, *p_obj, *p_alist, *p_atoms[3], *p_args;
 
 
-	p_base = x_mksatom(NULL, X_OBJ_FLAG_NONE, 0);
+	p_base = x_mkspair(NULL, X_OBJ_FLAG_NONE, NULL, NULL);
 
 	p_atoms[0] = x_mksatom(p_base, X_OBJ_FLAG_NONE, 1);
 	p_atoms[1] = x_mksatom(p_base, X_OBJ_FLAG_NONE, 2);
