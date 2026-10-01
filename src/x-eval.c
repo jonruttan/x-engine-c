@@ -746,7 +746,11 @@ static const x_fn_t x_eval_slot_fns[X_SLOT_LEN] = {
 #if !defined(STUB_X_EVAL) && !defined(X_EVAL_OWN)
 	[X_SLOT_ENV_EXTEND] = x_env_extend,
 #endif /* !STUB_X_EVAL && !X_EVAL_OWN -- evaluator engine */
-	[X_SLOT_ALIST_BST_LOOKUP] = x_alist_bst_lookup
+	[X_SLOT_ALIST_BST_LOOKUP] = x_alist_bst_lookup,
+
+	[X_SLOT_HEAP_MARK] = x_heap_mark_phase,
+	[X_SLOT_HEAP_SWEEP] = x_heap_sweep_phase,
+	[X_SLOT_OBJ_ALLOC] = x_eval_alloc
 };
 
 /**
@@ -803,7 +807,7 @@ static const x_fn_t x_eval_slot_fns[X_SLOT_LEN] = {
  */
 x_obj_t *x_eval_make(x_obj_t *p_base, x_obj_t *p_args)
 {
-	x_obj_t *p_parent = p_base;
+	x_obj_t *p_parent = p_base, *p_shell;
 	struct x_base_t base_cfg;
 	x_int_t i;
 
@@ -818,10 +822,19 @@ x_obj_t *x_eval_make(x_obj_t *p_base, x_obj_t *p_args)
 	base_cfg.p_heap_mark = (x_obj_t *)x_type_heap_mark_hook;
 	base_cfg.p_heap_free = (x_obj_t *)x_type_heap_free_hook;
 
-	p_base = x_base_make(p_base, base_cfg);
+	/* x-expr makes a base of one unit holding the tree.  The engine's base
+	 * has two: the tree first, where x-expr reads it, and the slot vector
+	 * second, where a call locates it in one load.  The tree x-expr built
+	 * moves into the engine's object, with the chain of what x_base_make
+	 * allocated, and x-expr's one-unit object is let go. */
+	p_shell = x_base_make(p_parent, base_cfg);
+	p_base = x_obj_make(p_parent, x_eval_obj, X_OBJ_FLAG_NONE,
+		X_OBJ_LENGTH_PAIR, x_base(p_shell), NULL);
 
-	/* Set base type (x-expr uses NULL). */
-	x_obj_type(p_base) = x_eval_obj;
+	if (p_parent == NULL) {
+		x_obj_heap(p_base) = x_obj_heap(p_shell);
+		x_obj_free(NULL, p_shell);
+	}
 
 	/* Build the empty pair-tree skeleton -- env+ctrl, the type-alist cell,
 	 * io-state, the profile counters, and the state fields -- from the
@@ -831,9 +844,9 @@ x_obj_t *x_eval_make(x_obj_t *p_base, x_obj_t *p_args)
 #include "x-eval-layout.h"
 #undef X_EVAL_BUILD_TREE
 
-	/* The slot vector, every slot filled from the table above.  A slot
-	 * left NULL there stays empty. */
-	x_eval_field_slots(p_base) = x_slots_make(p_base, X_SLOT_LEN);
+	/* The slot vector, in the base's second unit, every slot filled from
+	 * the table above.  A slot left NULL there stays empty. */
+	x_eval_slots(p_base) = x_slots_make(p_base, X_SLOT_LEN);
 
 	for (i = 0; i < X_SLOT_LEN; i++) {
 		if (x_eval_slot_fns[i] != NULL) {

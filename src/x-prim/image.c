@@ -18,6 +18,7 @@
 #include "x-type/int.h"
 #include "x-type/prim.h"
 #include "x-type/ptr.h"
+#include "x-obj/prim.h"
 
 /**
  * @brief The type word of an object record, when it is not an object index.
@@ -176,7 +177,10 @@ static void x_image_alloc_pass(x_obj_t *p_base, x_image_t *img)
 		units = rec[X_IMAGE_RECORD_COUNT];
 		flags = (x_obj_flag_t)(rec[X_IMAGE_RECORD_FLAGS] & X_IMAGE_FLAGS_KEPT);
 
-		img->ix[i] = x_obj_alloc(p_base, x_image_role_type(rec[X_IMAGE_RECORD_TYPE]), (x_obj_flag_t)(flags | X_OBJ_FLAG_SHARED), (size_t)(units < 1 ? 1 : units));
+		img->ix[i] = x_eval_call_or(p_base, X_SLOT_OBJ_ALLOC, x_eval_alloc,
+			x_argrun({ .p = x_image_role_type(rec[X_IMAGE_RECORD_TYPE]) },
+				{ .i = flags | X_OBJ_FLAG_SHARED },
+				{ .i = units < 1 ? 1 : units }));
 
 		pos += x_image_record_words(units);
 	}

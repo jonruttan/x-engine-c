@@ -15,6 +15,9 @@
 
 #ifdef STUB_X_PRIM
 void x_callable_bind(x_obj_t *p_base, x_char_t *name, x_fn_t fn) {}
+/* The slot table in x-eval.c names the collector's phases. */
+x_obj_t *x_heap_mark_phase(x_obj_t *p_base, x_obj_t *p_args) { return NULL; }
+x_obj_t *x_heap_sweep_phase(x_obj_t *p_base, x_obj_t *p_args) { return NULL; }
 #endif
 
 #ifdef STUB_X_PROCEDURE
@@ -66,6 +69,13 @@ x_obj_t *x_heap_mark(x_obj_t *p_base, x_obj_t *p_obj, x_obj_flag_t flags,
 #ifdef STUB_X_OBJ_OBJ
 x_satom_t x_eval_obj = x_obj_set(NULL, X_OBJ_FLAG_NONE,
 	{.s = (x_char_t *)"BASE"});
+/* The slot table names the allocation routine, and a call with no slot
+ * vector falls back to it. */
+x_obj_t *x_eval_alloc(x_obj_t *p_base, x_obj_t *p_args)
+{
+	return x_obj_alloc(p_base, x_obj(p_args[0]),
+		(x_obj_flag_t)p_args[1].i, (size_t)p_args[2].i);
+}
 #endif
 
 /* x_obj_meta_extra needed by ext/x-expr/src/x-obj.c alloc/free;

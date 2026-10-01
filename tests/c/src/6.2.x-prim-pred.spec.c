@@ -62,6 +62,9 @@ x_obj_t *x_prim_arith_register(x_obj_t *p_base, x_obj_t *p_args) { return p_base
 x_obj_t *x_prim_string_register(x_obj_t *p_base, x_obj_t *p_args) { return p_base; }
 x_obj_t *x_prim_io_register(x_obj_t *p_base, x_obj_t *p_args) { return p_base; }
 x_obj_t *x_prim_heap_register(x_obj_t *p_base, x_obj_t *p_args) { return p_base; }
+/* The slot table in x-eval.c names the collector's phases. */
+x_obj_t *x_heap_mark_phase(x_obj_t *p_base, x_obj_t *p_args) { return NULL; }
+x_obj_t *x_heap_sweep_phase(x_obj_t *p_base, x_obj_t *p_args) { return NULL; }
 x_obj_t *x_prim_image_register(x_obj_t *p_base, x_obj_t *p_args) { return p_base; }
 x_obj_t *x_prim_base_register(x_obj_t *p_base, x_obj_t *p_args) { return p_base; }
 x_obj_t *x_prim_buffer_register(x_obj_t *p_base, x_obj_t *p_args) { return p_base; }

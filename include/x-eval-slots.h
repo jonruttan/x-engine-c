@@ -39,17 +39,21 @@
  * are a run of words too, so a caller that holds its arguments in a
  * vector passes the address of its first element.
  *
- * The slot vector is the `slots` field of the base's tree
- * (tools/contract/base-layout.x); x_eval_make() makes it and fills every
- * slot. The positions are part of the layout contract: they are listed in
+ * The slot vector is the base object's second data unit. x-expr makes a
+ * base of one unit holding the tree; x_eval_make() makes the engine's base
+ * of two, the tree first, where x-expr reads it, and the vector second,
+ * so a call locates the vector in one load from the base. Each base has a
+ * vector of its own, filled from the engine's table when the base is made,
+ * and a slot replaced in one base is replaced there alone.
+ * The positions are part of the layout contract: they are listed in
  * tools/contract/base-slots.x, which tools/check/base-slots.sh diffs
  * against this header, and a language that replaces a routine reads its
  * position from there. Each slot's comment gives its arguments and the
  * type of the word each travels in: an object, an integer or a string.
- *
- * x-expr's own routines -- allocation, the collector's mark and sweep --
- * are not in the vector: the engine calls them by name, and x-expr
- * reaches the engine through the hooks x_base_make() takes.
+ * The collector is the engine's: the mark and sweep phases and the
+ * allocation of an object are routines in the vector, written over
+ * x-expr's chain, traversal, sweep and hooks, which the engine calls by
+ * name and which are never in a slot.
  *
  * @author Jon Ruttan (jonruttan@gmail.com)
  * @copyright 2026 Jon Ruttan
@@ -126,6 +130,18 @@ enum x_eval_slot_enum
 	/** x_token_delimit(). Arguments: (args). Types: (object). */
 	X_SLOT_TOKEN_DELIMIT,
 
+	/** x_heap_mark_phase(), the collector's mark phase. Arguments: ().
+	 *  Types: (). */
+	X_SLOT_HEAP_MARK,
+
+	/** x_heap_sweep_phase(), the collector's sweep phase. Arguments: ().
+	 *  Types: (). */
+	X_SLOT_HEAP_SWEEP,
+
+	/** x_eval_alloc(), allocate an object. Arguments: (type, flags, units).
+	 *  Types: (object, integer, integer). */
+	X_SLOT_OBJ_ALLOC,
+
 	/** The length of the slot vector. */
 	X_SLOT_LEN
 };
@@ -152,21 +168,19 @@ enum x_eval_slot_enum
  */
 #define x_argrun(...)				((x_obj_t[]){ __VA_ARGS__ })
 
-/** The slot vector of base @p B (an lvalue): its `slots` field. */
-#define x_eval_slots(B)				x_eval_field_slots((B))
+/** The slot vector of base @p B (an lvalue): its second data unit. */
+#define x_eval_slots(B)				x_restobj((B))
 
 /** The function pointer in slot @p I of base @p B (an lvalue). */
 #define x_eval_slot(B,I)			x_slot(x_eval_slots((B)), (I))
 
 /**
- * Test whether base @p B has a slot vector: it is a base the engine made,
- * with its tree and the vector in it. A base x-expr made on its own, or an
- * object of one unit standing as an allocation context, has none.
+ * Test whether base @p B has a slot vector: one load. The base must have
+ * two units: an object standing as an allocation context is a pair with
+ * nothing in it, never an atom, since the second unit is read.
  */
 #define x_eval_slots_isset(B) \
-	(x_base_isset((B)) \
-		&& x_obj_type((B)) == (x_obj_t *)x_eval_obj \
-		&& x_eval_slots((B)) != NULL)
+	((B) != NULL && x_eval_slots((B)) != NULL)
 
 /**
  * Call the function in slot @p I of base @p B with argument run @p A. The

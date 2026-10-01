@@ -18,6 +18,7 @@
 
 #include "x-vector.h"
 #include "x-eval-slots.h"
+#include "x-obj/prim.h"
 
 /* The static length atoms of x-vector.h, one for each of the lengths 0 to
  * X_VECTOR_LENGTH_STATIC_LEN - 1. */
@@ -55,7 +56,8 @@ x_obj_t *x_vector_make(x_obj_t *p_base, x_obj_t *p_type, x_obj_flag_t flags,
 	x_int_t i;
 	va_list ap;
 
-	p_obj = x_obj_alloc(p_base, p_type, flags, (size_t)x_vector_units(length));
+	p_obj = x_eval_call_or(p_base, X_SLOT_OBJ_ALLOC, x_eval_alloc,
+		x_argrun({ .p = p_type }, { .i = (x_int_t)flags }, { .i = x_vector_units(length) }));
 
 	if (p_obj == NULL) {
 		return NULL;
@@ -99,8 +101,8 @@ x_obj_t *x_slots_make(x_obj_t *p_base, x_int_t length)
 	x_obj_t *p_slots;
 	x_int_t i;
 
-	p_slots = x_obj_alloc(p_base, NULL, X_OBJ_FLAG_SHARED,
-		(size_t)x_vector_units(length));
+	p_slots = x_eval_call_or(p_base, X_SLOT_OBJ_ALLOC, x_eval_alloc,
+		x_argrun({ .p = NULL }, { .i = X_OBJ_FLAG_SHARED }, { .i = x_vector_units(length) }));
 
 	if (p_slots == NULL) {
 		return NULL;

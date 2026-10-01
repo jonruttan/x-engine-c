@@ -112,7 +112,7 @@ static char *test_type_types(void)
 {
 	x_obj_t *p_base, *p_obj;
 
-	p_base = x_mksatom(NULL, X_OBJ_FLAG_NONE, 0);
+	p_base = x_mkspair(NULL, X_OBJ_FLAG_NONE, NULL, NULL);
 	p_obj = x_mksatom(p_base, X_OBJ_FLAG_NONE, 0);
 
 	x_type_settypes(p_base, p_obj);
@@ -130,7 +130,7 @@ static char *test_type_units(void)
 	x_obj_t *p_base, *p_obj;
 	x_int_t units;
 
-	p_base = x_mksatom(NULL, X_OBJ_FLAG_NONE, 0);
+	p_base = x_mkspair(NULL, X_OBJ_FLAG_NONE, NULL, NULL);
 
 /*	x_atomobj(p_base) = pair(
 		pair(nil, nil),
@@ -197,7 +197,7 @@ static char *test_type_struct_make(void)
 
 	helper_alloc_reset();
 
-	p_base = x_mksatom(NULL, X_OBJ_FLAG_NONE, 0);
+	p_base = x_mkspair(NULL, X_OBJ_FLAG_NONE, NULL, NULL);
 	p_type = x_type_struct_make(p_base, type);
 	_it_should("return a new Type list",
 		! x_obj_isnil(p_base, p_type)
@@ -359,7 +359,7 @@ static char *test_type_prim_type_name(void)
 {
 	x_obj_t *p_base, *p_obj, *p_args, *p_ret;
 
-	p_base = x_mksatom(NULL, X_OBJ_FLAG_NONE, 0);
+	p_base = x_mkspair(NULL, X_OBJ_FLAG_NONE, NULL, NULL);
 
 	/* nil args returns NULL */
 	p_ret = x_type_prim_type_name(p_base, NULL);
@@ -423,7 +423,7 @@ static char *test_type_prim_units(void)
 {
 	x_obj_t *p_base, *p_obj, *p_args, *p_ret;
 
-	p_base = x_mksatom(NULL, X_OBJ_FLAG_NONE, 0);
+	p_base = x_mkspair(NULL, X_OBJ_FLAG_NONE, NULL, NULL);
 
 	/* nil args returns NULL */
 	p_ret = x_type_prim_units(p_base, NULL);
@@ -539,7 +539,7 @@ static char *test_type_prim_length(void)
 {
 	x_obj_t *p_base, *p_obj, *p_args, *p_ret;
 
-	p_base = x_mksatom(NULL, X_OBJ_FLAG_NONE, 0);
+	p_base = x_mkspair(NULL, X_OBJ_FLAG_NONE, NULL, NULL);
 
 	/* nil args returns NULL */
 	p_ret = x_type_prim_length(p_base, NULL);
@@ -607,10 +607,10 @@ static char *test_type_heap_mark(void)
 {
 	x_obj_t *p_base, *p_obj, *p_ret;
 
-	p_base = x_mksatom(NULL, X_OBJ_FLAG_NONE, 0);
+	p_base = x_mkspair(NULL, X_OBJ_FLAG_NONE, NULL, NULL);
 
-	/* Path 1: a base object returns its tree, the second of its two units */
-	p_obj = x_mkspair(p_base, X_OBJ_FLAG_NONE, NULL, 99);
+	/* Path 1: a base object returns its tree, the first of its two units */
+	p_obj = x_mkspair(p_base, X_OBJ_FLAG_NONE, 99, NULL);
 	x_obj_type(p_obj) = (x_obj_t *)&x_eval_obj;
 	p_ret = x_type_heap_mark(p_base, p_obj, 0);
 	_it_should("base type returns the base's tree",
@@ -635,7 +635,7 @@ static char *test_type_heap_mark(void)
 		x_obj_t *p_type;
 		struct x_type_t type_desc;
 
-		p_base = x_mksatom(NULL, X_OBJ_FLAG_NONE, 0);
+		p_base = x_mkspair(NULL, X_OBJ_FLAG_NONE, NULL, NULL);
 
 		memset(&type_desc, 0, sizeof(type_desc));
 		type_desc.p_mark = x_mksatom(p_base, X_OBJ_FLAG_NONE, mock_fn);
@@ -658,7 +658,7 @@ static char *test_type_heap_mark(void)
 		x_obj_t *p_type, *p_slot0, *p_slot1;
 		struct x_type_t type_desc;
 
-		p_base = x_mksatom(NULL, X_OBJ_FLAG_NONE, 0);
+		p_base = x_mkspair(NULL, X_OBJ_FLAG_NONE, NULL, NULL);
 
 		memset(&type_desc, 0, sizeof(type_desc));
 		type_desc.p_units = x_mksatom(p_base, X_OBJ_FLAG_NONE, 2);
@@ -692,7 +692,7 @@ static char *test_type_heap_free(void)
 	x_obj_t *p_base, *p_obj, *p_type;
 	struct x_type_t type_desc;
 
-	p_base = x_mksatom(NULL, X_OBJ_FLAG_NONE, 0);
+	p_base = x_mkspair(NULL, X_OBJ_FLAG_NONE, NULL, NULL);
 
 	/* With free fn */
 	memset(&type_desc, 0, sizeof(type_desc));

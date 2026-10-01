@@ -124,8 +124,8 @@ static char *test_base_make(void)
 		! x_base_isset(p_base)
 	);
 
-	p_base = x_mksatom(NULL, X_OBJ_FLAG_NONE, 0);
-	_it_should("return that the Base object is not set for a bare atom",
+	p_base = x_mkspair(NULL, X_OBJ_FLAG_NONE, NULL, NULL);
+	_it_should("return that the Base object is not set for a pair with nothing in it",
 		! x_base_isset(p_base)
 	);
 
@@ -224,7 +224,7 @@ static char *test_base_type_alist_extend(void)
 	);
 
 
-	p_base = x_mksatom(NULL, X_OBJ_FLAG_NONE, 0);
+	p_base = x_mkspair(NULL, X_OBJ_FLAG_NONE, NULL, NULL);
 	p_args = x_mkspair(NULL, X_OBJ_FLAG_NONE, NULL, NULL);
 	p_alist = x_eval_type_alist_extend(p_base, p_args);
 	_it_should("return nil when base is a bare atom (not set)",

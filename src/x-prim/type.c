@@ -45,6 +45,7 @@
 #include "x-type/str.h"
 #include "x-type/symbol.h"
 #include "x-type/whitespace.h"
+#include "x-obj/prim.h"
 
 /**
  * @brief Build a type struct from a handlers alist.
@@ -294,7 +295,8 @@ static x_obj_t *x_prim_make_obj(x_obj_t *p_base, x_obj_t *p_args)
 	}
 
 	n = x_intval(p_n);
-	p_obj = x_obj_alloc(p_base, p_type, X_OBJ_FLAG_NONE, (size_t)n);
+	p_obj = x_eval_call_or(p_base, X_SLOT_OBJ_ALLOC, x_eval_alloc,
+		x_argrun({ .p = p_type }, { .i = X_OBJ_FLAG_NONE }, { .i = n }));
 
 	for (i = 0; i < n; i++) {
 		(&x_firstobj(p_obj))[i] = NULL;

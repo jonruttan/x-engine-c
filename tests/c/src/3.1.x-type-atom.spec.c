@@ -212,7 +212,7 @@ static char *test_type_atom_struct(void)
 
 	helper_alloc_reset();
 
-	p_base = x_mksatom(NULL, X_OBJ_FLAG_NONE, 0);
+	p_base = x_mkspair(NULL, X_OBJ_FLAG_NONE, NULL, NULL);
 	p_type = x_type_atom_struct(p_base, p_base);
 	_it_should("return Atom Type list",
 		! x_obj_isnil(p_base, p_type)

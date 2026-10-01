@@ -66,7 +66,7 @@ x_obj_t *x_prim_arith_register(x_obj_t *p_base, x_obj_t *p_args) { return p_base
 x_obj_t *x_prim_pred_register(x_obj_t *p_base, x_obj_t *p_args) { return p_base; }
 x_obj_t *x_prim_string_register(x_obj_t *p_base, x_obj_t *p_args) { return p_base; }
 x_obj_t *x_prim_io_register(x_obj_t *p_base, x_obj_t *p_args) { return p_base; }
-x_obj_t *x_prim_heap_register(x_obj_t *p_base, x_obj_t *p_args) { return p_base; }
+#include "src/x-prim/heap.c"
 x_obj_t *x_prim_image_register(x_obj_t *p_base, x_obj_t *p_args) { return p_base; }
 x_obj_t *x_prim_ffi_register(x_obj_t *p_base, x_obj_t *p_args) { return p_base; }
 x_obj_t *x_prim_callcc_register(x_obj_t *p_base, x_obj_t *p_args) { return p_base; }
@@ -172,7 +172,10 @@ static char *test_slots_positions(void)
 		&& 13 == X_SLOT_TOKEN_READ
 		&& 14 == X_SLOT_TOKEN_ANALYSE
 		&& 15 == X_SLOT_TOKEN_DELIMIT
-		&& 16 == X_SLOT_LEN
+		&& 16 == X_SLOT_HEAP_MARK
+		&& 17 == X_SLOT_HEAP_SWEEP
+		&& 18 == X_SLOT_OBJ_ALLOC
+		&& 19 == X_SLOT_LEN
 	);
 
 	return NULL;
@@ -185,9 +188,11 @@ static char *test_slots_make(void)
 
 	p_base = x_eval_make(NULL, NULL);
 
-	_it_should("hold the slot vector in the base's slots field",
+	_it_should("hold the tree in the base's first unit and the slot vector in its second",
 		x_eval_slots_isset(p_base)
-		&& x_eval_slots(p_base) == x_eval_field_slots(p_base)
+		&& x_base(p_base) == x_firstobj(p_base)
+		&& x_eval_slots(p_base) == x_restobj(p_base)
+		&& x_obj_type(p_base) == (x_obj_t *)x_eval_obj
 	);
 
 	_it_should("make a base with the routines set",
@@ -524,6 +529,70 @@ static char *test_slots_vector_type(void)
 	return NULL;
 }
 
+/* Whether @p p_obj is on the allocation chain of @p p_base. */
+static int test_on_chain(x_obj_t *p_base, x_obj_t *p_obj)
+{
+	x_obj_t *p;
+
+	for (p = x_obj_heap(p_base); p != NULL; p = x_obj_heap(p)) {
+		if (p == p_obj) {
+			return 1;
+		}
+	}
+
+	return 0;
+}
+
+static char *test_slots_heap(void)
+{
+	x_obj_t *p_base, *p_obj, *p_kept, *p_lost;
+	x_obj_t args[3] = { { .p = NULL }, { .i = X_OBJ_FLAG_RO }, { .i = X_OBJ_LENGTH_ATOM } };
+
+	p_base = test_make_base();
+
+	args[0].p = (x_obj_t *)x_type_atom_obj;
+	p_obj = SLOT(p_base, X_SLOT_OBJ_ALLOC, args);
+	_it_should("allocate through the obj-alloc slot",
+		p_obj != NULL
+		&& x_obj_type_issatom(p_obj)
+		&& X_OBJ_FLAG_RO == (x_obj_flags(p_obj) & X_OBJ_FLAG_RO)
+		&& p_obj == x_obj_heap(p_base)
+	);
+
+	/* A collection, each phase through its slot: one object bound in the
+	 * root environment, and one nothing refers to. */
+	p_kept = x_mkint(p_base, (x_int_t)1);
+	x_env_bind(p_base, x_argrun({ .p = x_eval_field_env(p_base) },
+		{ .p = x_mksymbol(p_base, "slot-spec-kept") }, { .p = p_kept }));
+	p_lost = x_mkint(p_base, (x_int_t)3);
+
+	_it_should("mark through the heap-mark slot",
+		NULL == SLOT(p_base, X_SLOT_HEAP_MARK, NULL)
+		&& X_OBJ_FLAG_MARK == (x_obj_flags(p_kept) & X_OBJ_FLAG_MARK)
+		&& 0 == (x_obj_flags(p_lost) & X_OBJ_FLAG_MARK)
+	);
+
+	_it_should("sweep through the heap-sweep slot, keeping what was marked",
+		NULL == SLOT(p_base, X_SLOT_HEAP_SWEEP, NULL)
+		&& test_on_chain(p_base, p_kept)
+		&& ! test_on_chain(p_base, p_lost)
+		&& 0 == (x_obj_flags(p_kept) & X_OBJ_FLAG_MARK)
+	);
+
+	/* The primitives collect through the slots: a base with a mark phase
+	 * of its own runs that one. */
+	x_eval_slot(p_base, X_SLOT_HEAP_MARK) = _replaced_fn;
+	_replaced_called = 0;
+	x_prim_heap_mark(p_base, NULL);
+	_it_should("run the mark phase a base's slot holds",
+		1 == _replaced_called
+	);
+	x_eval_slot(p_base, X_SLOT_HEAP_MARK) = x_heap_mark_phase;
+
+	test_cleanup(p_base);
+	return NULL;
+}
+
 static char *test_slots_child_base(void)
 {
 	x_obj_t *p_base, *p_child;
@@ -569,6 +638,7 @@ static char *run_tests() {
 	_run_test(test_slots_token);
 	_run_test(test_slots_replace);
 	_run_test(test_slots_vector_type);
+	_run_test(test_slots_heap);
 	_run_test(test_slots_child_base);
 
 	return NULL;

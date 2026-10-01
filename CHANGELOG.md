@@ -13,88 +13,64 @@ alongside the library changes they landed with.
 
 ## Unreleased
 
-**The slot vector is the engine's** ([#81]). The base's slot vector, the vector
-layout it has and the routines in it moved out of x-expr, which is back at
-4c0b3bc, before its #14: a library of atoms, pairs and a heap has no
-evaluator routines to call through. In this engine:
-
-- The slot vector is the `slots` field of the base's tree
-  (`tools/contract/base-layout.x`, under `ctrl`); `x_eval_make` makes it and
-  fills every slot from the engine's table. It holds the sixteen engine
-  routines, numbered from 0; `X_SLOT_LEN` is 16.
-- The calls are `x_eval_call` and `x_eval_call_or`, the slot `x_eval_slot`,
-  and `x_eval_slots_isset` says whether a base is one the engine made with a
-  vector in it. `x_argrun` is unchanged. A routine in a slot still takes an
-  argument run.
-- The vector layout is `include/x-vector.h` and `src/x-vector.c`:
-  `x_vector_make`, `x_mksvector`, the static lengths, and `x_slots_make`.
-- x-expr's routines are called by name again -- `x_obj_alloc`,
-  `x_heap_tree_mark`, `x_heap_sweep`, `x_heap_root_chain_mark` -- and x-expr
-  reaches the engine through the hooks `x_base_make` takes, as before 0.2.18:
-  `x_eval_error`, `x_type_heap_mark` and `x_type_heap_free` have their hook
-  signatures back, and the type-name, units and length hooks take a pair
-  list.
-- `tools/contract/base-slots.x` lists the sixteen positions and
-  `tools/check/base-slots.sh` reads one header; a row's fourth element is the
-  type of the word each argument travels in. `tools/contract/base-paths.x` is
-  regenerated: every path begins with `f` again, and `slots` is a path.
-
-[#81]: https://github.com/jonruttan/x-engine-c/pull/81
-
 ## 0.2.18 — 2026-09-30
 
-**The base has a slot vector, and the engine's routines have slots in it**
-([#76]).
-The base object's first data unit holds a vector of function pointers, one
-per slot, and its second holds the tree. A slot holds the routine itself:
-each of the 27 routines has the engine's one signature,
-`(x_obj_t *p_base, x_obj_t *p_args)`, and `p_args` is an argument run, a run
-of datum words, one per argument, with no header and no length. An integer
-or a string travels as a word. A caller writes the run in stack storage and
-calls through the slot, so a routine is replaced while the engine runs by
-storing another function in its slot. x-expr's slots are at positions 0 to
-10, the engine's at 11 to 26.
+**The base holds a slot vector, and the engine's routines are called
+through it** ([#76], [#81], [#82]). The engine's base object has two data
+units: the first holds the tree, as x-expr's one-unit base does; the second
+holds the slot vector, a vector of function pointers, one per slot. A call
+locates the vector in one load from the base. `x_eval_make` makes the
+object: x-expr builds the tree, and the engine's object takes it, with the
+chain of what was allocated building it. A slot holds the routine itself: each of the nineteen
+routines has the engine's one signature,
+`(x_obj_t *p_base, x_obj_t *p_args)`, and `p_args` is an argument run, a
+run of datum words, one per argument, with no header and no length. An
+integer or a string travels as a word. A caller writes the run in stack
+storage and calls through the slot, so a routine is replaced while the
+engine runs by storing another function in its slot, and each base has a
+vector of its own, filled from the engine's table when it is made.
 
 - The positions are a contract, `tools/contract/base-slots.x`, which
-  `make check-base-slots` diffs against the two headers. A row gives the
-  slot's arguments and the type of the word each travels in. It is one of
-  the gates.
-- The type-name, units, length, error, mark and free hooks are slots 0 to 5.
-  Their cells in the tree are gone, and `heap-mark-hooks`, `heap-free-hooks`,
-  `heap-mark-roots` and `heap-root-chain` are each two steps nearer.
-- Every base path begins with `r` where it began with `f`; `base-slots` is
-  the path `f`. `tools/contract/base-paths.x` is regenerated.
-- `x_eval_make` makes a base with every slot filled: x-expr fills the
-  positions of its own five routines, and the engine's table names the hooks
-  and the engine's routines. Each base has a vector of its own.
-- The slot vector is a vector: the length in the first data unit, the
-  elements after it. The engine has a VECTOR type, `x-type/vector`,
-  registered with the others, and the registration gives the base's slot
-  vector the type. `x_mkvector` makes one from the objects it is given. The
-  elements of a vector are a run of words, so a caller that holds its
-  arguments in a vector passes the address of its first element.
-- The routines in slots are the six hooks (`x_type_prim_type_name`,
-  `x_type_prim_units`, `x_type_prim_length`, `x_eval_error`,
-  `x_type_heap_mark`, `x_type_heap_free`), x-expr's `x_obj_alloc`,
-  `x_obj_free`, `x_heap_tree_mark`, `x_heap_sweep` and
-  `x_heap_root_chain_mark`, the evaluator's `x_eval`, `x_eval_list`,
-  `x_eval_body`, `x_eval_body_tco`, `x_eval_tco_trampoline` and
-  `x_eval_op_body`, the calling routines `x_callable_call`,
-  `x_callable_apply` and `x_obj_prim_call`, the environment's
-  `x_env_lookup`, `x_env_bind`, `x_env_extend` and `x_alist_bst_lookup`, and
-  the reader's `x_token_read`, `x_token_analyse` and `x_token_delimit`.
+  `make check-base-slots` diffs against `include/x-eval-slots.h`. A row
+  gives the slot's arguments and the type of the word each travels in. It
+  is one of the gates.
+- The routines are the evaluator's `x_eval`, `x_eval_list`, `x_eval_body`,
+  `x_eval_body_tco`, `x_eval_tco_trampoline` and `x_eval_op_body`; the
+  calling routines `x_callable_call`, `x_callable_apply` and
+  `x_obj_prim_call`; the environment's `x_env_lookup`, `x_env_bind`,
+  `x_env_extend` and `x_alist_bst_lookup`; the reader's `x_token_read`,
+  `x_token_analyse` and `x_token_delimit`; and the collector's
+  `x_heap_mark_phase` and `x_heap_sweep_phase`, with `x_eval_alloc`, which
+  allocates an object. The calls are `x_eval_call` and `x_eval_call_or`,
+  the slot `x_eval_slot`, and `x_argrun` writes a run as an expression.
+- The collector is the engine's. The mark and sweep phases and the
+  allocation of an object are routines in the vector, written over
+  x-expr's chain, traversal, sweep and hooks, which the engine calls by
+  name and which are never in a slot. x-expr reaches the engine through the
+  hooks `x_base_make` takes, as before.
 - `x_eval` takes the expression. `x_eval_arg` is removed: it wrapped an
   expression for `x_eval`, which now wraps it itself.
 - A primitive and a type's handler take a pair list, as before.
   `x_callable_prim_call` is the primitive in front of `x_callable_call`, and
   `jit_eval_arg` keeps its `(base, expr)` signature for compiled code.
-- A call with no base reaches the routine by name (`x_base_call_or`): the
+- A call with no base reaches the routine by name (`x_eval_call_or`): the
   types are registered on a nil base before one exists.
-- An engine raise calls `x_obj_error`, which calls the error slot.
+- The vector layout is `include/x-vector.h` and `src/x-vector.c`:
+  `x_vector_make`, `x_mksvector`, the static lengths, and `x_slots_make`.
+  The engine has a VECTOR type, `x-type/vector`, registered with the
+  others, and the registration gives the base's slot vector the type.
+  `x_mkvector` makes one from the objects it is given.
+- `tools/contract/base-paths.x` is regenerated: `slots` is no longer a
+  path.
+- `(heap tree-mark! obj flags)` passes its flags as the integer given
+  ([#78]).
 - The cost, measured on x-lang's helium boot from source and on a loop of
   300,000 calls, darwin/arm64: about 7% more user time than 0.2.17.
 
 [#76]: https://github.com/jonruttan/x-engine-c/pull/76
+[#78]: https://github.com/jonruttan/x-engine-c/pull/78
+[#81]: https://github.com/jonruttan/x-engine-c/pull/81
+[#82]: https://github.com/jonruttan/x-engine-c/pull/82
 
 ## 0.2.17 — 2026-09-28
 
