@@ -47,7 +47,8 @@
 ; committed descriptor (tools/contract/obj-layout.x, gen-checked like base-layout).
 ;
 ; Flag-gated entries (present in the default build): (sys clock) needs
-; X_SYS_CLOCK; sigint-install/sigint-restore/%sigint-flag need X_SIGNAL.
+; X_SYS_CLOCK; sigint-install/sigint-restore/%sigint-flag and (signal catch)/
+; (signal take) need X_SIGNAL.
 ; #t/#f are bound from interned singletons, not name literals -- the scanner
 ; special-cases them.
 
@@ -176,6 +177,8 @@
                               ;   already had.
   (ptr fill! raw-mem)         ; x_lib_memset; the zeroing half, so a buffer that wants
                               ;   zeroing need not come from libc's calloc.
+  (signal catch sys)          ; record a signal's arrival; what it means is the caller's
+  (signal take sys)           ;   to decide, so the handler is C and nothing more
   (str ->ptr ffi)
   (str ->sym alloc)
   (str append alloc)

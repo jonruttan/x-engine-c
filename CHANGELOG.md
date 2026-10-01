@@ -13,6 +13,18 @@ alongside the library changes they landed with.
 
 ## Unreleased
 
+**Any signal can be caught and its arrival read back** ([#84]). `(signal
+catch N)` installs a handler for signal N that records the arrival in a
+static flag and does nothing else; `(signal take N)` answers 1 if N arrived
+since the last take, clearing the record, and 0 otherwise. What an arrival
+means is the caller's to decide, so the handler stays C and the policy
+stays in x. As SIGINT's handler does, it does not restart an interrupted
+read or poll, so a program waiting for input wakes up to look. A number
+that names no signal, or a signal that cannot be caught, answers -1 from
+catch. Both are in the default build, beside SIGINT's, under `X_SIGNAL`.
+
+[#84]: https://github.com/jonruttan/x-engine-c/pull/84
+
 **A call through a slot costs less** ([#83]). The evaluator, symbol lookup,
 argument evaluation and the call path call through the slot without the
 test for a base and a vector, which they always have; the test stays where

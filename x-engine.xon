@@ -7,7 +7,7 @@
 ; binary at install time, not properties of this source tree.
 (engine-name "x-engine-c")
 (binary "x-bin")
-(isa "sha256:c66c9662f829d9437540aeaad2644bad4b0e039b2db8c2f858548f889169538f")
+(isa "sha256:015b12330fcbdcab2570aa9121a0ecb33c457ca645c7b9f6aa56eb0fdb84ebf5")
 (layout "sha256:45e4e29174d1d6343a67e4d1d40f250af1357b1e78fb16e207cd3255ab7702e3")
 (profile core)
 (profile gc)
