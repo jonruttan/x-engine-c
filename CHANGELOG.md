@@ -13,6 +13,8 @@ alongside the library changes they landed with.
 
 ## Unreleased
 
+## 0.2.19 — 2026-10-01
+
 **A call through a slot costs less** ([#83]). The evaluator, symbol lookup,
 argument evaluation and the call path call through the slot without the
 test for a base and a vector, which they always have; the test stays where
