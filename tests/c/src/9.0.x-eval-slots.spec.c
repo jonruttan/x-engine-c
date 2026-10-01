@@ -188,10 +188,11 @@ static char *test_slots_make(void)
 
 	p_base = x_eval_make(NULL, NULL);
 
-	_it_should("hold the slot vector in the base's first unit",
+	_it_should("hold the tree in the base's first unit and the slot vector in its second",
 		x_eval_slots_isset(p_base)
-		&& x_eval_slots(p_base) == x_firstobj(p_base)
-		&& x_base(p_base) == x_restobj(p_base)
+		&& x_base(p_base) == x_firstobj(p_base)
+		&& x_eval_slots(p_base) == x_restobj(p_base)
+		&& x_obj_type(p_base) == (x_obj_t *)x_eval_obj
 	);
 
 	_it_should("make a base with the routines set",

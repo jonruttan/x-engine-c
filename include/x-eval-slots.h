@@ -39,11 +39,12 @@
  * are a run of words too, so a caller that holds its arguments in a
  * vector passes the address of its first element.
  *
- * The slot vector is the base object's first data unit, the unit x-expr
- * leaves to the layer above it (x-base.h); the tree is the second. So a
- * call locates the vector in one load from the base, and each base has a
- * vector of its own: x_eval_make() makes it and fills every slot from the
- * engine's table, and a slot replaced in one base is replaced there alone.
+ * The slot vector is the base object's second data unit. x-expr makes a
+ * base of one unit holding the tree; x_eval_make() makes the engine's base
+ * of two, the tree first, where x-expr reads it, and the vector second,
+ * so a call locates the vector in one load from the base. Each base has a
+ * vector of its own, filled from the engine's table when the base is made,
+ * and a slot replaced in one base is replaced there alone.
  * The positions are part of the layout contract: they are listed in
  * tools/contract/base-slots.x, which tools/check/base-slots.sh diffs
  * against this header, and a language that replaces a routine reads its
@@ -167,16 +168,16 @@ enum x_eval_slot_enum
  */
 #define x_argrun(...)				((x_obj_t[]){ __VA_ARGS__ })
 
-/** The slot vector of base @p B (an lvalue): its first data unit. */
-#define x_eval_slots(B)				x_firstobj((B))
+/** The slot vector of base @p B (an lvalue): its second data unit. */
+#define x_eval_slots(B)				x_restobj((B))
 
 /** The function pointer in slot @p I of base @p B (an lvalue). */
 #define x_eval_slot(B,I)			x_slot(x_eval_slots((B)), (I))
 
 /**
- * Test whether base @p B has a slot vector: one load. A base x-expr made
- * on its own leaves the first unit nil, and an object standing as an
- * allocation context has nothing there.
+ * Test whether base @p B has a slot vector: one load. The base must have
+ * two units: an object standing as an allocation context is a pair with
+ * nothing in it, never an atom, since the second unit is read.
  */
 #define x_eval_slots_isset(B) \
 	((B) != NULL && x_eval_slots((B)) != NULL)

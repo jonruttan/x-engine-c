@@ -1,6 +1,6 @@
 ; tools/contract/base-slots.x — the positions in the base's slot vector.
 ;
-; SINGLE SOURCE OF TRUTH for the slot vector: the base object's first data
+; SINGLE SOURCE OF TRUTH for the slot vector: the base object's second data
 ; unit holds a vector whose elements are function pointers, one per slot, and
 ; a routine the engine calls through a slot is replaced by storing another
 ; function in it.  This is the fourth layout contract, after tools/contract/base-layout.x,

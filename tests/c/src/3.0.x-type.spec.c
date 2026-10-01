@@ -609,8 +609,8 @@ static char *test_type_heap_mark(void)
 
 	p_base = x_mkspair(NULL, X_OBJ_FLAG_NONE, NULL, NULL);
 
-	/* Path 1: a base object returns its tree, the second of its two units */
-	p_obj = x_mkspair(p_base, X_OBJ_FLAG_NONE, NULL, 99);
+	/* Path 1: a base object returns its tree, the first of its two units */
+	p_obj = x_mkspair(p_base, X_OBJ_FLAG_NONE, 99, NULL);
 	x_obj_type(p_obj) = (x_obj_t *)&x_eval_obj;
 	p_ret = x_type_heap_mark(p_base, p_obj, 0);
 	_it_should("base type returns the base's tree",

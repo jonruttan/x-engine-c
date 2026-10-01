@@ -16,10 +16,12 @@ alongside the library changes they landed with.
 ## 0.2.18 — 2026-09-30
 
 **The base holds a slot vector, and the engine's routines are called
-through it** ([#76], [#81], [#82]). The base object has two data units:
-the first holds the slot vector, a vector of function pointers, one per
-slot; the second holds the tree. A call locates the vector in one load
-from the base. A slot holds the routine itself: each of the nineteen
+through it** ([#76], [#81], [#82]). The engine's base object has two data
+units: the first holds the tree, as x-expr's one-unit base does; the second
+holds the slot vector, a vector of function pointers, one per slot. A call
+locates the vector in one load from the base. `x_eval_make` makes the
+object: x-expr builds the tree, and the engine's object takes it, with the
+chain of what was allocated building it. A slot holds the routine itself: each of the nineteen
 routines has the engine's one signature,
 `(x_obj_t *p_base, x_obj_t *p_args)`, and `p_args` is an argument run, a
 run of datum words, one per argument, with no header and no length. An
@@ -58,9 +60,8 @@ vector of its own, filled from the engine's table when it is made.
   The engine has a VECTOR type, `x-type/vector`, registered with the
   others, and the registration gives the base's slot vector the type.
   `x_mkvector` makes one from the objects it is given.
-- `ext/x-expr` moves to the commit that gives the base object two units
-  (jonruttan/x-expr#17). Every base path begins with `r` where it began
-  with `f`; `tools/contract/base-paths.x` is regenerated.
+- `tools/contract/base-paths.x` is regenerated: `slots` is no longer a
+  path.
 - `(heap tree-mark! obj flags)` passes its flags as the integer given
   ([#78]).
 - The cost, measured on x-lang's helium boot from source and on a loop of
