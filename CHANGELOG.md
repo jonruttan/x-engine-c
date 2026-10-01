@@ -24,6 +24,7 @@ that names no signal, or a signal that cannot be caught, answers -1 from
 catch. Both are in the default build, beside SIGINT's, under `X_SIGNAL`.
 
 [#84]: https://github.com/jonruttan/x-engine-c/pull/84
+
 **A call through a slot costs less** ([#83]). The evaluator, symbol lookup,
 argument evaluation and the call path call through the slot without the
 test for a base and a vector, which they always have; the test stays where
