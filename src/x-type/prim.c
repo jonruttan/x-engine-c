@@ -156,7 +156,7 @@ x_obj_t *x_callable_call(x_obj_t *p_base, x_obj_t *p_args)
  */
 x_obj_t *x_callable_prim_call(x_obj_t *p_base, x_obj_t *p_args)
 {
-	return x_eval_call_or(p_base, X_SLOT_CALLABLE_CALL, x_callable_call, x_argrun({ .p = p_args }));
+	return x_eval_call(p_base, X_SLOT_CALLABLE_CALL, x_argrun({ .p = p_args }));
 }
 
 /**
@@ -189,7 +189,7 @@ x_obj_t *x_callable_apply(x_obj_t *p_base, x_obj_t *p_args)
 
 	/* Operative via apply: trampoline for TCO */
 	if (x_primval(p_fn) == (x_fn_t)x_type_operative_call) {
-		return x_eval_call_or(p_base, X_SLOT_EVAL_TCO_TRAMPOLINE, x_eval_tco_trampoline, x_argrun({ .p = x_type_operative_call(p_base, p_call) }));
+		return x_eval_call(p_base, X_SLOT_EVAL_TCO_TRAMPOLINE, x_argrun({ .p = x_type_operative_call(p_base, p_call) }));
 	}
 
 	/* C prim: call through fn-ptr with (fn . args) */

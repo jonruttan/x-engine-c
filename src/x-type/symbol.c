@@ -304,7 +304,7 @@ x_obj_t *x_type_symbol_eval(x_obj_t *p_base, x_obj_t *p_args)
 	}
 
 	lookup_args[0].p = x_eval_field_env(p_base);
-	p_entry = x_eval_call_or(p_base, X_SLOT_ENV_LOOKUP, x_env_lookup, lookup_args);
+	p_entry = x_eval_call(p_base, X_SLOT_ENV_LOOKUP, lookup_args);
 	if (p_entry != NULL) {
 		return x_restobj(p_entry);
 	}

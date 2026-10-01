@@ -118,7 +118,7 @@ x_obj_t *x_eval_op_body(x_obj_t *p_base, x_obj_t *p_args)
 		}
 
 		x_restobj((x_obj_t *)root) = p_body;
-		x_eval_call_or(p_base, X_SLOT_EVAL, x_eval, x_argrun({ .p = x_firstobj(p_body) }));
+		x_eval_call(p_base, X_SLOT_EVAL, x_argrun({ .p = x_firstobj(p_body) }));
 
 		p_body = x_restobj(p_body);
 	}
@@ -297,7 +297,7 @@ eval_start:
 
 	if ( ! x_obj_isnil(p_base, x_firstobj((x_obj_t *)prim_args))) {
 		x_restobj((x_obj_t *)prim_args) = p_args;
-		p_exp = x_eval_call_or(p_base, X_SLOT_CALLABLE_CALL, x_callable_call, x_argrun({ .p = (x_obj_t *)prim_args }));
+		p_exp = x_eval_call(p_base, X_SLOT_CALLABLE_CALL, x_argrun({ .p = (x_obj_t *)prim_args }));
 
 		if (p_exp == p_args) {
 			goto eval_start;
@@ -471,10 +471,10 @@ x_obj_t *x_eval_list(x_obj_t *p_base, x_obj_t *p_vector)
 	x_firstobj((x_obj_t *)root) = p_args;
 	x_heap_root_push(p_cell, root);
 
-	p_val = x_eval_call_or(p_base, X_SLOT_EVAL, x_eval, x_argrun({ .p = x_firstobj(p_args) }));
+	p_val = x_eval_call(p_base, X_SLOT_EVAL, x_argrun({ .p = x_firstobj(p_args) }));
 	x_restobj((x_obj_t *)root) = p_val;
 
-	p_rest = x_eval_call_or(p_base, X_SLOT_EVAL_LIST, x_eval_list, x_argrun({ .p = x_restobj(p_args) }));
+	p_rest = x_eval_call(p_base, X_SLOT_EVAL_LIST, x_argrun({ .p = x_restobj(p_args) }));
 
 	x_heap_root_pop(p_cell);
 
@@ -517,7 +517,7 @@ x_obj_t *x_eval_body(x_obj_t *p_base, x_obj_t *p_args)
 #endif
 		x_firstobj((x_obj_t *)root) = p_body;
 
-		p_result = x_eval_call_or(p_base, X_SLOT_EVAL, x_eval, x_argrun({ .p = x_firstobj(p_body) }));
+		p_result = x_eval_call(p_base, X_SLOT_EVAL, x_argrun({ .p = x_firstobj(p_body) }));
 
 		p_body = x_restobj(p_body);
 	}
@@ -619,7 +619,7 @@ x_obj_t *x_eval_body_tco(x_obj_t *p_base, x_obj_t *p_args)
 
 		x_firstobj((x_obj_t *)root) = p_body;
 
-		p_result = x_eval_call_or(p_base, X_SLOT_EVAL, x_eval, x_argrun({ .p = x_firstobj(p_body) }));
+		p_result = x_eval_call(p_base, X_SLOT_EVAL, x_argrun({ .p = x_firstobj(p_body) }));
 
 		p_body = x_restobj(p_body);
 	}
@@ -676,7 +676,7 @@ x_obj_t *x_eval_tco_trampoline(x_obj_t *p_base, x_obj_t *p_args)
 
 		x_firstobj(x_eval_field_tco_expr(p_base)) = NULL;
 		x_firstobj(x_eval_field_tco_env(p_base)) = NULL;
-		p_result = x_eval_call_or(p_base, X_SLOT_EVAL, x_eval, x_argrun({ .p = p_tco }));
+		p_result = x_eval_call(p_base, X_SLOT_EVAL, x_argrun({ .p = p_tco }));
 	}
 
 	x_eval_tco_apply(p_base, p_tco_env);
