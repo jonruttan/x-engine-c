@@ -283,7 +283,8 @@ x_obj_t *x_prim_ffi_register(x_obj_t *p_base, x_obj_t *p_args);
 x_obj_t *x_prim_callcc_register(x_obj_t *p_base, x_obj_t *p_args);
 
 #ifdef X_SIGNAL
-/** Register signal handling primitives and %sigint-flag. */
+/** Register signal handling primitives (sigint-install, sigint-restore,
+ *  signal catch, signal take) and %sigint-flag. */
 x_obj_t *x_prim_signal_register(x_obj_t *p_base, x_obj_t *p_args);
 #endif
 
