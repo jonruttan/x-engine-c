@@ -80,7 +80,10 @@ x_obj_t *x_syntax_quote_register(x_obj_t *p_base, x_obj_t *p_args) { return p_ba
 
 
 /* Test helper function for ptr-call */
-static long test_ffi_long_add3(long a, long b, long c, long d, long e, long f, long g) { (void)d; (void)e; (void)f; (void)g; return a + b + c; }
+static long test_ffi_long_add3(long a, long b, long c, long d, long e, long f, long g, long h) { (void)d; (void)e; (void)f; (void)g; (void)h; return a + b + c; }
+
+/* Test helper for ptr-call: the eighth argument, which must arrive */
+static long test_ffi_long_eighth(long a, long b, long c, long d, long e, long f, long g, long h) { (void)a; (void)b; (void)c; (void)d; (void)e; (void)f; (void)g; return h; }
 
 /*
  * ## Test Overhead
@@ -241,6 +244,31 @@ static char *test_ffi_ptr_call(void)
 	return NULL;
 }
 
+static char *test_ffi_ptr_call_eight(void)
+{
+	x_obj_t *p_base, *p_args, *p_result;
+	x_int_t i;
+
+	p_base = x_eval_make(NULL, NULL);
+	x_prim_register(p_base, NULL);
+
+	/* (ptr-call fptr 1 2 3 4 5 6 7 8) -> 8, the last argument */
+	p_args = NULL;
+	for (i = 8; i >= 1; i--) {
+		p_args = x_mkspair(p_base, X_OBJ_FLAG_NONE,
+			x_mkint(p_base, i), p_args);
+	}
+	p_args = x_mkspair(p_base, X_OBJ_FLAG_NONE, NULL,
+		x_mkspair(p_base, X_OBJ_FLAG_NONE,
+		x_mkptr(p_base, (void *)test_ffi_long_eighth), p_args));
+	p_result = x_prim_ptr_call(p_base, p_args);
+	_it_should("ptr-call: the eighth argument arrives",
+		x_intval(p_result) == 8);
+
+	test_cleanup(p_base);
+	return NULL;
+}
+
 static char *test_ffi_ptr_set_word(void)
 {
 	x_obj_t *p_base, *p_args, *p_result;
@@ -306,6 +334,7 @@ static char *run_tests() {
 	_run_test(test_ffi_string_ptr_convert);
 	_run_test(test_ffi_register);
 	_run_test(test_ffi_ptr_call);
+	_run_test(test_ffi_ptr_call_eight);
 	_run_test(test_ffi_ptr_set_word);
 	_run_test(test_ffi_ptr_call_str_arg);
 

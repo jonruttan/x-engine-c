@@ -13,6 +13,13 @@ alongside the library changes they landed with.
 
 ## Unreleased
 
+**`ptr call` passes up to eight arguments** ([#86]). The eighth fills arm64's
+last integer argument register, so a C function such as zlib's
+`deflateInit2_`, which takes eight, can be called. More than eight are still
+ignored.
+
+[#86]: https://github.com/jonruttan/x-engine-c/pull/86
+
 ## 0.2.19 — 2026-10-01
 
 **Any signal can be caught and its arrival read back** ([#84]). `(signal

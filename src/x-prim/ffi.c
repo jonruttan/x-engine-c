@@ -59,7 +59,7 @@ static void *x_ffi_fptr(x_obj_t *p_base, x_obj_t *p_fptr, const char *who)
 }
 
 /**
- * @brief Call a raw function pointer with up to 7 long-typed arguments.
+ * @brief Call a raw function pointer with up to 8 long-typed arguments.
  *
  * x-lang form: @code (ptr-call fptr args...) @endcode
  *
@@ -68,21 +68,22 @@ static void *x_ffi_fptr(x_obj_t *p_base, x_obj_t *p_fptr, const char *who)
  * C calling convention (long, long, ...) -> long.
  *
  * @param p_base  Base (execution context).
- * @param p_args  Unevaluated: (self fptr arg0 ... arg6).
+ * @param p_args  Unevaluated: (self fptr arg0 ... arg7).
  * @return Integer wrapping the long return value.
- * @note FFI: maximum 7 arguments; excess arguments are silently ignored.
+ * @note FFI: maximum 8 arguments, as many as arm64 passes in registers;
+ *       excess arguments are silently ignored.
  */
 static x_obj_t *x_prim_ptr_call(x_obj_t *p_base, x_obj_t *p_args)
 {
-	long i = 0, p[7];
+	long i = 0, p[8];
 	x_obj_t *arg, *p_fptr;
-	long (*fn)(long, long, long, long, long, long, long);
+	long (*fn)(long, long, long, long, long, long, long, long);
 
 	x_eargs(p_base, p_args, 2, NULL, &p_fptr);
 	p_args = x_args_tail(p_base, p_args, 2); /* skip self + fptr, walk remaining */
-	p[0] = p[1] = p[2] = p[3] = p[4] = p[5] = p[6] = 0;
+	p[0] = p[1] = p[2] = p[3] = p[4] = p[5] = p[6] = p[7] = 0;
 
-	while (!x_obj_isnil(p_base, p_args) && i < 7) {
+	while (!x_obj_isnil(p_base, p_args) && i < 8) {
 		x_eval_spine_guard(p_base, p_args);	/* dotted tail (#487) */
 		arg = x_eval_call_or(p_base, X_SLOT_EVAL, x_eval, x_argrun({ .p = x_firstobj(p_args) }));
 		if (x_obj_isnil(p_base, arg))
@@ -106,12 +107,12 @@ static x_obj_t *x_prim_ptr_call(x_obj_t *p_base, x_obj_t *p_args)
 		p_args = x_restobj(p_args);
 	}
 
-	fn = (long (*)(long, long, long, long, long, long, long))
+	fn = (long (*)(long, long, long, long, long, long, long, long))
 		x_ffi_fptr(p_base, p_fptr,
 			"ptr-call: nil function pointer (dlsym miss?)");
 
 	return x_mkint(p_base, (x_int_t)fn(
-		p[0], p[1], p[2], p[3], p[4], p[5], p[6]));
+		p[0], p[1], p[2], p[3], p[4], p[5], p[6], p[7]));
 }
 
 /**
