@@ -13,6 +13,8 @@ alongside the library changes they landed with.
 
 ## Unreleased
 
+## 0.2.20 — 2026-10-03
+
 **`ptr call` passes up to eight arguments** ([#86]). The eighth fills arm64's
 last integer argument register, so a C function such as zlib's
 `deflateInit2_`, which takes eight, can be called. More than eight are still
