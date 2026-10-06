@@ -171,6 +171,26 @@ static char *test_sexp_list_analyse(void)
 	}
 	test_cleanup(p_base);
 
+	/* NUL returns NULL: strchr would find the set's terminator */
+	p_base = x_eval_make(NULL, NULL);
+	buffer[0] = '\0';
+	p_buffer = x_mkbufferro(p_base, buffer);
+	x_bufferwrite(p_buffer) = x_bufferval(p_buffer) + 1;
+	{
+		x_spair_t score = x_obj_set(NULL, X_OBJ_FLAG_NONE, {});
+		x_spair_t buffer_args[3] = {
+			x_obj_set(NULL, X_OBJ_FLAG_NONE, { p_buffer }, { (x_obj_t *)(buffer_args + 1) }),
+			x_obj_set(NULL, X_OBJ_FLAG_NONE, { score }, { (x_obj_t *)(buffer_args + 2) }),
+			x_obj_set(NULL, X_OBJ_FLAG_NONE, { NULL }, { NULL }),
+		};
+
+		p_args = (x_obj_t *)buffer_args;
+		p_obj = x_type_buffer_read(p_base, p_args);
+		p_obj = x_sexp_list_analyse(p_base, p_args);
+		_it_should("return NULL for NUL", NULL == p_obj);
+	}
+	test_cleanup(p_base);
+
 	return NULL;
 }
 
@@ -204,6 +224,17 @@ static char *test_sexp_list_delimit(void)
 	p_obj = x_sexp_list_delimit(p_base, p_args);
 	_it_should("return buffer for ')'", p_buffer == p_obj);
 	_it_should("unread the character", 0 == x_bufferlen(p_buffer));
+	test_cleanup(p_base);
+
+	/* NUL is not a list delimiter */
+	p_base = x_eval_make(NULL, NULL);
+	buffer[0] = '\0';
+	p_buffer = x_mkbufferro(p_base, buffer);
+	x_bufferwrite(p_buffer) = x_bufferval(p_buffer) + 1;
+	p_args = x_mkspair(p_base, X_OBJ_FLAG_NONE, p_buffer, NULL);
+	x_type_buffer_read(p_base, p_args);
+	p_obj = x_sexp_list_delimit(p_base, p_args);
+	_it_should("return NULL for NUL", NULL == p_obj);
 	test_cleanup(p_base);
 
 	return NULL;

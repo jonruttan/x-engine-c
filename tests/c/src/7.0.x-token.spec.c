@@ -628,6 +628,73 @@ static char *test_token_read_label(void)
 	return NULL;
 }
 
+/* A NUL IS A BYTE.  BYTE accepts any one byte, scored on that byte; its
+ * reader answers the byte's value.  The write cursor alone ends the input. */
+x_obj_t *test_token_byte_read(x_obj_t *p_base, x_obj_t *p_args);
+x_satom_t test_token_byte_read_prim = x_obj_set(x_type_atom_obj, X_OBJ_FLAG_NONE, { .fn = test_token_byte_read });
+
+x_obj_t *test_token_byte_analyse(x_obj_t *p_base, x_obj_t *p_args)
+{
+	x_obj_t *p_buffer = x_token_read_arg_buffer(p_args),
+		*p_score = x_token_read_arg_score(p_args);
+
+	x_firstint(p_score) = x_bufferlen(p_buffer);
+	return p_score;
+}
+x_satom_t test_token_byte_analyse_prim = x_obj_set(x_type_atom_obj, X_OBJ_FLAG_NONE, { .fn = test_token_byte_analyse });
+
+x_obj_t *test_token_byte_read(x_obj_t *p_base, x_obj_t *p_args)
+{
+	x_obj_t *p_buffer = x_token_read_arg_buffer(p_args);
+
+	return x_mksatom(p_base, X_OBJ_FLAG_NONE, (unsigned char)x_bufferval(p_buffer)[0]);
+}
+
+static char *test_token_read_nul(void)
+{
+	x_obj_t *p_base = x_eval_make(NULL, NULL), *p_type, *p_args, *p_obj;
+	x_char_t buf[] = { '\0', 'A', '\0' };
+	x_obj_t *p_buffer;
+	struct x_type_t type_byte = {
+		.p_name = x_mkatom(p_base, (void *)"BYTE"),
+		.p_analyse = (x_obj_t *)test_token_byte_analyse_prim,
+		.p_read = (x_obj_t *)test_token_byte_read_prim
+	};
+
+	p_type = x_type_struct_make(p_base, type_byte);
+	x_eval_type_alist_extend(p_base, p_type);
+
+	p_buffer = x_mkbufferro(p_base, buf);
+	x_bufferwrite(p_buffer) = x_bufferval(p_buffer) + 3;
+	p_args = x_mkpair(p_base, p_buffer, p_base);
+
+	p_obj = x_token_read(p_base, x_argrun({ .p = p_args }));
+	_it_should("a leading NUL is a token, not the end of input",
+		p_obj != (x_obj_t *)x_token_eof_prim
+		&& ! x_obj_isnil(p_base, p_obj)
+		&& x_atomint(p_obj) == 0);
+
+	p_obj = x_token_read(p_base, x_argrun({ .p = p_args }));
+	_it_should("the byte after a NUL is read",
+		p_obj != (x_obj_t *)x_token_eof_prim
+		&& ! x_obj_isnil(p_base, p_obj)
+		&& x_atomint(p_obj) == 'A');
+
+	p_obj = x_token_read(p_base, x_argrun({ .p = p_args }));
+	_it_should("a NUL at the write cursor's last byte is a token",
+		p_obj != (x_obj_t *)x_token_eof_prim
+		&& ! x_obj_isnil(p_base, p_obj)
+		&& x_atomint(p_obj) == 0);
+
+	p_obj = x_token_read(p_base, x_argrun({ .p = p_args }));
+	_it_should("the write cursor ends the input",
+		p_obj == (x_obj_t *)x_token_eof_prim);
+
+	test_cleanup(p_base);
+
+	return NULL;
+}
+
 static char *run_tests() {
 	_run_test(test_token_delimit);
 	_run_test(test_token_read);
@@ -635,6 +702,7 @@ static char *run_tests() {
 	_run_test(test_token_read_null_reader);
 	_run_test(test_token_read_ro_eof);
 	_run_test(test_token_read_label);
+	_run_test(test_token_read_nul);
 
 	return NULL;
 }

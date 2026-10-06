@@ -48,7 +48,10 @@ x_obj_t *x_sexp_list_analyse(x_obj_t *p_base, x_obj_t *p_args)
 	x_obj_t *p_buffer = x_token_read_arg_buffer(p_args),
 		*p_score = x_token_read_arg_score(p_args);
 
-	if (x_lib_strchr(X_SEXP_LIST_CHARS_STR, x_bufferlastchar(p_buffer))) {
+	/* strchr finds the terminator, so a NUL is refused first. */
+	if ('\0' != x_bufferlastchar(p_buffer)
+		&& x_lib_strchr(X_SEXP_LIST_CHARS_STR, x_bufferlastchar(p_buffer)))
+	{
 		x_firstint(p_score) = x_bufferlen(p_buffer);
 		return p_score;
 	}
@@ -70,7 +73,9 @@ x_obj_t *x_sexp_list_delimit(x_obj_t *p_base, x_obj_t *p_args)
 {
 	x_obj_t *p_buffer = x_token_read_arg_buffer(p_args);
 
-	if (x_lib_strchr(X_SEXP_LIST_CHARS_STR, x_bufferlastchar(p_buffer))) {
+	if ('\0' != x_bufferlastchar(p_buffer)
+		&& x_lib_strchr(X_SEXP_LIST_CHARS_STR, x_bufferlastchar(p_buffer)))
+	{
 		x_bufferread(p_buffer)--;
 		return p_buffer;
 	}
