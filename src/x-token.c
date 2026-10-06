@@ -145,7 +145,6 @@ x_obj_t *x_token_analyse(x_obj_t *p_base, x_obj_t *p_args)
 			{ NULL }, { NULL });
 	x_obj_t *p_score = (x_obj_t *)score;
 	x_obj_t **p_cell = x_heap_root_slot(p_base);
-	x_char_t *p_bw;
 
 	/* Root the active analyse handler: the replace-analyser protocol
 	 * below can hand this frame a freshly allocated handler whose only
@@ -203,11 +202,8 @@ x_obj_t *x_token_analyse(x_obj_t *p_base, x_obj_t *p_args)
 					break;
 				}
 
-				p_bw = x_bufferwrite(p_buffer);
-
-				if (x_obj_isnil(p_base, x_type_buffer_read_text(p_base, (x_obj_t *)read_args))
-					&& x_bufferwrite(p_buffer) == p_bw)
-				{
+				/* The write cursor is the only end: a NUL is a byte. */
+				if (x_obj_isnil(p_base, x_type_buffer_read(p_base, (x_obj_t *)read_args))) {
 					x_bufferread(p_buffer) = x_bufferval(p_buffer);
 
 					break;

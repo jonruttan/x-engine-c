@@ -111,7 +111,7 @@ x_obj_t *x_sexp_int_analyse_base(x_obj_t *p_base, x_obj_t *p_args)
 	x_obj_t *p_self = x_0(p_args),
 		*p_buffer = x_token_read_arg_buffer(x_1(p_args));
 
-	if (x_lib_strchr("Xx", x_bufferlastchar(p_buffer))) {
+	if ('\0' != x_bufferlastchar(p_buffer) && x_lib_strchr("Xx", x_bufferlastchar(p_buffer))) {
 		return x_next_state(p_self, &x_sexp_int_analyse_xdigits_prim);
 	}
 
@@ -162,7 +162,7 @@ x_obj_t *x_sexp_int_analyse_sign(x_obj_t *p_base, x_obj_t *p_args)
 	x_obj_t *p_self = x_0(p_args),
 		*p_buffer = x_token_read_arg_buffer(x_1(p_args));
 
-	if (x_lib_strchr("+-", x_bufferlastchar(p_buffer)) != NULL) {
+	if ('\0' != x_bufferlastchar(p_buffer) && x_lib_strchr("+-", x_bufferlastchar(p_buffer)) != NULL) {
 		return x_next_state(p_self, &x_sexp_int_analyse_prefix_prim);
 	}
 

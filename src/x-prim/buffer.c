@@ -31,7 +31,9 @@
  * x-lang form: @code (buffer-token buffer) @endcode
  *
  * Reads the buffer's current length (bytes consumed by the tokenizer)
- * and duplicates that prefix into a new owned string.
+ * and copies that prefix, every byte of it, into a new owned string.
+ * A NUL in the token ends the string's text, but the bytes past it are
+ * in its storage, where byte-ref reaches them.
  *
  * @param p_base  Base (execution context).
  * @param p_args  Unevaluated: (self buffer).
@@ -45,7 +47,9 @@ static x_obj_t *x_prim_buffer_token(x_obj_t *p_base, x_obj_t *p_args)
 
 	x_eargs(p_base, p_args, 2, NULL, &p_buffer);
 	len = x_bufferlen(p_buffer);
-	str = x_lib_strndup(x_bufferval(p_buffer), len);
+	str = (x_char_t *)x_sys_malloc(len + 1);
+	x_lib_memcpy(str, x_bufferval(p_buffer), len);
+	str[len] = '\0';
 
 	return x_mkstrown(p_base, str);
 }
@@ -75,31 +79,44 @@ static x_obj_t *x_prim_buffer_last_char(x_obj_t *p_base, x_obj_t *p_args)
 /**
  * @brief Tokenize a string using a token base's registered types.
  *
- * x-lang form: @code (token-read-string token-base string) @endcode
+ * x-lang form: @code (token-read-string token-base string [start len]) @endcode
  *
  * Copies the input string into a read-only buffer, then repeatedly calls
  * x_token_read against the token base to produce a linked list of token
  * objects. If metadata tracking is active, the buffer is marked with
  * initial line number 1.
  *
+ * Without @p start and @p len the input is the string's text, up to its
+ * first NUL.  With them it is the @p len bytes at byte offset @p start,
+ * NULs included -- a span of a binary buffer, as str-byte-sub addresses
+ * one.  The span is the caller's to keep inside the string's storage.
+ *
  * @param p_base       Calling execution context (tokens allocated here).
- * @param p_args       Unevaluated: (self token-base string).
+ * @param p_args       Unevaluated: (self token-base string [start len]).
  * @return Linked list of token objects, or NULL for empty input.
  * @note The token base should have tokenizer types registered via
  *       make-token-base + base-make-type.
  */
 static x_obj_t *x_prim_token_read_string(x_obj_t *p_base, x_obj_t *p_args)
 {
-	x_obj_t *p_token_base, *p_str;
+	x_obj_t *p_token_base, *p_str, *p_start, *p_len;
 	x_char_t *str;
 	x_int_t len;
 	x_char_t *buf;
 	x_obj_t *p_buffer, *p_token, *p_result, *p_tail, *p_node;
 	x_spair_t read_args[1];
 
-	x_eargs(p_base, p_args, 3, NULL, &p_token_base, &p_str);
+	x_eargs(p_base, p_args, 5, NULL, &p_token_base, &p_str, &p_start, &p_len);
 	str = x_strval(p_str);
-	len = x_lib_strlen(str);
+
+	if (x_obj_isnil(p_base, p_len)) {
+		len = x_lib_strlen(str);
+	}
+	else {
+		str += x_intval(p_start);
+		len = x_intval(p_len);
+	}
+
 	buf = (x_char_t *)x_sys_malloc(len + 1);
 
 	x_lib_memcpy(buf, str, len);

@@ -80,7 +80,9 @@ x_obj_t *x_sexp_comment_delimit(x_obj_t *p_base, x_obj_t *p_args)
 {
 	x_obj_t *p_buffer = x_token_read_arg_buffer(p_args);
 
-	if (x_lib_strchr(X_SEXP_COMMENT_CHARS_STR, x_bufferlastchar(p_buffer))) {
+	if ('\0' != x_bufferlastchar(p_buffer)
+		&& x_lib_strchr(X_SEXP_COMMENT_CHARS_STR, x_bufferlastchar(p_buffer)))
+	{
 		x_bufferread(p_buffer)--;
 		return p_buffer;
 	}

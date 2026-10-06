@@ -26,7 +26,8 @@ x_satom_t x_sexp_whitespace_analyse1_prim = x_obj_set(x_type_atom_obj, X_OBJ_FLA
  * Analyse state 1: detect a whitespace character.
  *
  * Checks the last character in the buffer against
- * @ref X_SEXP_WHITESPACE_CHARS_STR.
+ * @ref X_SEXP_WHITESPACE_CHARS_STR.  A NUL is whitespace too: a symbol
+ * is a C string, so a NUL must end one rather than join it.
  *
  * @param p_base  Base (execution context).
  * @param p_args  Read-args containing the token buffer.
@@ -36,7 +37,9 @@ x_obj_t *x_sexp_whitespace_analyse1(x_obj_t *p_base, x_obj_t *p_args)
 {
 	x_obj_t *p_buffer = x_token_read_arg_buffer(p_args);
 
-	if (x_lib_strchr(X_SEXP_WHITESPACE_CHARS_STR, x_bufferlastchar(p_buffer))) {
+	if ('\0' == x_bufferlastchar(p_buffer)
+		|| x_lib_strchr(X_SEXP_WHITESPACE_CHARS_STR, x_bufferlastchar(p_buffer)))
+	{
 		return x_sexp_whitespace_analyse2_prim;
 	}
 
