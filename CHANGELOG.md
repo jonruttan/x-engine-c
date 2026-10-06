@@ -13,6 +13,15 @@ alongside the library changes they landed with.
 
 ## Unreleased
 
+**A NUL is an ordinary byte in the tokenizer** ([#88]). The buffer's write
+cursor is the only end of input, so a 0x00 reaches the analysers like any other
+byte. The sexp list, comment and integer analysers refuse it, and whitespace
+takes it, so a NUL in x source still ends a symbol. `buf tok` copies every byte
+of the token, and `tok read-str` takes an optional `start len` span, NULs
+included.
+
+[#88]: https://github.com/jonruttan/x-engine-c/pull/88
+
 ## 0.2.20 — 2026-10-03
 
 **`ptr call` passes up to eight arguments** ([#86]). The eighth fills arm64's
