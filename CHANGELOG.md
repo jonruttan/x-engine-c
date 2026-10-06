@@ -13,6 +13,8 @@ alongside the library changes they landed with.
 
 ## Unreleased
 
+## 0.2.21 — 2026-10-06
+
 **A NUL is an ordinary byte in the tokenizer** ([#88]). The buffer's write
 cursor is the only end of input, so a 0x00 reaches the analysers like any other
 byte. The sexp list, comment and integer analysers refuse it, and whitespace
