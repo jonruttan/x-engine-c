@@ -49,6 +49,8 @@ x_obj_t *x_make_ptr(x_obj_t *p_base, x_obj_flag_t flags, void *p);
 
 /** Build the POINTER type struct descriptor. */
 x_obj_t *x_type_ptr_struct(x_obj_t *p_base, x_obj_t *p_args);
+/** Image save handler: the one unit is a foreign address. */
+extern x_satom_t x_type_ptr_save_prim;
 /** Register (or retrieve) the POINTER type in the type alist. */
 x_obj_t *x_type_ptr_register(x_obj_t *p_base, x_obj_t *p_args);
 /** Type-system make handler for POINTER objects. */

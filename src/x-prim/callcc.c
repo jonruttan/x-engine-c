@@ -86,10 +86,143 @@ typedef struct {
 	x_obj_t    *p_save_stack;
 	x_obj_t    *p_error_handler;
 	x_obj_t    *p_eval_list_stack;
-	x_obj_t    *p_root_chain;     /* GC root-chain head; points into the
-	                               * captured segment, valid only after
-	                               * the stack bytes are restored */
+	x_obj_t    *p_root_chain;     /* GC root-chain head at capture; points
+	                               * into the captured segment, valid only
+	                               * after the stack bytes are restored --
+	                               * while dormant, read through the copy */
 } x_callcc_cont_t;
+
+/** @} */
+
+/** @name Continuation Type
+ *  @{
+ *
+ *  A continuation is an owning pointer to its x_callcc_cont_t, typed so
+ *  the collector marks what its dormant root chain holds.  The chain's
+ *  nodes are stack objects of the captured segment; while dormant their
+ *  bytes are in stack_copy, at the same offset from stack_lo, and the
+ *  links and pointers among them still name the original addresses.
+ */
+
+#define X_TYPE_CONT_NAME	"CONTINUATION"	/**< Canonical type name. */
+
+static x_obj_t *x_callcc_cont_mark(x_obj_t *p_base, x_obj_t *p_args);
+static x_obj_t *x_callcc_cont_struct(x_obj_t *p_base, x_obj_t *p_args);
+
+static x_satom_t x_callcc_cont_name = x_obj_set(x_type_atom_obj, X_OBJ_FLAG_NONE, { .s = (x_char_t *)X_TYPE_CONT_NAME }),
+	x_callcc_cont_mark_prim = x_obj_set(x_type_atom_obj, X_OBJ_FLAG_NONE, { (x_obj_t *)&x_callcc_cont_mark }),
+	x_callcc_cont_struct_prim = x_obj_set(x_type_atom_obj, X_OBJ_FLAG_NONE, { (x_obj_t *)&x_callcc_cont_struct });
+
+/** Where the bytes at @p p sit while @p cont is dormant.
+ *
+ *  @param cont The continuation.
+ *  @param p    An address.
+ *  @return The address in stack_copy, or NULL when @p p is outside the
+ *          captured segment.
+ */
+static x_obj_t *x_callcc_saved(const x_callcc_cont_t *cont, x_obj_t *p)
+{
+	const char *p_lo = (const char *)cont->stack_lo;
+
+	if ((const char *)p < p_lo || (const char *)p >= p_lo + cont->stack_size) {
+		return NULL;
+	}
+
+	return (x_obj_t *)((char *)cont->stack_copy + ((const char *)p - p_lo));
+}
+
+/** Mark the tree at @p p as the dormant segment holds it.
+ *
+ *  An object of the segment is read from the copy and left unflagged --
+ *  a flag written there would outlive this collection -- and only its
+ *  pair structure is followed; an object off the segment is marked as
+ *  the live chain marks it.
+ *
+ *  @param p_base Interpreter base context.
+ *  @param cont   The continuation.
+ *  @param p      The tree.
+ *  @param flags  Mark flags.
+ */
+static void x_callcc_mark_saved(x_obj_t *p_base, const x_callcc_cont_t *cont,
+	x_obj_t *p, x_obj_flag_t flags)
+{
+	x_obj_t *p_saved;
+
+	while (p != NULL) {
+		p_saved = x_callcc_saved(cont, p);
+
+		if (p_saved == NULL) {
+			x_heap_tree_mark(p_base, p, flags);
+
+			return;
+		}
+
+		if ( ! x_obj_type_isspair(p_saved)) {
+			return;
+		}
+
+		x_callcc_mark_saved(p_base, cont, x_firstobj(p_saved), flags);
+		p = x_restobj(p_saved);
+	}
+}
+
+/** GC mark handler: what the dormant root chain holds.
+ *  x-lang: (mark cont flags)
+ *
+ *  @param p_base Interpreter base context.
+ *  @param p_args Argument run: (cont flags).
+ *  @return NULL.
+ */
+static x_obj_t *x_callcc_cont_mark(x_obj_t *p_base, x_obj_t *p_args)
+{
+	x_obj_flag_t flags = x_firstint(x_restobj(p_args));
+	const x_callcc_cont_t *cont = (const x_callcc_cont_t *)x_ptrval(x_firstobj(p_args));
+	x_obj_t *p_node, *p_saved;
+
+	for (p_node = cont->p_root_chain;
+			(p_saved = x_callcc_saved(cont, p_node)) != NULL;
+			p_node = x_obj_heap(p_saved)) {
+		x_callcc_mark_saved(p_base, cont, p_node, flags);
+	}
+
+	return NULL;
+}
+
+/** Build the CONTINUATION type struct descriptor.
+ *
+ *  @param p_base Interpreter base context.
+ *  @param p_args Unused.
+ *  @return Type struct pair-tree for CONTINUATION.
+ */
+static x_obj_t *x_callcc_cont_struct(x_obj_t *p_base, x_obj_t *p_args)
+{
+	struct x_type_t type = {
+		.p_save = (x_obj_t *)x_type_ptr_save_prim,
+		.p_name = x_callcc_cont_name,
+		.p_mark = x_callcc_cont_mark_prim
+	};
+
+	(void)p_args;
+
+	return x_type_struct_make(p_base, type);
+}
+
+/** Wrap @p cont as an owning CONTINUATION object.
+ *
+ *  @param p_base Interpreter base context.
+ *  @param cont   The continuation; freed with the object.
+ *  @return The CONTINUATION object.
+ */
+static x_obj_t *x_callcc_cont_make(x_obj_t *p_base, x_callcc_cont_t *cont)
+{
+	x_spair_t args[2] = {
+		x_obj_set(NULL, X_OBJ_FLAG_NONE, { x_callcc_cont_name }, { (x_obj_t *)(args + 1) }),
+		x_obj_set(NULL, X_OBJ_FLAG_NONE, { x_callcc_cont_struct_prim }, { NULL })
+	};
+
+	return x_obj_make(p_base, x_type_struct_get(p_base, (x_obj_t *)args),
+		X_OBJ_FLAG_OWN, X_OBJ_LENGTH_ATOM, cont);
+}
 
 /** @} */
 
@@ -283,6 +416,7 @@ static X_CALLCC_NO_ASAN x_obj_t *x_prim_callcc(x_obj_t *p_base,
 	x_callcc_copy(cont->stack_copy, stack_lo, stack_size);
 	cont->stack_size = stack_size;
 	cont->stack_lo = stack_lo;
+	cont->p_root_chain = x_heap_root_chain(p_base);
 
 	/* Build GC-visible interpreter state list:
 	 * (env save-stack error-handler eval-list root-chain).  The
@@ -302,9 +436,9 @@ static X_CALLCC_NO_ASAN x_obj_t *x_prim_callcc(x_obj_t *p_base,
 							(void *)x_heap_root_chain(p_base)),
 						NULL)))));
 
-	/* Wrap continuation struct as POINTER with OWN flag.
+	/* Wrap continuation struct as CONTINUATION with OWN flag.
 	 * GC will free the struct (and embedded stack copy). */
-	p_ptr = x_mkptrown(p_base, cont);
+	p_ptr = x_callcc_cont_make(p_base, cont);
 
 	/* Build k = (fn %cc-args (%cc-invoke %cc-ptr %cc-state %cc-args))
 	 * Variadic: %cc-args collects all args as a list.
