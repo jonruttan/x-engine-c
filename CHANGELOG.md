@@ -13,6 +13,16 @@ alongside the library changes they landed with.
 
 ## Unreleased
 
+**A dormant continuation's root chain is marked from its stack copy** ([#92]).
+A continuation is its own type, `CONTINUATION`, whose mark walks the root
+chain saved at capture where its bytes wait, in the stack copy. An object
+held only by a captured frame -- an argument evaluated while the next one
+runs, a generator suspended mid-expression -- survives a collect while the
+continuation waits; before, it was swept and the resumed frame used freed
+memory (x-lang#283).
+
+[#92]: https://github.com/jonruttan/x-engine-c/pull/92
+
 ## 0.2.22 — 2026-10-16
 
 **A typed list marks without a C frame a pair** ([#90]). The generic mark
