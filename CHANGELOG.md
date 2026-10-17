@@ -13,6 +13,13 @@ alongside the library changes they landed with.
 
 ## Unreleased
 
+**A typed list marks without a C frame a pair** ([#90]). The generic mark
+traversal marks every reference unit but the last and returns that one to the
+mark loop, so a list's rest is followed, not recursed into. A collect with
+some 35,000 pairs live overflowed the C stack before.
+
+[#90]: https://github.com/jonruttan/x-engine-c/pull/90
+
 ## 0.2.21 — 2026-10-06
 
 **A NUL is an ordinary byte in the tokenizer** ([#88]). The buffer's write
