@@ -679,6 +679,36 @@ static char *test_type_list_call(void)
 	return NULL;
 }
 
+/* A list's rest is the last unit the mark hook hands back, so marking a
+ * long list takes no C frame per pair. */
+static char *test_type_list_mark_long(void)
+{
+	x_obj_t *p_base, *p_list, *p_cur;
+	x_int_t i, marked;
+
+	p_base = x_eval_make(NULL, NULL);
+	p_list = nil;
+
+	for (i = 0; i < 1000000; i++) {
+		p_list = x_mklist(p_base, atom(i), p_list);
+	}
+
+	x_heap_tree_mark(p_base, p_list, X_OBJ_FLAG_MARK);
+
+	marked = 0;
+
+	for (p_cur = p_list; p_cur != NULL; p_cur = x_restobj(p_cur)) {
+		if (x_obj_flags(p_cur) & X_OBJ_FLAG_MARK) {
+			marked++;
+		}
+	}
+
+	_it_should("mark every pair of a million-pair list", marked == 1000000);
+	test_cleanup(p_base);
+
+	return NULL;
+}
+
 static char *run_tests() {
 	_run_test(test_obj_type_islist);
 	_run_test(test_mklist);
@@ -694,6 +724,7 @@ static char *run_tests() {
 	_run_test(test_type_list_iter);
 	_run_test(test_type_list_length);
 	_run_test(test_type_list_call);
+	_run_test(test_type_list_mark_long);
 
 	return NULL;
 }

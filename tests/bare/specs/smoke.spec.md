@@ -279,3 +279,22 @@ shows it.
 ```
 ---
     *** ERROR: type survived
+
+### a collect with a long list live marks it without a C frame a pair
+
+`pair` makes LIST-typed objects, whose units the type's mark hook walks. It
+used to mark every unit by recursion, the rest as deep as the first, so a
+collect with some 35,000 pairs live overflowed the C stack (SIGSEGV). The
+hook now hands the last unit back to the mark loop, which follows it.
+
+```scheme
+(include "tests/bare/prim-ref.x")
+(def %collect (%prim-ref (lit heap) (lit collect)))
+(def %build (fn (self n acc) (match ((= n 0) acc) (#t (self (- n 1) (pair n acc))))))
+(def %last (fn (self l) (match ((eq? (rest l) ()) (first l)) (#t (self (rest l))))))
+(def %long (%build 60000 ()))
+(%collect)
+(match ((= (%last %long) 60000) (error "marked")) (#t (error "lost")))
+```
+---
+    *** ERROR: marked
