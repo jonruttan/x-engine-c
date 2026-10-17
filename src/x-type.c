@@ -530,18 +530,22 @@ x_obj_t *x_type_prim_length(x_obj_t *p_base, x_obj_t *p_args)
  * For child base objects (type == x_eval_obj), returns the data
  * pointer so the GC traverses the base's pair tree. For custom types,
  * calls the type's mark callback if present. Otherwise falls back to
- * a generic N-slot traversal using the units count.
+ * a generic N-slot traversal using the units count, which marks every
+ * reference unit but the last and returns that one for the caller's loop
+ * to take, so a list's rest is followed without a C frame per pair.
  *
  * @param p_base  x_obj_t* -- Base (execution context)
  * @param p_args  x_obj_t* -- Argument run: (object, flags) -- the object
  *                            being marked, and the GC mark flags
- * @return x_obj_t* -- Data pointer for base objects, or NULL
+ * @return x_obj_t* -- Data pointer for base objects, the last reference
+ *                     unit of a generically traversed one, or NULL
  */
 x_obj_t *x_type_heap_mark(x_obj_t *p_base, x_obj_t *p_obj, x_obj_flag_t flags)
 {
 	x_obj_t *p_type = x_obj_type(p_obj);
 	x_obj_t *p_mark;
 	x_obj_t *p_units;
+	x_obj_t *p_next;
 	x_spair_t mark_args[2];
 	x_int_t n;
 	x_int_t i;
@@ -608,7 +612,9 @@ x_obj_t *x_type_heap_mark(x_obj_t *p_base, x_obj_t *p_obj, x_obj_flag_t flags)
 			}
 
 			{
-				/* One argument run for every unit. */
+				/* The last reference unit is held back and returned. */
+
+				p_next = NULL;
 
 				for (i = 0; i < n; i++) {
 					if (x_type_unit_label(mask, i, described)
@@ -616,10 +622,14 @@ x_obj_t *x_type_heap_mark(x_obj_t *p_base, x_obj_t *p_obj, x_obj_flag_t flags)
 						continue;
 					}
 
-					x_heap_tree_mark(p_base, x_obj(x_obj_data_i(p_obj, i)), flags);
+					if (p_next != NULL) {
+						x_heap_tree_mark(p_base, p_next, flags);
+					}
+
+					p_next = x_obj(x_obj_data_i(p_obj, i));
 				}
 			}
-			return NULL;
+			return p_next;
 		}
 	}
 
