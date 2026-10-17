@@ -13,6 +13,8 @@ alongside the library changes they landed with.
 
 ## Unreleased
 
+## 0.2.22 — 2026-10-16
+
 **A typed list marks without a C frame a pair** ([#90]). The generic mark
 traversal marks every reference unit but the last and returns that one to the
 mark loop, so a list's rest is followed, not recursed into. A collect with
