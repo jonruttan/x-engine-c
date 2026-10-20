@@ -13,6 +13,19 @@ alongside the library changes they landed with.
 
 ## Unreleased
 
+**A type's mark handler may be a closure** ([#93]). `make-type` always took a
+`mark` handler; the collector called it as a C primitive, so a type made from
+x could not say what its objects hold. A closure there is applied to the
+object and the mark flags, inside the mark phase, and marks what it keeps
+through `heap-tree-mark!`.
+
+**call/cc's state list carries the stack segment's bounds** ([#93]). After the
+root-chain head come `stack-lo`, `stack-size` and `stack-copy`, so a library
+can read a dormant continuation's root chain where its bytes wait, in the
+copy. The engine restores nothing from them.
+
+[#93]: https://github.com/jonruttan/x-engine-c/pull/93
+
 ## 0.2.22 — 2026-10-16
 
 **A typed list marks without a C frame a pair** ([#90]). The generic mark
