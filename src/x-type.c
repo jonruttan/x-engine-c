@@ -19,6 +19,7 @@
 #include "x-heap.h"
 #include "x-obj.h"
 #include "x-type/prim.h"
+#include "x-type/procedure.h"
 #include "x-type/symbol.h"
 #include "x-type/int.h"
 
@@ -529,7 +530,8 @@ x_obj_t *x_type_prim_length(x_obj_t *p_base, x_obj_t *p_args)
  *
  * For child base objects (type == x_eval_obj), returns the data
  * pointer so the GC traverses the base's pair tree. For custom types,
- * calls the type's mark callback if present. Otherwise falls back to
+ * calls the type's mark callback if present, a primitive or a closure,
+ * with the object and the flags. Otherwise falls back to
  * a generic N-slot traversal using the units count, which marks every
  * reference unit but the last and returns that one for the caller's loop
  * to take, so a list's rest is followed without a C frame per pair.
@@ -547,6 +549,11 @@ x_obj_t *x_type_heap_mark(x_obj_t *p_base, x_obj_t *p_obj, x_obj_flag_t flags)
 	x_obj_t *p_units;
 	x_obj_t *p_next;
 	x_spair_t mark_args[2];
+	x_spair_t call_args[3] = {
+		x_obj_set(NULL, X_OBJ_FLAG_NONE, { NULL }, { (x_obj_t *)(call_args + 1) }),
+		x_obj_set(NULL, X_OBJ_FLAG_NONE, { p_obj }, { (x_obj_t *)(call_args + 2) }),
+		x_obj_set(NULL, X_OBJ_FLAG_NONE, { NULL }, { NULL })
+	};
 	x_int_t n;
 	x_int_t i;
 	x_int_t mask;
@@ -562,6 +569,15 @@ x_obj_t *x_type_heap_mark(x_obj_t *p_base, x_obj_t *p_obj, x_obj_flag_t flags)
 		p_mark = x_type_field_mark(p_type);
 
 		if (p_mark != NULL) {
+			/* A closure is applied to (obj flags) and trampolined, as a
+			 * mark hook is; what it allocates the sweep frees. */
+			if (x_obj_type_isprocedure(p_base, p_mark)) {
+				x_firstobj((x_obj_t *)call_args) = p_mark;
+				x_firstobj((x_obj_t *)(call_args + 2)) = x_mkint(p_base, flags);
+				x_eval_call_or(p_base, X_SLOT_EVAL_TCO_TRAMPOLINE, x_eval_tco_trampoline, x_argrun({ .p = x_eval_call_or(p_base, X_SLOT_CALLABLE_APPLY, x_callable_apply, x_argrun({ .p = (x_obj_t *)call_args })) }));
+				return NULL;
+			}
+
 			/* Call type's custom mark callback:
 			 * (mark p_obj flags) */
 			mark_args[0][X_OBJ_META_TYPE].p = NULL;

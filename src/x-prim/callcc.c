@@ -17,6 +17,7 @@
 #include "x-heap.h"
 #include "x-stdlib.h"
 #include <setjmp.h>
+#include "x-type/int.h"
 #include "x-type/list.h"
 #include "x-type/prim.h"
 #include "x-type/ptr.h"
@@ -202,7 +203,8 @@ static x_obj_t *x_prim_cc_invoke(x_obj_t *p_base, x_obj_t *p_args)
 
 	/* Store the return value and interpreter state in cont.
 	 * State is extracted from the GC-visible list:
-	 * (env save-stack error-handler eval-list root-chain) */
+	 * (env save-stack error-handler eval-list root-chain ...); the
+	 * stack facts after those are the library's to read, never restored. */
 	cont->p_result = p_val;
 	cont->p_env = x_firstobj(p_state);
 	cont->p_save_stack = x_firstobj(x_restobj(p_state));
@@ -285,10 +287,12 @@ static X_CALLCC_NO_ASAN x_obj_t *x_prim_callcc(x_obj_t *p_base,
 	cont->stack_lo = stack_lo;
 
 	/* Build GC-visible interpreter state list:
-	 * (env save-stack error-handler eval-list root-chain).  The
-	 * root-chain head is wrapped as an opaque ptr atom: its nodes are
-	 * stack memory, dead while the continuation is dormant, so
-	 * tree-marking this state list must not traverse them. */
+	 * (env save-stack error-handler eval-list root-chain
+	 *  stack-lo stack-size stack-copy).  The root-chain head is wrapped
+	 * as an opaque ptr atom: its nodes are stack memory, dead while the
+	 * continuation is dormant, so tree-marking this state list must not
+	 * traverse them.  The segment's bounds and its copy follow, so a
+	 * library can read those nodes where their bytes wait. */
 	p_state = x_mklist(p_base,
 		x_eval_field_env(p_base),
 		x_mklist(p_base,
@@ -300,7 +304,13 @@ static X_CALLCC_NO_ASAN x_obj_t *x_prim_callcc(x_obj_t *p_base,
 					x_mklist(p_base,
 						x_mkptr(p_base,
 							(void *)x_heap_root_chain(p_base)),
-						NULL)))));
+						x_mklist(p_base,
+							x_mkptr(p_base, stack_lo),
+							x_mklist(p_base,
+								x_mkint(p_base, (x_int_t)stack_size),
+								x_mklist(p_base,
+									x_mkptr(p_base, cont->stack_copy),
+									NULL))))))));
 
 	/* Wrap continuation struct as POINTER with OWN flag.
 	 * GC will free the struct (and embedded stack copy). */

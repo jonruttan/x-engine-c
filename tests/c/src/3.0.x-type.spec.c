@@ -41,6 +41,7 @@
 #define STUB_X_HEAP
 #define STUB_X_OBJ_OBJ
 #define STUB_X_STR
+#define STUB_X_INT
 #define STUB_X_PRIM_REGISTER
 #define STUB_X_PRIM_SHADOW
 #define STUB_X_PROCEDURE_APPLY
