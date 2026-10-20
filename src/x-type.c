@@ -548,7 +548,10 @@ x_obj_t *x_type_heap_mark(x_obj_t *p_base, x_obj_t *p_obj, x_obj_flag_t flags)
 	x_obj_t *p_mark;
 	x_obj_t *p_units;
 	x_obj_t *p_next;
-	x_spair_t mark_args[2];
+	x_spair_t mark_args[2] = {
+		x_obj_set(NULL, X_OBJ_FLAG_NONE, { p_obj }, { (x_obj_t *)(mark_args + 1) }),
+		x_obj_set(NULL, X_OBJ_FLAG_NONE, { .i = flags }, { NULL })
+	};
 	x_spair_t call_args[3] = {
 		x_obj_set(NULL, X_OBJ_FLAG_NONE, { NULL }, { (x_obj_t *)(call_args + 1) }),
 		x_obj_set(NULL, X_OBJ_FLAG_NONE, { p_obj }, { (x_obj_t *)(call_args + 2) }),
@@ -580,17 +583,6 @@ x_obj_t *x_type_heap_mark(x_obj_t *p_base, x_obj_t *p_obj, x_obj_flag_t flags)
 
 			/* Call type's custom mark callback:
 			 * (mark p_obj flags) */
-			mark_args[0][X_OBJ_META_TYPE].p = NULL;
-			mark_args[0][X_OBJ_META_FLAGS].i = X_OBJ_FLAG_NONE;
-			x_firstobj((x_obj_t *)mark_args) = p_obj;
-			x_restobj((x_obj_t *)mark_args)
-				= (x_obj_t *)(mark_args + 1);
-
-			mark_args[1][X_OBJ_META_TYPE].p = NULL;
-			mark_args[1][X_OBJ_META_FLAGS].i = X_OBJ_FLAG_NONE;
-			x_firstint((x_obj_t *)(mark_args + 1)) = flags;
-			x_restobj((x_obj_t *)(mark_args + 1)) = NULL;
-
 			x_atomfn(p_mark)(p_base, (x_obj_t *)mark_args);
 			return NULL;
 		}
