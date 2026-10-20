@@ -13,6 +13,8 @@ alongside the library changes they landed with.
 
 ## Unreleased
 
+## 0.2.23 — 2026-10-20
+
 **A type's mark handler may be a closure** ([#93]). `make-type` always took a
 `mark` handler; the collector called it as a C primitive, so a type made from
 x could not say what its objects hold. A closure there is applied to the
