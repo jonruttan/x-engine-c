@@ -274,7 +274,6 @@ static x_obj_t *x_prim_base_eval(x_obj_t *p_base, x_obj_t *p_args)
 			p_parent = x_firstobj(x_eval_field_error_handler(p_base));
 
 			x_error_handler_error(p_parent) = p_err;
-			x_error_handler_line(p_parent) = x_error_handler_line(p_handler);
 			x_eval_field_env(p_base) = x_error_handler_saved_env(p_parent);
 			longjmp(*(jmp_buf *)x_error_handler_jmp(p_parent), 1);
 		}
