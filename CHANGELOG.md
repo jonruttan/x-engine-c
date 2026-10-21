@@ -13,6 +13,19 @@ alongside the library changes they landed with.
 
 ## Unreleased
 
+## 0.2.24 — 2026-10-21
+
+**A guard's error record holds no raw word** ([#96]). A raise wrote its line
+into the rest slot of the handler's error cell as a raw integer, which nothing
+read: `(io error-line)` reads the base's err-line cell. call/cc keeps the
+installed handler in a continuation's state list, which the collector
+tree-marks while the continuation is reachable, so the first collect after a
+raise through a guard that a live continuation was captured inside chased the
+line as a pointer. The record is `(jmp-ptr (saved-env . previous) error-value)`,
+every word an object; `tests/bare/specs/callcc-guard.spec.md` holds the case.
+
+[#96]: https://github.com/jonruttan/x-engine-c/pull/96
+
 ## 0.2.23 — 2026-10-20
 
 **A type's mark handler may be a closure** ([#93]). `make-type` always took a
