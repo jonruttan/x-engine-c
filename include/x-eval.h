@@ -124,17 +124,19 @@ typedef char x_assert_evals_below_sign[
 /**
  * @defgroup error_handler Error Handler Macros
  * @brief Navigate the error handler pair tree
- *        @c (jmp-ptr (saved-env . previous) error-value . line).
+ *        @c (jmp-ptr (saved-env . previous) error-value).
  *        A guard's handler carries the handler it displaced in the
  *        previous slot, so every installed handler stays reachable from
  *        the error_handler slot while the innermost is; a base-eval
  *        handler leaves it nil and is consed onto the target's stack.
+ *        Every word of the tree is an object: call/cc keeps the handler
+ *        in a continuation's state list, which the collector tree-marks.
+ *        The raise line lives in the base's err-line cell, not here.
  * @{
  */
 #define x_error_handler_jmp(H)				x_ptrval(x_firstobj(H))
 #define x_error_handler_saved_env(H)		x_001(H)
 #define x_error_handler_error(H)			x_011(H)
-#define x_error_handler_line(H)				x_111(H)
 /** @} */
 
 /**

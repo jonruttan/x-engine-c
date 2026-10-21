@@ -1028,10 +1028,6 @@ void x_eval_error(x_obj_t *p_base, x_char_t *message, x_obj_t *p_obj)
 
 		x_error_handler_error(p_handler) = p_err;
 
-		/* Save error line — raw int in rest slot, zero allocation */
-		x_error_handler_line(p_handler)
-			= (x_obj_t *)(x_int_t)x_atomint(x_firstobj(x_eval_field_line(p_base)));
-
 		x_eval_field_env(p_base) = x_error_handler_saved_env(p_handler);
 		longjmp(*(jmp_buf *)x_error_handler_jmp(p_handler), 1);
 	}
