@@ -85,7 +85,6 @@
   (alloc-error base f r r r r f r r f)
   (error-handler-saved-env handler r f f)
   (error-handler-error handler r r f)
-  (error-handler-line handler r r r)
   (arg-exp base f)
   (type-name-stack type f)
   (type-name type f f)
