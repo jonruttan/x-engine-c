@@ -44,7 +44,12 @@ PREFIX?=/usr/local
 # this repo as a submodule, exactly as tools/release/package.sh already does
 # for a tarball.  The default below is only what a STANDALONE build of this
 # repo reports, where there is no library to pair with and nothing to refuse.
-X_RELEASE?=$(shell git describe --tags --always --dirty 2>/dev/null || echo dev)
+#
+# Asked of the shell when a recipe runs, not when the Makefile is read: only
+# GNU make 4 and BSD make can ask at read time (`!=`), and macOS ships GNU
+# make 3.81.  Every value the shell answers for is written this way (`$$(`
+# reaches the shell as `$(`); a command-line X_RELEASE=... still wins.
+X_RELEASE?=$$(git describe --tags --always --dirty 2>/dev/null || echo dev)
 
 # Override default compiler and flags
 CC?=gcc
@@ -55,51 +60,30 @@ CFLAGS+=-DX_HEAP -DX_TYPE -DX_SYS_CLOCK
 # Dead code elimination: each function/data in its own section, stripped at link
 CFLAGS+=-ffunction-sections -fdata-sections
 
-# Get the compiler name
-CCOMPILER=$(CC)
-ifeq ("$(CCOMPILER)", "cc")
-
-ifeq ($(shell diff $(shell which cc) $(shell which gcc)), )
-CCOMPILER=gcc
-else ifeq ($(shell diff $(shell which cc) $(shell which clang)), )
-CCOMPILER=clang
-endif
-
-endif
-
 # If there are no LDFLAGS, use the CFLAGS
 LDFLAGS?=$(CFLAGS)
 
-# Customise the settings for the compiler
+# Customise the settings for the compiler: one flag table a compiler, read by
+# computed name, so CC=c99 reads CFLAGS_c99 and a compiler with no table
+# reads nothing.  `cc` is an alias on most systems, so its table asks the
+# shell whose binary it is -- gcc's, else clang's, else neither.
 CFLAGS+=-fdiagnostics-color=always
-ifneq ("$(CCOMPILER)", "tcc")
-DUMPMACHINE=$(shell $(CC) $(CFLAGS) -dumpmachine)
-endif
-ifeq ("$(CCOMPILER)", "c89")
-CFLAGS+=-ansi -Wno-unused-result
-else ifeq ("$(CCOMPILER)", "c99")
-CFLAGS+=-Wno-unused-result
-else ifeq ("$(CCOMPILER)", "gcc")
-CFLAGS+=-ansi -Wno-unused-result
-else ifeq ("$(CCOMPILER)", "clang")
-CFLAGS+=-ansi -Wno-array-bounds
-endif
+CCOMPILER=$(CC)
+CFLAGS_c89=-ansi -Wno-unused-result
+CFLAGS_c99=-Wno-unused-result
+CFLAGS_gcc=-ansi -Wno-unused-result
+CFLAGS_clang=-ansi -Wno-array-bounds
+CFLAGS_cc=$$(if cmp -s "$$(command -v cc)" "$$(command -v gcc)" 2>/dev/null; then echo '$(CFLAGS_gcc)'; elif cmp -s "$$(command -v cc)" "$$(command -v clang)" 2>/dev/null; then echo '$(CFLAGS_clang)'; fi)
+CFLAGS+=$(CFLAGS_$(CCOMPILER))
 
-# Fallback command to use when compiler doesn't support `-dumpmachine`
-ifndef DUMPMACHINE
-DUMPMACHINE=$(shell echo $(shell uname -m)-$(shell uname -s)-$(shell uname -o) | tr A-Z a-z)
-endif
-
-# Get the machine Target Triplet
+# The machine target triplet, asked of the compiler; one that cannot answer
+# `-dumpmachine` gets uname's answer instead.
+DUMPMACHINE=$$($(CC) $(CFLAGS) -dumpmachine 2>/dev/null || echo $$(uname -m)-$$(uname -s)-$$(uname -o) | tr A-Z a-z)
 X_MACHINE?=\"$(DUMPMACHINE)\"
 
 # Dead strip unreferenced sections at link time
 # Export dynamic symbols so dlopen'd bundles can call host functions
-ifneq (,$(findstring darwin,$(DUMPMACHINE)))
-LDFLAGS+=-Wl,-exported_symbols_list,exports.sym -Wl,-dead_strip -Wl,-dead_strip
-else ifneq (,$(findstring linux,$(DUMPMACHINE)))
-LDFLAGS+=-Wl,--gc-sections -rdynamic
-endif
+LDFLAGS+=$$(case "$(DUMPMACHINE)" in (*darwin*) echo '-Wl,-exported_symbols_list,exports.sym -Wl,-dead_strip -Wl,-dead_strip';; (*linux*) echo '-Wl,--gc-sections -rdynamic';; esac)
 
 BASEDIR=.
 INCDIR=$(BASEDIR)/include
@@ -108,7 +92,10 @@ OPTDIR=$(BASEDIR)/opt
 
 # x-expr foundation library
 X_EXPR_DIR=ext/x-expr
-X_EXPR_SOURCES=$(wildcard $(X_EXPR_DIR)/src/*.c)
+X_EXPR_SOURCES=$(X_EXPR_DIR)/src/x-base.c $(X_EXPR_DIR)/src/x-heap.c \
+	$(X_EXPR_DIR)/src/x-lib.c $(X_EXPR_DIR)/src/x-obj.c \
+	$(X_EXPR_DIR)/src/x-stdlib.c $(X_EXPR_DIR)/src/x-sys.c \
+	$(X_EXPR_DIR)/src/x.c
 # Per-configuration object extension (#329).  The plain build owns .o;
 # each variant compiles to its own suffix (.cov.o, .asan.o, ...) beside
 # it, so no two configurations ever share an object path -- the old
@@ -121,8 +108,37 @@ X_EXPR_OBJECTS=$(X_EXPR_SOURCES:.c=$(OBJ_EXT))
 
 CFLAGS+=-I$(X_EXPR_DIR)/include -I$(INCDIR)
 
-HEADERS=$(wildcard $(INCDIR)/*.h $(INCDIR)/**/*.h $(INCDIR)/**/**/*.h $(X_EXPR_DIR)/include/*.h)
-SOURCES=$(wildcard $(SRCDIR)/*.c $(SRCDIR)/**/*.c $(SRCDIR)/**/**/*.c)
+# Shell globs, expanded by the one recipe that names them (watch).
+HEADERS=$(INCDIR)/*.h $(INCDIR)/*/*.h $(INCDIR)/*/*/*.h $(X_EXPR_DIR)/include/*.h
+
+# Every engine source, spelled out: make lists no directory, so a new .c is
+# a line here.  A directory a group, each in name order.
+SOURCES=$(SRCDIR)/x-alist.c $(SRCDIR)/x-cli.c $(SRCDIR)/x-env.c \
+	$(SRCDIR)/x-eval.c $(SRCDIR)/x-prim.c $(SRCDIR)/x-tco.c \
+	$(SRCDIR)/x-token.c $(SRCDIR)/x-toplevel.c $(SRCDIR)/x-type.c \
+	$(SRCDIR)/x-vector.c \
+	$(SRCDIR)/x-obj/jit.c $(SRCDIR)/x-obj/obj.c $(SRCDIR)/x-obj/prim.c \
+	$(SRCDIR)/x-prim/arith.c $(SRCDIR)/x-prim/base.c \
+	$(SRCDIR)/x-prim/buffer.c $(SRCDIR)/x-prim/callcc.c \
+	$(SRCDIR)/x-prim/core.c $(SRCDIR)/x-prim/ffi.c $(SRCDIR)/x-prim/heap.c \
+	$(SRCDIR)/x-prim/image.c $(SRCDIR)/x-prim/io.c $(SRCDIR)/x-prim/iter.c \
+	$(SRCDIR)/x-prim/pred.c $(SRCDIR)/x-prim/string.c \
+	$(SRCDIR)/x-prim/type.c \
+	$(SRCDIR)/x-syntax/binding.c $(SRCDIR)/x-syntax/closure.c \
+	$(SRCDIR)/x-syntax/control.c $(SRCDIR)/x-syntax/quote.c \
+	$(SRCDIR)/x-type/atom.c $(SRCDIR)/x-type/buffer.c \
+	$(SRCDIR)/x-type/char.c $(SRCDIR)/x-type/comment.c \
+	$(SRCDIR)/x-type/err.c $(SRCDIR)/x-type/int.c $(SRCDIR)/x-type/iter.c \
+	$(SRCDIR)/x-type/list.c $(SRCDIR)/x-type/operative.c \
+	$(SRCDIR)/x-type/pair.c $(SRCDIR)/x-type/prim.c \
+	$(SRCDIR)/x-type/procedure.c $(SRCDIR)/x-type/ptr.c \
+	$(SRCDIR)/x-type/str.c $(SRCDIR)/x-type/symbol.c \
+	$(SRCDIR)/x-type/vector.c $(SRCDIR)/x-type/whitespace.c \
+	$(SRCDIR)/x-token/sexp/atom.c $(SRCDIR)/x-token/sexp/char.c \
+	$(SRCDIR)/x-token/sexp/comment.c $(SRCDIR)/x-token/sexp/int.c \
+	$(SRCDIR)/x-token/sexp/list.c $(SRCDIR)/x-token/sexp/pair.c \
+	$(SRCDIR)/x-token/sexp/str.c $(SRCDIR)/x-token/sexp/symbol.c \
+	$(SRCDIR)/x-token/sexp/whitespace.c
 OBJECTS=$(SOURCES:.c=$(OBJ_EXT))
 # NAME is the PROJECT name: the wrapper's installed command (bin/x) and the
 # install-tree dirs (share/x, libexec/x) -- x.sh's X_SHARE/X_ENGINE and the
@@ -140,12 +156,11 @@ DEFS?=$(OSDEF) -DX_MACHINE="$(X_MACHINE)" -DX_SYSCALL -DX_DL -DX_INCLUDE -DSYMBO
 # flag).  The signal module lives under opt/ and is built only when enabled;
 # `make X_SIGNAL=` leaves it out of the build and compiles the eval poll out
 # too (x-lang REPLs fall back to no-ops).  DEFS is absent from TEST_CFLAGS, so
-# the C unit tests always build without it.
+# the C unit tests always build without it.  The substitution turns the flag
+# into the module's path, and an empty X_SIGNAL into nothing.
 X_SIGNAL?=-DX_SIGNAL
-ifdef X_SIGNAL
 DEFS+=$(X_SIGNAL)
-SOURCES+=$(OPTDIR)/x-prim/signal.c
-endif
+SOURCES+=$(X_SIGNAL:-DX_SIGNAL=$(OPTDIR)/x-prim/signal.c)
 
 # -ldl is the CLI's: dlopen/dlsym live in src/x-cli.c (X_DL), never in the
 # engine proper, which loads no libraries and calls no C library of its own.
@@ -166,12 +181,8 @@ LIBEXECDIR?=$(PREFIX)/libexec/$(NAME)
 MANDIR?=$(PREFIX)/share/man
 
 # C test config
-ifndef PATH_TESTS_C
-PATH_TESTS_C=tests/c
-endif
-ifndef TESTS
-TESTS=$(PATH_TESTS_C)/src/*.spec.c
-endif
+PATH_TESTS_C?=tests/c
+TESTS?=$(PATH_TESTS_C)/src/*.spec.c
 TEST_CFLAGS=$(CFLAGS) -fno-common -g -Og -I. -DTESTS
 
 # Coverage
@@ -233,30 +244,32 @@ $(OUTPUT): $(OBJECTS) $(X_EXPR_OBJECTS) $(EXTRA_OBJS)
 # binary used to go STALE after its first build instead, because the
 # bracket dance made rebuilding cost the whole tree twice).
 #
-# Defined ONLY in the plain (.o) universe: the inner make's goal IS the
-# variant's filename, which must resolve to the $(OUTPUT) link rule --
-# were this phony also defined there, it would override that rule
-# (later definition wins) and recurse forever.
-ifeq ($(OBJ_EXT),.o)
-x-bin-debug: ## Build debug target
+# Named as the variant's file ONLY in the plain (.o) universe: the inner
+# make's goal IS the variant's filename, which must resolve to the $(OUTPUT)
+# link rule -- were this phony defined under that name there too, it would
+# override that rule (later definition wins) and recurse forever.  So each
+# phony carries VARIANT, which is nothing in the plain universe and the
+# variant's own tag in its universe (`.debug` when OBJ_EXT is `.debug.o`),
+# keeping the name out of the link rule's way.
+VARIANT=$(OBJ_EXT:.o=)
+x-bin-debug$(VARIANT): ## Build debug target
 	$(MAKE) OUTPUT=$@ OBJ_EXT=.debug.o CFLAGS="$(CFLAGS) -g -Og -DDEBUG" $@
-.PHONY: x-bin-debug
+.PHONY: x-bin-debug$(VARIANT)
 
-x-bin-profile: ## Build profiling binary (includes coverage; ships in the release)
+x-bin-profile$(VARIANT): ## Build profiling binary (includes coverage; ships in the release)
 	$(MAKE) OUTPUT=$@ OBJ_EXT=.profile.o CFLAGS="$(CFLAGS) -DX_PROFILE -DX_COV" $@
-.PHONY: x-bin-profile
+.PHONY: x-bin-profile$(VARIANT)
 
 # ASan flags go in CFLAGS only: 'LDFLAGS?=$(CFLAGS)' (above) carries them into
 # the link too, so the runtime links while KEEPING the project's -dead_strip /
 # exports.sym LDFLAGS (passing LDFLAGS on the command line would lose those).
-x-bin-asan: ## Build with AddressSanitizer for memory-safety testing
+x-bin-asan$(VARIANT): ## Build with AddressSanitizer for memory-safety testing
 	$(MAKE) OUTPUT=$@ OBJ_EXT=.asan.o CFLAGS="$(CFLAGS) -fsanitize=address -fno-omit-frame-pointer -g" $@
-.PHONY: x-bin-asan
+.PHONY: x-bin-asan$(VARIANT)
 
-x-bin-cov: ## Build the coverage binary (-DX_COV flag-marking eval)
+x-bin-cov$(VARIANT): ## Build the coverage binary (-DX_COV flag-marking eval)
 	$(MAKE) OUTPUT=$@ OBJ_EXT=.cov.o CFLAGS="$(CFLAGS) -DX_COV" $@
-.PHONY: x-bin-cov
-endif
+.PHONY: x-bin-cov$(VARIANT)
 
 # The *.o globs also catch every variant suffix (x.cov.o ends in .o).
 clean-obj:
@@ -284,7 +297,11 @@ clean-obj:
 # The .d files land beside their objects and follow OBJ_EXT, so the variant
 # builds (.debug.o, .asan.o, .cov.o, .profile.o) each keep their own set and
 # cannot poison one another.
-%$(OBJ_EXT): %.c
+#
+# A suffix rule, so OBJ_EXT is declared a suffix: the rule is .c.o in the
+# plain universe and .c.debug.o in the debug one.
+.SUFFIXES: .c $(OBJ_EXT)
+.c$(OBJ_EXT):
 	$(CC) -c $(CFLAGS) $(DEFS) -MMD -MP -o $@ $<
 
 # Pulled in with `-include` rather than `include`: on a clean tree there are no
@@ -340,8 +357,8 @@ clean-obj:
 # already answered that -- naming it from the packaging host would put the
 # wrong platform on the file every consumer selects by.
 DIST_DIR?=build/dist
-DIST_OS=$(shell sed -n 's/^(param os \(.*\))$$/\1/p' x-engine-build.xon)
-DIST_ARCH=$(shell sed -n 's/^(param arch \(.*\))$$/\1/p' x-engine-build.xon)
+DIST_OS=$$(sed -n 's/^(param os \(.*\))$$/\1/p' x-engine-build.xon)
+DIST_ARCH=$$(sed -n 's/^(param arch \(.*\))$$/\1/p' x-engine-build.xon)
 DIST_NAME=x-engine-c-$(X_RELEASE)-$(DIST_OS)-$(DIST_ARCH)
 
 # The manifest is a LIST, not a comment: the staging step copies these paths
@@ -384,10 +401,11 @@ dist: all strip x-bin-profile ## Package this engine as a consumable artifact (t
 	@tar -czf $(DIST_DIR)/$(DIST_NAME).tar.gz -C $(DIST_DIR) $(DIST_NAME)
 	@# Digest from INSIDE the dist dir so the sidecar names the tarball by its
 	@# basename -- `shasum -c` resolves the name it reads relative to itself,
-	@# and a path-qualified line only verifies from one directory.
-	@cd $(DIST_DIR) && { \
-		if command -v shasum >/dev/null 2>&1; then shasum -a 256 $(DIST_NAME).tar.gz; \
-		else sha256sum $(DIST_NAME).tar.gz; fi; } > $(DIST_NAME).tar.gz.sha256
+	@# and a path-qualified line only verifies from one directory.  The name
+	@# is settled before the cd: x-engine-build.xon, which it reads, is here.
+	@name=$(DIST_NAME); cd $(DIST_DIR) && { \
+		if command -v shasum >/dev/null 2>&1; then shasum -a 256 $$name.tar.gz; \
+		else sha256sum $$name.tar.gz; fi; } > $$name.tar.gz.sha256
 	@echo "dist: $(DIST_DIR)/$(DIST_NAME).tar.gz"
 	@cat $(DIST_DIR)/$(DIST_NAME).tar.gz.sha256
 .PHONY: dist
@@ -498,8 +516,7 @@ test-bare: $(EXECUTABLE) ## Run the bare-engine smoke specs (no library)
 # X_PROFILE writes into each object, which a plain engine never writes -- so
 # those cases live apart from tests/bare/specs/, where `test-bare` would run
 # them against x-bin and fail every one.
-BARE_PROFILE_SPECS=$(sort $(wildcard tests/bare/specs/*.spec.md)) \
-	$(sort $(wildcard tests/bare/profile/*.spec.md))
+BARE_PROFILE_SPECS=tests/bare/specs/*.spec.md tests/bare/profile/*.spec.md
 
 test-bare-profile: x-bin-profile ## Run the bare-engine smoke specs against the profile build
 	X_BIN=./x-bin-profile sh tests/bare/bare-runner.sh $(BARE_PROFILE_SPECS)
@@ -706,6 +723,8 @@ clean: cov-clean ## Clean build artifacts
 	rm -f x x-debug x-profile x-asan x-cov
 .PHONY: clean
 
+# The variant targets carry `$(VARIANT)` in their names (see above); the
+# sub() shows them as they are called.
 help: ## Show targets
-	@awk 'BEGIN {FS = ":.*?## "} /^[a-zA-Z0-9_-]+:.*?## / {printf "\033[32m%-38s\033[0m %s\n", $$1, $$2}' $(MAKEFILE_LIST)
+	@awk 'BEGIN {FS = ":.*?## "} /^[a-zA-Z0-9_$$()-]+:.*?## / {sub(/\$$\(VARIANT\)/, "", $$1); printf "\033[32m%-38s\033[0m %s\n", $$1, $$2}' Makefile
 .PHONY: help
