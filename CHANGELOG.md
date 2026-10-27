@@ -13,6 +13,16 @@ alongside the library changes they landed with.
 
 ## Unreleased
 
+**first and rest of nil raise instead of taking the process down** ([#109]).
+nil is a NULL object pointer, and `(first ())` read a first word through it:
+the process died with no diagnostic, and no guard could catch it. Both prims
+now raise `first: () has no first` / `rest: () has no rest`, catchably, the
+way a dotted spine does; any other object is read as a pair, as before, since
+an instance's payload is read with a plain `first`. A 200k-element list
+walked 20 times measures about 1% slower.
+
+[#109]: https://github.com/jonruttan/x-engine-c/pull/109
+
 ## 0.2.24 — 2026-10-21
 
 **A guard's error record holds no raw word** ([#96]). A raise wrote its line
