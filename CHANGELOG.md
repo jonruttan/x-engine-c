@@ -13,6 +13,17 @@ alongside the library changes they landed with.
 
 ## Unreleased
 
+**The Makefile reads the same under GNU make, BSD make and POSIX make**
+([#111]). Its conditionals, `$(shell)`, `$(wildcard)`, `$(sort)`,
+`$(findstring)`, `%` rule and `$(MAKEFILE_LIST)` are gone: flag tables read
+by computed name, an explicit source list, a suffix rule, and the values the
+shell answers for (release tag, target triple, the `cc` alias, dist name,
+link flags) asked when a recipe runs, since macOS's GNU make 3.81 has no
+`!=`. Every target runs the same commands; the echoed compile line now
+carries the asks.
+
+[#111]: https://github.com/jonruttan/x-engine-c/pull/111
+
 ## 0.2.24 — 2026-10-21
 
 **A guard's error record holds no raw word** ([#96]). A raise wrote its line
