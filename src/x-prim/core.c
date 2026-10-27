@@ -45,11 +45,20 @@ static x_obj_t *x_prim_pair(x_obj_t *p_base, x_obj_t *p_args)
  *  @param p_args  Unevaluated argument list (x).
  *  @return First element of pair x.
  *  @note Fexpr: args unevaluated; x_eargs evaluates them.
+ *  @note nil is a NULL pointer and has no first: raises, catchably.  Any
+ *        other object is read as a pair -- an instance's payload is read
+ *        with a plain first, so a pair check here would refuse it.
  */
 static x_obj_t *x_prim_first(x_obj_t *p_base, x_obj_t *p_args)
 {
 	x_obj_t *x;
 	x_eargs(p_base, p_args, 2, NULL, &x);
+
+	if (x_obj_isnil(p_base, x)) {
+		x_obj_error(p_base, (x_char_t *)"first: () has no first", NULL);
+
+		return NULL;
+	}
 
 	return x_firstobj(x);
 }
@@ -60,11 +69,18 @@ static x_obj_t *x_prim_first(x_obj_t *p_base, x_obj_t *p_args)
  *  @param p_args  Unevaluated argument list (x).
  *  @return Rest element of pair x.
  *  @note Fexpr: args unevaluated; x_eargs evaluates them.
+ *  @note nil has no rest: raises, catchably, as x_prim_first does.
  */
 static x_obj_t *x_prim_rest(x_obj_t *p_base, x_obj_t *p_args)
 {
 	x_obj_t *x;
 	x_eargs(p_base, p_args, 2, NULL, &x);
+
+	if (x_obj_isnil(p_base, x)) {
+		x_obj_error(p_base, (x_char_t *)"rest: () has no rest", NULL);
+
+		return NULL;
+	}
 
 	return x_restobj(x);
 }

@@ -57,6 +57,28 @@ navigates first/rest unchecked by design).
 ---
     *** ERROR: raised
 
+### first and rest of nil raise instead of taking the process down
+
+nil is a NULL object pointer, and `(first ())` read a first word through it:
+the one typo no x program could guard against, because an unchecked read
+raises nothing.  Both prims raise now, catchably, as a dotted spine does.
+Any other object is still read as a pair -- an instance's payload is read
+with a plain `first`, so a pair check here would refuse the object protocol.
+
+```scheme
+(first ())
+```
+---
+    *** ERROR: first: () has no first
+
+### the raise is catchable
+
+```scheme
+(guard (e (error "caught")) (rest ()))
+```
+---
+    *** ERROR: caught
+
 ### a dotted body raises the same way
 
 ```scheme
