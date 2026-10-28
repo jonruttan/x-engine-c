@@ -312,34 +312,6 @@ static x_obj_t *x_prim_base_bind(x_obj_t *p_base, x_obj_t *p_args)
 	return x_eval_call_or(p_target, X_SLOT_ENV_BIND, x_env_bind, x_argrun({ .p = x_eval_field_env_root(p_target) }, { .p = p_name }, { .p = p_val }));
 }
 
-
-/**
- * @brief Bind a name in the base's ROOT environment, whatever environment
- *        is current.
- *
- * x-lang form: @code ((prim-ref 'base 'def-global) name value) @endcode
- *
- * @details This is `def` with the root named instead of the current
- *          environment, and it is expressible without a primitive now
- *          that environments are values: a `def` evaluated with the root
- *          as its environment binds there.  It stays for one release so
- *          the langs that call it through the catalogue keep working until
- *          they move to that spelling; its manifest row goes with it.
- *
- * @param p_base  Base (execution context).
- * @param p_args  Unevaluated: (self name value); both are evaluated.
- * @return The bound value.
- * @see x_env_bind
- */
-static x_obj_t *x_prim_define_global(x_obj_t *p_base, x_obj_t *p_args)
-{
-	x_obj_t *p_name, *p_val;
-
-	x_eargs(p_base, p_args, 3, NULL, &p_name, &p_val);
-
-	return x_eval_call_or(p_base, X_SLOT_ENV_BIND, x_env_bind, x_argrun({ .p = x_eval_field_env_root(p_base) }, { .p = p_name }, { .p = p_val }));
-}
-
 /** Register the sandbox base primitives. */
 x_obj_t *x_prim_base_register(x_obj_t *p_base, x_obj_t *p_args)
 {
@@ -348,8 +320,7 @@ x_obj_t *x_prim_base_register(x_obj_t *p_base, x_obj_t *p_args)
 		{ "make-token-base",   x_prim_make_token_base,   "base",   "make-tok"      },
 		{ "make-base",         x_prim_make_base,         "base",   "make"          },
 		{ "base-eval",         x_prim_base_eval,         "base",   "eval"          },
-		{ "base-bind",         x_prim_base_bind,         "base",   "bind"          },
-		{ "base-def-global",   x_prim_define_global,     "base",   "def-global"    }
+		{ "base-bind",         x_prim_base_bind,         "base",   "bind"          }
 	};
 
 	x_prims_bind_table(p_base, entries,
