@@ -13,6 +13,8 @@ alongside the library changes they landed with.
 
 ## Unreleased
 
+## 0.2.25 — 2026-10-28
+
 **The Makefile reads the same under GNU make, BSD make and POSIX make**
 ([#111]). Its conditionals, `$(shell)`, `$(wildcard)`, `$(sort)`,
 `$(findstring)`, `%` rule and `$(MAKEFILE_LIST)` are gone: flag tables read
@@ -24,13 +26,15 @@ carries the asks.
 
 [#111]: https://github.com/jonruttan/x-engine-c/pull/111
 
-**`(base def-global)` is gone.** The primitive was `def` with the root named
+**`(base def-global)` is gone** ([#110]). The primitive was `def` with the root named
 instead of the current environment, kept one release so the langs calling it
 through the catalogue could move to the spelling the environment model gives
 them: `(eval! (list (lit def) n (list (lit lit) v)))`, since `eval!` evaluates
 in the root. Every bundle has moved (x-krn#26, x-r5rs#35, x-sweet#33,
 x-r7rs#35) and x-lang's own tree with them (x-lang#1114). The function, its
 registration and its `isa.x` row go; the declaration's ISA digest follows.
+
+[#110]: https://github.com/jonruttan/x-engine-c/pull/110
 
 ## 0.2.24 — 2026-10-21
 
