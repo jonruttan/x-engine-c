@@ -15,6 +15,17 @@ alongside the library changes they landed with.
 
 ## 0.2.25 — 2026-10-28
 
+**The Makefile reads the same under GNU make, BSD make and POSIX make**
+([#111]). Its conditionals, `$(shell)`, `$(wildcard)`, `$(sort)`,
+`$(findstring)`, `%` rule and `$(MAKEFILE_LIST)` are gone: flag tables read
+by computed name, an explicit source list, a suffix rule, and the values the
+shell answers for (release tag, target triple, the `cc` alias, dist name,
+link flags) asked when a recipe runs, since macOS's GNU make 3.81 has no
+`!=`. Every target runs the same commands; the echoed compile line now
+carries the asks.
+
+[#111]: https://github.com/jonruttan/x-engine-c/pull/111
+
 **`(base def-global)` is gone** ([#110]). The primitive was `def` with the root named
 instead of the current environment, kept one release so the langs calling it
 through the catalogue could move to the spelling the environment model gives
