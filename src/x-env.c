@@ -59,11 +59,11 @@ static x_obj_t *x_env_own_symbol(x_obj_t *p_base, x_obj_t *p_sym)
 /**
  * The cell binding @p p_sym in @p p_env or an ancestor.
  *
- * Walks from @p p_env to the root: an environment with a parent searches
- * its alist of @c (name . value) cells by symbol identity; the root
- * searches its tree, also by identity.  The first hit wins, so a child's
- * binding shadows a parent's.  This is the whole of symbol lookup --
- * x_type_symbol_eval and `set!` call nothing else.
+ * Walks from @p p_env to the root: a frame searches its alist of
+ * @c (name . value) cells by symbol identity; the root, and a module's
+ * scope (x_env_istree), search their tree, also by identity.  The first
+ * hit wins, so a child's binding shadows a parent's.  This is the whole of
+ * symbol lookup -- x_type_symbol_eval and `set!` call nothing else.
  *
  * Symbols intern per base, and a name is found by identity, not by
  * spelling: a base's own symbol finds only what was bound under it, so a
@@ -95,12 +95,15 @@ x_obj_t *x_env_lookup(x_obj_t *p_base, x_obj_t *p_args)
 	x_obj_t tree_args[2] = { { .p = NULL }, { .p = NULL } };
 
 	for (; ! x_obj_isnil(p_base, p_env); p_env = x_env_parent(p_env)) {
-		if (x_env_isroot(p_base, p_env)) {
+		if (x_env_istree(p_base, p_env)) {
 			tree_args[0].p = x_env_bindings(p_env);
 			tree_args[1].p = p_sym;
 			p_entry = x_eval_call(p_base, X_SLOT_ALIST_BST_LOOKUP, tree_args);
 			if ( ! x_obj_isnil(p_base, p_entry)) {
 				return p_entry;
+			}
+			if ( ! x_env_isroot(p_base, p_env)) {
+				continue;
 			}
 
 			p_own = x_env_own_symbol(p_base, p_sym);
@@ -134,8 +137,9 @@ x_obj_t *x_env_lookup(x_obj_t *p_base, x_obj_t *p_args)
  * Bind @p p_sym to @p p_val in @p p_env itself.
  *
  * A binding the environment already holds is updated in place; otherwise
- * one is added -- to the root's tree, or in front of another
- * environment's alist.  A parent's binding of the same name is never
+ * one is added -- to the tree of a root or a module's scope
+ * (x_env_istree), or in front of a frame's alist.  A parent's binding of
+ * the same name is never
  * touched: it is shadowed, which is what a definition in a child means.
  * `def` is this on the current environment; the C binding doors and
  * `base bind` are this on a root.
@@ -158,7 +162,7 @@ x_obj_t *x_env_bind(x_obj_t *p_base, x_obj_t *p_args)
 	x_obj_t *p_cell, *p_pair;
 	x_obj_t tree_args[2] = { { .p = NULL }, { .p = p_sym } };
 
-	if (x_env_isroot(p_base, p_env)) {
+	if (x_env_istree(p_base, p_env)) {
 		tree_args[0].p = x_env_bindings(p_env);
 		p_cell = x_eval_call(p_base, X_SLOT_ALIST_BST_LOOKUP, tree_args);
 		if ( ! x_obj_isnil(p_base, p_cell)) {

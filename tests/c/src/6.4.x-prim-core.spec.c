@@ -262,6 +262,58 @@ static char *test_core_env_root(void)
 	return NULL;
 }
 
+/* A scope the language makes with pair -- a list pair over the root, as a
+ * module's environment is -- keeps its bindings in a tree like the root's;
+ * a frame the engine makes under it keeps an alist and reaches it. */
+static char *test_core_env_tree(void)
+{
+	x_obj_t *p_base, *p_root, *p_scope, *p_frame, *p_a, *p_b, *p_c, *p_entry;
+
+	p_base = x_eval_make(NULL, NULL);
+	x_prim_register(p_base, NULL);
+	p_root = x_eval_field_env_root(p_base);
+	p_a = x_mksymbol(p_base, "tree-a");
+	p_b = x_mksymbol(p_base, "tree-b");
+	p_c = x_mksymbol(p_base, "tree-c");
+	p_scope = x_mklist(p_base, NULL, p_root);
+
+	_it_should("a list pair over the root is no root, and keeps a tree where an engine frame keeps an alist",
+		! x_env_isroot(p_base, p_scope) && x_env_istree(p_base, p_scope)
+		&& ! x_env_istree(p_base, x_env_make(p_base, p_root)));
+
+	x_env_bind(p_base, x_argrun({ .p = p_scope }, { .p = p_b }, { .p = x_mksatom(p_base, X_OBJ_FLAG_NONE, (x_int_t)2) }));
+	x_env_bind(p_base, x_argrun({ .p = p_scope }, { .p = p_a }, { .p = x_mksatom(p_base, X_OBJ_FLAG_NONE, (x_int_t)1) }));
+	_it_should("its bindings are tree nodes, (entry . (left . right)), ordered by name",
+		x_firstobj(x_firstobj(x_env_bindings(p_scope))) == p_b
+		&& x_obj_type_isspair(x_restobj(x_env_bindings(p_scope)))
+		&& x_firstobj(x_firstobj(x_firstobj(x_restobj(x_env_bindings(p_scope))))) == p_a);
+
+	p_entry = x_env_lookup(p_base, x_argrun({ .p = p_scope }, { .p = p_a }));
+	_it_should("a name is found in the scope",
+		p_entry != NULL && x_atomint(x_restobj(p_entry)) == 1);
+
+	x_env_bind(p_base, x_argrun({ .p = p_scope }, { .p = p_a }, { .p = x_mksatom(p_base, X_OBJ_FLAG_NONE, (x_int_t)3) }));
+	_it_should("rebinding in the scope updates the same entry",
+		x_env_lookup(p_base, x_argrun({ .p = p_scope }, { .p = p_a })) == p_entry
+		&& x_atomint(x_restobj(p_entry)) == 3);
+
+	x_env_bind(p_base, x_argrun({ .p = p_root }, { .p = p_c }, { .p = x_mksatom(p_base, X_OBJ_FLAG_NONE, (x_int_t)4) }));
+	_it_should("a root binding is reached through the scope, and the root never sees the scope's",
+		x_atomint(x_restobj(x_env_lookup(p_base, x_argrun({ .p = p_scope }, { .p = p_c })))) == 4
+		&& x_env_lookup(p_base, x_argrun({ .p = p_root }, { .p = p_a })) == NULL);
+
+	p_frame = x_env_make(p_base, p_scope);
+	x_env_bind(p_base, x_argrun({ .p = p_frame }, { .p = p_b }, { .p = x_mksatom(p_base, X_OBJ_FLAG_NONE, (x_int_t)5) }));
+	_it_should("a frame under the scope keeps an alist, shadows the scope and reaches it",
+		x_obj_isnil(p_base, x_restobj(x_env_bindings(p_frame)))
+		&& x_atomint(x_restobj(x_env_lookup(p_base, x_argrun({ .p = p_frame }, { .p = p_b })))) == 5
+		&& x_atomint(x_restobj(x_env_lookup(p_base, x_argrun({ .p = p_frame }, { .p = p_a })))) == 3
+		&& x_atomint(x_restobj(x_env_lookup(p_base, x_argrun({ .p = p_scope }, { .p = p_b })))) == 2);
+
+	test_cleanup(p_base);
+	return NULL;
+}
+
 /* A name is found by identity, not by spelling.  Symbols intern per base,
  * so a host's symbol bound into a child under the host's own symbol is not
  * found by the child's symbol of that spelling; and a foreign symbol, one
@@ -1002,6 +1054,7 @@ static char *run_tests() {
 	_run_test(test_core_pair_first_rest);
 	_run_test(test_core_def_set);
 	_run_test(test_core_env_root);
+	_run_test(test_core_env_tree);
 	_run_test(test_core_env_root_identity);
 	_run_test(test_core_fn);
 	_run_test(test_core_op);
