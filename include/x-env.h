@@ -34,6 +34,11 @@
 #define x_env_bindings(E)		x_firstobj(E)	/**< The alist, or the root's tree. */
 #define x_env_parent(E)			x_restobj(E)	/**< The enclosing environment, nil at the root. */
 #define x_env_isroot(B,E)		x_obj_isnil((B), x_restobj(E))	/**< A root has no parent. */
+/** Keeps its bindings as a tree: a root, and an environment whose spine the
+ *  language made with `pair` -- a list pair, where the engine makes its own
+ *  frames of structural pairs.  A module's scope is one: its hundreds of
+ *  names would otherwise be an alist every root lookup from inside walks. */
+#define x_env_istree(B,E)		(x_env_isroot((B), (E)) || ! x_obj_type_isspair(E))
 /** @} */
 
 /** Make an empty environment whose parent is @p p_parent (nil for a root). */

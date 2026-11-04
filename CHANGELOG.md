@@ -13,6 +13,18 @@ alongside the library changes they landed with.
 
 ## Unreleased
 
+**An environment the language makes with `pair` keeps its bindings in a
+tree, as the root does** ([#114]). `x_env_lookup` and `x_env_bind` kept a
+tree for the root alone, by "parent is nil", and an alist for every other
+environment; a scoped module's environment is a list pair over the root,
+so every root name read from inside a module walked the module's names
+first -- 337 of them in x-coreutils's `vi`, 1.0 to 2.6 ms a keystroke. The
+two dispatch on `x_env_istree` now: a root, or a spine that is not a
+structural pair. The engine makes its own frames of structural pairs, so a
+call's frame still keeps an alist. The binary is the same size.
+
+[#114]: https://github.com/jonruttan/x-engine-c/pull/114
+
 ## 0.2.25 — 2026-10-28
 
 **The Makefile reads the same under GNU make, BSD make and POSIX make**
