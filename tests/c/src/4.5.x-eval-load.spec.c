@@ -277,6 +277,37 @@ static char *test_guard_keeps_the_enclosing_handler_across_a_collect(void)
 }
 
 /*
+ * The guard's own handler, once it has caught, is popped before its
+ * handler body runs, so a re-raise reaches the enclosing guard; nothing
+ * the collector sees holds it after that.  The guard used to read its
+ * environment back from it after the handler body, and a handler body
+ * that collected left that a read of freed memory: x-ssh's client,
+ * retrying a wrong passphrase in the handler body, died in the next
+ * guard.  The environment comes back as the handler body's parent.
+ * Under make test-asan the old read is a heap-use-after-free.
+ */
+static char *test_guard_gets_its_environment_back_across_a_collect_in_the_handler(void)
+{
+	x_obj_t *p_base, *p_env;
+	x_char_t buffer[256];
+	static x_char_t src[] = "(guard (e (heap-collect) e) (error 2))\n";
+
+	p_base = init(NULL, buffer);
+	x_callable_bind(p_base, (x_char_t *)"heap-collect", x_prim_heap_collect);
+	p_env = x_eval_field_env(p_base);
+
+	_load(p_base, src, sizeof(src) - 1);
+
+	_it_should("the environment is the guard's again",
+		x_eval_field_env(p_base) == p_env);
+	_it_should("the slot holds no handler again",
+		x_obj_isnil(p_base, x_firstobj(x_eval_field_error_handler(p_base))));
+
+	test_cleanup(p_base);
+	return NULL;
+}
+
+/*
  * The other half of the contract, unchanged: with the includer's state
  * parked, a loaded file's top-level def still lands in the ROOT, not in
  * the includer's environment -- the reason the state is displaced at all.
@@ -314,6 +345,7 @@ static char *test_load_still_binds_top_level_defs_globally(void)
 static char *run_tests() {
 	_run_test(test_load_keeps_the_includer_across_a_collect);
 	_run_test(test_guard_keeps_the_enclosing_handler_across_a_collect);
+	_run_test(test_guard_gets_its_environment_back_across_a_collect_in_the_handler);
 	_run_test(test_load_still_binds_top_level_defs_globally);
 
 	return NULL;

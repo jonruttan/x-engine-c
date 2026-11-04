@@ -221,12 +221,15 @@ static x_obj_t *x_prim_guard(x_obj_t *p_base, x_obj_t *p_args)
 		x_firstobj(x_eval_field_error_handler(p_base)) = p_prev_handler;
 		/* The handler body runs in a child of the guard's environment
 		 * holding the error variable, so the binding is the body's own
-		 * and a `def` there stays there. */
+		 * and a `def` there stays there.  Afterwards the guard's
+		 * environment is read back as that child's parent: the child is
+		 * current, so reachable, while the body runs, and the popped
+		 * handler is not -- a collect in the body frees it. */
 		p_env = x_env_make(p_base, x_error_handler_saved_env(p_handler));
 		x_eval_call_or(p_base, X_SLOT_ENV_BIND, x_env_bind, x_argrun({ .p = p_env }, { .p = p_var }, { .p = p_err }));
 		x_eval_field_env(p_base) = p_env;
 		p_result = x_eval_call_or(p_base, X_SLOT_EVAL_BODY, x_eval_body, x_argrun({ .p = p_handler_body }));
-		x_eval_field_env(p_base) = x_error_handler_saved_env(p_handler);
+		x_eval_field_env(p_base) = x_env_parent(p_env);
 	}
 
 	/* Pop handler. */
