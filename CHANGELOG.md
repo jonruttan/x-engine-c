@@ -13,6 +13,8 @@ alongside the library changes they landed with.
 
 ## Unreleased
 
+## 0.2.26 — 2026-11-04
+
 **An environment the language makes with `pair` keeps its bindings in a
 tree, as the root does** ([#114]). `x_env_lookup` and `x_env_bind` kept a
 tree for the root alone, by "parent is nil", and an alist for every other
@@ -24,6 +26,19 @@ structural pair. The engine makes its own frames of structural pairs, so a
 call's frame still keeps an alist. The binary is the same size.
 
 [#114]: https://github.com/jonruttan/x-engine-c/pull/114
+
+**A guard whose handler body ran a collect no longer reads freed memory
+for the environment to go back to** ([#113]). A guard pops its handler
+before the handler body runs, so a re-raise reaches the enclosing guard,
+and after the body it read its environment back from that handler, which
+nothing the collector could see still held. A handler body that redid the
+guarded work, or asked for a collect, left the guard a freed pair's word:
+a SIGSEGV in the next guard, or the wrong environment. The guard reads
+its environment back from the handler body's own environment, which stays
+reachable. Found in x-ssh's client retrying a passphrase inside the
+handler.
+
+[#113]: https://github.com/jonruttan/x-engine-c/pull/113
 
 ## 0.2.25 — 2026-10-28
 
