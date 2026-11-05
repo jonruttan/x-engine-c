@@ -56,11 +56,6 @@ CC?=gcc
 CFLAGS?=-O2
 CFLAGS+=-Wall -Wextra -Wno-unused-parameter
 CFLAGS+=-DX_HEAP -DX_TYPE -DX_SYS_CLOCK
-# Every object's extra meta words (slot 0 the source line, slot 1 the file
-# id) start at 0: line 0 of file 0, standard input.  A line of 0 is the
-# reader's "no stamp", so an object the tokenizer never stamped reads as
-# none instead of as whatever the allocator left there.
-CFLAGS+=-DX_OBJ_META_INIT=0
 
 # Dead code elimination: each function/data in its own section, stripped at link
 CFLAGS+=-ffunction-sections -fdata-sections

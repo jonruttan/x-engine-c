@@ -179,16 +179,30 @@ x_obj_t *x_type_buffer_register(x_obj_t *p_base, x_obj_t *p_args)
 x_obj_t *x_type_buffer_make(x_obj_t *p_base, x_obj_t *p_args)
 {
 	x_obj_t *p_type = x_type_buffer_register(p_base, p_base),
-		*p_buffer = x_0(p_args);
+		*p_buffer = x_0(p_args), *p_obj;
 	x_obj_flag_t flags = x_obj_isnil(p_base, x_1(p_args))
 		? 0 : x_firstint(x_01(p_args));
 
-	return x_obj_make(p_base, p_type, flags, X_OBJ_LENGTH_PAIR,
+	p_obj = x_obj_make(p_base, p_type, flags, X_OBJ_LENGTH_PAIR,
 			x_bufferval(p_buffer),
 			x_obj_make(p_base, p_type,
 				(flags & ~X_OBJ_FLAG_OWN) | X_TYPE_BUFFER_FLAG_INNER,
 				X_OBJ_LENGTH_PAIR,
 				x_bufferval(p_buffer), x_bufferval(p_buffer)));
+
+	/* The reader's position, which the tokenizer stamps each form with:
+	 * slot 0 the line, slot 1 the file id.  A buffer starts at line 0 of
+	 * file 0, standard input; include and the string reader move it. */
+	if (p_base != NULL
+			&& x_atomint(x_firstobj(x_base_field_obj_meta_extra(p_base))) > 0
+			&& (x_obj_flags(p_obj) & X_OBJ_FLAG_META)) {
+		x_obj_meta_i(p_obj, 0).i = 0;
+		if (x_atomint(x_firstobj(x_base_field_obj_meta_extra(p_base))) > 1) {
+			x_obj_meta_i(p_obj, 1).i = 0;
+		}
+	}
+
+	return p_obj;
 }
 
 /**
