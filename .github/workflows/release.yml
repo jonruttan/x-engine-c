@@ -127,6 +127,11 @@ jobs:
       fail-fast: false
       matrix:
         os: [macos-15, ubuntu-24.04]
+    # The macOS a release runs on, from 14 up: without this the binary's
+    # floor is the runner's SDK, and moving the runner image would raise it.
+    # Linux ignores the variable.
+    env:
+      MACOSX_DEPLOYMENT_TARGET: "14.0"
     steps:
       - uses: actions/checkout@v7
         with:
