@@ -461,7 +461,7 @@ static char *test_sexp_int_analyse_sign(void)
 static char *test_sexp_int_read(void)
 {
 	x_obj_t *p_args, *p_buffer, *p_obj;
-	x_char_t *s, buffer[32];
+	x_char_t *s, buffer[32] = "";
 
 	s = "9@";
 	helper_file_buffer_ptr[TEST_HELPER_FILE_STDIN] = s;
