@@ -13,6 +13,8 @@ alongside the library changes they landed with.
 
 ## Unreleased
 
+## 0.2.27 — 2026-11-05
+
 **Every object's extra meta words start at zero** ([#116], [#119]). The
 engine keeps a source line and file id in two extra meta words, which
 x-expr reserved and left as the allocator handed them over, and nothing
