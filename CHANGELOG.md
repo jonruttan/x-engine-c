@@ -13,16 +13,17 @@ alongside the library changes they landed with.
 
 ## Unreleased
 
-**Every object's extra meta words start at 0** ([#116]). The engine keeps
-a source line and file id in two extra meta words, which x-expr reserved
-and left as the allocator handed them over, and nothing wrote the
-standard-input buffer's file id. A sanitizer build fills with `0xbe`, so
-every form read from standard input carried a garbage file id and `Source`
-found no stamp. The engine builds with x-expr's `X_OBJ_META_INIT` at 0:
-line 0 of file 0, standard input, and a line of 0 is the reader's "no
-stamp".
+**A reader buffer starts at line 0 of file 0, standard input** ([#117]).
+The tokenizer stamps each form with the buffer's two meta words, the line
+and the file id, and nothing wrote the standard-input buffer's file id:
+it carried whatever the allocator left, which a sanitizer build fills with
+`0xbe`, so every form read from standard input carried a garbage file id
+and `Source` found no stamp. The buffer constructor writes both words. The
+value is the engine's to write where it makes the buffer, not x-expr's to
+guess, so the build flag [#116] added is gone.
 
 [#116]: https://github.com/jonruttan/x-engine-c/pull/116
+[#117]: https://github.com/jonruttan/x-engine-c/pull/117
 
 ## 0.2.26 — 2026-11-04
 
