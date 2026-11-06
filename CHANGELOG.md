@@ -13,6 +13,17 @@ alongside the library changes they landed with.
 
 ## Unreleased
 
+**The release ships the slot-vector contract, and a compiled collector phase
+has its doors** ([#123]). `tools/contract/base-slots.x` is staged with the
+other four contract files, so a language replacing a routine reads the slot
+positions from the release it pins. Three `jit_*` helpers join the exported
+runtime: `jit_heap_run_hooks` fires a hook list, `jit_type_heap_free` runs
+one object's type free hook, and `jit_obj_free` frees an object the engine's
+allocator made, so a sweep compiled into the heap-sweep slot reclaims
+objects as the engine's does.
+
+[#123]: https://github.com/jonruttan/x-engine-c/pull/123
+
 ## 0.2.27 — 2026-11-05
 
 **Every object's extra meta words start at zero** ([#116], [#119]). The
