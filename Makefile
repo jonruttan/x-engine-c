@@ -369,7 +369,7 @@ DIST_NAME=x-engine-c-$(X_RELEASE)-$(DIST_OS)-$(DIST_ARCH)
 DIST_REQUIRED=x-bin x-bin-profile x-engine.xon x-engine-build.xon LICENSE \
 	tools/contract/isa.x tools/contract/obj-layout.x \
 	tools/contract/base-paths.x tools/contract/base-layout.x \
-	tools/contract/claims.x \
+	tools/contract/claims.x tools/contract/base-slots.x \
 	include/x-eval.h ext/x-expr/include/x-obj.h
 
 dist: all strip x-bin-profile ## Package this engine as a consumable artifact (tar.gz + sha256)
@@ -385,6 +385,7 @@ dist: all strip x-bin-profile ## Package this engine as a consumable artifact (t
 	@strip -x $(DIST_DIR)/$(DIST_NAME)/x-bin-profile
 	@if [ -f entitlements.plist ]; then codesign -s - --entitlements entitlements.plist -f $(DIST_DIR)/$(DIST_NAME)/x-bin-profile 2>/dev/null || true; fi
 	@cp tools/contract/isa.x tools/contract/obj-layout.x tools/contract/base-paths.x \
+		tools/contract/base-slots.x \
 		tools/contract/base-layout.x tools/contract/claims.x \
 		$(DIST_DIR)/$(DIST_NAME)/tools/contract/
 	@cp -R $(INCDIR) $(DIST_DIR)/$(DIST_NAME)/include

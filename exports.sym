@@ -15,3 +15,6 @@ _jit_buffer_unread
 _jit_buffer_len
 _jit_buffer_last_char
 _jit_call_value
+_jit_heap_run_hooks
+_jit_type_heap_free
+_jit_obj_free

@@ -244,6 +244,8 @@ x_obj_t *x_prim_heap_register(x_obj_t *p_base, x_obj_t *p_args);
 x_obj_t *x_heap_mark_phase(x_obj_t *p_base, x_obj_t *p_args);
 /** The collector's sweep phase, a routine in the slot vector. Arguments: (). */
 x_obj_t *x_heap_sweep_phase(x_obj_t *p_base, x_obj_t *p_args);
+/** Fire each hook on a hook list. Arguments: (hooks). Types: (object). */
+x_obj_t *x_heap_run_hooks(x_obj_t *p_base, x_obj_t *p_args);
 
 /** Register the state-image primitives (image save!, image rebuild!). */
 x_obj_t *x_prim_image_register(x_obj_t *p_base, x_obj_t *p_args);
