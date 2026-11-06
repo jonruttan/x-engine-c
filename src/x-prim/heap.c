@@ -143,6 +143,11 @@ x_obj_t *x_heap_sweep_phase(x_obj_t *p_base, x_obj_t *p_args)
 static x_obj_t *x_prim_heap_sweep(x_obj_t *p_base, x_obj_t *p_args)
 {
 	(void)p_args;
+
+	if (x_obj_flags(p_base) & X_OBJ_FLAG_CHILD) {
+		return NULL;
+	}
+
 #ifdef X_PROFILE
 	if (x_base_isset(p_base))
 		x_atomint(x_firstobj(x_eval_field_profile_gc_runs(p_base)))++;
@@ -229,6 +234,11 @@ static x_obj_t *x_prim_alloc_limit(x_obj_t *p_base, x_obj_t *p_args)
 static x_obj_t *x_prim_heap_mark(x_obj_t *p_base, x_obj_t *p_args)
 {
 	(void)p_args;
+
+	if (x_obj_flags(p_base) & X_OBJ_FLAG_CHILD) {
+		return NULL;
+	}
+
 	x_eval_call_or(p_base, X_SLOT_HEAP_MARK, x_heap_mark_phase, NULL);
 
 	return NULL;
@@ -258,6 +268,11 @@ static x_obj_t *x_prim_heap_mark(x_obj_t *p_base, x_obj_t *p_args)
 static x_obj_t *x_prim_heap_collect(x_obj_t *p_base, x_obj_t *p_args)
 {
 	(void)p_args;
+
+	if (x_obj_flags(p_base) & X_OBJ_FLAG_CHILD) {
+		return NULL;
+	}
+
 #ifdef X_PROFILE
 	if (x_base_isset(p_base))
 		x_atomint(x_firstobj(x_eval_field_profile_gc_runs(p_base)))++;
