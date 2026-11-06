@@ -569,6 +569,10 @@ x_obj_t *x_type_heap_mark(x_obj_t *p_base, x_obj_t *p_obj, x_obj_flag_t flags)
 	}
 
 	if (p_type != NULL && x_obj_type_isspair(p_type)) {
+		/* An object refers to its type: a type a child base made lives on
+		 * while anything of that type does. */
+		x_heap_tree_mark(p_base, p_type, flags);
+
 		p_mark = x_type_field_mark(p_type);
 
 		if (p_mark != NULL) {

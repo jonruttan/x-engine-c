@@ -72,8 +72,12 @@ extern x_satom_t x_eval_obj;
  *  binding; FRAME, a bit on an env spine cell that marked it as part of a
  *  local frame; and FNFRAME, FRAME's refinement for procedure activations.
  *  An environment is an object now, so a frame is a value and needs no
- *  mark.  Flag bits 1, 3 and 4 are free at this layer. */
+ *  mark.  Flag bits 3 and 4 are free at this layer. */
 #define X_OBJ_FLAG_COV		X_OBJ_FLAG_2
+
+/** CHILD -- on a base object: the base allocates on its parent's chain, so
+ *  the parent's collect marks and sweeps it, and it never collects itself. */
+#define X_OBJ_FLAG_CHILD	X_OBJ_FLAG_1
 
 /** The TRACE bit -- the first bit above x-expr's, and the one a caller
  *  borrows to mark objects of its own.  (heap tree-mark!), (heap

@@ -142,13 +142,15 @@ static void x_base_attach_read_buffer(x_obj_t *p_new)
  */
 static x_obj_t *x_prim_make_token_base(x_obj_t *p_base, x_obj_t *p_args)
 {
-	x_obj_t *p_new = x_eval_make(NULL, NULL);
+	x_obj_t *p_new = x_eval_make(p_base, NULL);
 	(void)p_args;
+
+	x_obj_flags(p_new) |= X_OBJ_FLAG_CHILD;
 
 	/* Inherit the boolean singletons from the calling base, WRITING THROUGH
 	 * THE CELL.  true/false/sigint are cells (x-eval-layout.h), and
 	 * x_eval_make's own parented path assigns x_firstobj(field) for exactly
-	 * that reason; it is skipped here because this base is made parentless.
+	 * that reason.
 	 *
 	 * Assigning the FIELD instead -- which is what this did -- replaced each
 	 * cell with the singleton it should have contained, so every later
@@ -188,7 +190,8 @@ static x_obj_t *x_prim_make_base(x_obj_t *p_base, x_obj_t *p_args)
 	x_obj_t *p_new_base;
 	(void)p_args;
 
-	p_new_base = x_eval_make(NULL, NULL);
+	p_new_base = x_eval_make(p_base, NULL);
+	x_obj_flags(p_new_base) |= X_OBJ_FLAG_CHILD;
 
 	/* Register types. */
 	x_type_prim_register(p_new_base, p_new_base);

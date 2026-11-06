@@ -642,7 +642,7 @@ static char *test_slots_child_base(void)
 		x_eval == x_eval_slot(p_base, X_SLOT_EVAL)
 	);
 
-	test_cleanup(p_child);
+	/* The child is on the parent's chain; the parent's cleanup frees it. */
 	test_cleanup(p_base);
 	return NULL;
 }
