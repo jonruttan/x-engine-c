@@ -13,6 +13,8 @@ alongside the library changes they landed with.
 
 ## Unreleased
 
+## 0.2.28 — 2026-11-06
+
 **The release ships the slot-vector contract, and a compiled collector phase
 has its doors** ([#123]). `tools/contract/base-slots.x` is staged with the
 other four contract files, so a language replacing a routine reads the slot
