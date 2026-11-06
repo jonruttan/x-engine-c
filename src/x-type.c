@@ -18,6 +18,7 @@
 #include "x-eval.h"
 #include "x-heap.h"
 #include "x-obj.h"
+#include "x-stdlib.h"
 #include "x-type/prim.h"
 #include "x-type/procedure.h"
 #include "x-type/symbol.h"
@@ -525,6 +526,125 @@ x_obj_t *x_type_prim_length(x_obj_t *p_base, x_obj_t *p_args)
 	return (*x_atomfn(p_length))(p_base, (x_obj_t *)pair_args);
 }
 
+/*
+ * # Crossing into a child base
+ *
+ * A mark walk that reaches a child base enters its tree, and the cells it
+ * marks there sit on the CHILD's chain, where the walking base's sweep never
+ * goes.  The bits outlive the cycle, and the next walk stops at the first
+ * one it meets -- the child base object itself -- so a value on the walking
+ * base's heap that only the child's environment holds goes unmarked and is
+ * swept: base-bind and base-make-type lose by the same door.
+ *
+ * The hook cannot clear as it goes: x_heap_tree_mark marks the child before
+ * it asks, and a child whose tree holds its own base would be entered again
+ * on every clear.  Clearing the child's whole chain after the sweep costs
+ * what the child has allocated and never collected, on every collect of the
+ * parent.  So under the door the walk is this file's own, the twin of
+ * x_heap_tree_mark, and it records each object it marks, off the heap; the
+ * bits come off those once the sweep is done, when they are dead state for
+ * every base.  Every mark the engine makes under the door -- the unit walk
+ * below, a closure's environment, a handler's heap tree-mark! -- goes
+ * through x_type_heap_tree_mark, so it records too.  The record scales
+ * with what was reached, not with the child's heap.
+ */
+#define X_TYPE_RECORD_LEN	1024
+
+typedef struct x_type_record_t {
+	struct x_type_record_t *p_next;
+	x_int_t                 count;
+	x_obj_t                *pp_obj[X_TYPE_RECORD_LEN];
+} x_type_record_t;
+
+static x_type_record_t *p_record = NULL;	/* newest block first */
+static x_int_t crossing = 0;			/* > 0 under a child's door */
+
+/** Record an object marked under a child's door. */
+static void x_type_heap_mark_record(x_obj_t *p_obj)
+{
+	x_type_record_t *p_block = p_record;
+
+	if (p_block == NULL || p_block->count == X_TYPE_RECORD_LEN) {
+		p_block = (x_type_record_t *)x_sys_malloc(sizeof(x_type_record_t));
+
+		if (p_block == NULL) {
+			return;
+		}
+
+		p_block->p_next = p_record;
+		p_block->count = 0;
+		p_record = p_block;
+	}
+
+	p_block->pp_obj[p_block->count++] = p_obj;
+}
+
+/** x_heap_tree_mark's twin for a tree under a child's door: the same walk,
+ *  recording each object it marks. */
+static x_obj_t *x_type_heap_mark_walk(x_obj_t *p_base, x_obj_t *p_obj, x_obj_flag_t flags)
+{
+	while (p_obj != NULL && (x_obj_flags(p_obj) & flags) != flags) {
+		x_obj_flags(p_obj) |= flags;
+		x_type_heap_mark_record(p_obj);
+
+		if (x_obj_type_isspair(p_obj)) {
+			x_type_heap_mark_walk(p_base, x_firstobj(p_obj), flags);
+			p_obj = x_restobj(p_obj);
+
+			continue;
+		}
+
+		p_obj = x_type_heap_mark(p_base, p_obj, flags);
+	}
+
+	return p_obj;
+}
+
+/**
+ * Mark a tree: the collector's walk, or the recording one under a child's
+ * door.  Every mark the engine makes from inside x_type_heap_mark takes
+ * this road, so a crossing records all it reaches.
+ *
+ * @param p_base  x_obj_t* -- Base (execution context)
+ * @param p_obj   x_obj_t* -- Root object to mark from
+ * @param flags   x_obj_flag_t -- Flags to set on each marked object
+ * @return x_obj_t* -- The last object visited
+ */
+x_obj_t *x_type_heap_tree_mark(x_obj_t *p_base, x_obj_t *p_obj, x_obj_flag_t flags)
+{
+	if (crossing > 0) {
+		return x_type_heap_mark_walk(p_base, p_obj, flags);
+	}
+
+	return x_heap_tree_mark(p_base, p_obj, flags);
+}
+
+/**
+ * Clear the mark bit from every object recorded under a child's door, and
+ * forget them.  Runs after the sweep: a recorded object on the sweeping
+ * base's own chain was retained by its mark, so this clears it a second
+ * time and frees nothing.  No walk is open here, so the door count is
+ * reset too: a handler that raised under the door left it open.
+ */
+void x_type_heap_mark_release(void)
+{
+	x_type_record_t *p_block;
+	x_int_t i;
+
+	crossing = 0;
+
+	while (p_record != NULL) {
+		p_block = p_record;
+		p_record = p_block->p_next;
+
+		for (i = 0; i < p_block->count; i++) {
+			x_obj_flags(p_block->pp_obj[i]) &= ~X_OBJ_FLAG_MARK;
+		}
+
+		x_sys_free(p_block);
+	}
+}
+
 /**
  * GC mark hook for typed heap objects.
  *
@@ -563,9 +683,21 @@ x_obj_t *x_type_heap_mark(x_obj_t *p_base, x_obj_t *p_obj, x_obj_flag_t flags)
 	x_int_t described;
 
 	/* Child base objects (e.g. %sh-base): traverse their pair tree
-	 * so type alist entries, env, etc. are not freed by GC. */
+	 * so type alist entries, env, etc. are not freed by GC.  A MARK
+	 * walk goes under the door recording (see above); the child, marked
+	 * by the caller before it asked, is recorded here.  A SHARED walk
+	 * pins, and those bits stay. */
 	if (p_type == (x_obj_t *)&x_eval_obj) {
-		return x_base(p_obj);
+		if ((flags & X_OBJ_FLAG_MARK) == 0) {
+			return x_base(p_obj);
+		}
+
+		x_type_heap_mark_record(p_obj);
+		crossing++;
+		x_type_heap_mark_walk(p_base, x_base(p_obj), flags);
+		crossing--;
+
+		return NULL;
 	}
 
 	if (p_type != NULL && x_obj_type_isspair(p_type)) {
@@ -631,7 +763,7 @@ x_obj_t *x_type_heap_mark(x_obj_t *p_base, x_obj_t *p_obj, x_obj_flag_t flags)
 					}
 
 					if (p_next != NULL) {
-						x_heap_tree_mark(p_base, p_next, flags);
+						x_type_heap_tree_mark(p_base, p_next, flags);
 					}
 
 					p_next = x_obj(x_obj_data_i(p_obj, i));

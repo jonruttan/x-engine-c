@@ -30,7 +30,7 @@ static x_obj_t *x_type_operative_mark(x_obj_t *p_base, x_obj_t *p_args)
 {
 	x_obj_t *p_obj = x_firstobj(p_args);
 	x_obj_flag_t flags = (x_obj_flag_t)x_firstint(x_restobj(p_args));
-	x_heap_tree_mark(p_base, x_obj(x_obj_data_i(p_obj, 1)), flags);
+	x_type_heap_tree_mark(p_base, x_obj(x_obj_data_i(p_obj, 1)), flags);
 	return NULL;
 }
 

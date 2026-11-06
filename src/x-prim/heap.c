@@ -149,6 +149,7 @@ static x_obj_t *x_prim_heap_sweep(x_obj_t *p_base, x_obj_t *p_args)
 #endif
 
 	x_eval_call_or(p_base, X_SLOT_HEAP_SWEEP, x_heap_sweep_phase, NULL);
+	x_type_heap_mark_release();
 
 	return NULL;
 }
@@ -265,6 +266,11 @@ static x_obj_t *x_prim_heap_collect(x_obj_t *p_base, x_obj_t *p_args)
 
 	x_eval_call_or(p_base, X_SLOT_HEAP_MARK, x_heap_mark_phase, NULL);
 	x_eval_call_or(p_base, X_SLOT_HEAP_SWEEP, x_heap_sweep_phase, NULL);
+	/* The sweep clears the bit along this chain only.  A child base the
+	 * mark walk entered carries it on its own chain, out of reach of any
+	 * sweep in the slot, C or compiled; it is dead state now for every
+	 * base, so it comes off here, after whichever ran. */
+	x_type_heap_mark_release();
 
 	return NULL;
 }
@@ -359,7 +365,7 @@ static x_obj_t *x_prim_heap_tree_mark(x_obj_t *p_base, x_obj_t *p_args)
 	x_obj_t *p_obj, *p_flags;
 
 	x_eargs(p_base, p_args, 3, NULL, &p_obj, &p_flags);
-	x_heap_tree_mark(p_base, p_obj, (x_obj_flag_t)x_atomint(p_flags));
+	x_type_heap_tree_mark(p_base, p_obj, (x_obj_flag_t)x_atomint(p_flags));
 
 	return p_obj;
 }
