@@ -19,14 +19,16 @@
 #include "x-type/str.h"
 #include "x-obj/prim.h"
 
-/** Fire each hook on a hook list, draining any deferred tail call.  Shared
- *  by the mark and free hook walks (mark_phase / sweep_phase).  A procedure
- *  hook that returns a non-nil tail leaves the env extended and tco_expr/
- *  tco_env set for an outer trampoline; there is none here, so drain it via
- *  x_eval_tco_trampoline -- otherwise the env frame the hook left live is
- *  freed by the sweep and the next eval dereferences it. */
-static void x_heap_run_hooks(x_obj_t *p_base, x_obj_t *p_hooks)
+/** Fire each hook on a hook list, draining any deferred tail call.  Arguments:
+ *  (hooks).  Types: (object).  Shared by the mark and free hook walks
+ *  (mark_phase / sweep_phase).  A procedure hook that returns a non-nil tail
+ *  leaves the env extended and tco_expr/tco_env set for an outer trampoline;
+ *  there is none here, so drain it via x_eval_tco_trampoline -- otherwise the
+ *  env frame the hook left live is freed by the sweep and the next eval
+ *  dereferences it. */
+x_obj_t *x_heap_run_hooks(x_obj_t *p_base, x_obj_t *p_args)
 {
+	x_obj_t *p_hooks = x_obj(p_args[0]);
 	x_spair_t hook_args[1];
 	x_obj_t call_args[1] = { { .p = (x_obj_t *)hook_args } };
 
@@ -39,6 +41,8 @@ static void x_heap_run_hooks(x_obj_t *p_base, x_obj_t *p_hooks)
 		x_eval_call_or(p_base, X_SLOT_EVAL_TCO_TRAMPOLINE, x_eval_tco_trampoline, x_argrun({ .p = x_eval_call_or(p_base, X_SLOT_OBJ_PRIM_CALL, x_obj_prim_call, call_args) }));
 		p_hooks = x_restobj(p_hooks);
 	}
+
+	return NULL;
 }
 
 /** Mark phase: trace live objects from every root (GC phase 1).
@@ -80,8 +84,8 @@ x_obj_t *x_heap_mark_phase(x_obj_t *p_base, x_obj_t *p_args)
 	x_obj_t *p_roots;
 
 	if (x_base_isset(p_base)) {
-		x_heap_run_hooks(p_base,
-			x_firstobj(x_base_field_heap_mark_hooks(p_base)));
+		x_heap_run_hooks(p_base, x_argrun({ .p =
+			x_firstobj(x_base_field_heap_mark_hooks(p_base)) }));
 	}
 
 	x_heap_tree_mark(p_base, x_base(p_base), X_OBJ_FLAG_MARK);
@@ -111,8 +115,8 @@ x_obj_t *x_heap_mark_phase(x_obj_t *p_base, x_obj_t *p_args)
 x_obj_t *x_heap_sweep_phase(x_obj_t *p_base, x_obj_t *p_args)
 {
 	if (x_base_isset(p_base)) {
-		x_heap_run_hooks(p_base,
-			x_firstobj(x_base_field_heap_free_hooks(p_base)));
+		x_heap_run_hooks(p_base, x_argrun({ .p =
+			x_firstobj(x_base_field_heap_free_hooks(p_base)) }));
 	}
 
 	x_heap_sweep(p_base, x_obj_heap(p_base), X_OBJ_FLAG_MARK);

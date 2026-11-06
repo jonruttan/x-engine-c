@@ -7,6 +7,7 @@
  */
 #include "x-obj.h"
 #include "x-prim.h"
+#include "x-type.h"
 #include "x-type/buffer.h"
 #include "x-type/int.h"
 #include "x-type/pair.h"
@@ -249,4 +250,50 @@ x_obj_t *jit_call_value(x_obj_t *p_base, x_obj_t *p_args)
 	}
 
 	return (*x_primval(p_fn))(p_base, p_args);
+}
+
+/**
+ * Fire each hook on a hook list: the free hooks ahead of a sweep, or the
+ * mark hooks ahead of a mark.  Arguments: (hooks).  Types: (object).
+ *
+ * @param p_base  x_obj_t* -- Base (execution context)
+ * @param p_args  x_obj_t* -- Argument run: (hooks), a hook list from the
+ *                            base's heap fields
+ * @return NULL
+ */
+x_obj_t *jit_heap_run_hooks(x_obj_t *p_base, x_obj_t *p_args)
+{
+	return x_heap_run_hooks(p_base, p_args);
+}
+
+/**
+ * Run an object's type-specific free hook, if its type has one.
+ * Arguments: (object).  Types: (object).
+ *
+ * @param p_base  x_obj_t* -- Base (execution context)
+ * @param p_args  x_obj_t* -- Argument run: (object), the object about to be
+ *                            freed
+ * @return NULL
+ */
+x_obj_t *jit_type_heap_free(x_obj_t *p_base, x_obj_t *p_args)
+{
+	x_type_heap_free(p_base, x_obj(p_args[0]));
+
+	return NULL;
+}
+
+/**
+ * Free an object the engine's allocator made: its owned payload, its
+ * allocation and the base's allocation count.  Arguments: (object).
+ * Types: (object).
+ *
+ * @param p_base  x_obj_t* -- Base (execution context)
+ * @param p_args  x_obj_t* -- Argument run: (object), unlinked from the chain
+ * @return NULL
+ */
+x_obj_t *jit_obj_free(x_obj_t *p_base, x_obj_t *p_args)
+{
+	x_obj_free(p_base, x_obj(p_args[0]));
+
+	return NULL;
 }
