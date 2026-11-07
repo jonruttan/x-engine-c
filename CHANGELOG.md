@@ -13,6 +13,21 @@ alongside the library changes they landed with.
 
 ## Unreleased
 
+**A child base allocates on its parent's chain, so a value bound into it
+survives the parent's collects** ([#126]). `make-base` and `make-tok` made
+a parentless base heading its own allocation chain. The parent's mark set
+its bit on the child's cells and the parent's sweep never cleared it, so
+the next mark stopped at the stale bit and a value handed over by
+`base-bind` was swept on the second collect; and nothing swept a child's
+chain, so a child and all it allocated lived until exit. Both now make the
+child with its parent: the parent's sweep clears every bit it set and
+frees a dead child with its garbage. `X_OBJ_FLAG_CHILD` marks such a base,
+and `heap collect`, `heap mark` and `heap sweep` return at once on it.
+The mark follows an object's type, so a type a child made lives while
+anything of that type does.
+
+[#126]: https://github.com/jonruttan/x-engine-c/pull/126
+
 ## 0.2.28 — 2026-11-06
 
 **The release ships the slot-vector contract, and a compiled collector phase
