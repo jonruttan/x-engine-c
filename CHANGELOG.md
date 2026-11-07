@@ -13,6 +13,8 @@ alongside the library changes they landed with.
 
 ## Unreleased
 
+## 0.2.29 — 2026-11-07
+
 **A child base allocates on its parent's chain, so a value bound into it
 survives the parent's collects** ([#126]). `make-base` and `make-tok` made
 a parentless base heading its own allocation chain. The parent's mark set
