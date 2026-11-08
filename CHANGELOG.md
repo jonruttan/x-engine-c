@@ -13,6 +13,25 @@ alongside the library changes they landed with.
 
 ## Unreleased
 
+## 0.2.30 — 2026-11-07
+
+**An engine built for 32-bit ARM declares `(param arch arm)`** ([#130]).
+`tools/contract/gen-build-params.sh` named arm64, x86-64 and i386, so a
+build for `arm-linux-gnueabihf` declared `(param arch unknown)` beside its
+binary, and x-lang's syscall conformance case had no row to read write's
+number from. A triple starting `arm` after the arm64 spellings is now
+`arm`, the spelling x-lang's contract vocabulary adds for it.
+
+[#130]: https://github.com/jonruttan/x-engine-c/pull/130
+
+**The engine's nil test is inlined** ([#129]). x-expr's `x_obj_isnil` is
+a macro (jonruttan/x-expr#24), a comparison with NULL at each use in place
+of a call into x-expr. An x-core boot from source runs 6.0% faster (2.206 s
+to 2.073 s, 8 alternating runs). x-bin no longer exports `x_obj_isnil`;
+nothing looks it up by name.
+
+[#129]: https://github.com/jonruttan/x-engine-c/pull/129
+
 ## 0.2.29 — 2026-11-07
 
 **A child base allocates on its parent's chain, so a value bound into it
