@@ -76,7 +76,8 @@ extern x_satom_t x_eval_obj;
 #define X_OBJ_FLAG_COV		X_OBJ_FLAG_2
 
 /** CHILD -- on a base object: the base allocates on its parent's chain, so
- *  the parent's collect marks and sweeps it, and it never collects itself. */
+ *  the parent's collect marks and sweeps it, and a collect it asks for runs
+ *  in the base that owns the chain, reached through the parent cell. */
 #define X_OBJ_FLAG_CHILD	X_OBJ_FLAG_1
 
 /** The TRACE bit -- the first bit above x-expr's, and the one a caller

@@ -135,6 +135,9 @@ x_obj_t *x_heap_sweep_phase(x_obj_t *p_base, x_obj_t *p_args)
  *  is exposed only for instrumentation that controls the phases manually
  *  with no intervening allocation.
  *
+ *  A child has no chain of its own: it fires its free hooks, and so does
+ *  each base up to the one that owns the chain, which sweeps it.
+ *
  *  @param p_base  Base (execution context).
  *  @param p_args  Unused.
  *  @return NULL.
@@ -144,8 +147,10 @@ static x_obj_t *x_prim_heap_sweep(x_obj_t *p_base, x_obj_t *p_args)
 {
 	(void)p_args;
 
-	if (x_obj_flags(p_base) & X_OBJ_FLAG_CHILD) {
-		return NULL;
+	while (x_obj_flags(p_base) & X_OBJ_FLAG_CHILD) {
+		x_heap_run_hooks(p_base, x_argrun({ .p =
+			x_firstobj(x_base_field_heap_free_hooks(p_base)) }));
+		p_base = x_firstobj(x_eval_field_parent(p_base));
 	}
 
 #ifdef X_PROFILE
@@ -226,6 +231,10 @@ static x_obj_t *x_prim_alloc_limit(x_obj_t *p_base, x_obj_t *p_args)
  *  is only useful paired with a sweep that runs with no allocation in
  *  between.  Use (heap-collect) for a safe, atomic mark+sweep.
  *
+ *  A child marks, and so does each base up to the one that owns the
+ *  chain: each holds roots of its own, an evaluation in progress among
+ *  them.
+ *
  *  @param p_base  Base (execution context).
  *  @param p_args  Unused.
  *  @return NULL.
@@ -235,11 +244,12 @@ static x_obj_t *x_prim_heap_mark(x_obj_t *p_base, x_obj_t *p_args)
 {
 	(void)p_args;
 
-	if (x_obj_flags(p_base) & X_OBJ_FLAG_CHILD) {
-		return NULL;
-	}
-
 	x_eval_call_or(p_base, X_SLOT_HEAP_MARK, x_heap_mark_phase, NULL);
+
+	while (x_obj_flags(p_base) & X_OBJ_FLAG_CHILD) {
+		p_base = x_firstobj(x_eval_field_parent(p_base));
+		x_eval_call_or(p_base, X_SLOT_HEAP_MARK, x_heap_mark_phase, NULL);
+	}
 
 	return NULL;
 }
@@ -262,24 +272,14 @@ static x_obj_t *x_prim_heap_mark(x_obj_t *p_base, x_obj_t *p_args)
  *  @param p_base  Base (execution context).
  *  @param p_args  Unused.
  *  @return NULL.
- *  @note Increments the GC run counter when X_PROFILE is defined.
+ *  @note Increments the GC run counter when X_PROFILE is defined: the
+ *        sweep counts it, in the base that owns the chain.
  *  @see x_prim_heap_mark, x_prim_heap_sweep, x_prim_heap_count
  */
 static x_obj_t *x_prim_heap_collect(x_obj_t *p_base, x_obj_t *p_args)
 {
-	(void)p_args;
-
-	if (x_obj_flags(p_base) & X_OBJ_FLAG_CHILD) {
-		return NULL;
-	}
-
-#ifdef X_PROFILE
-	if (x_base_isset(p_base))
-		x_atomint(x_firstobj(x_eval_field_profile_gc_runs(p_base)))++;
-#endif
-
-	x_eval_call_or(p_base, X_SLOT_HEAP_MARK, x_heap_mark_phase, NULL);
-	x_eval_call_or(p_base, X_SLOT_HEAP_SWEEP, x_heap_sweep_phase, NULL);
+	x_prim_heap_mark(p_base, p_args);
+	x_prim_heap_sweep(p_base, p_args);
 
 	return NULL;
 }
