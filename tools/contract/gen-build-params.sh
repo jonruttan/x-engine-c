@@ -54,8 +54,10 @@ case "$TRIPLE" in
 esac
 
 # Darwin spells A64 "arm64"; GNU triplets spell it "aarch64".  One place knows.
+# 32-bit ARM triplets start "arm" or "armv7" and follow arm64 here.
 case "$TRIPLE" in
 	arm64*|aarch64*)   arch=arm64 ;;
+	arm*)              arch=arm ;;
 	x86_64*|amd64*)    arch=x86-64 ;;
 	i[3456]86*)        arch=i386 ;;
 	*)                 arch=unknown ;;
