@@ -147,7 +147,7 @@ static x_obj_t *x_prim_heap_sweep(x_obj_t *p_base, x_obj_t *p_args)
 {
 	(void)p_args;
 
-	while (x_obj_flags(p_base) & X_OBJ_FLAG_CHILD) {
+	while ( ! x_obj_isnil(p_base, x_firstobj(x_eval_field_parent(p_base)))) {
 		x_heap_run_hooks(p_base, x_argrun({ .p =
 			x_firstobj(x_base_field_heap_free_hooks(p_base)) }));
 		p_base = x_firstobj(x_eval_field_parent(p_base));
@@ -246,7 +246,7 @@ static x_obj_t *x_prim_heap_mark(x_obj_t *p_base, x_obj_t *p_args)
 
 	x_eval_call_or(p_base, X_SLOT_HEAP_MARK, x_heap_mark_phase, NULL);
 
-	while (x_obj_flags(p_base) & X_OBJ_FLAG_CHILD) {
+	while ( ! x_obj_isnil(p_base, x_firstobj(x_eval_field_parent(p_base)))) {
 		p_base = x_firstobj(x_eval_field_parent(p_base));
 		x_eval_call_or(p_base, X_SLOT_HEAP_MARK, x_heap_mark_phase, NULL);
 	}
