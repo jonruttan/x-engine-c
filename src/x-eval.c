@@ -895,6 +895,10 @@ x_obj_t *x_eval_make(x_obj_t *p_base, x_obj_t *p_args)
 		x_firstobj(x_eval_field_true(p_base)) = x_firstobj(x_eval_field_true(p_parent));
 		x_firstobj(x_eval_field_false(p_base)) = x_firstobj(x_eval_field_false(p_parent));
 		x_firstobj(x_eval_field_sigint(p_base)) = x_firstobj(x_eval_field_sigint(p_parent));
+
+		/* The base this one was made from: what a collect asked of a
+		 * child climbs to reach the base that owns the chain. */
+		x_firstobj(x_eval_field_parent(p_base)) = p_parent;
 	}
 
 	return p_base;

@@ -31,10 +31,10 @@ value reads back as something else.
 ---
     *** ERROR: kept
 
-### a collect run inside a child leaves the parent's heap alone
+### a collect run inside a child keeps what the parent holds
 
-A child's cells sit on its parent's chain, so the child does not collect;
-the parent's collect does it for both.
+A child's cells sit on its parent's chain, so a collect the child asks for
+runs in the parent, with the parent's marks.
 
 ```scheme
 (include "tests/bare/prim-ref.x")
@@ -50,6 +50,55 @@ the parent's collect does it for both.
 (churn 3000 ())
 (%collect)
 (error (match ((= (first (rest (rest keep))) 3) "kept")
+              (#t "lost")))
+```
+---
+    *** ERROR: kept
+
+### a collect run inside a child reclaims the child's garbage
+
+The child's garbage is on the parent's chain, so the parent's count drops
+when the child collects.
+
+```scheme
+(include "tests/bare/prim-ref.x")
+(def %make    (%prim-ref (lit base) (lit make)))
+(def %bind    (%prim-ref (lit base) (lit bind)))
+(def %eval    (%prim-ref (lit base) (lit eval)))
+(def %collect (%prim-ref (lit heap) (lit collect)))
+(def %count   (%prim-ref (lit heap) (lit count)))
+(def churn (fn (self n acc) (match ((= n 0) acc) (#t (self (- n 1) (pair n acc))))))
+(def b (%make))
+(%bind b (lit c) %collect)
+(%bind b (lit churn) churn)
+(%collect)
+(def before (%count))
+(%eval b (lit (churn 20000 ())))
+(%eval b (lit (c)))
+(error (match ((< (%count) (+ before 2000)) "reclaimed")
+              (#t "kept the garbage")))
+```
+---
+    *** ERROR: reclaimed
+
+### a collect run inside a child keeps what the child's evaluation holds
+
+The list is an argument already evaluated, held by the child's call in
+progress and by nothing else; the churn after the collect recycles what it
+freed.
+
+```scheme
+(include "tests/bare/prim-ref.x")
+(def %make    (%prim-ref (lit base) (lit make)))
+(def %bind    (%prim-ref (lit base) (lit bind)))
+(def %eval    (%prim-ref (lit base) (lit eval)))
+(def %collect (%prim-ref (lit heap) (lit collect)))
+(def churn (fn (self n acc) (match ((= n 0) acc) (#t (self (- n 1) (pair n acc))))))
+(def b (%make))
+(%bind b (lit c) %collect)
+(%bind b (lit churn) churn)
+(%bind b (lit third) (fn (_ xs done more) (first (rest (rest xs)))))
+(error (match ((= (%eval b (lit (third (churn 100 ()) (c) (churn 3000 ())))) 3) "kept")
               (#t "lost")))
 ```
 ---

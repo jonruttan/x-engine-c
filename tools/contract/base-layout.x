@@ -95,7 +95,11 @@
                   ; -- they survive the handler pop that clears the caught guard
                   ; (control.c) before its body (and thus the reflect read) runs.
                   ; file-registry is the id->path alist grown by `include`.
+                  ; parent is the base this one was made from, nil in the
+                  ; root: a child allocates on its parent's chain, and a
+                  ; collect it asks for runs where the chain is owned.
                   (pair (cell file)
                     (pair (cell err-line)
                       (pair (cell err-file)
-                            (cell file-registry)))))))))))))
+                        (pair (cell file-registry)
+                              (cell parent))))))))))))))
