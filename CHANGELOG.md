@@ -13,6 +13,22 @@ alongside the library changes they landed with.
 
 ## Unreleased
 
+## 0.2.31 — 2026-11-10
+
+**`(heap-collect)` inside a child base collects** ([#132]). Since 0.2.29
+a child allocates on its parent's chain and has none of its own, so a
+collect asked of a child returned without collecting: its garbage stayed
+until the parent collected, and x-lang's image writer, which loads the
+imaged code into a made base and collects there as it loads, could write
+no image. A base now records the base it was made from in a new state
+cell, `parent`. A mark asked of a child marks the child's roots, then
+each base's up to the one that owns the chain; a sweep fires each
+child's free hooks on the way up and sweeps the chain there.
+`X_OBJ_FLAG_CHILD` is removed: a base is a child when its `parent` cell
+is not nil. The layout digest changes.
+
+[#132]: https://github.com/jonruttan/x-engine-c/pull/132
+
 ## 0.2.30 — 2026-11-07
 
 **An engine built for 32-bit ARM declares `(param arch arm)`** ([#130]).
