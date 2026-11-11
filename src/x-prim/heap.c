@@ -365,6 +365,14 @@ static x_obj_t *x_prim_heap_mark_root(x_obj_t *p_base, x_obj_t *p_args)
  * X_OBJ_FLAG_MARK makes the next mark phase stop short and its sweep free the
  * children it missed.  The layout descriptor names a bit reserved for this.
  *
+ * The traversal follows an object to its type (x_type_heap_mark), a type's
+ * handlers are x-lang closures, and a closure holds its environment, so a
+ * mark from any object, even a fresh pair, integer, symbol or string, flags
+ * the whole environment.  A caller that wants less flags its stopping points
+ * before the mark, since the flag is also the visited test; x-lang's image
+ * writer does this.  pin! is not affected: its walk stops at the SHARED type
+ * nodes.
+ *
  * @param p_base  Base (execution context).
  * @param p_args  Unevaluated: (self obj flags).
  * @return The object marked from.
