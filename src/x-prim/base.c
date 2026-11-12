@@ -233,9 +233,10 @@ static x_obj_t *x_prim_base_eval(x_obj_t *p_base, x_obj_t *p_args)
 	jmp_buf jmp;
 	x_obj_t *p_target, *p_expr;
 	x_obj_t *p_handler, *p_result;
-	x_obj_t *p_err, *p_parent;
+	x_obj_t *p_err, *p_parent, *p_saved_root_chain;
 
 	x_eargs(p_base, p_args, 3, NULL, &p_target, &p_expr);
+	p_saved_root_chain = x_heap_root_chain(p_target);
 
 	/* Build handler pair tree, laid out the same as x_prim_guard's (#253):
 	 * (jmp-ptr . ((saved-env . previous) . (error-value . line))).
@@ -269,6 +270,9 @@ static x_obj_t *x_prim_base_eval(x_obj_t *p_base, x_obj_t *p_args)
 		x_eval_field_error_handler(p_target)
 			= x_restobj(x_eval_field_error_handler(p_target));
 		x_eval_field_env(p_target) = x_error_handler_saved_env(p_handler);
+		/* The longjmp cut away the target's frames before their
+		 * x_heap_root_pop calls ran: drop their nodes, as guard does. */
+		x_heap_root_chain(p_target) = p_saved_root_chain;
 
 		if ( ! x_obj_isnil(p_base, x_firstobj(x_eval_field_error_handler(p_base)))) {
 			p_parent = x_firstobj(x_eval_field_error_handler(p_base));
