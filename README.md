@@ -2,20 +2,24 @@
 
 <p align="center"><img src="docs/bitwise-banner.svg" alt="x-engine-c, with Bitwise the owl" width="100%"></p>
 
-The C engine for [x-lang][x-lang]: the evaluator, the primitive surface, and
-the tokenizer, built on the [x-expr][x-expr] object, type and heap machinery.
+The reference engine for [x-lang][x-lang], in C89: the evaluator, the
+primitive surface, and the tokenizer, built on the [x-expr][x-expr] object,
+type and heap machinery. It is the engine x-lang pins and `make engine`
+there fetches. What an engine must provide, promise and report is x-lang's
+[engine contract][contract].
 
-This repository builds one artifact — `x-bin` — and `x-bin` cannot do anything
-on its own. It has no printer, no REPL, no standard library; those are written
-*in x-lang* and live in the [x-lang][x-lang] repository. The engine reads a
-program from stdin and evaluates it, and the wrapper there is what pipes the
-library in front of your source:
+This repository builds one artifact, `x-bin`. It has no x-lang printer, no
+line editor and no standard library; those are written *in x-lang* and live
+in the [x-lang][x-lang] repository. The engine's own loop is bare: it reads
+forms from stdin and evaluates each, and the wrapper there puts the library in
+front of your source. In its smallest form:
 
     { cat lib/x-core.x; cat program.x; } | ./x-bin
 
-That is the whole coupling. The engine embeds no x-lang text and generates
-none; it binds exactly one string, `x-release`, so a booted image can say which
-release it was built for.
+The engine embeds no x-lang text and generates none. It binds four names
+before it reads: `args`, the command line; `x-machine`, the build's target;
+`x-version`, the x-expr layer's version; and `x-release`, which release of
+the engine this is, so a booted image can say what it was built for.
 
 ## Build
 
@@ -24,7 +28,8 @@ release it was built for.
     make
 
 `--recursive` matters: [x-expr][x-expr] is a submodule and the build needs its
-sources. C89 (`-ansi`).  The engine proper assumes no C library and deals in
+sources, and the C suite's runner, `tests/c/test-runner`, is another. C89
+(`-ansi`).  The engine proper assumes no C library and deals in
 no floats: its C library is x-expr's `x-stdlib.h`/`x-sys.h`, and only the CLI
 (`src/x-cli.c`) reaches the host -- `syscall`, and `dlopen`/`dlsym` (hence
 `-ldl`).  `make check-libc` enforces it.
@@ -42,6 +47,14 @@ Variant builds — `x-bin-debug`, `x-bin-profile`, `x-bin-asan`, `x-bin-cov` —
 each compile to their own object suffix, so no two configurations share an
 object path and variants rebuild incrementally. `x-bin-profile` also ships in
 every release, beside `x-bin`.
+
+## Releases
+
+Each [release](https://github.com/jonruttan/x-engine-c/releases) carries the
+engine built for macOS on arm64 and for Linux on x86-64, each a tarball with
+its `.sha256`. `make dist` packages one. x-lang names a release and its
+digests in `tools/engine/engine.pin.xon`; on any other platform, x-lang's
+`make engine-source` builds the pinned release from this source.
 
 ## Profiling
 
@@ -112,36 +125,49 @@ the contract every other implementation is judged against.
 
 ## The contracts
 
-Four ratchets pin this C surface so it cannot grow or shift silently. Three
-live here and are fully self-contained — each scans this repo's C and diffs it
-against a committed manifest, with no x-lang checkout anywhere in the loop:
+Gates pin this C surface so it cannot grow or shift silently. Five are
+self-contained, run by `make gates`: each scans this repo's C and diffs it
+against a committed manifest, with no x-lang checkout in the loop.
 
 | gate | pins | against |
 |---|---|---|
 | `make check-isa` | every binding site in the C | `tools/contract/isa.x` |
 | `make check-obj-layout` | the object header layout | `tools/contract/obj-layout.x` |
 | `make check-base-paths` | the base-field accessor chains | `tools/contract/base-paths.x` |
+| `make check-base-slots` | the positions in the base's slot vector | `tools/contract/base-slots.x` |
+| `make check-libc` | the host boundary | the engine's own sources |
 
-Those manifests are also **the engine's published description of itself**.
+Two more need x-lang beside this repo:
+
+| gate | asks | runs |
+|---|---|---|
+| `make check-declaration` | whether `x-engine.xon` is what x-lang's generator produces from `isa.x` and `claims.x` | here, with an x-lang checkout |
+| `make check-prim-coverage` | whether every primitive is exercised by a spec | in x-lang, over this repo's sources and both suites |
+
+The manifests are also **the engine's published description of itself**.
 x-lang's boot loads `base-paths.x` and `obj-layout.x` to learn this engine's
-field offsets, and its `pin.x` reads `isa.x` to answer which C surface a tree
-carries. They ship with the engine rather than being copied into the library,
-so a library can never run on an engine whose layout disagrees with the copy
-it holds — which is exactly the failure the release-identity work was about.
+field offsets, reads a slot's position from `base-slots.x`, and its `pin.x`
+reads `isa.x` to answer which C surface a tree carries. They ship with the
+engine rather than being copied into the library, so a library cannot run on
+an engine whose layout disagrees with a copy it holds.
 
-Each of the three has a **runtime half** — a spec that probes a live engine —
-and those need a library to boot, so they run in x-lang under
+`x-engine.xon` is the engine's declaration: the capabilities it provides,
+derived from `isa.x`, and the guarantees it claims, from
+`tools/contract/claims.x`. It is generated and not edited.
+
+**The slot vector.** A base holds a vector of function pointers, one per
+slot, and the engine reaches a routine by its position
+(`include/x-eval-slots.h`). Storing another function in a slot replaces the
+routine while the engine runs.
+
+The layout gates each have a **runtime half**, a spec that probes a live
+engine. Those need a library to boot, so they run in x-lang under
 `tests/x/specs/meta/`.
 
-A fourth gate, `make check-libc`, holds the host boundary: the engine
-reaches libc only through x-expr's `x_sys_*`/`x_lib_*` doors.  `src/x-cli.c`
-(the host doors), the optional host modules under `opt/`, `ctype.h`,
-`setjmp.h`, the freestanding headers and DEBUG-only code are exempt.
-
-The fourth ratchet, `check-prim-coverage`, asks whether every primitive is
-*exercised* by a spec. Most primitives are reachable only through the library,
-so the honest answer needs both spec suites at once; it runs in x-lang, over
-this repo's sources and both suites.
+`check-libc`: the engine reaches libc only through x-expr's
+`x_sys_*`/`x_lib_*` doors.  `src/x-cli.c` (the host doors), the optional host
+modules under `opt/`, `ctype.h`, `setjmp.h`, the freestanding headers and
+DEBUG-only code are exempt.
 
 `tools/contract/base-layout.x` is a pure build input: `make gen-layout` turns
 it into `include/x-eval-layout.h`. That header is committed, so a plain
@@ -172,5 +198,6 @@ MIT No Attribution (MIT-0). See [LICENSE](LICENSE).
 
 [x-lang]: https://github.com/jonruttan/x-lang
 [x-expr]: https://github.com/jonruttan/x-expr
+[contract]: https://github.com/jonruttan/x-lang/blob/main/docs/engine-contract.md
 
 <p align="center"><img src="docs/bitwise-mark.svg" alt="Bitwise" width="96"></p>
