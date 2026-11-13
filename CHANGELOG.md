@@ -13,6 +13,17 @@ alongside the library changes they landed with.
 
 ## Unreleased
 
+## 0.2.32 — 2026-11-13
+
+**A second error caught from a child base no longer segfaults** ([#136]).
+An error raised in a child longjmps past the child's frames before their
+root-chain nodes are popped, so the nodes stayed on the child's root
+chain pointing at dead stack, and the parent's next collect read them
+through the child's base tree. `base-eval` now restores the child's
+root-chain head on the error path, as `guard` does.
+
+[#136]: https://github.com/jonruttan/x-engine-c/pull/136
+
 ## 0.2.31 — 2026-11-10
 
 **`(heap-collect)` inside a child base collects** ([#132]). Since 0.2.29
