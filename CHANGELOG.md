@@ -13,6 +13,8 @@ alongside the library changes they landed with.
 
 ## Unreleased
 
+## 0.2.32 — 2026-11-13
+
 **A second error caught from a child base no longer segfaults** ([#136]).
 An error raised in a child longjmps past the child's frames before their
 root-chain nodes are popped, so the nodes stayed on the child's root
