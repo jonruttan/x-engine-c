@@ -13,6 +13,11 @@ alongside the library changes they landed with.
 
 ## Unreleased
 
+**`x-version` reads "0.2.0".** `ext/x-expr` moves to its 0.2.0 release,
+which carries the version bump, the changelog, a plain MIT-0 licence text
+and corrected examples. Nothing the engine compiles changes except the
+version string.
+
 ## 0.2.32 — 2026-11-13
 
 **A second error caught from a child base no longer segfaults** ([#136]).
