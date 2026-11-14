@@ -387,7 +387,7 @@ int main(int argc, char *argv[])
 	x_value_bind(p_base, "x-machine", x_mkstr(p_base, (x_char_t *)X_MACHINE));
 	x_value_bind(p_base, "x-version", x_mkstr(p_base, (x_char_t *)X_VERSION));
 	/* x-version is the EXPRESSION LAYER's version (ext/x-expr's X_VERSION,
-	 * "0.1.0" and rightly stable); x-release is which RELEASE of x-lang this
+	 * which moves only when x-expr releases); x-release is which RELEASE of x-lang this
 	 * engine is.  Before this binding existed nothing in a built engine
 	 * differed between releases whose C never changed -- v0.4.0 and v0.5.0
 	 * were the same bytes reporting the same version -- and a pinned amalgam
